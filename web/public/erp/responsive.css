@@ -1,0 +1,62 @@
+/* Layout adaptável para notebooks, telas baixas, tablets e celulares. */
+html, body { max-width: 100%; overflow-x: hidden; }
+.app-shell, .main-column, .topbar-left, .topbar-right, .breadcrumbs, .content, .panel, .banner-text { min-width: 0; }
+.sidebar { overflow-y: auto; overscroll-behavior: contain; }
+.breadcrumbs strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.panel-grid > *, .stats-grid > *, .fiscal-grid > *, .module-grid > * { min-width: 0; }
+.info-row { min-width: 0; flex-wrap: wrap; overflow-wrap: anywhere; }
+.info-row strong { min-width: 0; }
+.table-panel, .table-wrap { max-width: 100%; }
+.table-wrap { overflow-x: auto; overscroll-behavior-x: contain; }
+.table-summary, .footer { flex-wrap: wrap; }
+
+/* O cabeçalho e o rodapé do cadastro ficam fixos; só os campos rolam. */
+.modal-backdrop { overflow-y: auto; overscroll-behavior: contain; }
+.modal { min-width: 0; max-height: calc(100dvh - 36px); overflow: hidden; }
+.modal form { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.modal-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.modal-head, .modal-footer { flex-shrink: 0; }
+.form-grid, .field { min-width: 0; }
+
+.input-action { display: flex; align-items: stretch; gap: 8px; min-width: 0; }
+.input-action input { min-width: 0; flex: 1; }
+.btn.lookup-btn { min-width: 88px; height: auto; min-height: 39px; padding: 8px 10px; white-space: normal; line-height: 1.2; flex-shrink: 0; }
+.lookup-note { display: block; color: #628578; font-size: 10px; line-height: 1.5; margin-top: 8px; }
+.focus-status { margin-top: 12px; border: 1px solid #deebe9; background: #f7fcfb; border-radius: 9px; padding: 12px; color: #3d665c; font-size: 11px; line-height: 1.5; }
+#toastRoot { max-width: calc(100vw - 24px); right: 12px; }
+
+@media (max-width: 1100px) {
+  .sidebar { position: fixed; left: 0; top: 0; transform: translateX(-100%); transition: transform .2s; box-shadow: 18px 0 60px #10283d25; }
+  .sidebar.open { transform: translateX(0); }
+  .mobile-backdrop.active { position: fixed; inset: 0; background: #132b3f6b; z-index: 9; }
+  .mobile-menu { display: grid; }
+  .topbar { padding: 0 22px; }
+}
+
+@media (max-width: 760px) {
+  .topbar { padding: 0 14px; }
+  .content { padding: 23px 14px; }
+}
+
+@media (max-width: 560px) {
+  .topbar { padding: 0 12px; }
+  .breadcrumbs { font-size: 10.5px; gap: 5px; }
+  .topbar-right { gap: 7px; }
+  .top-pill { max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+  .content { padding: 19px 12px; }
+  .modal-backdrop { padding: 8px; }
+  .modal { max-height: calc(100dvh - 16px); border-radius: 12px; }
+  .modal-head, .modal-footer { padding: 12px; }
+  .modal-footer { flex-wrap: wrap; justify-content: flex-end; }
+  .modal-footer small { margin-right: auto; }
+  .form-grid { gap: 12px; }
+  .field.full { grid-column: 1 / -1; }
+  .footer { padding: 12px; }
+}
+
+@media (max-height: 690px) {
+  .modal-backdrop { padding: 8px; }
+  .modal { max-height: calc(100dvh - 16px); }
+  .modal-head { padding-top: 12px; padding-bottom: 12px; }
+  .modal-footer { padding-top: 10px; padding-bottom: 10px; }
+}

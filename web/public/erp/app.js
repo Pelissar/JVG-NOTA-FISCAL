@@ -21,6 +21,7 @@
   var state = readState();
   var view = 'dashboard', query = '', filter = 'all';
   var cloud = {status:'checking',displayName:'',company:null};
+  var focusMessage = 'Verificação ainda não realizada. A emissão permanece bloqueada.';
   var content = document.getElementById('content');
   var modalRoot = document.getElementById('modalRoot');
   var toastRoot = document.getElementById('toastRoot');
@@ -84,8 +85,9 @@
     var models=[['NF-e','Modelo 55','Venda de mercadorias e operações fiscais','receipt'],['NFC-e','Modelo 65','Venda ao consumidor e frente de caixa','cash'],['NFS-e','Padrão Nacional','Prestação de serviços / DPS','layers'],['CT-e','Modelo 57','Conhecimento de transporte eletrônico','truck'],['MDF-e','Modelo 58','Manifesto eletrônico de documentos','warehouse']];
     return heading('Central de notas fiscais','Os cinco modelos já estão previstos na navegação do JVG.')+banner()+
       '<div class="fiscal-grid">'+models.map(function(x){return '<article class="fiscal-card"><div class="fiscal-card-top"><div class="fiscal-icon">'+ico(x[3])+'</div><span class="badge amber">Em preparação</span></div><h3>'+x[0]+' <span class="muted" style="font-weight:400;font-size:10px">'+x[1]+'</span></h3><p>'+x[2]+'. A transmissão real será habilitada após integração e homologação com a Focus NFe.</p><div class="fiscal-bottom"><span>Focus NFe: aguardando certificado A1</span><span>'+ico('clock')+'</span></div></article>';}).join('')+'</div>'+
-      '<div class="section-row"><h2 class="section-title">Próximas configurações fiscais</h2></div><div class="setup-steps"><article class="setup-step"><span class="step-count">01 / DADOS</span><strong>Empresa e regime</strong><p>CNPJ real, inscrições, endereço, regime tributário e responsável fiscal.</p></article><article class="setup-step"><span class="step-count">02 / CERTIFICADO</span><strong>Certificado A1 e Focus</strong><p>Cadastro seguro do emitente, credenciais por ambiente e CSC quando aplicável.</p></article><article class="setup-step"><span class="step-count">03 / HOMOLOGAÇÃO</span><strong>Regras e testes</strong><p>Conferência com contador e autorização de casos reais em ambiente de homologação.</p></article></div>';
+      '<div class="section-row"><h2 class="section-title">Próximas configurações fiscais</h2></div><div class="setup-steps"><article class="setup-step"><span class="step-count">01 / DADOS</span><strong>Empresa e regime</strong><p>CNPJ real, inscrições, endereço, regime tributário e responsável fiscal.</p></article><article class="setup-step"><span class="step-count">02 / CERTIFICADO</span><strong>Certificado A1 e Focus</strong><p>Cadastro seguro do emitente, credenciais por ambiente e CSC quando aplicável.</p></article><article class="setup-step"><span class="step-count">03 / HOMOLOGAÇÃO</span><strong>Regras e testes</strong><p>Conferência com contador e autorização de casos reais em ambiente de homologação.</p></article></div>'+focusBlock();
   }
+  function focusBlock(){return '<section class="panel wide-info" style="margin-top:20px"><div class="panel-head"><div><h2>Focus NFe · Homologação</h2><p>Consulta segura do token, sem transmitir notas</p></div></div><div class="panel-body"><button class="btn primary" data-action="check-focus" type="button">'+ico('shield')+' Verificar conexão Focus</button><div class="focus-status" data-focus-result role="status">'+h(focusMessage)+'</div><p class="small-note">Configure <code>JVG_FOCUS_HOMOLOGACAO_TOKEN</code> e <code>JVG_FOCUS_PILOT_COMPANY_ID</code> nas variáveis privadas da Netlify. Nunca cole o token aqui.</p></div></section>';}
   function simpleSoon(title,subtitle,icon,features){
     return heading(title,subtitle)+banner()+'<section class="panel wide-info"><div class="panel-body">'+empty(icon,'Módulo preparado para as próximas etapas','A navegação e a arquitetura deste módulo estão previstas. Ainda não há operação real nesta primeira versão.')+'<div class="info-list">'+features.map(function(x){return '<div class="info-row"><span>'+h(x[0])+'</span><strong>'+h(x[1])+'</strong></div>';}).join('')+'</div></div></section>';
   }
@@ -105,7 +107,7 @@
       '<section class="panel wide-info"><div class="panel-head"><div><h2>Etapa 6 · Cadastro fiscal do emitente</h2><p>Dados da empresa para preparar a NF-e em homologação</p></div></div><div class="panel-body"><div class="info-list">'+items.map(function(x){return '<div class="info-row"><span>'+h(x[0])+'</span><strong>'+h(x[1])+'</strong></div>';}).join('')+'</div>'+
       (ready&&missing.length?'<p class="small-note" style="margin-top:16px">Preencha: '+missing.map(h).join(', ')+'.</p>':ready?'<p class="small-note" style="margin-top:16px">Dados preenchidos. Ainda é obrigatória a conferência com o contador e com a Focus antes de qualquer emissão.</p>':'')+
       '<div class="heading-actions" style="margin-top:24px">'+action+(ready?'<button class="btn" data-action="logout">Sair da conta</button>':'<button class="btn danger" data-action="reset-demo">Restaurar demonstração</button>')+'</div>'+
-      '<p class="small-note" style="margin-top:16px">Tokens Focus e certificado A1 não são solicitados nesta página. A chave JVG_SUPABASE_SECRET_KEY precisa existir apenas nos segredos privados do servidor de hospedagem; nunca cole essa chave em um campo do site.</p></div></section>';
+      '<p class="small-note" style="margin-top:16px">Tokens Focus e certificado A1 não são solicitados nesta página. A chave JVG_SUPABASE_SECRET_KEY precisa existir apenas nos segredos privados do servidor de hospedagem; nunca cole essa chave em um campo do site.</p></div></section>'+focusBlock();
   }
   function render(){
     document.getElementById('breadcrumb').textContent=labels[view]||labels.dashboard;
@@ -118,15 +120,103 @@
   }
   function setView(next){if(!labels[next])return;view=next;query='';filter='all';document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');render();window.scrollTo({top:0,behavior:'smooth'});}
   function field(name,label,value,extra,full,help){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+(extra||'')+'>'+(help?'<small>'+h(help)+'</small>':'')+'</div>';}
+  function lookupField(name,label,value,extra,kind,full){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><div class="input-action"><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+extra+'><button class="btn ghost lookup-btn" type="button" data-action="lookup-'+kind+'">Consultar</button></div></div>';}
   function select(name,label,options,value){return '<div class="field"><label for="f-'+h(name)+'">'+h(label)+'</label><select id="f-'+h(name)+'" name="'+h(name)+'">'+options.map(function(o){return '<option value="'+h(o[0])+'" '+(String(value)===String(o[0])?'selected':'')+'>'+h(o[1])+'</option>';}).join('')+'</select></div>';}
   function productForm(p){return field('sku','Código interno (SKU) *',p.sku,'required maxlength="40"',false)+field('name','Descrição do produto *',p.name,'required maxlength="160"',false)+field('category','Categoria',p.category,'maxlength="80"',false)+select('unit','Unidade',[['UN','Unidade (UN)'],['KG','Quilograma (KG)'],['M','Metro (M)'],['L','Litro (L)'],['CX','Caixa (CX)'],['PAR','Par (PAR)'],['PCT','Pacote (PCT)']],p.unit||'UN')+field('ncm','NCM',p.ncm,'inputmode="numeric" maxlength="8" pattern="[0-9]{8}"',false,'8 dígitos; confira com seu contador.')+field('cest','CEST (quando aplicável)',p.cest,'maxlength="12"',false)+field('gtin','EAN / GTIN',p.gtin||'SEM GTIN','maxlength="14"',false,'Informe SEM GTIN quando não houver código.')+select('origin','Origem da mercadoria',[['0','0 · Nacional'],['1','1 · Estrangeira direta'],['2','2 · Estrangeira mercado interno'],['3','3 · Nacional > 40% importação'],['4','4 · Nacional processos básicos'],['5','5 · Nacional ≤ 40% importação'],['6','6 · Estrangeira sem similar'],['7','7 · Estrangeira mercado interno sem similar'],['8','8 · Nacional > 70% importação']],p.origin||'0')+field('cost','Preço de custo (R$)',p.cost,'type="number" min="0" step="0.01"',false)+field('price','Preço de venda (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+field('stock','Saldo inicial/demonstrativo',p.stock,'type="number" min="0" step="0.001"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
-  function clientForm(p){return field('name','Nome / razão social *',p.name,'required maxlength="160"',true)+select('type','Tipo',[['PJ','Pessoa jurídica'],['PF','Pessoa física'],['EXT','Estrangeiro']],p.type||'PJ')+field('document','CPF / CNPJ',p.document,'inputmode="numeric" maxlength="18"',false,'Dados usados apenas nesta demonstração local.')+field('email','E-mail',p.email,'type="email" maxlength="160"',false)+field('phone','Telefone / WhatsApp',p.phone,'maxlength="25"',false)+field('city','Cidade',p.city,'maxlength="90"',false)+field('state','UF',p.state,'maxlength="2"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
+  function clientForm(p){return field('name','Nome / razão social *',p.name,'required maxlength="160"',true)+
+    select('type','Tipo',[['PJ','Pessoa jurídica'],['PF','Pessoa física'],['EXT','Estrangeiro']],p.type||'PJ')+
+    lookupField('document','CPF / CNPJ (consulta para PJ)',p.document,'maxlength="18"','cnpj',false)+
+    field('email','E-mail',p.email,'type="email" maxlength="160"',false)+
+    field('phone','Telefone / WhatsApp',p.phone,'maxlength="25"',false)+
+    '<div class="field full"><strong>Endereço do destinatário</strong></div>'+
+    lookupField('postalCode','CEP',p.postalCode,'inputmode="numeric" maxlength="9"','cep',false)+
+    field('street','Logradouro',p.street,'maxlength="160"',true)+
+    field('number','Número',p.number,'maxlength="20"',false)+
+    field('complement','Complemento',p.complement,'maxlength="100"',false)+
+    field('district','Bairro',p.district,'maxlength="100"',false)+
+    field('city','Cidade',p.city,'maxlength="100"',false)+
+    field('state','UF',p.state,'maxlength="2"',false)+
+    field('cityCode','Código IBGE do município',p.cityCode,'inputmode="numeric" maxlength="7"',false)+
+    select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false')+
+    '<p class="lookup-note field full">Dados públicos sugeridos por ViaCEP/BrasilAPI. Confira antes de salvar ou emitir documentos fiscais.</p>';}
   function serviceForm(p){return field('code','Código do serviço *',p.code,'required maxlength="40"',false)+field('name','Descrição do serviço *',p.name,'required maxlength="160"',false)+field('description','Detalhamento',p.description,'maxlength="255"',true)+field('lc116','Subitem da LC 116',p.lc116,'maxlength="12"',false)+field('nbs','Código NBS',p.nbs,'maxlength="12"',false)+field('price','Valor (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
   async function callApi(endpoint,options){
     var response=await fetch(endpoint,Object.assign({credentials:'same-origin',cache:'no-store'},options||{}));
     var result=await response.json().catch(function(){return {error:'Resposta inválida do servidor.'};});
     if(!response.ok)throw new Error(result.error||'A operação não pôde ser concluída.');
     return result;
+  }
+  function setFormField(form,name,value){
+    var target=form.querySelector('[name="'+name+'"]');
+    if(target&&value!==undefined&&value!==null&&String(value).trim())target.value=String(value);
+  }
+  function fillAddress(form,data){
+    ['postalCode','street','number','complement','district','city','state','cityCode'].forEach(function(name){setFormField(form,name,data[name]);});
+  }
+  async function lookupRegistration(button,kind){
+    var form=button.closest('form');if(!form)return;
+    var field=form.querySelector('[name="'+(kind==='cep'?'postalCode':form.id==='companyForm'?'cnpj':'document')+'"]');
+    if(!field)return;
+    if(kind==='cnpj'&&form.id==='recordForm'){
+      var person=form.querySelector('[name="type"]');
+      if(!person||person.value!=='PJ'){toast('A consulta de CNPJ é exclusiva de pessoa jurídica.','error');return;}
+    }
+    var value=field.value.trim();
+    if(kind==='cep'&&value.replace(/\D/g,'').length!==8){toast('Digite um CEP com 8 dígitos.','error');field.focus();return;}
+    if(kind==='cnpj'&&value.toUpperCase().replace(/[^A-Z0-9]/g,'').length!==14){toast('Digite um CNPJ com 14 caracteres.','error');field.focus();return;}
+    var label=button.textContent;button.disabled=true;button.textContent='Consultando...';
+    try{
+      var data=await callApi('/api/lookup?type='+kind+'&value='+encodeURIComponent(value));
+      if(!form.isConnected)return;
+      if(kind==='cep'){fillAddress(form,data);}
+      else {
+        setFormField(form,form.id==='companyForm'?'legalName':'name',data.legalName);
+        if(form.id==='companyForm'){
+          setFormField(form,'tradeName',data.tradeName);
+          setFormField(form,'cnae',data.cnae);
+          setFormField(form,'fiscalEmail',data.email);
+          setFormField(form,'fiscalPhone',data.phone);
+        } else {
+          setFormField(form,'email',data.email);
+          setFormField(form,'phone',data.phone);
+        }
+        fillAddress(form,data);
+        if(data.postalCode&&/^\d{8}$/.test(data.postalCode)){
+          try{
+            var address=await callApi('/api/lookup?type=cep&value='+data.postalCode);
+            if(form.isConnected)fillAddress(form,address);
+          }catch(e){/* CNPJ valido mesmo que a consulta complementar do CEP falhe. */}
+        }
+      }
+      if(form.isConnected)toast('Dados sugeridos por '+data.source+'. Confira antes de salvar.');
+    }catch(error){if(form.isConnected)toast(error.message,'error');}
+    finally{if(button.isConnected){button.disabled=false;button.textContent=label;}}
+  }
+  async function checkFocusConnection(button){
+    var label=button.textContent;button.disabled=true;button.textContent='Verificando...';
+    try{
+      var response=await fetch('/api/focus/status',{credentials:'same-origin',cache:'no-store'});
+      var data=await response.json().catch(function(){return {};});
+      var status=data.status||'unexpected_response';
+      var messages={
+        token_valid:'Token aceito no ambiente de homologação. Certificado, credenciamento e emissão ainda precisam de validação.',
+        invalid_token:'Token de homologação inválido. Confira o segredo privado na Netlify.',
+        forbidden:'A Focus recusou o acesso. Verifique o cadastro e as permissões da empresa.',
+        rate_limited:'A Focus limitou as consultas. Aguarde alguns minutos.',
+        provider_unavailable:'Não foi possível acessar a Focus agora. Tente novamente.',
+        waiting_focus_token:'Falta configurar JVG_FOCUS_HOMOLOGACAO_TOKEN na Netlify.',
+        focus_not_enabled_for_company:'Empresa piloto não autorizada. Configure JVG_FOCUS_PILOT_COMPANY_ID com o UUID correto.',
+        needs_company:'Cadastre sua empresa antes de verificar a Focus.',
+        supabase_not_configured:'A conexão com o Supabase ainda não está pronta.',
+        sign_in_required:'Faça login para verificar a Focus.',
+        unexpected_response:'A Focus respondeu de forma inesperada. Verifique a configuração com o suporte.'
+      };
+      focusMessage=messages[status]||(data.error||'Não foi possível verificar a Focus.');
+    }catch(error){focusMessage='Falha temporária ao consultar a Focus: '+error.message;}
+    finally{
+      document.querySelectorAll('[data-focus-result]').forEach(function(el){el.textContent=focusMessage;});
+      if(button.isConnected){button.disabled=false;button.textContent=label;}
+    }
   }
   async function refreshCloud(){
     var data=await callApi('/api/records');
@@ -148,7 +238,7 @@
     var a=company.address||{};
     return '<div class="field full"><strong>Identificação e contato fiscal</strong></div>'+
       field('tradeName','Nome fantasia',company.trade_name||'','maxlength="160"',false)+
-      field('cnpj','CNPJ (numérico ou alfanumérico)',company.cnpj||'','maxlength="18" placeholder="00.000.000/0000-00"',false)+
+      lookupField('cnpj','CNPJ (numérico ou alfanumérico)',company.cnpj||'','maxlength="18" placeholder="00.000.000/0000-00"','cnpj',false)+
       field('stateRegistration','Inscrição Estadual (IE)',company.state_registration||'','maxlength="40"',false)+
       field('municipalRegistration','Inscrição Municipal',company.municipal_registration||'','maxlength="40"',false)+
       field('cnae','CNAE principal (7 dígitos)',company.cnae||'','inputmode="numeric" maxlength="10"',false)+
@@ -161,7 +251,7 @@
       field('district','Bairro',a.district||'','maxlength="100"',false)+
       field('city','Município',a.city||'','maxlength="100"',false)+
       field('state','UF',a.state||'','maxlength="2" placeholder="SP"',false)+
-      field('postalCode','CEP (8 dígitos)',a.postalCode||'','inputmode="numeric" maxlength="9"',false)+
+      lookupField('postalCode','CEP (8 dígitos)',a.postalCode||'','inputmode="numeric" maxlength="9"','cep',false)+
       field('cityCode','Código IBGE do município (7 dígitos)',a.cityCode||'','inputmode="numeric" maxlength="7"',false)+
       '<div class="field full"><strong>Numeração planejada para NF-e de homologação</strong></div>'+
       field('nfeSeries','Série',company.nfe_series_homologacao==null?1:company.nfe_series_homologacao,'type="number" min="1" max="999"',false)+
@@ -215,9 +305,9 @@
       record=Object.assign(record,{sku:values.sku.trim(),name:values.name.trim(),category:values.category.trim(),unit:values.unit,ncm:values.ncm,cest:values.cest,gtin:values.gtin||'SEM GTIN',origin:values.origin,cost:Number(values.cost||0),price:Number(values.price||0),stock:Number(values.stock||0),active:values.active==='true'});
       if(record.price<0||record.cost<0||record.stock<0){toast('Valores não podem ser negativos.','error');return;}
     }else if(kind==='client'){
-      var doc=values.document.replace(/\D/g,'');
-      if(doc&&![11,14].includes(doc.length)){toast('CPF/CNPJ deve ter 11 ou 14 dígitos.','error');return;}
-      record=Object.assign(record,{name:values.name.trim(),type:values.type,document:doc,email:values.email.trim(),phone:values.phone.trim(),city:values.city.trim(),state:values.state.trim().toUpperCase(),active:values.active==='true'});
+      var doc=values.document.toUpperCase().replace(/[^A-Z0-9]/g,'');
+      if(doc&&((values.type==='PF'&&!/^\d{11}$/.test(doc))||(values.type==='PJ'&&!/^[A-Z0-9]{12}\d{2}$/.test(doc)))){toast('CPF/CNPJ tem formato incompatível com o tipo de pessoa.','error');return;}
+      record=Object.assign(record,{name:values.name.trim(),type:values.type,document:doc,email:values.email.trim(),phone:values.phone.trim(),street:values.street.trim(),number:values.number.trim(),complement:values.complement.trim(),district:values.district.trim(),postalCode:values.postalCode.replace(/\D/g,''),cityCode:values.cityCode.replace(/\D/g,''),city:values.city.trim(),state:values.state.trim().toUpperCase(),active:values.active==='true'});
     }else{
       record=Object.assign(record,{code:values.code.trim(),name:values.name.trim(),description:values.description.trim(),lc116:values.lc116.trim(),nbs:values.nbs.trim(),price:Number(values.price||0),active:values.active==='true'});
       if(record.price<0){toast('Valor inválido.','error');return;}
@@ -271,7 +361,7 @@
     persist();closeModal();render();toast('Estoque demonstrativo ajustado.');
   }
   function exportCsv(kind){
-    var data=state[kind],fields=kind==='products'?['sku','name','category','unit','ncm','cest','gtin','origin','cost','price','stock','active']:kind==='clients'?['name','type','document','email','phone','city','state','active']:['code','name','description','lc116','nbs','price','active'];
+    var data=state[kind],fields=kind==='products'?['sku','name','category','unit','ncm','cest','gtin','origin','cost','price','stock','active']:kind==='clients'?['name','type','document','email','phone','postalCode','street','number','complement','district','city','state','cityCode','active']:['code','name','description','lc116','nbs','price','active'];
     if(!Array.isArray(data)||!data.length){toast('Não há dados para exportar.','error');return;}
     var lines=[fields.join(';')].concat(data.map(function(r){return fields.map(function(f){return '"'+String(r[f]??'').replace(/"/g,'""')+'"';}).join(';');}));
     var blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
@@ -281,6 +371,8 @@
     var v=e.target.closest('[data-view]');if(v){setView(v.dataset.view);return;}
     var b=e.target.closest('[data-action]');if(!b)return;var a=b.dataset.action,recordId=b.dataset.id;
     if(a==='close-modal'){closeModal();return;}
+    if(a==='lookup-cep'||a==='lookup-cnpj'){lookupRegistration(b,a.substring(7));return;}
+    if(a==='check-focus'){checkFocusConnection(b);return;}
     if(a==='configure-company'){openCompanyEditor();return;}
     if(a==='check-connection'){checkConnection();return;}
     if(a==='logout'){window.location.assign('/logout');return;}

@@ -34,9 +34,19 @@ A configuração de deploy libera **somente** as duas variáveis públicas `NEXT
 - `app/login/page.tsx`: login e cadastro com Supabase Auth.
 - `app/auth/callback/route.ts`: confirmação de e-mail.
 - `app/api/*`: endpoints Next.js com autenticação no servidor.
+- `app/api/lookup/route.ts`: consulta de CEP (ViaCEP) e CNPJ (BrasilAPI), com validação e prazo de resposta.
 - `lib/supabase/server.ts`: sessão por cookies.
 - `lib/jvg-backend.ts`: acesso seguro e filtrado ao banco.
 - `public/erp/`: dashboard, estilos e cadastros da versão piloto.
+
+### Etapa 8 — telas responsivas e consultas cadastrais
+
+- O dashboard adapta a barra lateral para o modo recolhido em telas menores; a tabela pode rolar horizontalmente sem deslocar a página toda.
+- Formulários grandes preservam cabeçalho e botões de salvar visíveis enquanto os campos têm rolagem própria, inclusive em notebooks de pouca altura.
+- Na edição da empresa, os botões **Consultar** ao lado de CNPJ e CEP sugerem dados públicos de razão social, endereço e código IBGE. Na tela **Clientes**, a busca de CNPJ é para pessoa jurídica, e a de CEP completa o endereço do destinatário.
+- A consulta de CNPJ usa a **BrasilAPI**, que agrega informações cadastrais públicas, e não constitui consulta direta ou oficial à Receita Federal. A de CEP usa o **ViaCEP**. Ambas podem ficar indisponíveis e nunca substituem a conferência dos dados com o cliente e o contador.
+- Dados retornados apenas preenchem o formulário: **o usuário precisa conferir e salvar**. Tokens e credenciais do Supabase/Focus não entram em requisições do navegador para esses provedores.
+- O endereço do cliente é salvo no JSONB já existente (`jvg_parties.address`). A migração `20261106_jvg_etapa8_cnpj_alfanumerico_clientes.sql` permite armazenar o novo CNPJ alfanumérico no cadastro de clientes, com validação dos dígitos no backend.
 
 ### Etapa 6 — cadastro fiscal do emitente
 
@@ -51,6 +61,7 @@ O CNPJ aceita os formatos numérico e alfanumérico em vigor desde julho de 2026
 1. No painel da Focus, cadastre o CNPJ real da empresa, envie o certificado A1 com senha por conexão segura e habilite NF-e em homologação. Confira IE, credenciamento, série e próxima numeração com o contador.
 2. Configure as duas variáveis `JVG_FOCUS_*` acima no painel da Netlify (Builds e Functions). Não coloque token ou arquivo de certificado no GitHub.
 3. Acesse `GET /api/focus/status` após entrar com o usuário da empresa piloto. `token_valid` significa somente autenticação aceita na consulta de uma referência inexistente: **não comprova certificado, autorização SEFAZ ou prontidão fiscal**.
+   O painel **Configurações → Focus NFe · Homologação** e a **Central de notas fiscais** agora exibem um botão para fazer esta verificação sem conhecer o token.
 4. Próxima fase: cadastro fiscal completo de emitente/destinatário/produtos, motor de validações e NF-e de teste com referência idempotente, depois consulta de resultado, XML, DANFE e eventos.
 
 Esse endpoint de validação não emite, cancela nem altera documentos. A emissão continuará bloqueada até os requisitos fiscais estarem conferidos. O token de homologação é exclusivo da empresa piloto; cada empresa comercial precisará de credenciais próprias e isolamento por tenant.

@@ -1,5 +1,6 @@
 import { getJvgUser } from "../../jvg-auth";
 import { apiJson, dbRequest, filterEq, getCompany, getSiteAccount, isSameOrigin, JvgBackendError, positiveMoney, safeError, str, type SiteAccount } from "../../../lib/jvg-backend";
+import { fiscalAddress, validCnpj } from "../../../lib/fiscal-company";
 
 export const dynamic = "force-dynamic";
 
@@ -35,16 +36,17 @@ function buildRow(kind: RecordKind, input: Record<string, unknown>, account: Sit
   }
   if (kind === "client") {
     const displayName = str(input.name, 160), type = input.type;
-    const document = str(input.document, 22).replace(/\D/g, "");
+    const document = str(input.document, 22).toUpperCase().replace(/[^A-Z0-9]/g, "");
     if (!displayName) throw new JvgBackendError("Nome é obrigatório.", 400);
-    if (document && ![11,14].includes(document.length)) throw new JvgBackendError("CPF/CNPJ inválido.", 400);
-    if (document && ((type === "PF" && document.length !== 11) || (type === "PJ" && document.length !== 14)))
+    if (type === "PF" && document && !/^\d{11}$/.test(document))
       throw new JvgBackendError("Documento incompatível com o tipo de pessoa.", 400);
+    if (type === "PJ" && document && !validCnpj(document))
+      throw new JvgBackendError("CNPJ inválido: confira os caracteres e dígitos verificadores.", 400);
     const documentType = type === "PF" ? "cpf" : type === "EXT" ? "foreign" : "cnpj";
     return { ...base, display_name: displayName, document_type: documentType,
       document_number: document || null, email: str(input.email, 160) || null,
       phone: str(input.phone, 25) || null,
-      address: { city: str(input.city, 90), state: str(input.state, 2).toUpperCase() },
+      address: fiscalAddress(input),
       is_customer: true, active: input.active !== false };
   }
   const code = str(input.code, 40), name = str(input.name, 160);
@@ -85,8 +87,10 @@ export async function GET() {
       clients: parties.map(p => {
         const address = p.address && typeof p.address === "object" ? p.address as Record<string, unknown> : {};
         return { id: p.id, name: p.display_name, type: p.document_type === "cpf" ? "PF" : p.document_type === "foreign" ? "EXT" : "PJ",
-          document: p.document_number || "", email: p.email || "", phone: p.phone || "", city: address.city || "",
-          state: address.state || "", active: p.active };
+          document: p.document_number || "", email: p.email || "", phone: p.phone || "",
+          street: address.street || "", number: address.number || "", complement: address.complement || "",
+          district: address.district || "", postalCode: address.postalCode || "", cityCode: address.cityCode || "",
+          city: address.city || "", state: address.state || "", active: p.active };
       }),
       services: services.map(p => ({ id: p.id, code: p.code, name: p.name, description: p.description || "",
         lc116: p.national_service_code || "", nbs: p.nbs || "", price: Number(p.sale_price), active: p.active })),
