@@ -42,6 +42,15 @@ export async function dbRequest<T = unknown>(path: string, init: RequestInit = {
 
 export function filterEq(value: string): string { return encodeURIComponent(`eq.${value}`); }
 
+/** Acesso global e separado da empresa: so apos verificacao do email no Auth. */
+export async function getPlatformRole(user: JvgAuthUser): Promise<"platform_admin" | null> {
+  const role = await dbRequest<string | null>("/rest/v1/rpc/jvg_claim_platform_admin", {
+    method: "POST",
+    body: JSON.stringify({ p_user_id: user.userId, p_email: user.email }),
+  });
+  return role === "platform_admin" ? role : null;
+}
+
 export async function getSiteAccount(user: JvgAuthUser): Promise<SiteAccount | null> {
   const result = await dbRequest<SiteAccount[]>(
     `/rest/v1/jvg_company_memberships?user_id=${filterEq(user.userId)}&active=eq.true&select=tenant_id,company_id&order=created_at.asc&limit=1`,

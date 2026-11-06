@@ -136,6 +136,7 @@
       var response=await fetch('/api/session',{credentials:'same-origin',cache:'no-store'}),status=await response.json();
       if(response.status===401&&status.status==='sign_in_required'){window.location.replace('/login');return;}
       if(!response.ok)throw new Error(status.error||'Erro de conexão.');
+      if(status.status==='admin_ready'){window.location.replace('/admin');return;}
       cloud={status:status.status,displayName:status.displayName||'',company:status.company||null};
       if(cloud.status==='ready')await refreshCloud();
       else render();
