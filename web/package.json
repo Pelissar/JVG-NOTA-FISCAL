@@ -9,6 +9,7 @@
     "install:ci": "bash scripts/install-pnpm.sh",
     "dev": "next dev",
     "build": "next build && node scripts/purge-turbopack-cache.mjs",
+    "test:nfe": "node --experimental-strip-types --test scripts/nfe-draft.test.mjs",
     "start": "next start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"

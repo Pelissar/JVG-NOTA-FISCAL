@@ -89,3 +89,16 @@ Leia também o [README da raiz](../README.md) para o procedimento de publicaçã
 6. **Qualidade e entrega:** testes automatizados end-to-end e de integração, homologação com dados fictícios, telemetria, alertas, limites de requisição, reprocessamento e infraestrutura para o futuro EXE conectado ao servidor.
 
 Nenhum módulo deve ser apresentado como autorizado para emissão real antes de seus respectivos testes e credenciamentos.
+
+### Etapa 9 — rascunhos NF-e em homologação (sem transmissão)
+
+No painel, abra **Notas fiscais → Abrir rascunhos NF-e** ou vá a `/erp/nfe-drafts.html` após o login. A nova tela usa produtos e destinatários ativos já cadastrados e salva no Supabase via `/api/fiscal/nfe-drafts`.
+
+- **GET**: lista até 50 documentos NF-e da empresa autenticada, somente em homologação.
+- **POST**: valida destinatário e produtos contra os vínculos de `tenant_id` e `company_id`, verifica quantidade/preço/CFOP/CSOSN e guarda uma cópia de referência em `jvg_fiscal_documents.fiscal_payload` com estado `draft`.
+- Valores comerciais são calculados em centavos. A série e numeração não são reservadas nesta fase; o registro não possui referência Focus, chave de acesso ou XML.
+- Pendências de documento, NCM, CFOP, CSOSN e cálculos tributários aparecem para revisão. O fluxo inicial atende ao emitente piloto do **Simples Nacional**, sem pretender decidir tributos automaticamente.
+- Não há endpoint de autorização, cancelamento ou envio à Focus nesta etapa. Nenhum token ou certificado é enviado pelo navegador.
+- Requer a tabela `jvg_fiscal_documents` da migração base já aplicada. A criação fica bloqueada se empresa, destinatário ou produtos não forem válidos/ativos.
+
+Execute `pnpm test:nfe` para conferir as validações básicas. Antes de liberar transmissão real: validar tabela fiscal e regras IBS/CBS com contador, gerenciar numeração idempotente, integrar as respostas assíncronas da Focus, webhooks e arquivos XML/DANFE.
