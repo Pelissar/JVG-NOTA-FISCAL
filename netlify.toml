@@ -6,5 +6,9 @@
 [build.environment]
   NODE_VERSION = "22"
 
-# A Netlify usa o adaptador OpenNext automatico para Next.js.
+# O repositorio tambem contem ferramentas antigas de Vite/Cloudflare.
+# Ativar o adaptador Next.js explicitamente impede deploy estatico da pasta .next.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
 # Configure as chaves no painel da Netlify, nunca neste arquivo.

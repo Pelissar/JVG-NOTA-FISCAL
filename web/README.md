@@ -2,6 +2,8 @@
 
 Versão piloto Next.js para publicação na Netlify.
 
+O adaptador `@netlify/plugin-nextjs` está fixado em `package.json` e ativado no `netlify.toml` da raiz. Ele é indispensável para gerar as funções de servidor (Auth e API); publicar somente os arquivos de `.next` resulta em 404.
+
 ## Iniciar localmente
 
 ```bash
