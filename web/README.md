@@ -25,6 +25,8 @@ Não coloque valores reais em `.env.example` ou em arquivos versionados. Use `.e
 
 Na Netlify, **não crie `JVG_SUPABASE_URL`**: esta variável antiga não é utilizada. Configure apenas `NEXT_PUBLIC_SUPABASE_URL` com a URL do projeto (sem marcar como segredo), `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` como pública, e `JVG_SUPABASE_SECRET_KEY` como segredo no servidor. A URL e a chave publicável são destinadas ao navegador; a chave secreta nunca deve ser exposta.
 
+A configuração de deploy libera **somente** as duas variáveis públicas `NEXT_PUBLIC_` da detecção de segredos da Netlify, pois o Next.js as incorpora legitimamente nos arquivos do navegador. O scanner permanece ativo para `JVG_SUPABASE_SECRET_KEY` e para possíveis outros segredos.
+
 ## Componentes principais
 
 - `app/login/page.tsx`: login e cadastro com Supabase Auth.

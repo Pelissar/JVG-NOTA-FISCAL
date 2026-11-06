@@ -5,6 +5,9 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  # Ambos os valores NEXT_PUBLIC_ sao expostos ao navegador por design.
+  # A chave JVG_SUPABASE_SECRET_KEY continua sujeita a verificacao de segredos.
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
 
 # O repositorio tambem contem ferramentas antigas de Vite/Cloudflare.
 # Ativar o adaptador Next.js explicitamente impede deploy estatico da pasta .next.
