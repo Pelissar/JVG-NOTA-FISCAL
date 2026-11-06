@@ -60,7 +60,7 @@ O CNPJ aceita os formatos numérico e alfanumérico em vigor desde julho de 2026
 ### Focus NFe — passo de homologação
 
 1. No painel da Focus, cadastre o CNPJ real da empresa, envie o certificado A1 com senha por conexão segura e habilite NF-e em homologação. Confira IE, credenciamento, série e próxima numeração com o contador.
- 2. Configure as duas variáveis `JVG_FOCUS_*` acima no painel da Netlify com **escopo Functions** (servidor), no ambiente Production. Evite conceder escopo Builds para o token; a compilação não precisa conhecê-lo. Não coloque token ou certificado no GitHub.
+2. Configure as duas variáveis `JVG_FOCUS_*` acima no painel da Netlify, no ambiente Production. **Se o plano permitir separar escopos**, use apenas **Functions** para o token; a compilação não precisa conhecê-lo. Em planos sem controle de escopo, mantenha os valores nas variáveis privadas da Netlify. Não coloque token ou certificado no GitHub.
 3. Acesse `GET /api/focus/status` após entrar com o usuário da empresa piloto. `token_valid` significa somente autenticação aceita na consulta de uma referência inexistente: **não comprova certificado, autorização SEFAZ ou prontidão fiscal**.
    O painel **Configurações → Focus NFe · Homologação** e a **Central de notas fiscais** agora exibem um botão para fazer esta verificação sem conhecer o token.
    Se a empresa autenticada não corresponder ao UUID em `JVG_FOCUS_PILOT_COMPANY_ID`, o painel mostra o UUID **da própria empresa logada** para conferir na Netlify. O UUID de outra empresa e o token não são revelados.
