@@ -1,11 +1,10 @@
 import { jvgRuntime } from "./jvg-runtime";
 import type { JvgAuthUser } from "../app/jvg-auth";
+import { fiscalMissing } from "./fiscal-company";
+import { JvgBackendError } from "./jvg-errors";
+export { JvgBackendError } from "./jvg-errors";
 
-export type SiteAccount = { tenant_id: string; company_id: string };
-
-export class JvgBackendError extends Error {
-  constructor(message: string, public status = 500) { super(message); }
-}
+export type SiteAccount = { tenant_id: string; company_id: string; role?: string };
 
 export function isConfigured(): boolean {
   const runtime = jvgRuntime();
@@ -53,7 +52,7 @@ export async function getPlatformRole(user: JvgAuthUser): Promise<"platform_admi
 
 export async function getSiteAccount(user: JvgAuthUser): Promise<SiteAccount | null> {
   const result = await dbRequest<SiteAccount[]>(
-    `/rest/v1/jvg_company_memberships?user_id=${filterEq(user.userId)}&active=eq.true&select=tenant_id,company_id&order=created_at.asc&limit=1`,
+    `/rest/v1/jvg_company_memberships?user_id=${filterEq(user.userId)}&active=eq.true&select=tenant_id,company_id,role&order=created_at.asc&limit=1`,
   );
   return result[0] ?? null;
 }
@@ -71,11 +70,14 @@ export async function ensureSiteAccount(user: JvgAuthUser, companyName: string):
   return list[0];
 }
 
-export async function getCompany(account: SiteAccount) {
+export async function getCompany(account: SiteAccount): Promise<(Record<string, unknown> & { fiscal_missing: string[]; fiscal_profile_complete: boolean }) | null> {
   const rows = await dbRequest<Array<Record<string, unknown>>>(
-    `/rest/v1/jvg_companies?tenant_id=${filterEq(account.tenant_id)}&id=${filterEq(account.company_id)}&select=id,legal_name,trade_name,cnpj,state_registration,municipal_registration,tax_regime,status,address&limit=1`,
+    `/rest/v1/jvg_companies?tenant_id=${filterEq(account.tenant_id)}&id=${filterEq(account.company_id)}&select=id,legal_name,trade_name,cnpj,state_registration,municipal_registration,tax_regime,status,address,cnae,fiscal_email,fiscal_phone,nfe_series_homologacao,nfe_next_number_homologacao&limit=1`,
   );
-  return rows[0] ?? null;
+  const company = rows[0];
+  if (!company) return null;
+  const missing = fiscalMissing(company);
+  return { ...company, fiscal_missing: missing, fiscal_profile_complete: missing.length === 0 };
 }
 
 export function apiJson(data: unknown, status = 200): Response {

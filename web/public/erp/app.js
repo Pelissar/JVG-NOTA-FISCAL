@@ -98,10 +98,12 @@
   }
   function settings(){
     var ready=cloud.status==='ready';
-    var items=[['Usuário identificado',cloud.displayName||'Aguardando verificação'],['Empresa',state.companyName||'Empresa piloto'],['Banco de dados',ready?'Supabase conectado':cloud.status==='needs_company'?'Aguardando cadastro da empresa':'Aguardando chave do servidor'],['Dados dos cadastros',ready?'Persistidos no Supabase':'Somente neste navegador'],['Regime da empresa piloto','Simples Nacional'],['Focus NFe','Homologação em preparação'],['Certificado A1','Pendente'],['Emissão oficial','Bloqueada até habilitação fiscal']];
+    var missing=ready&&cloud.company&&Array.isArray(cloud.company.fiscal_missing)?cloud.company.fiscal_missing:[];
+    var items=[['Usuário identificado',cloud.displayName||'Aguardando verificação'],['Empresa',state.companyName||'Empresa piloto'],['Banco de dados',ready?'Supabase conectado':cloud.status==='needs_company'?'Aguardando cadastro da empresa':'Aguardando chave do servidor'],['Dados dos cadastros',ready?'Persistidos no Supabase':'Somente neste navegador'],['Regime da empresa piloto','Simples Nacional'],['Cadastro fiscal',ready?(missing.length?missing.length+' informação(ões) pendente(s)':'Dados preenchidos · revisão fiscal necessária'):'Aguardando empresa'],['Focus NFe','Homologação em preparação'],['Certificado A1','Validar no painel da Focus'],['Emissão oficial','Bloqueada até habilitação fiscal']];
     var action=ready?'<button class="btn primary" data-action="configure-company">'+ico('edit')+' Editar empresa</button>':cloud.status==='needs_company'?'<button class="btn primary" data-action="configure-company">'+ico('plus')+' Cadastrar empresa piloto</button>':'<button class="btn" data-action="check-connection">'+ico('check')+' Verificar conexão</button>';
     return heading('Configurações','Sua conta, empresa piloto e integração segura com a Focus.')+banner()+
-      '<section class="panel wide-info"><div class="panel-head"><div><h2>Etapa 3 · Conta e banco de dados</h2><p>Autenticação do site e cadastro multiempresa</p></div></div><div class="panel-body"><div class="info-list">'+items.map(function(x){return '<div class="info-row"><span>'+h(x[0])+'</span><strong>'+h(x[1])+'</strong></div>';}).join('')+'</div>'+
+      '<section class="panel wide-info"><div class="panel-head"><div><h2>Etapa 6 · Cadastro fiscal do emitente</h2><p>Dados da empresa para preparar a NF-e em homologação</p></div></div><div class="panel-body"><div class="info-list">'+items.map(function(x){return '<div class="info-row"><span>'+h(x[0])+'</span><strong>'+h(x[1])+'</strong></div>';}).join('')+'</div>'+
+      (ready&&missing.length?'<p class="small-note" style="margin-top:16px">Preencha: '+missing.map(h).join(', ')+'.</p>':ready?'<p class="small-note" style="margin-top:16px">Dados preenchidos. Ainda é obrigatória a conferência com o contador e com a Focus antes de qualquer emissão.</p>':'')+
       '<div class="heading-actions" style="margin-top:24px">'+action+(ready?'<button class="btn" data-action="logout">Sair da conta</button>':'<button class="btn danger" data-action="reset-demo">Restaurar demonstração</button>')+'</div>'+
       '<p class="small-note" style="margin-top:16px">Tokens Focus e certificado A1 não são solicitados nesta página. A chave JVG_SUPABASE_SECRET_KEY precisa existir apenas nos segredos privados do servidor de hospedagem; nunca cole essa chave em um campo do site.</p></div></section>';
   }
@@ -142,13 +144,36 @@
       else render();
     }catch(error){cloud.status='error';render();toast('Não foi possível verificar a conexão: '+error.message,'error');}
   }
+  function companyFiscalFields(company){
+    var a=company.address||{};
+    return '<div class="field full"><strong>Identificação e contato fiscal</strong></div>'+
+      field('tradeName','Nome fantasia',company.trade_name||'','maxlength="160"',false)+
+      field('cnpj','CNPJ (numérico ou alfanumérico)',company.cnpj||'','maxlength="18" placeholder="00.000.000/0000-00"',false)+
+      field('stateRegistration','Inscrição Estadual (IE)',company.state_registration||'','maxlength="40"',false)+
+      field('municipalRegistration','Inscrição Municipal',company.municipal_registration||'','maxlength="40"',false)+
+      field('cnae','CNAE principal (7 dígitos)',company.cnae||'','inputmode="numeric" maxlength="10"',false)+
+      field('fiscalEmail','E-mail fiscal',company.fiscal_email||'','type="email" maxlength="254"',false)+
+      field('fiscalPhone','Telefone com DDD',company.fiscal_phone||'','inputmode="tel" maxlength="24"',false)+
+      '<div class="field full"><strong>Endereço fiscal da empresa</strong></div>'+
+      field('street','Logradouro',a.street||'','maxlength="160"',true)+
+      field('number','Número',a.number||'','maxlength="20"',false)+
+      field('complement','Complemento',a.complement||'','maxlength="100"',false)+
+      field('district','Bairro',a.district||'','maxlength="100"',false)+
+      field('city','Município',a.city||'','maxlength="100"',false)+
+      field('state','UF',a.state||'','maxlength="2" placeholder="SP"',false)+
+      field('postalCode','CEP (8 dígitos)',a.postalCode||'','inputmode="numeric" maxlength="9"',false)+
+      field('cityCode','Código IBGE do município (7 dígitos)',a.cityCode||'','inputmode="numeric" maxlength="7"',false)+
+      '<div class="field full"><strong>Numeração planejada para NF-e de homologação</strong></div>'+
+      field('nfeSeries','Série',company.nfe_series_homologacao==null?1:company.nfe_series_homologacao,'type="number" min="1" max="999"',false)+
+      field('nfeNextNumber','Próximo número',company.nfe_next_number_homologacao==null?1:company.nfe_next_number_homologacao,'type="number" min="1" max="999999999"',false);
+  }
   function openCompanyEditor(){
     if(!['needs_company','ready'].includes(cloud.status)){toast('Aguarde a configuração segura do servidor.','error');return;}
     var company=cloud.company||{},existing=cloud.status==='ready';
     modalRoot.innerHTML='<div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><h2 id="modalTitle">'+(existing?'Editar empresa piloto':'Cadastrar minha empresa piloto')+'</h2><p>Seus dados serão vinculados somente à sua conta.</p></div><button class="icon-btn" type="button" data-action="close-modal">'+ico('x')+'</button></div><form id="companyForm"><div class="modal-body"><div class="form-grid">'+
       field('legalName','Razão social ou nome da empresa *',company.legal_name||'','required maxlength="160"',true)+
-      (existing?field('tradeName','Nome fantasia',company.trade_name||'','maxlength="160"',false)+field('cnpj','CNPJ (opcional até concluir cadastro)',company.cnpj||'','inputmode="numeric" maxlength="18"',false)+field('stateRegistration','Inscrição Estadual',company.state_registration||'','maxlength="40"',false)+field('municipalRegistration','Inscrição Municipal',company.municipal_registration||'','maxlength="40"',false):'')+
-      '</div><p class="small-note">Regime selecionado: Simples Nacional. Homologação Focus e certificado serão concluídos depois.</p></div><div class="modal-footer"><small>* Obrigatório</small><div class="modal-footer-actions"><button class="btn" type="button" data-action="close-modal">Cancelar</button><button class="btn primary" type="submit">Salvar empresa</button></div></div></form></div></div>';
+      (existing?companyFiscalFields(company):'')+
+      '</div><p class="small-note" style="margin-top:16px">Regime piloto: Simples Nacional. Salvar este cadastro não transmite NF-e. Confira os dados com seu contador e a numeração com a Focus.</p></div><div class="modal-footer"><small>* Obrigatório</small><div class="modal-footer-actions"><button class="btn" type="button" data-action="close-modal">Cancelar</button><button class="btn primary" type="submit">Salvar empresa</button></div></div></form></div></div>';
     document.getElementById('modalBackdrop').addEventListener('click',function(e){if(e.target.id==='modalBackdrop')closeModal();});
     modalRoot.querySelector('[name]').focus();
   }

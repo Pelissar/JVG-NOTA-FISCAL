@@ -38,6 +38,12 @@ A configuração de deploy libera **somente** as duas variáveis públicas `NEXT
 - `lib/jvg-backend.ts`: acesso seguro e filtrado ao banco.
 - `public/erp/`: dashboard, estilos e cadastros da versão piloto.
 
+### Etapa 6 — cadastro fiscal do emitente
+
+No painel web, vá em **Configurações → Editar empresa** para informar CNPJ, IE, IM, CNAE, contato fiscal, endereço completo com CEP/código IBGE e série/numeração planejada da NF-e de homologação. Os campos ficam em `public.jvg_companies`, com endereço em `address` (JSONB), sob autenticação e vínculo com a empresa.
+
+O CNPJ aceita os formatos numérico e alfanumérico em vigor desde julho de 2026, com validação de dígitos verificadores pela regra da Receita Federal (ASCII - 48, módulo 11). O sistema permite **rascunhos incompletos**, mas apresenta a lista de campos pendentes. Dados preenchidos não representam autorização fiscal: emissão permanece desativada até revisão do contador e credenciamento Focus/SEFAZ.
+
 **Estado fiscal:** a transmissão pela Focus NFe permanece desativada. Não há emissão real de NF-e/NFS-e nesta versão.
 
 ### Focus NFe — passo de homologação
