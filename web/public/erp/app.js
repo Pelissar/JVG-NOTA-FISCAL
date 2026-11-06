@@ -205,13 +205,16 @@
         rate_limited:'A Focus limitou as consultas. Aguarde alguns minutos.',
         provider_unavailable:'Não foi possível acessar a Focus agora. Tente novamente.',
         waiting_focus_token:'Falta configurar JVG_FOCUS_HOMOLOGACAO_TOKEN na Netlify.',
-        focus_not_enabled_for_company:'Empresa piloto não autorizada. Configure JVG_FOCUS_PILOT_COMPANY_ID com o UUID correto.',
+        waiting_focus_company_id:'Falta configurar JVG_FOCUS_PILOT_COMPANY_ID na Netlify (ambiente Production).',
+        focus_not_enabled_for_company:'O UUID da empresa logada é diferente do configurado na Netlify. Confira JVG_FOCUS_PILOT_COMPANY_ID e faça um novo deploy.',
         needs_company:'Cadastre sua empresa antes de verificar a Focus.',
         supabase_not_configured:'A conexão com o Supabase ainda não está pronta.',
         sign_in_required:'Faça login para verificar a Focus.',
         unexpected_response:'A Focus respondeu de forma inesperada. Verifique a configuração com o suporte.'
       };
       focusMessage=messages[status]||(data.error||'Não foi possível verificar a Focus.');
+      if(data.currentCompanyId&&['waiting_focus_company_id','focus_not_enabled_for_company'].includes(status))
+        focusMessage+=' UUID desta empresa: '+data.currentCompanyId;
     }catch(error){focusMessage='Falha temporária ao consultar a Focus: '+error.message;}
     finally{
       document.querySelectorAll('[data-focus-result]').forEach(function(el){el.textContent=focusMessage;});

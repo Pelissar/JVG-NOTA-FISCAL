@@ -45,6 +45,7 @@ A configuração de deploy libera **somente** as duas variáveis públicas `NEXT
 - Formulários grandes preservam cabeçalho e botões de salvar visíveis enquanto os campos têm rolagem própria, inclusive em notebooks de pouca altura.
 - Na edição da empresa, os botões **Consultar** ao lado de CNPJ e CEP sugerem dados públicos de razão social, endereço e código IBGE. Na tela **Clientes**, a busca de CNPJ é para pessoa jurídica, e a de CEP completa o endereço do destinatário.
 - A consulta de CNPJ usa a **BrasilAPI**, que agrega informações cadastrais públicas, e não constitui consulta direta ou oficial à Receita Federal. A de CEP usa o **ViaCEP**. Ambas podem ficar indisponíveis e nunca substituem a conferência dos dados com o cliente e o contador.
+- Em caso de falha do primeiro serviço, o CEP tenta a BrasilAPI e o CNPJ numérico tenta a API pública CNPJ.ws (com limite próprio de consultas). O erro diferencia ausência de cadastro e indisponibilidade dos provedores. O preenchimento manual continua disponível.
 - Dados retornados apenas preenchem o formulário: **o usuário precisa conferir e salvar**. Tokens e credenciais do Supabase/Focus não entram em requisições do navegador para esses provedores.
 - O endereço do cliente é salvo no JSONB já existente (`jvg_parties.address`). A migração `20261106_jvg_etapa8_cnpj_alfanumerico_clientes.sql` permite armazenar o novo CNPJ alfanumérico no cadastro de clientes, com validação dos dígitos no backend.
 
@@ -62,6 +63,7 @@ O CNPJ aceita os formatos numérico e alfanumérico em vigor desde julho de 2026
 2. Configure as duas variáveis `JVG_FOCUS_*` acima no painel da Netlify (Builds e Functions). Não coloque token ou arquivo de certificado no GitHub.
 3. Acesse `GET /api/focus/status` após entrar com o usuário da empresa piloto. `token_valid` significa somente autenticação aceita na consulta de uma referência inexistente: **não comprova certificado, autorização SEFAZ ou prontidão fiscal**.
    O painel **Configurações → Focus NFe · Homologação** e a **Central de notas fiscais** agora exibem um botão para fazer esta verificação sem conhecer o token.
+   Se a empresa autenticada não corresponder ao UUID em `JVG_FOCUS_PILOT_COMPANY_ID`, o painel mostra o UUID **da própria empresa logada** para conferir na Netlify. O UUID de outra empresa e o token não são revelados.
 4. Próxima fase: cadastro fiscal completo de emitente/destinatário/produtos, motor de validações e NF-e de teste com referência idempotente, depois consulta de resultado, XML, DANFE e eventos.
 
 Esse endpoint de validação não emite, cancela nem altera documentos. A emissão continuará bloqueada até os requisitos fiscais estarem conferidos. O token de homologação é exclusivo da empresa piloto; cada empresa comercial precisará de credenciais próprias e isolamento por tenant.

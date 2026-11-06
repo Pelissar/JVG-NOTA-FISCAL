@@ -14,8 +14,15 @@ export async function GET() {
     if (!account) return apiJson({ status: "needs_company" }, 403);
 
     const pilotCompany = process.env.JVG_FOCUS_PILOT_COMPANY_ID?.trim();
-    if (!pilotCompany || pilotCompany !== account.company_id) {
-      return apiJson({ status: "focus_not_enabled_for_company", environment: "homologacao", emissionEnabled: false }, 403);
+    if (!pilotCompany) {
+      return apiJson({ status: "waiting_focus_company_id", currentCompanyId: account.company_id,
+        environment: "homologacao", emissionEnabled: false });
+    }
+    if (pilotCompany !== account.company_id) {
+      // Revela apenas o id da propria empresa autenticada, nunca o id configurado
+      // no segredo do servidor (que poderia pertencer a outro cliente).
+      return apiJson({ status: "focus_not_enabled_for_company", currentCompanyId: account.company_id,
+        environment: "homologacao", emissionEnabled: false }, 403);
     }
 
     const token = process.env.JVG_FOCUS_HOMOLOGACAO_TOKEN?.trim();
