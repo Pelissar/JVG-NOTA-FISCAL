@@ -8,12 +8,14 @@ export class JvgBackendError extends Error {
 }
 
 export function isConfigured(): boolean {
-  return !!jvgRuntime().supabaseSecretKey;
+  const runtime = jvgRuntime();
+  return !!runtime.supabaseUrl && !!runtime.supabaseSecretKey;
 }
 
 export async function dbRequest<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
   const runtime = jvgRuntime();
   const secret = runtime.supabaseSecretKey;
+  if (!runtime.supabaseUrl) throw new JvgBackendError("URL do Supabase ainda não configurada.", 503);
   if (!secret) throw new JvgBackendError("Chave privada do Supabase ainda não configurada.", 503);
   if (!path.startsWith("/rest/v1/") || path.includes("..")) throw new JvgBackendError("Consulta inválida.", 400);
   const headers = new Headers(init.headers);

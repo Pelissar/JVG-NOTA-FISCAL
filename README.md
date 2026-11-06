@@ -29,7 +29,7 @@ A versão atual usa Supabase Auth com sessão por cookies e funciona como aplica
 
 ## Configuração e segurança
 
-- O banco é o Supabase: `https://gkhxcuysqyvnkdkzsxxm.supabase.co`.
+- O banco Supabase é definido pela variável de ambiente `NEXT_PUBLIC_SUPABASE_URL`.
 - Na Netlify configure `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (ambas públicas) e `JVG_SUPABASE_SECRET_KEY` como **segredo de servidor**. Veja `web/.env.example`.
 - Tokens da Focus NFe e certificado A1 **não** são parte do código-fonte e não devem ser publicados.
 - A emissão fiscal ainda não foi habilitada. A integração com a Focus depende de configuração segura e homologação.
