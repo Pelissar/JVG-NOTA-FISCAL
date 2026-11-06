@@ -22,7 +22,7 @@ export async function dbRequest<T = unknown>(path: string, init: RequestInit = {
   if (secret.split(".").length === 3) headers.set("Authorization", `Bearer ${secret}`);
   headers.set("Accept", "application/json");
   if (init.body) headers.set("Content-Type", "application/json");
-  if (init.method && init.method !== "GET") headers.set("Prefer", "return=representation");
+  if (init.method && init.method !== "GET" && !headers.has("Prefer")) headers.set("Prefer", "return=representation");
   const response = await fetch(`${runtime.supabaseUrl}${path}`, {
     ...init, headers, cache: "no-store",
   });

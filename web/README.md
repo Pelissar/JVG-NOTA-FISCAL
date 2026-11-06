@@ -61,9 +61,8 @@ O CNPJ aceita os formatos numérico e alfanumérico em vigor desde julho de 2026
 
 1. No painel da Focus, cadastre o CNPJ real da empresa, envie o certificado A1 com senha por conexão segura e habilite NF-e em homologação. Confira IE, credenciamento, série e próxima numeração com o contador.
 2. Configure as duas variáveis `JVG_FOCUS_*` acima no painel da Netlify, no ambiente Production. **Se o plano permitir separar escopos**, use apenas **Functions** para o token; a compilação não precisa conhecê-lo. Em planos sem controle de escopo, mantenha os valores nas variáveis privadas da Netlify. Não coloque token ou certificado no GitHub.
-3. Acesse `GET /api/focus/status` após entrar com o usuário da empresa piloto. `token_valid` significa somente autenticação aceita na consulta de uma referência inexistente: **não comprova certificado, autorização SEFAZ ou prontidão fiscal**.
-   O painel **Configurações → Focus NFe · Homologação** e a **Central de notas fiscais** agora exibem um botão para fazer esta verificação sem conhecer o token.
-   Se a empresa autenticada não corresponder ao UUID em `JVG_FOCUS_PILOT_COMPANY_ID`, o painel mostra o UUID **da própria empresa logada** para conferir na Netlify. O UUID de outra empresa e o token não são revelados.
+3. Somente o administrador da plataforma pode consultar `GET /api/focus/status`, após login e com vínculo à empresa piloto. `token_valid` significa somente autenticação aceita na consulta de uma referência inexistente: **não comprova certificado, autorização SEFAZ ou prontidão fiscal**.
+   O botão de diagnóstico e o nome do fornecedor foram retirados do painel comum e da central fiscal. Os dados de diagnóstico ficam restritos à administração; o UUID de outra empresa e o token não são revelados.
 4. Próxima fase: cadastro fiscal completo de emitente/destinatário/produtos, motor de validações e NF-e de teste com referência idempotente, depois consulta de resultado, XML, DANFE e eventos.
 
 Esse endpoint de validação não emite, cancela nem altera documentos. A emissão continuará bloqueada até os requisitos fiscais estarem conferidos. O token de homologação é exclusivo da empresa piloto; cada empresa comercial precisará de credenciais próprias e isolamento por tenant.
@@ -102,3 +101,14 @@ No painel, abra **Notas fiscais → Abrir rascunhos NF-e** ou vá a `/erp/nfe-dr
 - Requer a tabela `jvg_fiscal_documents` da migração base já aplicada. A criação fica bloqueada se empresa, destinatário ou produtos não forem válidos/ativos.
 
 Execute `pnpm test:nfe` para conferir as validações básicas. Antes de liberar transmissão real: validar tabela fiscal e regras IBS/CBS com contador, gerenciar numeração idempotente, integrar as respostas assíncronas da Focus, webhooks e arquivos XML/DANFE.
+
+### Etapa 10 — catálogo CFOP com personalização por empresa
+
+No painel privado, abra **Tabela CFOP** na barra lateral ou **Notas fiscais → Consultar CFOP**. A página `/erp/cfop.html` permite pesquisar por código, título, nota explicativa e grupo (entradas e saídas); exibe a nota explicativa oficial completa. O rascunho NF-e tem sugestões dos códigos disponíveis.
+
+- São **619 CFOPs**, importados da **Tabela CFOP do Portal Nacional da NF-e, Informe Técnico 2023.002 v2.10, publicada em 04/09/2026**. Fonte oficial: <https://www.nfe.fazenda.gov.br/portal/listaConteudo.aspx?tipoConteudo=0q5q+Cu5ZJ8=>. A cópia versionada está em `data/cfop-official-2026.json`, com URL de origem, data e hash SHA-256 do XLSX. O importador `scripts/import-cfop-official.py` utiliza `openpyxl` e verifica códigos únicos e colunas obrigatórias. **Atualizações oficiais futuras exigem revisão e nova importação; não são automáticas.**
+- O backend oferece `GET /api/fiscal/cfop` (catálogo e personalizações), `POST /api/fiscal/cfop` (salvar apelido) e `DELETE /api/fiscal/cfop?code=...` (restaurar padrão), sempre com autenticação, filtro de empresa e verificação de permissão. A interface permite renomear **apenas o nome interno**, nunca o código, título ou descrição fiscal oficial.
+- Os apelidos ficam na tabela `public.jvg_cfop_overrides`, com chave `(tenant_id, company_id, code)`, referência obrigatória à empresa e **RLS**. Aplicar uma vez a migração `supabase/migrations/20261106_jvg_etapa10_cfop_personalizado.sql` no Supabase do projeto antes de editar apelidos. Se a migração não estiver aplicada, o catálogo oficial fica consultável, mas sem salvar personalizações.
+- Há validação de código oficial no servidor, separação de registros por empresa e acesso de escrita limitado a `owner`, `admin`, `manager` e `operator`. Contas somente de leitura podem consultar a tabela.
+- O diagnóstico técnico de autorização fiscal continua no servidor e não é mostrado aos usuários normais; não são fornecidos tokens via navegador. O código-fonte do repositório é público, portanto ocultar o nome do provedor da UI **não significa ocultar a integração de quem inspeciona o código**.
+- Verificar com `pnpm test:cfop` e `pnpm build`. O catálogo não é motor de decisão tributária: a seleção do CFOP precisa de revisão fiscal por operação.

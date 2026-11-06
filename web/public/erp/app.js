@@ -21,7 +21,6 @@
   var state = readState();
   var view = 'dashboard', query = '', filter = 'all';
   var cloud = {status:'checking',displayName:'',company:null};
-  var focusMessage = 'Verificação ainda não realizada. A emissão permanece bloqueada.';
   var content = document.getElementById('content');
   var modalRoot = document.getElementById('modalRoot');
   var toastRoot = document.getElementById('toastRoot');
@@ -85,10 +84,10 @@
     var models=[['NF-e','Modelo 55','Venda de mercadorias e operações fiscais','receipt'],['NFC-e','Modelo 65','Venda ao consumidor e frente de caixa','cash'],['NFS-e','Padrão Nacional','Prestação de serviços / DPS','layers'],['CT-e','Modelo 57','Conhecimento de transporte eletrônico','truck'],['MDF-e','Modelo 58','Manifesto eletrônico de documentos','warehouse']];
     return heading('Central de notas fiscais','Os cinco modelos já estão previstos na navegação do JVG.')+banner()+
       '<section class="panel" style="margin-bottom:22px"><div class="panel-head"><div><h2>NF-e · Rascunhos em homologação</h2><p>Primeira etapa do fluxo fiscal: preparar e salvar notas sem transmitir à SEFAZ</p></div><a class="btn primary" href="/erp/nfe-drafts.html">Abrir rascunhos NF-e →</a></div><div class="panel-body"><p class="small-note">Selecione destinatários e produtos cadastrados. Os campos fiscais e tributos precisam de revisão do contador antes da futura integração de emissão.</p></div></section>'+ 
-      '<div class="fiscal-grid">'+models.map(function(x){return '<article class="fiscal-card"><div class="fiscal-card-top"><div class="fiscal-icon">'+ico(x[3])+'</div><span class="badge amber">Em preparação</span></div><h3>'+x[0]+' <span class="muted" style="font-weight:400;font-size:10px">'+x[1]+'</span></h3><p>'+x[2]+'. A transmissão real será habilitada após integração e homologação com a Focus NFe.</p><div class="fiscal-bottom"><span>Focus NFe: validar habilitação fiscal</span><span>'+ico('clock')+'</span></div></article>';}).join('')+'</div>'+
-      '<div class="section-row"><h2 class="section-title">Próximas configurações fiscais</h2></div><div class="setup-steps"><article class="setup-step"><span class="step-count">01 / DADOS</span><strong>Empresa e regime</strong><p>CNPJ real, inscrições, endereço, regime tributário e responsável fiscal.</p></article><article class="setup-step"><span class="step-count">02 / CERTIFICADO</span><strong>Certificado A1 e Focus</strong><p>Cadastro seguro do emitente, credenciais por ambiente e CSC quando aplicável.</p></article><article class="setup-step"><span class="step-count">03 / HOMOLOGAÇÃO</span><strong>Regras e testes</strong><p>Conferência com contador e autorização de casos reais em ambiente de homologação.</p></article></div>'+focusBlock();
+      '<section class="panel" style="margin-bottom:22px"><div class="panel-head"><div><h2>Tabela nacional de CFOP</h2><p>619 códigos com títulos e descrições oficiais; personalize o nome usado pela empresa</p></div><a class="btn primary" href="/erp/cfop.html">Consultar CFOP →</a></div></section>'+
+      '<div class="fiscal-grid">'+models.map(function(x){return '<article class="fiscal-card"><div class="fiscal-card-top"><div class="fiscal-icon">'+ico(x[3])+'</div><span class="badge amber">Em preparação</span></div><h3>'+x[0]+' <span class="muted" style="font-weight:400;font-size:10px">'+x[1]+'</span></h3><p>'+x[2]+'. A transmissão real será habilitada após validação fiscal e homologação do emissor.</p><div class="fiscal-bottom"><span>Credenciamento fiscal em andamento</span><span>'+ico('clock')+'</span></div></article>';}).join('')+'</div>'+
+      '<div class="section-row"><h2 class="section-title">Próximas configurações fiscais</h2></div><div class="setup-steps"><article class="setup-step"><span class="step-count">01 / DADOS</span><strong>Empresa e regime</strong><p>CNPJ real, inscrições, endereço, regime tributário e responsável fiscal.</p></article><article class="setup-step"><span class="step-count">02 / CERTIFICADO</span><strong>Certificado A1 e integração fiscal</strong><p>Cadastro seguro do emitente, credenciais por ambiente e CSC quando aplicável.</p></article><article class="setup-step"><span class="step-count">03 / HOMOLOGAÇÃO</span><strong>Regras e testes</strong><p>Conferência com contador e autorização de casos reais em ambiente de homologação.</p></article></div>';
   }
-  function focusBlock(){return '<section class="panel wide-info" style="margin-top:20px"><div class="panel-head"><div><h2>Focus NFe · Homologação</h2><p>Consulta segura do token, sem transmitir notas</p></div></div><div class="panel-body"><button class="btn primary" data-action="check-focus" type="button">'+ico('shield')+' Verificar conexão Focus</button><div class="focus-status" data-focus-result role="status">'+h(focusMessage)+'</div><p class="small-note">Configure <code>JVG_FOCUS_HOMOLOGACAO_TOKEN</code> e <code>JVG_FOCUS_PILOT_COMPANY_ID</code> nas variáveis privadas da Netlify. Nunca cole o token aqui.</p></div></section>';}
   function simpleSoon(title,subtitle,icon,features){
     return heading(title,subtitle)+banner()+'<section class="panel wide-info"><div class="panel-body">'+empty(icon,'Módulo preparado para as próximas etapas','A navegação e a arquitetura deste módulo estão previstas. Ainda não há operação real nesta primeira versão.')+'<div class="info-list">'+features.map(function(x){return '<div class="info-row"><span>'+h(x[0])+'</span><strong>'+h(x[1])+'</strong></div>';}).join('')+'</div></div></section>';
   }
@@ -102,13 +101,13 @@
   function settings(){
     var ready=cloud.status==='ready';
     var missing=ready&&cloud.company&&Array.isArray(cloud.company.fiscal_missing)?cloud.company.fiscal_missing:[];
-    var items=[['Usuário identificado',cloud.displayName||'Aguardando verificação'],['Empresa',state.companyName||'Empresa piloto'],['Banco de dados',ready?'Supabase conectado':cloud.status==='needs_company'?'Aguardando cadastro da empresa':'Aguardando chave do servidor'],['Dados dos cadastros',ready?'Persistidos no Supabase':'Somente neste navegador'],['Regime da empresa piloto','Simples Nacional'],['Cadastro fiscal',ready?(missing.length?missing.length+' informação(ões) pendente(s)':'Dados preenchidos · revisão fiscal necessária'):'Aguardando empresa'],['Focus NFe','Homologação em preparação'],['Certificado A1','Validar no painel da Focus'],['Emissão oficial','Bloqueada até habilitação fiscal']];
+    var items=[['Usuário identificado',cloud.displayName||'Aguardando verificação'],['Empresa',state.companyName||'Empresa piloto'],['Banco de dados',ready?'Supabase conectado':cloud.status==='needs_company'?'Aguardando cadastro da empresa':'Aguardando chave do servidor'],['Dados dos cadastros',ready?'Persistidos no Supabase':'Somente neste navegador'],['Regime da empresa piloto','Simples Nacional'],['Cadastro fiscal',ready?(missing.length?missing.length+' informação(ões) pendente(s)':'Dados preenchidos · revisão fiscal necessária'):'Aguardando empresa'],['Integração fiscal','Homologação em preparação'],['Certificado A1','Credenciamento fiscal a validar'],['Emissão oficial','Bloqueada até habilitação fiscal']];
     var action=ready?'<button class="btn primary" data-action="configure-company">'+ico('edit')+' Editar empresa</button>':cloud.status==='needs_company'?'<button class="btn primary" data-action="configure-company">'+ico('plus')+' Cadastrar empresa piloto</button>':'<button class="btn" data-action="check-connection">'+ico('check')+' Verificar conexão</button>';
-    return heading('Configurações','Sua conta, empresa piloto e integração segura com a Focus.')+banner()+
+    return heading('Configurações','Sua conta, empresa piloto e configurações fiscais seguras.')+banner()+
       '<div class="settings-grid"><section class="panel wide-info"><div class="panel-head"><div><h2>Cadastro fiscal do emitente</h2><p>Dados da empresa para preparar a NF-e em homologação</p></div></div><div class="panel-body"><div class="info-list">'+items.map(function(x){return '<div class="info-row"><span>'+h(x[0])+'</span><strong>'+h(x[1])+'</strong></div>';}).join('')+'</div>'+
-      (ready&&missing.length?'<p class="small-note" style="margin-top:16px">Preencha: '+missing.map(h).join(', ')+'.</p>':ready?'<p class="small-note" style="margin-top:16px">Dados preenchidos. Ainda é obrigatória a conferência com o contador e com a Focus antes de qualquer emissão.</p>':'')+
+      (ready&&missing.length?'<p class="small-note" style="margin-top:16px">Preencha: '+missing.map(h).join(', ')+'.</p>':ready?'<p class="small-note" style="margin-top:16px">Dados preenchidos. Ainda é obrigatória a conferência com o contador e a validação do credenciamento fiscal antes de emitir.</p>':'')+
       '<div class="heading-actions" style="margin-top:24px">'+action+(ready?'<button class="btn" data-action="logout">Sair da conta</button>':'<button class="btn danger" data-action="reset-demo">Restaurar demonstração</button>')+'</div>'+
-      '<p class="small-note" style="margin-top:16px">Tokens Focus e certificado A1 não são solicitados nesta página. A chave JVG_SUPABASE_SECRET_KEY precisa existir apenas nos segredos privados do servidor de hospedagem; nunca cole essa chave em um campo do site.</p></div></section>'+focusBlock()+'</div>';
+      '<p class="small-note" style="margin-top:16px">Credenciais de autorização fiscal e certificado A1 não são solicitados nesta página. Os segredos técnicos devem ser configurados apenas no servidor privado.</p></div></section></div>';
   }
   function render(){
     document.getElementById('breadcrumb').textContent=labels[view]||labels.dashboard;
@@ -199,35 +198,6 @@
     }catch(error){if(form.isConnected)toast(error.message,'error');}
     finally{if(button.isConnected){button.disabled=false;button.textContent=label;}}
   }
-  async function checkFocusConnection(button){
-    var label=button.textContent;button.disabled=true;button.textContent='Verificando...';
-    try{
-      var response=await fetch('/api/focus/status',{credentials:'same-origin',cache:'no-store'});
-      var data=await response.json().catch(function(){return {};});
-      var status=data.status||'unexpected_response';
-      var messages={
-        token_valid:'Token aceito no ambiente de homologação. Certificado, credenciamento e emissão ainda precisam de validação.',
-        invalid_token:'Token de homologação inválido. Confira o segredo privado na Netlify.',
-        forbidden:'A Focus recusou o acesso. Verifique o cadastro e as permissões da empresa.',
-        rate_limited:'A Focus limitou as consultas. Aguarde alguns minutos.',
-        provider_unavailable:'Não foi possível acessar a Focus agora. Tente novamente.',
-        waiting_focus_token:'Falta configurar JVG_FOCUS_HOMOLOGACAO_TOKEN na Netlify.',
-        waiting_focus_company_id:'Falta configurar JVG_FOCUS_PILOT_COMPANY_ID na Netlify (ambiente Production).',
-        focus_not_enabled_for_company:'O UUID da empresa logada é diferente do configurado na Netlify. Confira JVG_FOCUS_PILOT_COMPANY_ID e faça um novo deploy.',
-        needs_company:'Cadastre sua empresa antes de verificar a Focus.',
-        supabase_not_configured:'A conexão com o Supabase ainda não está pronta.',
-        sign_in_required:'Faça login para verificar a Focus.',
-        unexpected_response:'A Focus respondeu de forma inesperada. Verifique a configuração com o suporte.'
-      };
-      focusMessage=messages[status]||(data.error||'Não foi possível verificar a Focus.');
-      if(data.currentCompanyId&&['waiting_focus_company_id','focus_not_enabled_for_company'].includes(status))
-        focusMessage+=' UUID desta empresa: '+data.currentCompanyId;
-    }catch(error){focusMessage='Falha temporária ao consultar a Focus: '+error.message;}
-    finally{
-      document.querySelectorAll('[data-focus-result]').forEach(function(el){el.textContent=focusMessage;});
-      if(button.isConnected){button.disabled=false;button.textContent=label;}
-    }
-  }
   async function refreshCloud(){
     var data=await callApi('/api/records');
     state={products:data.products||[],clients:data.clients||[],services:data.services||[],movements:data.movements||[],demo:false,companyName:data.companyName||'Empresa piloto'};
@@ -278,7 +248,7 @@
     modalRoot.innerHTML='<div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><h2 id="modalTitle">'+(existing?'Editar empresa piloto':'Cadastrar minha empresa piloto')+'</h2><p>Seus dados serão vinculados somente à sua conta.</p></div><button class="icon-btn" type="button" data-action="close-modal">'+ico('x')+'</button></div><form id="companyForm"><div class="modal-body"><div class="form-grid">'+
       field('legalName','Razão social ou nome da empresa *',company.legal_name||'','required maxlength="160"',true)+
       (existing?companyFiscalFields(company):'')+
-      '</div><p class="small-note" style="margin-top:16px">Regime piloto: Simples Nacional. Salvar este cadastro não transmite NF-e. Confira os dados com seu contador e a numeração com a Focus.</p></div><div class="modal-footer"><small>* Obrigatório</small><div class="modal-footer-actions"><button class="btn" type="button" data-action="close-modal">Cancelar</button><button class="btn primary" type="submit">Salvar empresa</button></div></div></form></div></div>';
+      '</div><p class="small-note" style="margin-top:16px">Regime piloto: Simples Nacional. Salvar este cadastro não transmite NF-e. Confira os dados com seu contador e a numeração na autorização fiscal.</p></div><div class="modal-footer"><small>* Obrigatório</small><div class="modal-footer-actions"><button class="btn" type="button" data-action="close-modal">Cancelar</button><button class="btn primary" type="submit">Salvar empresa</button></div></div></form></div></div>';
     // O formulario permanece aberto ao clicar no fundo: somente os botoes
     // Fechar/Cancelar ou a conclusao do cadastro podem dispensa-lo.
     modalRoot.querySelector('[name]').focus();
@@ -387,7 +357,6 @@
     var b=e.target.closest('[data-action]');if(!b)return;var a=b.dataset.action,recordId=b.dataset.id;
     if(a==='close-modal'){closeModal();return;}
     if(a==='lookup-cep'||a==='lookup-cnpj'){lookupRegistration(b,a.substring(7));return;}
-    if(a==='check-focus'){checkFocusConnection(b);return;}
     if(a==='configure-company'){openCompanyEditor();return;}
     if(a==='check-connection'){checkConnection();return;}
     if(a==='logout'){window.location.assign('/logout');return;}

@@ -61,7 +61,7 @@
       '<label class="field product-field"><span>Produto *</span><select class="product" required></select></label>' +
       '<label class="field"><span>Qtd. *</span><input class="quantity" type="number" min="0.001" max="100000" step="0.001" value="1" required></label>' +
       '<label class="field"><span>Preço (R$) *</span><input class="price" type="number" min="0" max="999999.99" step="0.01" required></label>' +
-      '<label class="field"><span>CFOP</span><input class="cfop" maxlength="4" inputmode="numeric" placeholder="Ex.: 5102"></label>' +
+      '<label class="field"><span>CFOP</span><input class="cfop" maxlength="4" inputmode="numeric" list="cfopOptions" placeholder="Ex.: 5102"></label>' +
       '<label class="field"><span>CSOSN</span><input class="csosn" maxlength="3" inputmode="numeric" placeholder="Ex.: 102"></label>' +
       '<button type="button" class="remove-item" aria-label="Remover este produto" title="Remover produto">×</button>';
     var select = row.querySelector('.product');
@@ -145,6 +145,14 @@
       state.clients = Array.isArray(data.clients) ? data.clients : [];
       fillRecipients();
       addItem();
+      // Sugestões oficiais não podem impedir o uso de rascunhos se o catálogo falhar.
+      try {
+        var cfops = await api('/api/fiscal/cfop');
+        var options = document.getElementById('cfopOptions');
+        (cfops.records || []).forEach(function (record) {
+          options.append(option(record.code, record.customLabel || record.title));
+        });
+      } catch { /* campo livre continua disponível */ }
       await refreshHistory();
       state.ready = state.products.some(function (p) { return p.active; }) &&
         state.clients.some(function (c) { return c.active && c.type !== 'EXT'; });

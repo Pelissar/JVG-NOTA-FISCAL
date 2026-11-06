@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#112536">
+  <title>CFOP · Cadastro fiscal · JVG ERP</title>
+  <meta name="description" content="Tabela CFOP oficial com descrições, pesquisa e nomes personalizados por empresa.">
+  <link rel="stylesheet" href="/erp/nfe-drafts.css">
+  <link rel="stylesheet" href="/erp/cfop.css">
+  <script defer src="/erp/cfop.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">J</span><span><strong>JVG Nota Fiscal</strong><small>CADASTRO FISCAL / CFOP</small></span></div>
+    <div class="header-actions"><span class="environment">TABELA OFICIAL</span><a class="back-button" href="/erp/index.html">← Voltar ao ERP</a></div>
+  </header>
+  <main class="layout">
+    <div class="page-title"><div><div class="eyebrow">CENTRAL FISCAL / CÓDIGO FISCAL DE OPERAÇÕES E PRESTAÇÕES</div><h1>Cadastro de CFOP</h1><p>Consulte a tabela oficial e crie nomes internos que façam sentido para a sua empresa.</p></div><span class="phase" id="total">Carregando...</span></div>
+    <div class="notice info" id="notice" role="status" aria-live="polite">Carregando catálogo fiscal...</div>
+    <section class="cfop-summary" aria-label="Informações do catálogo"><div><strong>Descrição oficial preservada</strong><span>O código, título fiscal e nota explicativa nunca são alterados.</span></div><div><strong>Apelido por empresa</strong><span>O nome personalizado é usado apenas para facilitar a identificação no ERP.</span></div><div><strong>Fonte rastreável</strong><span id="sourceInfo">Portal Nacional da NF-e</span></div></section>
+    <div class="cfop-grid">
+      <section class="panel" aria-labelledby="listHeading">
+        <div class="panel-head"><div><h2 id="listHeading">Tabela de operações</h2><p>Pesquise pelo código, título ou nota explicativa oficial.</p></div><span class="step-tag" id="matches">—</span></div>
+        <div class="cfop-toolbar"><label for="search">Buscar CFOP</label><input id="search" type="search" placeholder="Ex.: 5102, venda, devolução..." autocomplete="off"><label for="group">Grupo</label><select id="group"><option value="all">Todos os grupos</option><option value="1">1 · Entradas no estado</option><option value="2">2 · Entradas interestaduais</option><option value="3">3 · Entradas do exterior</option><option value="5">5 · Saídas no estado</option><option value="6">6 · Saídas interestaduais</option><option value="7">7 · Saídas para o exterior</option></select></div>
+        <div class="cfop-list" id="list" aria-label="Códigos CFOP"></div>
+        <div class="cfop-pagination"><span id="pageInfo"></span><div><button id="previous" type="button">Anterior</button><button id="next" type="button">Próximo</button></div></div>
+      </section>
+      <section class="panel cfop-details" aria-labelledby="detailsHeading">
+        <div class="panel-head"><div><h2 id="detailsHeading">Detalhes do CFOP</h2><p>Título, enquadramento e nota explicativa</p></div><span class="step-tag">OFICIAL</span></div>
+        <div class="panel-body" id="details"><p class="placeholder">Selecione um código à esquerda para ver a descrição oficial e personalizar o nome usado na sua empresa.</p></div>
+      </section>
+    </div>
+    <p class="cfop-disclaimer">A seleção de um CFOP não determina, por si só, o enquadramento fiscal correto da operação. Confira natureza da operação, produto, origem/destino e regime tributário com seu contador antes de emitir documentos.</p>
+  </main>
+  <footer>© 2026 JVG Nota Fiscal · Catálogo fiscal de referência; não realiza transmissão.</footer>
+</body>
+</html>

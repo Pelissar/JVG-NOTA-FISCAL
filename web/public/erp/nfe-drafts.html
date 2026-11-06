@@ -15,7 +15,7 @@
     <div class="header-actions"><span class="environment">HOMOLOGAÇÃO · SEM EMISSÃO</span><a class="back-button" href="/erp/index.html">← Voltar ao painel</a></div>
   </header>
   <main class="layout">
-    <div class="page-title"><div><div class="eyebrow">CENTRAL FISCAL / NF-e MODELO 55</div><h1>Rascunhos de NF-e</h1><p>Prepare itens e informações comerciais com segurança antes da futura transmissão pela Focus NFe.</p></div><span class="phase">Etapa de preparação</span></div>
+    <div class="page-title"><div><div class="eyebrow">CENTRAL FISCAL / NF-e MODELO 55</div><h1>Rascunhos de NF-e</h1><p>Prepare itens e informações comerciais antes da futura transmissão fiscal.</p></div><span class="phase">Etapa de preparação</span></div>
     <div id="status" class="notice" role="status">Conectando ao Supabase e carregando seus cadastros...</div>
     <div class="grid">
       <section class="panel">
@@ -28,7 +28,8 @@
             </div>
             <div class="items-heading"><div><h3>Produtos</h3><p>Até 20 itens, com quantidade e preço unitário.</p></div><button type="button" class="add-button" id="addItem">+ Adicionar produto</button></div>
             <div id="items" class="items" aria-live="polite"></div>
-            <p class="hint">CFOP e CSOSN são campos para conferência tributária. Deixe vazios quando ainda não tiver a classificação revisada pelo contador.</p>
+            <datalist id="cfopOptions"></datalist>
+            <p class="hint">CFOP e CSOSN são campos para conferência tributária. Digite o CFOP para ver as sugestões da tabela oficial ou <a href="/erp/cfop.html" style="color:#0a9574;font-weight:800;text-decoration:underline">consulte o catálogo completo</a>. Deixe vazios quando ainda não tiver a classificação revisada pelo contador.</p>
             <div class="summary"><span>Valor comercial estimado</span><strong id="total">R$ 0,00</strong></div>
           </div>
           <div class="form-footer"><p>O rascunho <b>não</b> gera XML, DANFE ou nota autorizada.</p><button class="save-button" id="saveButton" disabled type="submit">Salvar rascunho NF-e</button></div>
@@ -36,7 +37,7 @@
       </section>
       <aside class="side">
         <section class="panel history"><div class="panel-head"><div><h2>Rascunhos salvos</h2><p>Somente desta empresa e em homologação.</p></div><span class="step-tag">02 / HISTÓRICO</span></div><div class="panel-body"><div id="history" class="history-list"><p>Carregando...</p></div></div></section>
-        <section class="next-panel"><div class="next-icon">✓</div><h3>Uma etapa de cada vez.</h3><p>Os rascunhos usam seus cadastros atuais. O cálculo tributário, o envio à Focus NFe, o retorno da SEFAZ e os arquivos fiscais serão implementados e validados nas próximas fases.</p><span>Transmissão desativada por segurança</span></section>
+        <section class="next-panel"><div class="next-icon">✓</div><h3>Uma etapa de cada vez.</h3><p>Os rascunhos usam seus cadastros atuais. O cálculo tributário, a transmissão fiscal, o retorno da SEFAZ e os arquivos fiscais serão implementados e validados nas próximas fases.</p><span>Transmissão desativada por segurança</span></section>
       </aside>
     </div>
   </main>
