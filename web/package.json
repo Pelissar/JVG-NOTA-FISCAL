@@ -8,7 +8,7 @@
   "scripts": {
     "install:ci": "bash scripts/install-pnpm.sh",
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node scripts/purge-turbopack-cache.mjs",
     "start": "next start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"

@@ -76,7 +76,8 @@ Leia também o [README da raiz](../README.md) para o procedimento de publicaçã
 - O `proxy.ts` (Next.js 16) exige sessão Supabase válida nas rotas `/erp/*`. A tela de gestão é privativa; os endpoints de API têm **suas próprias validações de autenticação e autorização**, independentemente do proxy.
 - O painel possui navegação recolhível para telas estreitas e configurações em duas colunas nas telas largas. Os módulos fiscais ainda não transmitem documentos.
 - `lib/focus/runtime-env.ts` consulta o token e o UUID piloto somente em tempo de execução no servidor, evitando que o compilador os incorpore ao cache Turbopack. **Não desative a verificação de segredos da Netlify** nem coloque `JVG_FOCUS_HOMOLOGACAO_TOKEN` nas variáveis públicas.
-- Se um deploy continuar acusando a presença de um token no caminho antigo `.netlify/.next/cache/turbopack/*`, execute na interface da Netlify **Deploys → Trigger deploy → Clear cache and deploy site** (o rótulo pode variar) para descartar o cache de compilação anterior. Não é preciso compartilhar credenciais.
+- O comando `pnpm build` agora remove automaticamente **apenas** os caches descartáveis `.next/cache/turbopack` e `.netlify/.next/cache/turbopack` após a compilação; eles não são necessários para o site em execução. Isso evita que arquivos `.sst` restaurados de builds antigos sejam incluídos na inspeção da Netlify.
+- Se um deploy ainda acusar segredos em outro cache antigo, use **Deploys → Retry without cache** na Netlify para iniciar uma compilação sem cache. Não é preciso compartilhar credenciais nem desabilitar o scanner de segredos.
 
 ### Roadmap auditado: pendências antes da comercialização
 
