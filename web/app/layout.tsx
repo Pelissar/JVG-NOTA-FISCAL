@@ -2,11 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Starter Project",
-  description: "A clean starting point for building your site.",
-  other: {
-    "codex-preview": "development",
-  },
+  title: "JVG Nota Fiscal | Gestão empresarial e emissão fiscal",
+  description: "Plataforma web de gestão empresarial, cadastros, estoque e preparação para emissão de documentos fiscais.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
@@ -19,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <body className="antialiased">{children}</body>
     </html>
   );

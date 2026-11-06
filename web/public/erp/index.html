@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0d1c2c">
-  <meta name="description" content="JVG Nota Fiscal — painel de gestão empresarial. Etapa 3, empresa e Supabase seguros.">
+  <meta name="description" content="JVG Nota Fiscal — painel privado de gestão empresarial, cadastros e preparação fiscal.">
   <title>JVG Nota Fiscal · Painel</title>
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./responsive.css">
@@ -41,6 +41,7 @@
       <div class="brand-row">
         <div class="brand-mark"><svg><use href="#i-receipt"/></svg></div>
         <div class="brand-text"><strong>JVG<span>ERP</span></strong><small>Nota Fiscal & Gestão</small></div>
+        <button class="sidebar-close" type="button" id="closeMenuBtn" aria-label="Fechar menu">×</button>
       </div>
       <div class="workspace-switch"><span class="workspace-avatar">JP</span><div><strong>Empresa piloto</strong><small>Ambiente de teste</small></div><span class="switch-chev">⌄</span></div>
       <div class="nav-label">MENU PRINCIPAL</div>
@@ -57,7 +58,7 @@
       </nav>
       <div class="nav-label secondary-label">SISTEMA</div>
       <nav class="side-nav"><button class="nav-link" data-view="settings"><svg><use href="#i-settings"/></svg><span>Configurações</span></button></nav>
-      <div class="sidebar-bottom"><div class="release-status"><span class="pulse"></span> Etapa 3 · Supabase</div><div class="support-box"><strong>JVG Nota Fiscal</strong><small>Fundação do seu ERP, passo a passo.</small><span>Versão piloto 0.3</span></div></div>
+      <div class="sidebar-bottom"><div class="release-status"><span class="pulse"></span> Ambiente piloto</div><div class="support-box"><strong>JVG Nota Fiscal</strong><small>Gestão em desenvolvimento.</small><a href="/" class="site-back">← Ver site público</a></div></div>
     </aside>
     <div class="mobile-backdrop" id="mobileBackdrop"></div>
     <div class="main-column">
@@ -66,7 +67,7 @@
         <div class="topbar-right"><label class="global-search"><svg><use href="#i-search"/></svg><input id="globalSearch" placeholder="Buscar no módulo..." autocomplete="off"><kbd>/</kbd></label><span class="top-pill">PILOTO PRIVADO</span><span class="top-avatar" title="Seu perfil">JP</span></div>
       </header>
       <main class="content" id="content" tabindex="-1"></main>
-      <footer class="footer"><span>© 2026 JVG ERP · Etapa 3</span><span>Cadastro seguro em implantação • Sem emissão fiscal real</span></footer>
+      <footer class="footer"><span>© 2026 JVG Nota Fiscal · Ambiente piloto</span><span>Cadastro em implantação • Sem emissão fiscal real</span></footer>
     </div>
   </div>
   <div id="modalRoot"></div>

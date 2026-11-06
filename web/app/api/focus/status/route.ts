@@ -1,6 +1,7 @@
 import { getJvgUser } from "../../../jvg-auth";
 import { apiJson, getSiteAccount, isConfigured, safeError } from "../../../../lib/jvg-backend";
 import { checkFocusHomologacaoToken } from "../../../../lib/focus/client";
+import { focusRuntimeEnv } from "../../../../lib/focus/runtime-env";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export async function GET() {
     const account = await getSiteAccount(user);
     if (!account) return apiJson({ status: "needs_company" }, 403);
 
-    const pilotCompany = process.env.JVG_FOCUS_PILOT_COMPANY_ID?.trim();
+    const pilotCompany = focusRuntimeEnv("JVG_FOCUS_PILOT_COMPANY_ID");
     if (!pilotCompany) {
       return apiJson({ status: "waiting_focus_company_id", currentCompanyId: account.company_id,
         environment: "homologacao", emissionEnabled: false });
@@ -25,7 +26,7 @@ export async function GET() {
         environment: "homologacao", emissionEnabled: false }, 403);
     }
 
-    const token = process.env.JVG_FOCUS_HOMOLOGACAO_TOKEN?.trim();
+    const token = focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN");
     if (!token) {
       return apiJson({ status: "waiting_focus_token", environment: "homologacao", emissionEnabled: false });
     }

@@ -2,6 +2,7 @@
 
 import { createBrowserClient } from "@supabase/ssr";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -55,6 +56,7 @@ export default function LoginPage() {
   return (
     <main style={{ minHeight:"100vh", background:"linear-gradient(145deg,#081827,#153a50)", color:"#e8f0f6",display:"grid",placeItems:"center",padding:20,fontFamily:"system-ui,sans-serif" }}>
       <section style={{ width:"100%",maxWidth:440,background:"#fff",color:"#172c3a",borderRadius:22,padding:"34px 30px",boxShadow:"0 22px 80px #020c1680" }}>
+        <Link href="/" style={{display:"inline-flex",alignItems:"center",gap:7,color:"#387b73",fontSize:12,textDecoration:"none",marginBottom:23,fontWeight:700}}>← Voltar ao site</Link>
         <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:25}}>
           <div style={{background:"#0a7b70",color:"#fff",borderRadius:13,width:47,height:47,display:"grid",placeItems:"center",fontSize:24,fontWeight:800}}>J</div>
           <div><strong style={{fontSize:21}}>JVG Nota Fiscal</strong><div style={{fontSize:12,color:"#687e8c"}}>ERP multiempresa • ambiente piloto</div></div>
@@ -73,7 +75,7 @@ export default function LoginPage() {
         </form>
         {message && <p role="status" style={{marginTop:15,fontSize:13,background:"#ecf5f5",padding:12,borderRadius:9}}>{message}</p>}
         <button type="button" onClick={()=>{setMode(mode==="login"?"signup":"login");setMessage("");}} style={{marginTop:20,padding:0,border:0,background:"transparent",color:"#007f72",fontWeight:650,cursor:"pointer"}}>{mode==="login"?"Primeiro acesso? Criar conta":"Já tenho conta. Fazer login"}</button>
-        <p style={{fontSize:11,color:"#81929d",marginTop:25}}>Emissão de notas indisponível até a conclusão da homologação e do certificado.</p>
+        <p style={{fontSize:11,color:"#81929d",marginTop:25}}>Ambiente piloto. A emissão fiscal real ainda depende da integração e da homologação com a Focus NFe.</p>
       </section>
     </main>
   );

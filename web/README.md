@@ -60,7 +60,7 @@ O CNPJ aceita os formatos numérico e alfanumérico em vigor desde julho de 2026
 ### Focus NFe — passo de homologação
 
 1. No painel da Focus, cadastre o CNPJ real da empresa, envie o certificado A1 com senha por conexão segura e habilite NF-e em homologação. Confira IE, credenciamento, série e próxima numeração com o contador.
-2. Configure as duas variáveis `JVG_FOCUS_*` acima no painel da Netlify (Builds e Functions). Não coloque token ou arquivo de certificado no GitHub.
+ 2. Configure as duas variáveis `JVG_FOCUS_*` acima no painel da Netlify com **escopo Functions** (servidor), no ambiente Production. Evite conceder escopo Builds para o token; a compilação não precisa conhecê-lo. Não coloque token ou certificado no GitHub.
 3. Acesse `GET /api/focus/status` após entrar com o usuário da empresa piloto. `token_valid` significa somente autenticação aceita na consulta de uma referência inexistente: **não comprova certificado, autorização SEFAZ ou prontidão fiscal**.
    O painel **Configurações → Focus NFe · Homologação** e a **Central de notas fiscais** agora exibem um botão para fazer esta verificação sem conhecer o token.
    Se a empresa autenticada não corresponder ao UUID em `JVG_FOCUS_PILOT_COMPANY_ID`, o painel mostra o UUID **da própria empresa logada** para conferir na Netlify. O UUID de outra empresa e o token não são revelados.
@@ -69,3 +69,22 @@ O CNPJ aceita os formatos numérico e alfanumérico em vigor desde julho de 2026
 Esse endpoint de validação não emite, cancela nem altera documentos. A emissão continuará bloqueada até os requisitos fiscais estarem conferidos. O token de homologação é exclusivo da empresa piloto; cada empresa comercial precisará de credenciais próprias e isolamento por tenant.
 
 Leia também o [README da raiz](../README.md) para o procedimento de publicação na Netlify.
+
+### Página pública, acesso ao ERP e tratamento do cache
+
+- A rota `/` é uma página pública de apresentação. O botão de entrada abre `/login`.
+- O `proxy.ts` (Next.js 16) exige sessão Supabase válida nas rotas `/erp/*`. A tela de gestão é privativa; os endpoints de API têm **suas próprias validações de autenticação e autorização**, independentemente do proxy.
+- O painel possui navegação recolhível para telas estreitas e configurações em duas colunas nas telas largas. Os módulos fiscais ainda não transmitem documentos.
+- `lib/focus/runtime-env.ts` consulta o token e o UUID piloto somente em tempo de execução no servidor, evitando que o compilador os incorpore ao cache Turbopack. **Não desative a verificação de segredos da Netlify** nem coloque `JVG_FOCUS_HOMOLOGACAO_TOKEN` nas variáveis públicas.
+- Se um deploy continuar acusando a presença de um token no caminho antigo `.netlify/.next/cache/turbopack/*`, execute na interface da Netlify **Deploys → Trigger deploy → Clear cache and deploy site** (o rótulo pode variar) para descartar o cache de compilação anterior. Não é preciso compartilhar credenciais.
+
+### Roadmap auditado: pendências antes da comercialização
+
+1. **Segurança multiempresa:** revisão de RLS, permissões por papel, provisionamento administrativo, auditoria de acessos, backups, política de retenção e isolamento dos tokens por empresa.
+2. **Dados fiscais completos:** cadastro tributário por regime/UF, NCM/CEST/CFOP/CST/CSOSN, PIS/Cofins/ISS, IBS/CBS, regras atualizáveis, validações por contador e cadastro de emitentes, destinatários e transportadoras.
+3. **Emissão NF-e/NFC-e:** geração de rascunhos, itens, totalizadores, sequência/série transacional, referência idempotente, envio em homologação à Focus, tratamento de rejeições, consulta, cancelamento, CC-e e inutilização quando aplicáveis.
+4. **Emissão NFS-e/CT-e/MDF-e:** implementação por modelo e município/UF, cenários de serviço e transporte e validação dos dados específicos com as regras vigentes.
+5. **Documentos e operação:** XML e DANFE/DACTE/DAMDFE, armazenamento seguro, exportação e compartilhamento com contador, pedidos, vendas/PDV, contas e estoque integrado sem duplicação de movimentos.
+6. **Qualidade e entrega:** testes automatizados end-to-end e de integração, homologação com dados fictícios, telemetria, alertas, limites de requisição, reprocessamento e infraestrutura para o futuro EXE conectado ao servidor.
+
+Nenhum módulo deve ser apresentado como autorizado para emissão real antes de seus respectivos testes e credenciamentos.
