@@ -40,7 +40,7 @@
     var ready=cloud.status==='ready',needs=cloud.status==='needs_company',pending=cloud.status==='waiting_secret',login=cloud.status==='login_required';
     var title=ready?'Supabase conectado · '+h(state.companyName):needs?'Cadastro da empresa piloto pendente':pending?'Integração segura preparada · chave privada pendente':login?'Login necessário no site publicado':cloud.status==='error'?'Servidor temporariamente indisponível':'Verificando integração do Supabase';
     var detail=ready?'Os cadastros desta empresa são salvos no servidor. A emissão de notas continua bloqueada até a homologação fiscal.':needs?'Sua conta já está identificada. Cadastre o nome da empresa para criar o ambiente isolado no banco.':pending?'A estrutura do banco existe. Falta configurar JVG_SUPABASE_SECRET_KEY somente nos segredos do servidor. Até lá, estes registros continuam sendo uma demonstração local.':login?'O painel de pré-visualização não fornece a identidade autenticada. Abra o site privado publicado com sua conta para utilizar a integração.':cloud.status==='error'?'A conexão não pôde ser validada. Seus dados locais não foram enviados ao servidor.':'Aguarde a verificação. Os dados fictícios continuam disponíveis no navegador.';
-    var action=needs?'<div class="heading-actions" style="margin-top:10px"><button class="btn primary" data-action="configure-company">'+ico('plus')+' Cadastrar empresa</button></div>':pending?'<div class="heading-actions" style="margin-top:10px"><button class="btn" data-view="settings">Ver configuração</button></div>':'';
+    var action=needs?'<div class="heading-actions" style="margin-top:10px"><button class="btn primary" data-action="configure-company">'+ico('plus')+' Cadastrar empresa</button></div>':pending?'<div class="heading-actions" style="margin-top:10px"><button class="btn" data-view="settings">Ver configuração</button></div>':cloud.status==='error'?'<div class="heading-actions" style="margin-top:10px"><button class="btn" data-action="check-connection">Tentar novamente</button></div>':'';
     return '<div class="banner" style="border-color:'+(ready?'#76bb9c':'#d5deea')+'"><span class="banner-icon">'+ico('shield')+'</span><div class="banner-text"><strong>'+title+'</strong><p>'+detail+'</p>'+action+'</div></div>';
   }
   function stat(label,value,icon,color,foot){return '<article class="stat-card"><div class="stat-top"><span>'+h(label)+'</span><div class="stat-icon '+(color||'')+'">'+ico(icon)+'</div></div><div class="stat-value">'+h(value)+'</div><div class="stat-foot">'+h(foot)+'</div></article>';}
@@ -118,7 +118,7 @@
     else content.innerHTML=(views[view]||dashboard)();
     var search=document.getElementById('globalSearch');search.value=query;
   }
-  function setView(next){if(!labels[next])return;view=next;query='';filter='all';document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');render();window.scrollTo({top:0,behavior:'smooth'});}
+  function setView(next){if(!labels[next])return;view=next;query='';filter='all';document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');render();document.querySelector('.main-column').scrollTop=0;}
   function field(name,label,value,extra,full,help){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+(extra||'')+'>'+(help?'<small>'+h(help)+'</small>':'')+'</div>';}
   function lookupField(name,label,value,extra,kind,full){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><div class="input-action"><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+extra+'><button class="btn ghost lookup-btn" type="button" data-action="lookup-'+kind+'">Consultar</button></div></div>';}
   function select(name,label,options,value){return '<div class="field"><label for="f-'+h(name)+'">'+h(label)+'</label><select id="f-'+h(name)+'" name="'+h(name)+'">'+options.map(function(o){return '<option value="'+h(o[0])+'" '+(String(value)===String(o[0])?'selected':'')+'>'+h(o[1])+'</option>';}).join('')+'</select></div>';}
@@ -141,10 +141,16 @@
     '<p class="lookup-note field full">Dados públicos sugeridos por ViaCEP/BrasilAPI. Confira antes de salvar ou emitir documentos fiscais.</p>';}
   function serviceForm(p){return field('code','Código do serviço *',p.code,'required maxlength="40"',false)+field('name','Descrição do serviço *',p.name,'required maxlength="160"',false)+field('description','Detalhamento',p.description,'maxlength="255"',true)+field('lc116','Subitem da LC 116',p.lc116,'maxlength="12"',false)+field('nbs','Código NBS',p.nbs,'maxlength="12"',false)+field('price','Valor (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
   async function callApi(endpoint,options){
-    var response=await fetch(endpoint,Object.assign({credentials:'same-origin',cache:'no-store'},options||{}));
-    var result=await response.json().catch(function(){return {error:'Resposta inválida do servidor.'};});
-    if(!response.ok)throw new Error(result.error||'A operação não pôde ser concluída.');
-    return result;
+    var controller=new AbortController(),timeout=setTimeout(function(){controller.abort();},20000);
+    try{
+      var response=await fetch(endpoint,Object.assign({credentials:'same-origin',cache:'no-store'},options||{},{signal:controller.signal}));
+      var result=await response.json().catch(function(){return {error:'Resposta inválida do servidor.'};});
+      if(!response.ok)throw new Error(result.error||'A operação não pôde ser concluída.');
+      return result;
+    }catch(error){
+      if(error.name==='AbortError')throw new Error('O servidor demorou a responder. Confira sua conexão e tente novamente.');
+      throw error;
+    }finally{clearTimeout(timeout);}
   }
   function setFormField(form,name,value){
     var target=form.querySelector('[name="'+name+'"]');
@@ -226,16 +232,21 @@
     state={products:data.products||[],clients:data.clients||[],services:data.services||[],movements:data.movements||[],demo:false,companyName:data.companyName||'Empresa piloto'};
     render();
   }
+  var checkingConnection=false;
   async function checkConnection(){
+    if(checkingConnection)return;
+    checkingConnection=true;
+    var controller=new AbortController(),timeout=setTimeout(function(){controller.abort();},12000);
     try{
-      var response=await fetch('/api/session',{credentials:'same-origin',cache:'no-store'}),status=await response.json();
+      var response=await fetch('/api/session',{credentials:'same-origin',cache:'no-store',signal:controller.signal}),status=await response.json();
       if(response.status===401&&status.status==='sign_in_required'){window.location.replace('/login');return;}
       if(!response.ok)throw new Error(status.error||'Erro de conexão.');
       if(status.status==='admin_ready'){window.location.replace('/admin');return;}
       cloud={status:status.status,displayName:status.displayName||'',company:status.company||null};
       if(cloud.status==='ready')await refreshCloud();
       else render();
-    }catch(error){cloud.status='error';render();toast('Não foi possível verificar a conexão: '+error.message,'error');}
+    }catch(error){cloud.status='error';render();toast(error.name==='AbortError'?'O Supabase não respondeu em 12 segundos. Use Tentar novamente.':'Não foi possível verificar a conexão: '+error.message,'error');}
+    finally{clearTimeout(timeout);checkingConnection=false;}
   }
   function companyFiscalFields(company){
     var a=company.address||{};
@@ -400,6 +411,9 @@
   document.getElementById('closeMenuBtn').addEventListener('click',closeSidebar);
   document.getElementById('mobileBackdrop').addEventListener('click',closeSidebar);
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSidebar();if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();document.getElementById('globalSearch').focus();}});
+  if('scrollRestoration' in history)history.scrollRestoration='manual';
+  window.scrollTo(0,0);
+  document.querySelector('.main-column').scrollTop=0;
   render();
   checkConnection();
 })();
