@@ -4,6 +4,7 @@ import {
   JvgBackendError, safeError, type SiteAccount,
 } from "../../../../lib/jvg-backend";
 import { parseNfeDraftInput } from "../../../../lib/fiscal/nfe-draft";
+import { isOfficialCfopCode } from "../../../../lib/fiscal/cfop";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,7 @@ export async function POST(request: Request) {
       const product = byId.get(input.productId)!;
       if (!/^[0-9]{8}$/.test(String(product.ncm || ""))) pending.push(`Item ${index + 1}: NCM pendente`);
       if (!input.cfop) pending.push(`Item ${index + 1}: CFOP pendente`);
+      else if (!isOfficialCfopCode(input.cfop)) pending.push(`Item ${index + 1}: CFOP não consta da tabela oficial`);
       if (!input.csosn) pending.push(`Item ${index + 1}: CSOSN pendente`);
       return {
         productId: product.id, sku: product.sku, description: product.name,

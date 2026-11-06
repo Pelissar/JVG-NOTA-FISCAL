@@ -112,3 +112,11 @@ No painel privado, abra **Tabela CFOP** na barra lateral ou **Notas fiscais → 
 - Há validação de código oficial no servidor, separação de registros por empresa e acesso de escrita limitado a `owner`, `admin`, `manager` e `operator`. Contas somente de leitura podem consultar a tabela.
 - O diagnóstico técnico de autorização fiscal continua no servidor e não é mostrado aos usuários normais; não são fornecidos tokens via navegador. O código-fonte do repositório é público, portanto ocultar o nome do provedor da UI **não significa ocultar a integração de quem inspeciona o código**.
 - Verificar com `pnpm test:cfop` e `pnpm build`. O catálogo não é motor de decisão tributária: a seleção do CFOP precisa de revisão fiscal por operação.
+
+### Etapa 11 — cadastros reais e CFOP sugerido por produto
+
+- Foram removidos os produtos, clientes e serviços fictícios predefinidos no painel. O ERP começa com listas vazias e somente carrega registros do Supabase, depois de validar a sessão e o vínculo com a empresa. Erros de conexão não ativam um modo de simulação e operações de cadastro/estoque não são salvas no navegador.
+- O antigo armazenamento local da simulação **não é mais lido nem alterado automaticamente**, para não apagar silenciosamente possíveis cadastros manuais não sincronizados. Registros reais existentes no banco não foram excluídos.
+- O cadastro de produtos possui o campo opcional `default_cfop`. Só são aceitos códigos presentes no catálogo oficial. O painel oferece sugestões com os nomes personalizados da empresa.
+- Ao selecionar um produto no rascunho de NF-e, o CFOP sugerido preenche inicialmente o campo, mas o operador pode alterá-lo. Código inexistente na tabela oficial gera pendência no rascunho; nenhum CFOP é tratado como classificação tributária definitiva.
+- Aplicar a migração `supabase/migrations/20261106_jvg_etapa11_cfop_sugerido_produto.sql` antes do deploy que usa a coluna. A transmissão fiscal permanece desabilitada.

@@ -11,6 +11,7 @@
     "build": "next build && node scripts/purge-turbopack-cache.mjs",
     "test:nfe": "node --experimental-strip-types --test scripts/nfe-draft.test.mjs",
     "test:cfop": "node --test scripts/cfop.test.mjs",
+    "test:erp": "node --test scripts/erp-data.test.mjs",
     "start": "next start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"

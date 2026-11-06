@@ -72,6 +72,7 @@
     select.addEventListener('change', function () {
       var product = state.products.find(function (p) { return p.id === select.value; });
       row.querySelector('.price').value = product ? Number(product.price || 0).toFixed(2) : '';
+      row.querySelector('.cfop').value = product ? product.defaultCfop || '' : '';
       updateTotal();
     });
     row.querySelector('.remove-item').addEventListener('click', function () {
