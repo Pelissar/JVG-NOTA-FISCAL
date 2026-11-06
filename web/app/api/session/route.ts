@@ -1,10 +1,10 @@
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getJvgUser } from "../../jvg-auth";
 import { apiJson, getCompany, getSiteAccount, isConfigured, safeError } from "../../../lib/jvg-backend";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const user = await getChatGPTUser();
+  const user = await getJvgUser();
   if (!user) return apiJson({ authenticated: false, status: "sign_in_required" }, 401);
   if (!isConfigured()) return apiJson({ authenticated: true, displayName: user.displayName, status: "waiting_secret" });
   try {

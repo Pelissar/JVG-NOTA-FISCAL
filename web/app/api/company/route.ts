@@ -1,10 +1,10 @@
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getJvgUser } from "../../jvg-auth";
 import { apiJson, dbRequest, ensureSiteAccount, filterEq, getCompany, getSiteAccount, isSameOrigin, JvgBackendError, safeError, str } from "../../../lib/jvg-backend";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const user = await getChatGPTUser();
+  const user = await getJvgUser();
   if (!user) return apiJson({ error: "Faça login para continuar." }, 401);
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const user = await getChatGPTUser();
+  const user = await getJvgUser();
   if (!user) return apiJson({ error: "Faça login para continuar." }, 401);
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {

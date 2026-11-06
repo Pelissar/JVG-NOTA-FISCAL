@@ -1,7 +1,5 @@
 import { jvgRuntime } from "./jvg-runtime";
-import type { ChatGPTUser } from "../app/chatgpt-auth";
-
-export const JVG_SITE_ID = "appgprj_6aedb5b0b2d08191823212b94a3815a1";
+import type { JvgAuthUser } from "../app/jvg-auth";
 
 export type SiteAccount = { tenant_id: string; company_id: string };
 
@@ -42,19 +40,18 @@ export async function dbRequest<T = unknown>(path: string, init: RequestInit = {
 
 export function filterEq(value: string): string { return encodeURIComponent(`eq.${value}`); }
 
-export async function getSiteAccount(user: ChatGPTUser): Promise<SiteAccount | null> {
+export async function getSiteAccount(user: JvgAuthUser): Promise<SiteAccount | null> {
   const result = await dbRequest<SiteAccount[]>(
-    `/rest/v1/jvg_site_accounts?site_project_id=${filterEq(JVG_SITE_ID)}&site_user_id=${filterEq(user.userId)}&select=tenant_id,company_id&limit=1`,
+    `/rest/v1/jvg_company_memberships?user_id=${filterEq(user.userId)}&active=eq.true&select=tenant_id,company_id&order=created_at.asc&limit=1`,
   );
   return result[0] ?? null;
 }
 
-export async function ensureSiteAccount(user: ChatGPTUser, companyName: string): Promise<SiteAccount> {
-  const list = await dbRequest<SiteAccount[]>("/rest/v1/rpc/jvg_register_site_pilot", {
+export async function ensureSiteAccount(user: JvgAuthUser, companyName: string): Promise<SiteAccount> {
+  const list = await dbRequest<SiteAccount[]>("/rest/v1/rpc/jvg_register_authenticated_pilot", {
     method: "POST",
     body: JSON.stringify({
-      p_site_project_id: JVG_SITE_ID,
-      p_site_user_id: user.userId,
+      p_user_id: user.userId,
       p_email: user.email,
       p_company_name: companyName,
     }),

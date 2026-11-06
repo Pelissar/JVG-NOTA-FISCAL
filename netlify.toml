@@ -1,0 +1,10 @@
+[build]
+  base = "web"
+  command = "pnpm build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# A Netlify usa o adaptador OpenNext automatico para Next.js.
+# Configure as chaves no painel da Netlify, nunca neste arquivo.

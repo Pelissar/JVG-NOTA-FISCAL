@@ -1,4 +1,4 @@
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getJvgUser } from "../../jvg-auth";
 import { apiJson, dbRequest, filterEq, getCompany, getSiteAccount, isSameOrigin, JvgBackendError, positiveMoney, safeError, str, type SiteAccount } from "../../../lib/jvg-backend";
 
 export const dynamic = "force-dynamic";
@@ -55,7 +55,7 @@ function buildRow(kind: RecordKind, input: Record<string, unknown>, account: Sit
 }
 
 async function authenticatedAccount() {
-  const user = await getChatGPTUser();
+  const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
   const account = await getSiteAccount(user);
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);

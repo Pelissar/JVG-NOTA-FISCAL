@@ -102,7 +102,7 @@
     var action=ready?'<button class="btn primary" data-action="configure-company">'+ico('edit')+' Editar empresa</button>':cloud.status==='needs_company'?'<button class="btn primary" data-action="configure-company">'+ico('plus')+' Cadastrar empresa piloto</button>':'<button class="btn" data-action="check-connection">'+ico('check')+' Verificar conexão</button>';
     return heading('Configurações','Sua conta, empresa piloto e integração segura com a Focus.')+banner()+
       '<section class="panel wide-info"><div class="panel-head"><div><h2>Etapa 3 · Conta e banco de dados</h2><p>Autenticação do site e cadastro multiempresa</p></div></div><div class="panel-body"><div class="info-list">'+items.map(function(x){return '<div class="info-row"><span>'+h(x[0])+'</span><strong>'+h(x[1])+'</strong></div>';}).join('')+'</div>'+
-      '<div class="heading-actions" style="margin-top:24px">'+action+(ready?'':'<button class="btn danger" data-action="reset-demo">Restaurar demonstração</button>')+'</div>'+
+      '<div class="heading-actions" style="margin-top:24px">'+action+(ready?'<button class="btn" data-action="logout">Sair da conta</button>':'<button class="btn danger" data-action="reset-demo">Restaurar demonstração</button>')+'</div>'+
       '<p class="small-note" style="margin-top:16px">Tokens Focus e certificado A1 não são solicitados nesta página. A chave JVG_SUPABASE_SECRET_KEY precisa existir apenas nos segredos privados do servidor de hospedagem; nunca cole essa chave em um campo do site.</p></div></section>';
   }
   function render(){
@@ -134,7 +134,7 @@
   async function checkConnection(){
     try{
       var response=await fetch('/api/session',{credentials:'same-origin',cache:'no-store'}),status=await response.json();
-      if(response.status===401&&status.status==='sign_in_required'){cloud.status='login_required';render();return;}
+      if(response.status===401&&status.status==='sign_in_required'){window.location.replace('/login');return;}
       if(!response.ok)throw new Error(status.error||'Erro de conexão.');
       cloud={status:status.status,displayName:status.displayName||'',company:status.company||null};
       if(cloud.status==='ready')await refreshCloud();
@@ -255,6 +255,7 @@
     if(a==='close-modal'){closeModal();return;}
     if(a==='configure-company'){openCompanyEditor();return;}
     if(a==='check-connection'){checkConnection();return;}
+    if(a==='logout'){window.location.assign('/logout');return;}
     if(a.indexOf('new-')===0){openEditor(a.substring(4));return;}
     if(a.indexOf('edit-')===0){openEditor(a.substring(5),recordId);return;}
     if(a.indexOf('remove-')===0){removeRecord(a.substring(7),recordId);return;}
