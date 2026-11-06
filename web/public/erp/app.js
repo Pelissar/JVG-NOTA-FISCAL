@@ -174,7 +174,8 @@
       field('legalName','Razão social ou nome da empresa *',company.legal_name||'','required maxlength="160"',true)+
       (existing?companyFiscalFields(company):'')+
       '</div><p class="small-note" style="margin-top:16px">Regime piloto: Simples Nacional. Salvar este cadastro não transmite NF-e. Confira os dados com seu contador e a numeração com a Focus.</p></div><div class="modal-footer"><small>* Obrigatório</small><div class="modal-footer-actions"><button class="btn" type="button" data-action="close-modal">Cancelar</button><button class="btn primary" type="submit">Salvar empresa</button></div></div></form></div></div>';
-    document.getElementById('modalBackdrop').addEventListener('click',function(e){if(e.target.id==='modalBackdrop')closeModal();});
+    // O formulario permanece aberto ao clicar no fundo: somente os botoes
+    // Fechar/Cancelar ou a conclusao do cadastro podem dispensa-lo.
     modalRoot.querySelector('[name]').focus();
   }
   async function saveCompany(form){
@@ -196,7 +197,8 @@
       var stockField=modalRoot.querySelector('[name="stock"]');
       if(stockField){stockField.readOnly=true;stockField.title='Use Ajustar saldo no módulo Estoque';}
     }
-    document.getElementById('modalBackdrop').addEventListener('click',function(e){if(e.target.id==='modalBackdrop')closeModal();});
+    // Evita fechamento acidental ao arrastar o mouse para selecionar texto
+    // ou escolher opcoes dos campos de cadastro.
     var first=modalRoot.querySelector('[name]');if(first)first.focus();
   }
   function closeModal(){modalRoot.innerHTML='';}
@@ -252,7 +254,7 @@
   function adjustStock(recordId){
     var p=state.products.find(function(x){return x.id===recordId;});if(!p)return;
     modalRoot.innerHTML='<div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><h2 id="modalTitle">Ajustar estoque</h2><p>'+h(p.name)+' · Saldo atual: '+num(p.stock)+' '+h(p.unit)+'</p></div><button class="icon-btn" type="button" data-action="close-modal">'+ico('x')+'</button></div><form id="stockForm" data-id="'+h(recordId)+'"><div class="modal-body"><div class="form-grid"><div class="field"><label for="stockDelta">Quantidade de ajuste *</label><input id="stockDelta" name="delta" type="number" step="0.001" required placeholder="Ex.: 10 ou -2"><small>Positivo = entrada. Negativo = saída.</small></div><div class="field"><label for="stockReason">Motivo *</label><input id="stockReason" name="reason" maxlength="120" required placeholder="Ex.: Inventário de teste"></div></div><p class="small-note">Controle demonstrativo, sem depósito ou livro contábil oficial nesta etapa.</p></div><div class="modal-footer"><small>O saldo não poderá ficar negativo.</small><div class="modal-footer-actions"><button class="btn" type="button" data-action="close-modal">Cancelar</button><button class="btn primary" type="submit">Confirmar ajuste</button></div></div></form></div></div>';
-    document.getElementById('modalBackdrop').addEventListener('click',function(e){if(e.target.id==='modalBackdrop')closeModal();});
+    // A janela de ajuste nao fecha ao tocar fora dela.
     document.getElementById('stockDelta').focus();
   }
   async function saveStock(form){
@@ -300,7 +302,7 @@
   document.addEventListener('change',function(e){if(e.target.hasAttribute('data-filter')){filter=e.target.value;render();}});
   document.getElementById('menuBtn').addEventListener('click',function(){document.getElementById('sidebar').classList.add('open');document.getElementById('mobileBackdrop').classList.add('active');});
   document.getElementById('mobileBackdrop').addEventListener('click',function(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();if(e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){e.preventDefault();document.getElementById('globalSearch').focus();}});
+  document.addEventListener('keydown',function(e){if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();document.getElementById('globalSearch').focus();}});
   render();
   checkConnection();
 })();
