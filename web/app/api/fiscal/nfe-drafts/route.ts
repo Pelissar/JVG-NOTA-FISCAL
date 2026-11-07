@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     const scoped = scope(account);
     const [recipientRows, products] = await Promise.all([
       dbRequest<DbRow[]>(`/rest/v1/jvg_parties?${scoped}&id=${filterEq(draft.recipientId)}&is_customer=eq.true&active=eq.true&select=id,display_name,document_type,document_number,address&limit=1`),
-      dbRequest<DbRow[]>(`/rest/v1/jvg_products?${scoped}&id=in.(${draft.items.map(i => i.productId).join(",")})&active=eq.true&select=id,sku,name,unit,ncm,cest,gtin,origin,sale_price`),
+      dbRequest<DbRow[]>(`/rest/v1/jvg_products?${scoped}&id=in.(${draft.items.map(i => i.productId).join(",")})&active=eq.true&select=id,sku,name,unit,ncm,cest,gtin,origin,tax_profile_id,sale_price`),
     ]);
     const recipient = recipientRows[0];
     if (!recipient) throw new JvgBackendError("Destinatário não pertence a esta empresa ou está inativo.", 400);
@@ -70,6 +70,9 @@ export async function POST(request: Request) {
     if (draft.items.some(item => !byId.has(item.productId)))
       throw new JvgBackendError("Um ou mais produtos não pertencem à empresa ou estão inativos.", 400);
 
+    const profileIds = [...new Set(products.map(product => String(product.tax_profile_id || '')).filter(Boolean))];
+    const profiles = profileIds.length ? await dbRequest<DbRow[]>(`/rest/v1/jvg_tax_profiles?${scoped}&id=in.(${profileIds.join(',')})&document_type=eq.nfe&select=id,name,rules,review_status`) : [];
+    const byProfile = new Map(profiles.map(profile => [String(profile.id), profile]));
     const pending: string[] = [];
     if (company.fiscal_missing.length) pending.push("Conferir dados fiscais do emitente");
     if (!recipient.document_number) pending.push("Documento CPF/CNPJ do destinatário não informado");
@@ -79,11 +82,15 @@ export async function POST(request: Request) {
       if (!input.cfop) pending.push(`Item ${index + 1}: CFOP pendente`);
       else if (!isOfficialCfopCode(input.cfop)) pending.push(`Item ${index + 1}: CFOP não consta da tabela oficial`);
       if (!input.csosn) pending.push(`Item ${index + 1}: CSOSN pendente`);
+      const profile = product.tax_profile_id ? byProfile.get(String(product.tax_profile_id)) : undefined;
+      if (!profile) pending.push(`Item ${index + 1}: perfil tributário não associado ou indisponível`);
+      else if (profile.review_status !== 'reviewed') pending.push(`Item ${index + 1}: perfil tributário ainda não revisado`);
       return {
         productId: product.id, sku: product.sku, description: product.name,
         unit: product.unit, ncm: product.ncm, cest: product.cest, gtin: product.gtin, origin: product.origin,
         quantity: input.quantity, unitPriceCents: input.unitPriceCents,
         subtotalCents: input.subtotalCents, cfop: input.cfop, csosn: input.csosn,
+        taxProfile: profile ? { id: profile.id, name: profile.name, reviewStatus: profile.review_status, rules: profile.rules } : null,
       };
     });
     pending.push("Conferência tributária com contador: ICMS, PIS/Cofins, IBS/CBS e demais totalizadores");

@@ -106,7 +106,7 @@
   function field(name,label,value,extra,full,help){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+(extra||'')+'>'+(help?'<small>'+h(help)+'</small>':'')+'</div>';}
   function lookupField(name,label,value,extra,kind,full){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><div class="input-action"><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+extra+'><button class="btn ghost lookup-btn" type="button" data-action="lookup-'+kind+'">Consultar</button></div></div>';}
   function select(name,label,options,value){return '<div class="field"><label for="f-'+h(name)+'">'+h(label)+'</label><select id="f-'+h(name)+'" name="'+h(name)+'">'+options.map(function(o){return '<option value="'+h(o[0])+'" '+(String(value)===String(o[0])?'selected':'')+'>'+h(o[1])+'</option>';}).join('')+'</select></div>';}
-  function productForm(p){return field('sku','Código interno (SKU) *',p.sku,'required maxlength="40"',false)+field('name','Descrição do produto *',p.name,'required maxlength="160"',false)+field('category','Categoria',p.category,'maxlength="80"',false)+select('unit','Unidade',[['UN','Unidade (UN)'],['KG','Quilograma (KG)'],['M','Metro (M)'],['L','Litro (L)'],['CX','Caixa (CX)'],['PAR','Par (PAR)'],['PCT','Pacote (PCT)']],p.unit||'UN')+field('ncm','NCM',p.ncm,'inputmode="numeric" maxlength="8" pattern="[0-9]{8}"',false,'8 dígitos; confira com seu contador.')+field('cest','CEST (quando aplicável)',p.cest,'maxlength="12"',false)+field('defaultCfop','CFOP sugerido (opcional)',p.defaultCfop,'maxlength="4" inputmode="numeric" pattern="[0-9]{4}" list="productCfopOptions"',false,'Sugestão para rascunhos: depende da operação, UF e regime. Consulte seu contador.')+field('gtin','EAN / GTIN',p.gtin||'SEM GTIN','maxlength="14"',false,'Informe SEM GTIN quando não houver código.')+select('origin','Origem da mercadoria',[['0','0 · Nacional'],['1','1 · Estrangeira direta'],['2','2 · Estrangeira mercado interno'],['3','3 · Nacional > 40% importação'],['4','4 · Nacional processos básicos'],['5','5 · Nacional ≤ 40% importação'],['6','6 · Estrangeira sem similar'],['7','7 · Estrangeira mercado interno sem similar'],['8','8 · Nacional > 70% importação']],p.origin||'0')+field('cost','Preço de custo (R$)',p.cost,'type="number" min="0" step="0.01"',false)+field('price','Preço de venda (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+field('stock','Saldo inicial',p.stock,'type="number" min="0" step="0.001"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
+  function productForm(p){return field('sku','Código interno (SKU) *',p.sku,'required maxlength="40"',false)+field('name','Descrição do produto *',p.name,'required maxlength="160"',false)+field('category','Categoria',p.category,'maxlength="80"',false)+select('unit','Unidade',[['UN','Unidade (UN)'],['KG','Quilograma (KG)'],['M','Metro (M)'],['L','Litro (L)'],['CX','Caixa (CX)'],['PAR','Par (PAR)'],['PCT','Pacote (PCT)']],p.unit||'UN')+field('ncm','NCM',p.ncm,'inputmode="numeric" maxlength="8" pattern="[0-9]{8}"',false,'8 dígitos; confira com seu contador.')+field('cest','CEST (quando aplicável)',p.cest,'maxlength="12"',false)+field('defaultCfop','CFOP sugerido (opcional)',p.defaultCfop,'maxlength="4" inputmode="numeric" pattern="[0-9]{4}" list="productCfopOptions"',false,'Sugestão para rascunhos: depende da operação, UF e regime. Consulte seu contador.')+select('taxProfileId','Perfil tributário (NF-e)',[['','Nenhum perfil selecionado']],p.taxProfileId||'')+field('gtin','EAN / GTIN',p.gtin||'SEM GTIN','maxlength="14"',false,'Informe SEM GTIN quando não houver código.')+select('origin','Origem da mercadoria',[['0','0 · Nacional'],['1','1 · Estrangeira direta'],['2','2 · Estrangeira mercado interno'],['3','3 · Nacional > 40% importação'],['4','4 · Nacional processos básicos'],['5','5 · Nacional ≤ 40% importação'],['6','6 · Estrangeira sem similar'],['7','7 · Estrangeira mercado interno sem similar'],['8','8 · Nacional > 70% importação']],p.origin||'0')+field('cost','Preço de custo (R$)',p.cost,'type="number" min="0" step="0.01"',false)+field('price','Preço de venda (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+field('stock','Saldo inicial',p.stock,'type="number" min="0" step="0.001"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
   function clientForm(p){return field('name','Nome / razão social *',p.name,'required maxlength="160"',true)+
     select('type','Tipo',[['PJ','Pessoa jurídica'],['PF','Pessoa física'],['EXT','Estrangeiro']],p.type||'PJ')+
     lookupField('document','CPF / CNPJ (consulta para PJ)',p.document,'maxlength="18"','cnpj',false)+
@@ -256,10 +256,19 @@
       var stockField=modalRoot.querySelector('[name="stock"]');
       if(stockField){stockField.readOnly=true;stockField.title='Use Ajustar saldo no módulo Estoque';}
     }
-    if(kind==='product')loadProductCfopOptions();
+    if(kind==='product'){loadProductCfopOptions();loadProductProfileOptions(p.taxProfileId||'');}
     // Evita fechamento acidental ao arrastar o mouse para selecionar texto
     // ou escolher opcoes dos campos de cadastro.
     var first=modalRoot.querySelector('[name]');if(first)first.focus();
+  }
+  async function loadProductProfileOptions(selected){
+    try{
+      var response=await callApi('/api/fiscal/tax-profiles');
+      var field=modalRoot.querySelector('#recordForm [name="taxProfileId"]');
+      if(!field)return;
+      (response.records||[]).forEach(function(profile){var opt=document.createElement('option');opt.value=profile.id;opt.textContent=profile.name+' · pendente de revisão';field.appendChild(opt);});
+      field.value=selected||'';
+    }catch(error){toast('Perfis tributários indisponíveis no momento.','error');}
   }
   var productCfopOptionsLoaded=false;
   async function loadProductCfopOptions(){
@@ -285,7 +294,7 @@
     if(kind==='product'){
       if(values.ncm&&!/^\d{8}$/.test(values.ncm)){toast('NCM deve conter 8 dígitos.','error');return;}
       if(values.gtin && values.gtin!=='SEM GTIN' && !/^\d{8}$|^\d{12,14}$/.test(values.gtin)){toast('GTIN deve conter 8, 12, 13 ou 14 dígitos ou SEM GTIN.','error');return;}
-      record=Object.assign(record,{sku:values.sku.trim(),name:values.name.trim(),category:values.category.trim(),unit:values.unit,ncm:values.ncm,cest:values.cest,defaultCfop:values.defaultCfop.trim(),gtin:values.gtin||'SEM GTIN',origin:values.origin,cost:Number(values.cost||0),price:Number(values.price||0),stock:Number(values.stock||0),active:values.active==='true'});
+      record=Object.assign(record,{sku:values.sku.trim(),name:values.name.trim(),category:values.category.trim(),unit:values.unit,ncm:values.ncm,cest:values.cest,defaultCfop:values.defaultCfop.trim(),taxProfileId:values.taxProfileId||null,gtin:values.gtin||'SEM GTIN',origin:values.origin,cost:Number(values.cost||0),price:Number(values.price||0),stock:Number(values.stock||0),active:values.active==='true'});
       if(record.price<0||record.cost<0||record.stock<0){toast('Valores não podem ser negativos.','error');return;}
     }else if(kind==='client'){
       var doc=values.document.toUpperCase().replace(/[^A-Z0-9]/g,'');
