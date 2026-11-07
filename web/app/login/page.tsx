@@ -75,7 +75,7 @@ export default function LoginPage() {
         </form>
         {message && <p role="status" style={{marginTop:15,fontSize:13,background:"#ecf5f5",padding:12,borderRadius:9}}>{message}</p>}
         <button type="button" onClick={()=>{setMode(mode==="login"?"signup":"login");setMessage("");}} style={{marginTop:20,padding:0,border:0,background:"transparent",color:"#007f72",fontWeight:650,cursor:"pointer"}}>{mode==="login"?"Primeiro acesso? Criar conta":"Já tenho conta. Fazer login"}</button>
-        <p style={{fontSize:11,color:"#81929d",marginTop:25}}>Ambiente piloto. A emissão fiscal real ainda depende da integração e da homologação com a Focus NFe.</p>
+        <p style={{fontSize:11,color:"#81929d",marginTop:25}}>Ambiente piloto. A emissão fiscal real permanece bloqueada até a conclusão dos testes de homologação.</p>
       </section>
     </main>
   );
