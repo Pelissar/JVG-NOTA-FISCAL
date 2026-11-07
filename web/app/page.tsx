@@ -40,8 +40,8 @@ export default function Home() {
           <div className={styles.previewBody}>
             <aside className={styles.previewSide}><b>▦ &nbsp; Visão geral</b><span>⬡ &nbsp; Produtos</span><span>◉ &nbsp; Clientes</span><span>▤ &nbsp; Notas fiscais</span><span>⌁ &nbsp; Estoque</span><span>◫ &nbsp; Relatórios</span></aside>
             <div className={styles.previewContent}><small className={styles.previewCaption}>VISÃO GERAL <em>AMBIENTE PILOTO</em></small><h3>Seu negócio em um só lugar ✦</h3>
-              <div className={styles.stats}><div><small>Produtos</small><strong>—</strong><span>Catálogo</span></div><div><small>Clientes</small><strong>—</strong><span>Cadastros</span></div><div><small>Serviços</small><strong>—</strong><span>Portfólio</span></div></div>
-              <div className={styles.chart}><div><b>Visão da operação</b><small>Dados ilustrativos</small></div><div className={styles.bars}>{[36,52,42,68,60,82,73,94,79,100,87,96].map((n,i)=><i key={i} style={{height:n+"%"}} />)}</div><div className={styles.axis}><span>Cadastros</span><span>Estoque</span><span>Fiscal</span></div></div>
+              <div className={styles.stats}><div><small>Produtos</small><strong>SKU</strong><span>Cadastro fiscal</span></div><div><small>Clientes</small><strong>CPF/CNPJ</strong><span>Dados reais</span></div><div><small>Serviços</small><strong>NBS</strong><span>Catálogo</span></div></div>
+              <div className={styles.chart}><div><b>Fluxo de trabalho</b><small>Estrutura do produto</small></div><div className={styles.workflow}><span>Cadastros</span><span>Estoque</span><span>Rascunho fiscal</span></div><div className={styles.axis}><span>Sem dados demonstrativos</span><span>Emissão em homologação pendente</span></div></div>
             </div>
           </div>
         </div>
