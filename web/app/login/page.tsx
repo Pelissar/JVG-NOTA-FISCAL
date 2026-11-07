@@ -62,7 +62,7 @@ export default function LoginPage() {
           <div><strong style={{fontSize:21}}>JVG Nota Fiscal</strong><div style={{fontSize:12,color:"#687e8c"}}>ERP multiempresa • ambiente piloto</div></div>
         </div>
         <h1 style={{fontSize:26,fontWeight:750,margin:"0 0 6px"}}>{mode==="login"?"Entrar no sistema":"Criar minha conta"}</h1>
-        <p style={{color:"#617785",fontSize:14,margin:"0 0 24px"}}>Acesso protegido por Supabase Auth. Cadastre sua empresa após entrar.</p>
+        <p style={{color:"#617785",fontSize:14,margin:"0 0 24px"}}>Acesso seguro ao painel de gestão. Cadastre sua empresa após entrar.</p>
         {!ready && <p role="alert" style={{padding:13,background:"#fff3d9",borderRadius:9,color:"#855500",fontSize:13}}>Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY na Netlify e publique novamente.</p>}
         <form onSubmit={submit} style={{display:"grid",gap:13}}>
           <label style={{display:"grid",gap:6,fontSize:13,fontWeight:650}}>E-mail
