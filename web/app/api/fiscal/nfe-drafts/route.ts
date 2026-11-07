@@ -5,6 +5,7 @@ import {
 } from "../../../../lib/jvg-backend";
 import { parseNfeDraftInput } from "../../../../lib/fiscal/nfe-draft";
 import { isOfficialCfopCode } from "../../../../lib/fiscal/cfop";
+import { reviewNfeOperation, reviewProfileConsistency } from "../../../../lib/fiscal/operation-review";
 
 export const dynamic = "force-dynamic";
 
@@ -76,33 +77,44 @@ export async function POST(request: Request) {
     const pending: string[] = [];
     if (company.fiscal_missing.length) pending.push("Conferir dados fiscais do emitente");
     if (!recipient.document_number) pending.push("Documento CPF/CNPJ do destinatário não informado");
+    const issuerAddress = company.address && typeof company.address === "object" ? company.address as DbRow : {};
+    const recipientAddress = recipient.address && typeof recipient.address === "object" ? recipient.address as DbRow : {};
+    const issuerUf = issuerAddress.state;
+    const recipientUf = recipientAddress.state;
     const items = draft.items.map((input, index) => {
       const product = byId.get(input.productId)!;
       if (!/^[0-9]{8}$/.test(String(product.ncm || ""))) pending.push(`Item ${index + 1}: NCM pendente`);
       if (!input.cfop) pending.push(`Item ${index + 1}: CFOP pendente`);
       else if (!isOfficialCfopCode(input.cfop)) pending.push(`Item ${index + 1}: CFOP não consta da tabela oficial`);
       if (!input.csosn) pending.push(`Item ${index + 1}: CSOSN pendente`);
+      const review = reviewNfeOperation(issuerUf, recipientUf, input.cfop, index + 1);
+      pending.push(...review.pending);
       const profile = product.tax_profile_id ? byProfile.get(String(product.tax_profile_id)) : undefined;
       if (!profile) pending.push(`Item ${index + 1}: perfil tributário não associado ou indisponível`);
-      else if (profile.review_status !== 'reviewed') pending.push(`Item ${index + 1}: perfil tributário ainda não revisado`);
+      else {
+        if (profile.review_status !== 'reviewed') pending.push(`Item ${index + 1}: perfil tributário ainda não revisado`);
+        const rules = profile.rules && typeof profile.rules === "object" && !Array.isArray(profile.rules) ? profile.rules as DbRow : {};
+        pending.push(...reviewProfileConsistency(rules, input.cfop, input.csosn, index + 1));
+      }
       return {
         productId: product.id, sku: product.sku, description: product.name,
         unit: product.unit, ncm: product.ncm, cest: product.cest, gtin: product.gtin, origin: product.origin,
         quantity: input.quantity, unitPriceCents: input.unitPriceCents,
         subtotalCents: input.subtotalCents, cfop: input.cfop, csosn: input.csosn,
+        operation: review.operation,
         taxProfile: profile ? { id: profile.id, name: profile.name, reviewStatus: profile.review_status, rules: profile.rules } : null,
       };
     });
     pending.push("Conferência tributária com contador: ICMS, PIS/Cofins, IBS/CBS e demais totalizadores");
 
     const payload = {
-      schemaVersion: 1, nature: draft.nature, purpose: "1",
+      schemaVersion: 2, nature: draft.nature, purpose: "1",
       issuer: { companyId: account.company_id, name: company.trade_name || company.legal_name,
         cnpj: company.cnpj, stateRegistration: company.state_registration,
-        taxRegime: company.tax_regime },
+        taxRegime: company.tax_regime, state: issuerUf },
       recipient: { id: recipient.id, name: recipient.display_name,
         documentType: recipient.document_type, documentNumber: recipient.document_number,
-        address: recipient.address },
+        address: recipient.address, state: recipientUf },
       items, totalCents: draft.totalCents, pending, readyToTransmit: false,
     };
 

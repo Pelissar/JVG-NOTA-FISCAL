@@ -14,7 +14,8 @@
     "test:erp": "node --test scripts/erp-data.test.mjs",
     "start": "next start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "test:operation": "node --experimental-strip-types --test scripts/operation-review.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
