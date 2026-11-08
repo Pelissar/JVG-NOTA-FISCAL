@@ -160,6 +160,15 @@
       appendLine(target, 'h3', 'Rascunho · ' + (recipient.name || 'Destinatário'));
       appendLine(target, 'p', 'Natureza: ' + (draft.nature || 'não informada'));
       appendLine(target, 'p', 'Total comercial: ' + money.format(Number(draft.totalCents || 0) / 100));
+      if (draft.preflight) {
+        appendLine(target, 'h4', 'Pré-conferência cadastral');
+        appendLine(target, 'p', draft.preflight.dataComplete ?
+          'Dados básicos presentes. Revisão fiscal e homologação ainda obrigatórias.' :
+          'Dados cadastrais incompletos: veja as pendências abaixo.');
+        appendLine(target, 'p', 'Transmissão bloqueada. Pré-conferência não substitui validação fiscal.');
+      } else {
+        appendLine(target, 'p', 'Rascunho antigo: pré-conferência cadastral indisponível.');
+      }
       appendLine(target, 'h4', 'Itens');
       var itemList = document.createElement('ul');
       (Array.isArray(draft.items) ? draft.items : []).forEach(function (item, i) {

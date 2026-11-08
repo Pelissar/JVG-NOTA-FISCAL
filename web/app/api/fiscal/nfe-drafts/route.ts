@@ -7,6 +7,7 @@ import { parseNfeDraftInput } from "../../../../lib/fiscal/nfe-draft";
 import { isOfficialCfopCode } from "../../../../lib/fiscal/cfop";
 import { reviewNfeOperation, reviewProfileConsistency } from "../../../../lib/fiscal/operation-review";
 import { calculateTaxPreview, parsePreviewRate, PREVIEW_TAXES, type PreviewRates } from "../../../../lib/fiscal/tax-preview";
+import { reviewNfePreparation } from "../../../../lib/fiscal/nfe-preflight";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,7 @@ export async function GET(request: Request) {
           issuer: payload.issuer, recipient: payload.recipient,
           items: payload.items, totalCents: payload.totalCents,
           pending: payload.pending, taxPreview: payload.taxPreview,
+          preflight: payload.preflight ?? null,
           readyToTransmit: false, transmissionEnabled: false,
         },
       });
@@ -139,6 +141,18 @@ export async function POST(request: Request) {
         taxProfile: profile ? { id: profile.id, name: profile.name, reviewStatus: profile.review_status, rules: profile.rules } : null,
       };
     });
+    const issuer = {
+      companyId: account.company_id, name: company.trade_name || company.legal_name,
+      cnpj: company.cnpj, stateRegistration: company.state_registration,
+      taxRegime: company.tax_regime, state: issuerUf,
+    };
+    const recipientSnapshot = {
+      id: recipient.id, name: recipient.display_name,
+      documentType: recipient.document_type, documentNumber: recipient.document_number,
+      address: recipient.address, state: recipientUf,
+    };
+    const preflight = reviewNfePreparation(issuer, recipientSnapshot, items);
+    pending.push(...preflight.issues);
     pending.push("Conferência tributária com contador: ICMS, PIS/Cofins, IBS/CBS e demais totalizadores");
     const taxPreview = {
       sumOfEstimatesCents: estimatedLines.reduce((sum, line) => sum + line.amountCents, 0),
@@ -146,14 +160,9 @@ export async function POST(request: Request) {
     };
 
     const payload = {
-      schemaVersion: 2, nature: draft.nature, purpose: "1",
-      issuer: { companyId: account.company_id, name: company.trade_name || company.legal_name,
-        cnpj: company.cnpj, stateRegistration: company.state_registration,
-        taxRegime: company.tax_regime, state: issuerUf },
-      recipient: { id: recipient.id, name: recipient.display_name,
-        documentType: recipient.document_type, documentNumber: recipient.document_number,
-        address: recipient.address, state: recipientUf },
-      items, totalCents: draft.totalCents, taxPreview, pending, readyToTransmit: false,
+      schemaVersion: 3, nature: draft.nature, purpose: "1",
+      issuer, recipient: recipientSnapshot,
+      items, totalCents: draft.totalCents, taxPreview, preflight, pending, readyToTransmit: false,
     };
 
     const created = await dbRequest<Array<{ id: string }>>("/rest/v1/jvg_fiscal_documents", {
