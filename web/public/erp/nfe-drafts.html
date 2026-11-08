@@ -8,6 +8,10 @@
   <title>Rascunhos NF-e · JVG Nota Fiscal</title>
   <link rel="stylesheet" href="./nfe-drafts.css">
   <script defer src="./nfe-drafts.js"></script>
+<style>
+.draft-inspect{margin-top:10px;border:1px solid #138b75;border-radius:9px;background:#e9f9f3;color:#086f5d;font-weight:700;cursor:pointer;padding:9px 12px;font:inherit;font-size:12px;text-align:left}
+.draft-inspect:hover{background:#d4f2e7}.draft-details{padding:20px;overflow-wrap:anywhere}.draft-details h3,.draft-details h4{margin:10px 0}.draft-details p,.draft-details li{font-size:13px;line-height:1.6}.draft-details ul{padding-left:22px}.draft-details[hidden]{display:none}
+</style>
 </head>
 <body>
   <header class="topbar">
@@ -38,6 +42,7 @@
       </section>
       <aside class="side">
         <section class="panel history"><div class="panel-head"><div><h2>Rascunhos salvos</h2><p>Somente desta empresa e em homologação.</p></div><span class="step-tag">02 / HISTÓRICO</span></div><div class="panel-body"><div id="history" class="history-list"><p>Carregando...</p></div></div></section>
+        <section class="panel draft-details" id="draftDetails" hidden aria-live="polite" aria-label="Detalhes do rascunho"></section>
         <section class="next-panel"><div class="next-icon">✓</div><h3>Uma etapa de cada vez.</h3><p>Os rascunhos usam seus cadastros atuais. O cálculo tributário, a transmissão fiscal, o retorno da SEFAZ e os arquivos fiscais serão implementados e validados nas próximas fases.</p><span>Transmissão desativada por segurança</span></section>
       </aside>
     </div>

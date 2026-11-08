@@ -24,9 +24,30 @@ function scope(account: SiteAccount): string {
   return `tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const account = await currentAccount();
+    const requestedId = new URL(request.url).searchParams.get("id");
+    if (requestedId !== null) {
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedId))
+        throw new JvgBackendError("Identificador do rascunho inválido.", 400);
+      // Filtro por empresa, tipo e ambiente aplicado também na consulta individual.
+      const selected = await dbRequest<DbRow[]>(
+        `/rest/v1/jvg_fiscal_documents?${scope(account)}&id=${filterEq(requestedId)}&document_type=eq.nfe&environment=eq.homologacao&status=eq.draft&select=id,status,fiscal_payload,created_at&limit=1`,
+      );
+      if (!selected[0]) throw new JvgBackendError("Rascunho não encontrado nesta empresa.", 404);
+      const payload = selected[0].fiscal_payload && typeof selected[0].fiscal_payload === "object" ? selected[0].fiscal_payload as DbRow : {};
+      return apiJson({
+        draft: {
+          id: selected[0].id, status: selected[0].status, createdAt: selected[0].created_at,
+          nature: payload.nature,
+          issuer: payload.issuer, recipient: payload.recipient,
+          items: payload.items, totalCents: payload.totalCents,
+          pending: payload.pending, taxPreview: payload.taxPreview,
+          readyToTransmit: false, transmissionEnabled: false,
+        },
+      });
+    }
     const rows = await dbRequest<DbRow[]>(
       `/rest/v1/jvg_fiscal_documents?${scope(account)}&document_type=eq.nfe&environment=eq.homologacao&select=id,status,fiscal_payload,created_at,updated_at&order=created_at.desc&limit=50`,
     );

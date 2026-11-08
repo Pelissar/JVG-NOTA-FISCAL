@@ -130,9 +130,65 @@
       foot.append(price, badge);
       const preview = document.createElement('small');
       preview.textContent = draft.previewTotalCents ? 'Estimativa aritmética de tributos: ' + money.format(draft.previewTotalCents / 100) + ' · não válida para emissão' : 'Sem estimativa de tributos';
-      row.append(name, date, foot, preview);
+      var inspect = document.createElement('button');
+      inspect.type = 'button';
+      inspect.className = 'draft-inspect';
+      inspect.textContent = 'Ver pendências e detalhes';
+      inspect.addEventListener('click', function () { inspectDraft(draft.id); });
+      row.append(name, date, foot, preview, inspect);
       target.append(row);
     });
+  }
+
+  function appendLine(parent, tag, value) {
+    var node = document.createElement(tag);
+    node.textContent = value;
+    parent.append(node);
+  }
+
+  async function inspectDraft(id) {
+    var target = document.getElementById('draftDetails');
+    target.replaceChildren();
+    appendLine(target, 'p', 'Buscando detalhes do rascunho...');
+    try {
+      var response = await api('/api/fiscal/nfe-drafts?id=' + encodeURIComponent(id));
+      var draft = response.draft;
+      if (!draft || draft.readyToTransmit !== false || draft.transmissionEnabled !== false)
+        throw new Error('Resposta fiscal inesperada. Consulte o suporte.');
+      target.replaceChildren();
+      var recipient = draft.recipient || {};
+      appendLine(target, 'h3', 'Rascunho · ' + (recipient.name || 'Destinatário'));
+      appendLine(target, 'p', 'Natureza: ' + (draft.nature || 'não informada'));
+      appendLine(target, 'p', 'Total comercial: ' + money.format(Number(draft.totalCents || 0) / 100));
+      appendLine(target, 'h4', 'Itens');
+      var itemList = document.createElement('ul');
+      (Array.isArray(draft.items) ? draft.items : []).forEach(function (item, i) {
+        appendLine(itemList, 'li', (i + 1) + '. ' + (item.description || 'Produto') +
+          ' · CFOP ' + (item.cfop || 'pendente') + ' · CSOSN ' + (item.csosn || 'pendente') +
+          ' · ' + money.format(Number(item.subtotalCents || 0) / 100));
+      });
+      target.append(itemList);
+      appendLine(target, 'h4', 'Pendências de conferência');
+      var pending = Array.isArray(draft.pending) ? draft.pending : [];
+      if (pending.length) {
+        var list = document.createElement('ul');
+        pending.forEach(function (issue) { appendLine(list, 'li', String(issue)); });
+        target.append(list);
+      } else {
+        appendLine(target, 'p', 'Sem pendências registradas neste rascunho. Isso não representa aprovação fiscal.');
+      }
+      var preview = draft.taxPreview || {};
+      appendLine(target, 'h4', 'Prévia matemática não fiscal');
+      appendLine(target, 'p', 'Estimativa total: ' + money.format(Number(preview.sumOfEstimatesCents || 0) / 100) +
+        '. Não é valor autorizado, nem apuração tributária.');
+      appendLine(target, 'p', 'Emissão e transmissão indisponíveis nesta fase.');
+      target.hidden = false;
+      target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (error) {
+      target.replaceChildren();
+      appendLine(target, 'p', 'Falha na consulta: ' + error.message);
+      target.hidden = false;
+    }
   }
 
   async function refreshHistory() {
