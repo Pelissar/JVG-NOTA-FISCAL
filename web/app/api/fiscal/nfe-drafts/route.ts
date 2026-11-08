@@ -8,6 +8,7 @@ import { isOfficialCfopCode } from "../../../../lib/fiscal/cfop";
 import { reviewNfeOperation, reviewProfileConsistency } from "../../../../lib/fiscal/operation-review";
 import { calculateTaxPreview, parsePreviewRate, PREVIEW_TAXES, type PreviewRates } from "../../../../lib/fiscal/tax-preview";
 import { reviewNfePreparation } from "../../../../lib/fiscal/nfe-preflight";
+import { reviewNfeDocument } from "../../../../lib/fiscal/nfe-document-review";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,7 @@ export async function GET(request: Request) {
           items: payload.items, totalCents: payload.totalCents,
           pending: payload.pending, taxPreview: payload.taxPreview,
           preflight: payload.preflight ?? null,
+          documentReview: reviewNfeDocument(payload),
           readyToTransmit: false, transmissionEnabled: false,
         },
       });

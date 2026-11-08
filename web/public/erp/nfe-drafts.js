@@ -169,6 +169,17 @@
       } else {
         appendLine(target, 'p', 'Rascunho antigo: pré-conferência cadastral indisponível.');
       }
+      var documentReview = draft.documentReview || {};
+      if (Array.isArray(documentReview.checks)) {
+        appendLine(target, 'h4', 'Checklist de preparação da NF-e');
+        var checkList = document.createElement('ul');
+        documentReview.checks.forEach(function (check) {
+          appendLine(checkList, 'li', (check.ok ? '✓ ' : 'Pendente: ') +
+            check.label + ' — ' + check.detail);
+        });
+        target.append(checkList);
+        appendLine(target, 'p', 'Checklist interno: não é XML, DANFE, validação da SEFAZ ou permissão de emissão.');
+      }
       appendLine(target, 'h4', 'Itens');
       var itemList = document.createElement('ul');
       (Array.isArray(draft.items) ? draft.items : []).forEach(function (item, i) {
