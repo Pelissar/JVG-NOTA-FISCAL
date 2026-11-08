@@ -4,6 +4,7 @@ import {
   type SiteAccount,
 } from "../../../../lib/jvg-backend";
 import { isOfficialCfopCode } from "../../../../lib/fiscal/cfop";
+import { parsePreviewRate, PREVIEW_TAXES, type PreviewRates } from "../../../../lib/fiscal/tax-preview";
 
 export const dynamic = "force-dynamic";
 
@@ -61,8 +62,16 @@ export async function POST(request: Request) {
     if (cofinsCst && !/^\d{2}$/.test(cofinsCst)) throw new JvgBackendError("CST Cofins deve ter 2 dígitos.", 400);
     if (cstIbsCbs && !/^\d{3}$/.test(cstIbsCbs)) throw new JvgBackendError("CST IBS/CBS deve ter 3 dígitos.", 400);
     if (classTrib && !/^\d{6}$/.test(classTrib)) throw new JvgBackendError("Classificação tributária IBS/CBS deve ter 6 dígitos.", 400);
+    const previewRates: PreviewRates = {};
+    for (const tax of PREVIEW_TAXES) {
+      const rawRate = input[`${tax}Rate`];
+      let value: string | null;
+      try { value = parsePreviewRate(rawRate); }
+      catch (error) { throw new JvgBackendError(`${tax.toUpperCase()}: ${error instanceof Error ? error.message : "Alíquota inválida."}`, 400); }
+      if (value !== null) previewRates[tax] = value;
+    }
     const rules = { regime: "simples_nacional", cfop, csosn: taxSituation, pisCst, cofinsCst,
-      cstIbsCbs, classTrib, taxCalculationEnabled: false, requiresAccountantReview: true };
+      cstIbsCbs, classTrib, previewRates, previewOnly: true, taxCalculationEnabled: false, requiresAccountantReview: true };
     const result = await dbRequest<Array<{ id: string }>>("/rest/v1/jvg_tax_profiles", {
       method: "POST",
       body: JSON.stringify({ tenant_id: a.tenant_id, company_id: a.company_id,

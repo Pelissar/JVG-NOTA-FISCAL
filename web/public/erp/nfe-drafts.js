@@ -128,7 +128,9 @@
       var badge = document.createElement('span');
       badge.textContent = draft.status === 'draft' ? 'Rascunho · ' + draft.pendingCount + ' pendência(s)' : draft.status;
       foot.append(price, badge);
-      row.append(name, date, foot);
+      const preview = document.createElement('small');
+      preview.textContent = draft.previewTotalCents ? 'Estimativa aritmética de tributos: ' + money.format(draft.previewTotalCents / 100) + ' · não válida para emissão' : 'Sem estimativa de tributos';
+      row.append(name, date, foot, preview);
       target.append(row);
     });
   }

@@ -17,7 +17,11 @@ body{margin:0}header{background:#102b3c;color:white;padding:18px max(20px,calc((
 <label>CST da Cofins<input name="cofinsCst" pattern="[0-9]{2}" maxlength="2" inputmode="numeric"></label>
 <label>CST IBS/CBS<input name="cstIbsCbs" pattern="[0-9]{3}" maxlength="3" inputmode="numeric"></label>
 <label>Classificação IBS/CBS<input name="classTrib" pattern="[0-9]{6}" maxlength="6" inputmode="numeric"></label>
-</div><div class="notice">Confirme todas as classificações com o contador e as tabelas fiscais vigentes. O perfil será salvo como <strong>rascunho não revisado</strong>.</div>
+<label>PIS estimado (%)<input name="pisRate" inputmode="decimal" pattern="[0-9]{1,3}([.][0-9]{1,4})?" placeholder="Preencher com orientação fiscal"></label>
+<label>Cofins estimada (%)<input name="cofinsRate" inputmode="decimal" pattern="[0-9]{1,3}([.][0-9]{1,4})?" placeholder="Preencher com orientação fiscal"></label>
+<label>IBS estimado (%)<input name="ibsRate" inputmode="decimal" pattern="[0-9]{1,3}([.][0-9]{1,4})?" placeholder="Preencher com orientação fiscal"></label>
+<label>CBS estimada (%)<input name="cbsRate" inputmode="decimal" pattern="[0-9]{1,3}([.][0-9]{1,4})?" placeholder="Preencher com orientação fiscal"></label>
+</div><div class="notice">As alíquotas são opcionais e informadas manualmente. O sistema apenas multiplica a base comercial pelos percentuais; não considera reduções, créditos, diferimentos, exceções ou regras completas do Simples Nacional. <strong>Nunca use a estimativa para emitir notas.</strong></div><div class="notice">Confirme todas as classificações com o contador e as tabelas fiscais vigentes. O perfil será salvo como <strong>rascunho não revisado</strong>.</div>
 <button id="save" type="submit" disabled>Salvar perfil fiscal</button></form><datalist id="cfopOptions"></datalist></section>
 <section class="panel"><h2>Perfis da empresa</h2><p>Somente registros reais vinculados à empresa autenticada.</p><div id="records">Carregando...</div></section>
 </div></main></body></html>

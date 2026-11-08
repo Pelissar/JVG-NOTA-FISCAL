@@ -6,6 +6,7 @@ import {
 import { parseNfeDraftInput } from "../../../../lib/fiscal/nfe-draft";
 import { isOfficialCfopCode } from "../../../../lib/fiscal/cfop";
 import { reviewNfeOperation, reviewProfileConsistency } from "../../../../lib/fiscal/operation-review";
+import { calculateTaxPreview, parsePreviewRate, PREVIEW_TAXES, type PreviewRates } from "../../../../lib/fiscal/tax-preview";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,7 @@ export async function GET() {
         id: row.id, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at,
         recipientName: String(recipient.name || "Destinatário"), itemsCount: items.length,
         totalCents: Number(payload.totalCents || 0), pendingCount: warnings.length,
+        previewTotalCents: Number((payload.taxPreview as DbRow | undefined)?.sumOfEstimatesCents || 0),
       };
     }) });
   } catch (error) { return safeError(error); }
@@ -81,6 +83,7 @@ export async function POST(request: Request) {
     const recipientAddress = recipient.address && typeof recipient.address === "object" ? recipient.address as DbRow : {};
     const issuerUf = issuerAddress.state;
     const recipientUf = recipientAddress.state;
+    const estimatedLines: Array<{ tax: string; amountCents: number }> = [];
     const items = draft.items.map((input, index) => {
       const product = byId.get(input.productId)!;
       if (!/^[0-9]{8}$/.test(String(product.ncm || ""))) pending.push(`Item ${index + 1}: NCM pendente`);
@@ -96,16 +99,30 @@ export async function POST(request: Request) {
         const rules = profile.rules && typeof profile.rules === "object" && !Array.isArray(profile.rules) ? profile.rules as DbRow : {};
         pending.push(...reviewProfileConsistency(rules, input.cfop, input.csosn, index + 1));
       }
+      const rules = profile?.rules && typeof profile.rules === "object" && !Array.isArray(profile.rules) ? profile.rules as DbRow : {};
+      const rawRates = rules.previewRates && typeof rules.previewRates === "object" && !Array.isArray(rules.previewRates) ? rules.previewRates as DbRow : {};
+      const previewRates: PreviewRates = {};
+      for (const tax of PREVIEW_TAXES) {
+        try { const rate = parsePreviewRate(rawRates[tax]); if (rate !== null) previewRates[tax] = rate; }
+        catch { pending.push(`Item ${index + 1}: alíquota ${tax.toUpperCase()} inválida no perfil`); }
+      }
+      const taxPreview = calculateTaxPreview(input.subtotalCents, previewRates);
+      for (const line of taxPreview.lines) estimatedLines.push({ tax: line.tax, amountCents: line.estimateCents });
+      if (taxPreview.lines.length) pending.push(`Item ${index + 1}: estimativas tributárias exigem conferência; não são impostos apurados`);
       return {
         productId: product.id, sku: product.sku, description: product.name,
         unit: product.unit, ncm: product.ncm, cest: product.cest, gtin: product.gtin, origin: product.origin,
         quantity: input.quantity, unitPriceCents: input.unitPriceCents,
         subtotalCents: input.subtotalCents, cfop: input.cfop, csosn: input.csosn,
-        operation: review.operation,
+        operation: review.operation, taxPreview,
         taxProfile: profile ? { id: profile.id, name: profile.name, reviewStatus: profile.review_status, rules: profile.rules } : null,
       };
     });
     pending.push("Conferência tributária com contador: ICMS, PIS/Cofins, IBS/CBS e demais totalizadores");
+    const taxPreview = {
+      sumOfEstimatesCents: estimatedLines.reduce((sum, line) => sum + line.amountCents, 0),
+      provisional: true, validForEmission: false, calculationMethod: "arithmetic_only",
+    };
 
     const payload = {
       schemaVersion: 2, nature: draft.nature, purpose: "1",
@@ -115,7 +132,7 @@ export async function POST(request: Request) {
       recipient: { id: recipient.id, name: recipient.display_name,
         documentType: recipient.document_type, documentNumber: recipient.document_number,
         address: recipient.address, state: recipientUf },
-      items, totalCents: draft.totalCents, pending, readyToTransmit: false,
+      items, totalCents: draft.totalCents, taxPreview, pending, readyToTransmit: false,
     };
 
     const created = await dbRequest<Array<{ id: string }>>("/rest/v1/jvg_fiscal_documents", {
