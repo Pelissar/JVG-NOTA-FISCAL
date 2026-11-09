@@ -26,3 +26,16 @@ test('nenhum endpoint declara emissão SEFAZ a partir de venda, pedido ou orçam
   assert.doesNotMatch(api,/sefaz.*(emit|authoriz)|emit.*sefaz/i);
  }
 });
+
+test('Focus homologação exige autorização por empresa e mantém emissão desativada',()=>{
+ const status=read('../app/api/focus/status/route.ts');
+ const client=read('../lib/focus/client.ts');
+ assert.match(status,/getPlatformRole\(user\)/);
+ assert.match(status,/JVG_FOCUS_PILOT_COMPANY_ID/);
+ assert.match(status,/JVG_FOCUS_HOMOLOGACAO_TOKEN/);
+ assert.match(status,/FOCUS_NFE_HOMOLOGACAO_TOKEN/);
+ assert.match(status,/emissionEnabled: false/);
+ assert.match(client,/homologacao\.focusnfe\.com\.br/);
+ assert.match(client,/method: "GET"/);
+ assert.doesNotMatch(client,/method: "POST"/);
+});
