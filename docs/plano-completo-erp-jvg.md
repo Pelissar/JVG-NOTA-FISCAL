@@ -25,7 +25,7 @@ Data da revisão: 2026-11-09. Base: branch feature/erp-vendas-design-unificado. 
 
 ## Etapa 2 — Vendas (PARCIAL)
 - Fluxo de venda e baixa transacional de estoque existe no código; interface redesenhada na branch.
-- Faltam: teste real da RPC com autenticação/service role, idempotência de requisição, devolução/cancelamento com estorno, descontos, frete, múltiplos pagamentos, integração financeiro/caixa, reserva e permissões.
+- Faltam: teste real da RPC com autenticação/service role, aplicação e teste da migração de idempotência em homologação, devolução/cancelamento com estorno, descontos, frete, múltiplos pagamentos, integração financeiro/caixa, reserva e permissões.
 - Aceite: criar venda, impedir estoque negativo e duplicidade, conferir saldo e trilha de auditoria.
 
 ## Etapa 3 — Estoque (PARCIAL)
@@ -85,7 +85,7 @@ Data da revisão: 2026-11-09. Base: branch feature/erp-vendas-design-unificado. 
 2. Migração de numeração de cadastros aplicada no banco; ainda faltam testes de concorrência e novos cadastros.
 3. Tela fiscal mostra abas de transporte e pagamento sem persistência.
 4. Emissão fiscal está bloqueada e não deve ser chamada de pronta.
-5. Venda não foi testada ponta a ponta e precisa de idempotência de API.
+5. Venda não foi testada ponta a ponta; API, interface e migração de idempotência foram implementadas no código, mas aguardam execução da migração e teste de concorrência em homologação.
 6. Financeiro/caixa e demais modelos fiscais não estão concluídos.
 7. RLS, segredos, homologação, backup e rollback exigem revisão.
 
@@ -98,3 +98,10 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - [#5](https://github.com/Pelissar/JVG-NOTA-FISCAL/issues/5): P1 paginação e agregação de estoque sem limites silenciosos.
 - Correção aplicada: seletor da tela de vendas filtra clientes ativos e elegíveis, sem fornecedores/transportadoras exclusivos; teste de contrato incluído.
 - PR de integração: [#2](https://github.com/Pelissar/JVG-NOTA-FISCAL/pull/2), não integrado nem implantado, aguarda testes de CI/preview.
+
+### Implementação inicial em 2026-11-09 — prevenção de venda duplicada
+- `supabase/migrations/20261109_jvg_sale_idempotency.sql`: nova assinatura RPC com chave UUID por empresa, tabela de requisições e replay transacional.
+- `web/app/api/sales/route.ts`: exige `requestId` válido e encaminha para a RPC.
+- `web/public/erp/sales.js`: mantém a mesma chave nas tentativas de reenvio da tela e restringe seleção a clientes ativos.
+- `web/scripts/sales-contract.test.mjs`: testes de contrato atualizados; não substituem testes integrados.
+- **Bloqueio:** não integrar/deployar esta mudança antes de aplicar a migração em ambiente alvo; caso contrário a API de venda falhará por assinatura RPC ausente. Não aplicada à produção nesta sessão.
