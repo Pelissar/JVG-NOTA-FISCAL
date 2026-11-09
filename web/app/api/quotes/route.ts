@@ -46,8 +46,11 @@ export async function POST(request: Request) {
       const customer = await dbRequest<Array<{id:string}>>(`/rest/v1/jvg_parties?${companyScope}&id=${filterEq(customerId)}&is_customer=eq.true&active=eq.true&select=id&limit=1`);
       if (!customer.length) throw new JvgBackendError("Cliente indisponível nesta empresa.", 400);
     }
-    const products = await dbRequest<Array<{id:string;name:string;unit:string}>>(`/rest/v1/jvg_products?${companyScope}&active=eq.true&select=id,name,unit&limit=1000`);
-    const services = await dbRequest<Array<{id:string;name:string}>>(`/rest/v1/jvg_services?${companyScope}&active=eq.true&select=id,name&limit=1000`);
+    // Consulta apenas os IDs presentes na proposta: evita rejeitar itens além dos 1000 primeiros.
+    const productIds = [...new Set(data.items.filter((entry: unknown) => entry && typeof entry === "object" && !Array.isArray(entry)).map((entry: Record<string,unknown>) => entry.productId).filter((id: unknown) => id != null).map(uuid))];
+    const serviceIds = [...new Set(data.items.filter((entry: unknown) => entry && typeof entry === "object" && !Array.isArray(entry)).map((entry: Record<string,unknown>) => entry.serviceId).filter((id: unknown) => id != null).map(uuid))];
+    const products = productIds.length ? await dbRequest<Array<{id:string;name:string;unit:string}>>(`/rest/v1/jvg_products?${companyScope}&active=eq.true&id=in.(${productIds.join(",")})&select=id,name,unit`) : [];
+    const services = serviceIds.length ? await dbRequest<Array<{id:string;name:string}>>(`/rest/v1/jvg_services?${companyScope}&active=eq.true&id=in.(${serviceIds.join(",")})&select=id,name`) : [];
     const productById = new Map(products.map(p=>[p.id,p]));
     const serviceById = new Map(services.map(s=>[s.id,s]));
     let totalCents = 0;
