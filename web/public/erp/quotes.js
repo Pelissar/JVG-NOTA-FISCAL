@@ -40,9 +40,22 @@ async function history(nextPage=page){
 const statusLabels={draft:'Rascunho',sent:'Enviado',accepted:'Aceito',rejected:'Recusado',expired:'Expirado'};
 function actions(q){
  const next=q.status==='draft'?[['sent','Marcar enviado'],['rejected','Recusar']]:q.status==='sent'?[['accepted','Aceitar'],['rejected','Recusar'],['expired','Expirar']]:[];
- return next.map(([status,label])=>'<button type="button" class="btn quote-status" data-id="'+safe(q.id)+'" data-from="'+safe(q.status)+'" data-to="'+safe(status)+'">'+safe(label)+'</button>').join(' ')||'—';
+ const buttons=next.map(([status,label])=>'<button type="button" class="btn quote-status" data-id="'+safe(q.id)+'" data-from="'+safe(q.status)+'" data-to="'+safe(status)+'">'+safe(label)+'</button>');
+ if(q.status==='accepted')buttons.push('<button type="button" class="btn quote-order" data-id="'+safe(q.id)+'">Gerar pedido</button>');
+ return buttons.join(' ')||'—';
 }
 $('quoteList').addEventListener('click',async event=>{
+ const orderButton=event.target.closest('button.quote-order');
+ if(orderButton){
+  if(busy||historyBusy)return;
+  if(!confirm('Gerar pedido comercial deste orçamento aceito?'))return;
+  orderButton.disabled=true;
+  try{
+   const result=await api('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({quoteId:orderButton.dataset.id})});
+   notice('Pedido registrado: '+result.orderId+'. A criação repetida retorna o mesmo pedido.');
+  }catch(error){notice(error.message);orderButton.disabled=false;}
+  return;
+ }
  const button=event.target.closest('button.quote-status');
  if(!button||busy||historyBusy)return;
  const {id,from,to}=button.dataset;
