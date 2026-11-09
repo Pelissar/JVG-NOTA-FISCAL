@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const money = n => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n);
   const notice = message => { $('notice').textContent = message; };
-  let products = [], services = [], busy = false, loaded = false;
+  let products = [], services = [], busy = false, loaded = false, writable = false;
   const safe = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   async function request(url, init) {
     const response = await fetch(url,{credentials:'same-origin',cache:'no-store',...init});
@@ -33,7 +33,7 @@
     const rows=[...document.querySelectorAll('.sale-row')];
     const total=rows.reduce((sum,row)=>sum+(Number(row.querySelector('.quantity').value)||0)*(Number(row.querySelector('.price').value)||0),0);
     $('total').textContent='Total: '+money(total);
-    $('submit').disabled=!loaded||busy||!rows.length||rows.some(row=>!row.querySelector('.item').value||!(Number(row.querySelector('.quantity').value)>0)||row.querySelector('.price').value===''||Number(row.querySelector('.price').value)<0);
+    $('submit').disabled=!loaded||!writable||busy||!rows.length||rows.some(row=>!row.querySelector('.item').value||!(Number(row.querySelector('.quantity').value)>0)||row.querySelector('.price').value===''||Number(row.querySelector('.price').value)<0);
   }
   async function loadSales() {
     const data=await request('/api/sales');
@@ -48,12 +48,12 @@
       services=Array.isArray(data.services)?data.services:[];
       const clients=Array.isArray(data.clients)?data.clients:[];
       $('customer').innerHTML='<option value="">Consumidor não identificado</option>'+clients.filter(x=>x.active).map(x=>'<option value="'+safe(x.id)+'">'+safe(x.name)+'</option>').join('');
-      addItem();await loadSales();loaded=true;recalculate();notice('Dados carregados da empresa conectada.');
+      addItem();await loadSales();loaded=true;writable=true;recalculate();notice('Dados carregados da empresa conectada.');
     } catch(error) {loaded=false;notice(error.message);$('submit').disabled=true;$('addItem').disabled=true;}
   }
   $('addItem').addEventListener('click',addItem);
   $('saleForm').addEventListener('submit',async event=>{
-    event.preventDefault();if(busy||!loaded||$('submit').disabled)return;
+    event.preventDefault();if(busy||!loaded||!writable||$('submit').disabled)return;
     const items=[...document.querySelectorAll('.sale-row')].map(row=>{
       const [kind,id]=row.querySelector('.item').value.split(':');
       return {productId:kind==='product'?id:null,serviceId:kind==='service'?id:null,quantity:Number(row.querySelector('.quantity').value),unitPrice:Number(row.querySelector('.price').value)};
@@ -61,8 +61,9 @@
     busy=true;recalculate();notice('Confirmando venda...');
     try {
       const confirmed = await request('/api/sales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerId:$('customer').value||null,items,notes:$('notes').value})});
-      $('items').replaceChildren();addItem();$('notes').value='';
-      notice('Venda confirmada: '+confirmed.saleId+'.');
+      writable=false;
+      $('items').replaceChildren();$('notes').value='';
+      notice('Venda confirmada: '+confirmed.saleId+'. Atualize a página antes de registrar outra venda.');
       try { await loadSales(); } catch(error) { notice('Venda confirmada: '+confirmed.saleId+'. Não foi possível atualizar o histórico: '+error.message); }
     }catch(error){notice(error.message);}finally{busy=false;recalculate();}
   });
