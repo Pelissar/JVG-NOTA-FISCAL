@@ -384,6 +384,9 @@
   if('scrollRestoration' in history)history.scrollRestoration='manual';
   window.scrollTo(0,0);
   document.querySelector('.main-column').scrollTop=0;
+  var initialHash=decodeURIComponent(window.location.hash.slice(1));
+  if(labels[initialHash])view=initialHash;
+  window.addEventListener('hashchange',function(){var next=decodeURIComponent(window.location.hash.slice(1));if(labels[next])setView(next);});
   render();
   checkConnection();
 })();
