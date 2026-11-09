@@ -37,7 +37,12 @@ test('Focus homologação exige autorização por empresa e mantém emissão des
  assert.match(status,/emissionEnabled: false/);
  assert.match(client,/homologacao\.focusnfe\.com\.br/);
  assert.match(client,/method: "GET"/);
- assert.doesNotMatch(client,/method: "POST"/);
+ assert.match(client,/method: "POST"/);
+ assert.match(client,/v2\/nfe\?ref=/);
+ assert.match(client,/headers\.set\("Authorization", focusAuthorization\(token\)\)/);
+ assert.match(client,/focusReferencePattern/);
+ assert.match(client,/focusReferenceForFiscalDocument/);
+ assert.match(client,/JVGPROBE\$\{crypto\.randomUUID\(\)\.replace\(/);
 });
 
 test('Focus nunca usa URL de produção nem expõe token no cliente',()=>{
@@ -73,3 +78,4 @@ test('diagnóstico Focus tem contraste nos dois temas e informa que não emite',
  assert.match(css,/focus-visible/);
  assert.match(css,/@media\(max-width:560px\)/);
 });
+

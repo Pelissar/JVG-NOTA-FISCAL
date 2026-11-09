@@ -213,8 +213,8 @@
       field('tradeName','Nome fantasia',company.trade_name||'','maxlength="160"',false)+
       lookupField('cnpj','CNPJ (numérico ou alfanumérico)',company.cnpj||'','maxlength="18" placeholder="00.000.000/0000-00"','cnpj',false)+
       field('stateRegistration','Inscrição Estadual (IE)',company.state_registration||'','maxlength="40"',false)+
-      field('municipalRegistration','Inscrição Municipal',company.municipal_registration||'','maxlength="40"',false)+
-      field('cnae','CNAE principal (7 dígitos)',company.cnae||'','inputmode="numeric" maxlength="10"',false)+
+      field('municipalRegistration','Inscrição Municipal',company.municipal_registration||'','maxlength="40"',false,'Se informar, preencha também o CNAE fiscal.')+
+      field('cnae','CNAE fiscal (7 dígitos)',company.cnae||'','inputmode="numeric" maxlength="10"',false,'A Focus exige o par CNAE e Inscrição Municipal quando esses dados forem enviados.')+
       field('fiscalEmail','E-mail fiscal',company.fiscal_email||'','type="email" maxlength="254"',false)+
       field('fiscalPhone','Telefone com DDD',company.fiscal_phone||'','inputmode="tel" maxlength="24"',false)+
       '<div class="field full"><strong>Endereço fiscal da empresa</strong></div>'+
@@ -226,9 +226,9 @@
       field('state','UF',a.state||'','maxlength="2" placeholder="SP"',false)+
       lookupField('postalCode','CEP (8 dígitos)',a.postalCode||'','inputmode="numeric" maxlength="9"','cep',false)+
       field('cityCode','Código IBGE do município (7 dígitos)',a.cityCode||'','inputmode="numeric" maxlength="7"',false)+
-      '<div class="field full"><strong>Numeração planejada para NF-e de homologação</strong></div>'+
-      field('nfeSeries','Série',company.nfe_series_homologacao==null?1:company.nfe_series_homologacao,'type="number" min="1" max="999"',false)+
-      field('nfeNextNumber','Próximo número',company.nfe_next_number_homologacao==null?1:company.nfe_next_number_homologacao,'type="number" min="1" max="999999999"',false);
+      '<div class="field full"><strong>Numeração da NF-e de homologação</strong><small>A Focus pode atribuir série e número automaticamente; o JVG não enviará esses campos por padrão.</small></div>'+
+      field('nfeSeries','Série de controle local',company.nfe_series_homologacao==null?1:company.nfe_series_homologacao,'type="number" min="1" max="999"',false)+
+      field('nfeNextNumber','Próximo número de controle local',company.nfe_next_number_homologacao==null?1:company.nfe_next_number_homologacao,'type="number" min="1" max="999999999"',false);
   }
   function openCompanyEditor(){
     if(!['needs_company','ready'].includes(cloud.status)){toast('Aguarde a configuração segura do servidor.','error');return;}
@@ -388,3 +388,4 @@
   render();
   checkConnection();
 })();
+
