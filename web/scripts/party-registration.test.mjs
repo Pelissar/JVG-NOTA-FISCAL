@@ -24,7 +24,7 @@ test('IE e inscrição municipal são persistidas e exibidas', () => {
   assert.match(ui, /Inscrição Municipal \(IM\)/);
 });
 
-test('cadastro sequencial tem coluna identity e unicidade por empresa', () => {
+test('cadastro sequencial por empresa e unicidade', () => {
   assert.match(migration, /registration_number bigint/i);
   assert.match(migration, /partition by company_id order by created_at, id/i);
   assert.match(migration, /jvg_assign_party_registration_number/i);
@@ -36,4 +36,9 @@ test('cadastro sequencial tem coluna identity e unicidade por empresa', () => {
 test('não permite gravar pessoa sem classificação comercial', () => {
   assert.match(api, /if \(!isCustomer && !isSupplier && !isCarrier\)/);
   assert.match(ui, /if\(!isCustomer&&!isSupplier&&!isCarrier\)/);
+});
+
+test('rascunho NF-e oferece apenas destinatários cadastrados como clientes', () => {
+  const draftUi = readFileSync(new URL('../public/erp/nfe-drafts.js', import.meta.url), 'utf8');
+  assert.match(draftUi, /c\.active && c\.isCustomer === true/);
 });
