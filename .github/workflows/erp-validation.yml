@@ -28,6 +28,8 @@ jobs:
       - name: Validate ERP tests
         run: pnpm test:erp
       - name: Validate JavaScript syntax
-        run: node --check public/erp/sales.js
+        run: |
+          node --check public/erp/sales.js
+          node --check public/erp/app.js
       - name: Compile production application
         run: pnpm build
