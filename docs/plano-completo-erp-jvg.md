@@ -186,3 +186,9 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - Link de salto ao conteúdo, rótulo acessível de busca e regras extras para telas estreitas/baixas e zoom.
 - Testes de contrato atualizados. **Execução automatizada e revisão visual em navegadores ainda não realizadas.**
 - Sem deploy, merge ou mudanças no Supabase de produção.
+
+### Limpeza final de navegação (2026-11-09)
+- Removidos os estados internos obsoletos de Financeiro e Transporte: esses módulos não apareciam no menu, mas ainda podiam ser abertos por `#finance` e `#transport` e exibir telas sem operação real.
+- Teste de contrato garante que os placeholders não reapareçam como rotas navegáveis.
+- Não foram removidos dados, tabelas ou funcionalidades comerciais; as futuras áreas continuam no planejamento.
+- Validação em navegador e execução de testes/build continuam pendentes. Nenhuma alteração de produção.
