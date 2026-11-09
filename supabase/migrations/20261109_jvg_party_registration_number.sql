@@ -6,10 +6,16 @@ create table if not exists public.jvg_party_counters (
   last_number bigint not null default 0 check (last_number >= 0)
 );
 
-with numbered as (
-  select id, row_number() over (partition by company_id order by created_at, id) as number
+with existing as (
+  select company_id, coalesce(max(registration_number), 0) as last_number
   from public.jvg_parties
-  where registration_number is null
+  group by company_id
+), numbered as (
+  select p.id,
+    coalesce(e.last_number, 0) + row_number() over (partition by p.company_id order by p.created_at, p.id) as number
+  from public.jvg_parties p
+  left join existing e on e.company_id = p.company_id
+  where p.registration_number is null
 )
 update public.jvg_parties p
 set registration_number = n.number
