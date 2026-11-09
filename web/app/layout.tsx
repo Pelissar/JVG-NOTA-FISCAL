@@ -5,8 +5,8 @@ export const metadata: Metadata = {
   title: "JVG Nota Fiscal | Gestão empresarial e emissão fiscal",
   description: "Plataforma web de gestão empresarial, cadastros, estoque e preparação para emissão de documentos fiscais.",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: "/branding/sigmafiscal-icon.svg",
+    shortcut: "/branding/sigmafiscal-icon.svg",
   },
 };
 
