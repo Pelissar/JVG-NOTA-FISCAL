@@ -90,9 +90,19 @@ export function safeError(error: unknown): Response {
 }
 
 export function isSameOrigin(request: Request): boolean {
+  // On Netlify the internal Request URL can use a different hostname than
+  // the public hostname sent by the browser. Compare Origin to the incoming
+  // Host header first; never trust X-Forwarded-Host as a CSRF authority.
   const origin = request.headers.get("origin");
-  if (!origin) return false;
-  try { return new URL(origin).host === new URL(request.url).host; } catch { return false; }
+  if (!origin || origin === "null") return false;
+  try {
+    const source = new URL(origin);
+    if (source.protocol !== "https:" && !(source.protocol === "http:" && ["localhost", "127.0.0.1"].includes(source.hostname))) return false;
+    if (source.username || source.password || source.pathname !== "/" || source.search || source.hash) return false;
+    const host = request.headers.get("host");
+    if (host) return source.host.toLowerCase() === host.trim().toLowerCase();
+    return source.host.toLowerCase() === new URL(request.url).host.toLowerCase();
+  } catch { return false; }
 }
 
 export function str(value: unknown, max = 180): string {
