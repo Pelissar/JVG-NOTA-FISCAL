@@ -3,7 +3,7 @@
   var labels = {dashboard:'Visão geral',products:'Produtos',clients:'Clientes',services:'Serviços',fiscal:'Notas fiscais',inventory:'Estoque',finance:'Financeiro',transport:'Transporte',reports:'Relatórios',settings:'Configurações'};
   // Nunca mostrar dados locais como se fossem cadastros reais da empresa.
   var state = emptyState();
-  var view = 'dashboard', query = '', filter = 'all';
+  var view = 'dashboard', query = '', filter = 'all', partyFilter = 'all';
   var cloud = {status:'checking',displayName:'',company:null};
   var content = document.getElementById('content');
   var modalRoot = document.getElementById('modalRoot');
@@ -48,9 +48,13 @@
     return heading('Cadastro de produtos','Organize SKU, descrição, preços, estoque e informações fiscais.','new-product','Novo produto')+banner()+tableShell('Buscar por nome, SKU ou NCM...',body,rows.length,'products');
   }
   function clients(){
-    var rows=state.clients.filter(function(p){return matches(p,['name','document','email','city']);});
-    var body=rows.length?'<div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Tipo</th><th>CPF/CNPJ</th><th>Cidade / UF</th><th>E-mail</th><th>Status</th><th class="text-right">Ações</th></tr></thead><tbody>'+rows.map(function(p){return '<tr><td><strong>'+h(p.name)+'</strong></td><td><span class="badge blue">'+h(p.type)+'</span></td><td class="mono">'+h(p.document||'Não informado')+'</td><td>'+h(p.city||'—')+' / '+h(p.state||'—')+'</td><td>'+h(p.email||'—')+'</td><td>'+badge(p.active)+'</td><td>'+rowActions('client',p.id)+'</td></tr>';}).join('')+'</tbody></table></div>':empty('users','Nenhum cliente encontrado','Registre pessoas e empresas para usar nos próximos módulos.','new-client','Novo cliente');
-    return heading('Clientes','Cadastro central de destinatários e tomadores de serviços.','new-client','Novo cliente')+banner()+tableShell('Buscar por nome, documento ou cidade...',body,rows.length,'clients');
+    var roleMatches=function(p){return partyFilter==='all'||(partyFilter==='customer'&&p.isCustomer)||(partyFilter==='supplier'&&p.isSupplier)||(partyFilter==='carrier'&&p.isCarrier);};
+    var rows=state.clients.filter(function(p){return matches(p,['registrationNumber','name','legalName','document','email','city','stateRegistration','municipalRegistration'])&&roleMatches(p);});
+    var roleLabels=function(p){return [p.isCustomer?'Cliente':'',p.isSupplier?'Fornecedor':'',p.isCarrier?'Transportadora':''].filter(Boolean);};
+    var body=rows.length?'<div class="table-wrap"><table><thead><tr><th>Nº cadastro</th><th>Nome / Razão social</th><th>Tipo de relacionamento</th><th>CPF / CNPJ</th><th>IE / IM</th><th>Cidade / UF</th><th>Status</th><th class="text-right">Ações</th></tr></thead><tbody>'+rows.map(function(p){return '<tr><td class="mono"><strong>'+h(p.registrationNumber||'—')+'</strong></td><td><strong>'+h(p.name)+'</strong>'+(p.legalName&&p.legalName!==p.name?'<div class="subcell">'+h(p.legalName)+'</div>':'')+'</td><td>'+roleLabels(p).map(function(x){return '<span class="badge blue">'+h(x)+'</span> ';}).join('')+'</td><td class="mono">'+h(p.document||'Não informado')+'</td><td><div class="mono">IE: '+h(p.stateRegistration||'—')+'</div><div class="mono">IM: '+h(p.municipalRegistration||'—')+'</div></td><td>'+h(p.city||'—')+' / '+h(p.state||'—')+'</td><td>'+badge(p.active)+'</td><td>'+rowActions('client',p.id)+'</td></tr>';}).join('')+'</tbody></table></div>':empty('users','Nenhum cadastro encontrado','Ajuste o filtro ou cadastre um cliente, fornecedor ou transportadora.','new-client','Novo cadastro');
+    var total=state.clients.length,customers=state.clients.filter(function(p){return p.isCustomer;}).length,suppliers=state.clients.filter(function(p){return p.isSupplier;}).length,carriers=state.clients.filter(function(p){return p.isCarrier;}).length;
+    var roleFilter='<div class="party-filter-row"><label>Tipo de cadastro <select class="filter-select" id="partyTypeFilter"><option value="all" '+(partyFilter==='all'?'selected':'')+'>Todos ('+total+')</option><option value="customer" '+(partyFilter==='customer'?'selected':'')+'>Clientes ('+customers+')</option><option value="supplier" '+(partyFilter==='supplier'?'selected':'')+'>Fornecedores ('+suppliers+')</option><option value="carrier" '+(partyFilter==='carrier'?'selected':'')+'>Transportadoras ('+carriers+')</option></select></label><span class="small-note">Exibindo '+rows.length+' de '+total+' cadastro(s)</span></div>';
+    return heading('Cadastro de pessoas e empresas','Cadastre clientes, fornecedores e transportadoras em um único registro, com identificação fiscal completa.','new-client','Novo cadastro')+banner()+roleFilter+tableShell('Buscar por número, nome, documento, IE ou IM...',body,rows.length,'clients');
   }
   function services(){
     var rows=state.services.filter(function(p){return matches(p,['code','name','description','lc116','nbs']);});
@@ -107,12 +111,16 @@
   function lookupField(name,label,value,extra,kind,full){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><div class="input-action"><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+extra+'><button class="btn ghost lookup-btn" type="button" data-action="lookup-'+kind+'">Consultar</button></div></div>';}
   function select(name,label,options,value){return '<div class="field"><label for="f-'+h(name)+'">'+h(label)+'</label><select id="f-'+h(name)+'" name="'+h(name)+'">'+options.map(function(o){return '<option value="'+h(o[0])+'" '+(String(value)===String(o[0])?'selected':'')+'>'+h(o[1])+'</option>';}).join('')+'</select></div>';}
   function productForm(p){return field('sku','Código interno (SKU) *',p.sku,'required maxlength="40"',false)+field('name','Descrição do produto *',p.name,'required maxlength="160"',false)+field('category','Categoria',p.category,'maxlength="80"',false)+select('unit','Unidade',[['UN','Unidade (UN)'],['KG','Quilograma (KG)'],['M','Metro (M)'],['L','Litro (L)'],['CX','Caixa (CX)'],['PAR','Par (PAR)'],['PCT','Pacote (PCT)']],p.unit||'UN')+field('ncm','NCM',p.ncm,'inputmode="numeric" maxlength="8" pattern="[0-9]{8}"',false,'8 dígitos; confira com seu contador.')+field('cest','CEST (quando aplicável)',p.cest,'maxlength="12"',false)+field('defaultCfop','CFOP sugerido (opcional)',p.defaultCfop,'maxlength="4" inputmode="numeric" pattern="[0-9]{4}" list="productCfopOptions"',false,'Sugestão para rascunhos: depende da operação, UF e regime. Consulte seu contador.')+select('taxProfileId','Perfil tributário (NF-e)',[['','Nenhum perfil selecionado']],p.taxProfileId||'')+field('gtin','EAN / GTIN',p.gtin||'SEM GTIN','maxlength="14"',false,'Informe SEM GTIN quando não houver código.')+select('origin','Origem da mercadoria',[['0','0 · Nacional'],['1','1 · Estrangeira direta'],['2','2 · Estrangeira mercado interno'],['3','3 · Nacional > 40% importação'],['4','4 · Nacional processos básicos'],['5','5 · Nacional ≤ 40% importação'],['6','6 · Estrangeira sem similar'],['7','7 · Estrangeira mercado interno sem similar'],['8','8 · Nacional > 70% importação']],p.origin||'0')+field('cost','Preço de custo (R$)',p.cost,'type="number" min="0" step="0.01"',false)+field('price','Preço de venda (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+field('stock','Saldo inicial',p.stock,'type="number" min="0" step="0.001"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
-  function clientForm(p){return field('name','Nome / razão social *',p.name,'required maxlength="160"',true)+
-    select('type','Tipo',[['PJ','Pessoa jurídica'],['PF','Pessoa física'],['EXT','Estrangeiro']],p.type||'PJ')+
+  function clientForm(p){return '<div class="field full"><strong>Classificação do cadastro *</strong><small>Uma pessoa pode exercer mais de uma função.</small><div class="party-role-options">'+[['isCustomer','Cliente',p.isCustomer!==false],['isSupplier','Fornecedor',!!p.isSupplier],['isCarrier','Transportadora',!!p.isCarrier]].map(function(x){return '<label class="party-role-option"><input type="checkbox" name="'+x[0]+'" value="true" '+(x[2]?'checked':'')+'><span>'+x[1]+'</span></label>';}).join('')+'</div></div>'+
+    field('name','Nome / nome fantasia *',p.name,'required maxlength="160"',true)+
+    field('legalName','Razão social',p.legalName,'maxlength="180"',true)+
+    select('type','Tipo de pessoa',[['PJ','Pessoa jurídica'],['PF','Pessoa física'],['EXT','Estrangeiro']],p.type||'PJ')+
     lookupField('document','CPF / CNPJ (consulta para PJ)',p.document,'maxlength="18"','cnpj',false)+
+    field('stateRegistration','Inscrição Estadual (IE)',p.stateRegistration,'maxlength="40"',false)+
+    field('municipalRegistration','Inscrição Municipal (IM)',p.municipalRegistration,'maxlength="40"',false)+
     field('email','E-mail',p.email,'type="email" maxlength="160"',false)+
     field('phone','Telefone / WhatsApp',p.phone,'maxlength="25"',false)+
-    '<div class="field full"><strong>Endereço do destinatário</strong></div>'+
+    '<div class="field full"><strong>Endereço do cadastro</strong></div>'+
     lookupField('postalCode','CEP',p.postalCode,'inputmode="numeric" maxlength="9"','cep',false)+
     field('street','Logradouro',p.street,'maxlength="160"',true)+
     field('number','Número',p.number,'maxlength="20"',false)+
@@ -299,7 +307,9 @@
     }else if(kind==='client'){
       var doc=values.document.toUpperCase().replace(/[^A-Z0-9]/g,'');
       if(doc&&((values.type==='PF'&&!/^\d{11}$/.test(doc))||(values.type==='PJ'&&!/^[A-Z0-9]{12}\d{2}$/.test(doc)))){toast('CPF/CNPJ tem formato incompatível com o tipo de pessoa.','error');return;}
-      record=Object.assign(record,{name:values.name.trim(),type:values.type,document:doc,email:values.email.trim(),phone:values.phone.trim(),street:values.street.trim(),number:values.number.trim(),complement:values.complement.trim(),district:values.district.trim(),postalCode:values.postalCode.replace(/\D/g,''),cityCode:values.cityCode.replace(/\D/g,''),city:values.city.trim(),state:values.state.trim().toUpperCase(),active:values.active==='true'});
+      var isCustomer=values.isCustomer==='true',isSupplier=values.isSupplier==='true',isCarrier=values.isCarrier==='true';
+      if(!isCustomer&&!isSupplier&&!isCarrier){toast('Selecione pelo menos um tipo: cliente, fornecedor ou transportadora.','error');return;}
+      record=Object.assign(record,{name:values.name.trim(),legalName:values.legalName.trim(),type:values.type,document:doc,stateRegistration:values.stateRegistration.trim(),municipalRegistration:values.municipalRegistration.trim(),isCustomer:isCustomer,isSupplier:isSupplier,isCarrier:isCarrier,email:values.email.trim(),phone:values.phone.trim(),street:values.street.trim(),number:values.number.trim(),complement:values.complement.trim(),district:values.district.trim(),postalCode:values.postalCode.replace(/\D/g,''),cityCode:values.cityCode.replace(/\D/g,''),city:values.city.trim(),state:values.state.trim().toUpperCase(),active:values.active==='true'});
     }else{
       record=Object.assign(record,{code:values.code.trim(),name:values.name.trim(),description:values.description.trim(),lc116:values.lc116.trim(),nbs:values.nbs.trim(),price:Number(values.price||0),active:values.active==='true'});
       if(record.price<0){toast('Valor inválido.','error');return;}
@@ -365,7 +375,7 @@
     if(e.target.id==='globalSearch'){query=e.target.value;if(view==='dashboard')setView('products');else render();return;}
     if(e.target.hasAttribute('data-search-input')){query=e.target.value;var pos=e.target.selectionStart;render();var next=document.querySelector('[data-search-input]');if(next){next.focus();next.setSelectionRange(pos,pos);}}
   });
-  document.addEventListener('change',function(e){if(e.target.hasAttribute('data-filter')){filter=e.target.value;render();}});
+  document.addEventListener('change',function(e){if(e.target.hasAttribute('data-filter')){filter=e.target.value;render();}if(e.target.id==='partyTypeFilter'){partyFilter=e.target.value;render();}});
   function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');}
   document.getElementById('menuBtn').addEventListener('click',function(){document.getElementById('sidebar').classList.add('open');document.getElementById('mobileBackdrop').classList.add('active');this.setAttribute('aria-expanded','true');});
   document.getElementById('closeMenuBtn').addEventListener('click',closeSidebar);
