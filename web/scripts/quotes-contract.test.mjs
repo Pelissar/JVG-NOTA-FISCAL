@@ -49,3 +49,13 @@ test('orçamento vencido não pode ser aceito',()=>{
  assert.match(api,/valid_until\.gte\.\$\{today\}/);
  assert.match(api,/to === "accepted"/);
 });
+
+test('orçamentos ajustam colunas e campos à janela do computador',()=>{
+ const css=read('../public/erp/commercial-responsive.css');
+ assert.match(page,/class="commercial-page quote-wrap"/);
+ assert.match(page,/commercial-responsive\.css/);
+ assert.match(css,/grid-template-columns:minmax\(0,2fr\)/);
+ assert.match(css,/@media\(max-width:900px\)/);
+ assert.match(css,/@media\(max-width:640px\)/);
+ assert.match(css,/min-width:0/);
+});
