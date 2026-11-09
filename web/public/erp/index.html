@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="./responsive.css">
   <link rel="stylesheet" href="./design-system.css">
   <link rel="stylesheet" href="./glass-ui.css">
+  <link rel="stylesheet" href="./theme-contrast.css">
+  <script src="./theme-switch.js"></script>
   <script defer src="./app.js"></script>
   <script defer src="./navigation.js"></script>
 </head>
@@ -90,8 +92,8 @@
     <div class="mobile-backdrop" id="mobileBackdrop" aria-hidden="true"></div>
     <div class="main-column">
       <header class="topbar">
-        <div class="topbar-left"><button class="icon-btn mobile-menu" id="menuBtn" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div class="breadcrumbs"><span>JVG ERP</span><svg><use href="#i-chevron"/></svg><strong id="breadcrumb">Visão geral</strong></div></div>
-        <div class="topbar-right"><label class="global-search"><svg><use href="#i-search"/></svg><input id="globalSearch" aria-label="Buscar no módulo atual" placeholder="Buscar no módulo..." autocomplete="off"><kbd>/</kbd></label><span class="top-pill">AMBIENTE DE TESTES</span><span class="top-avatar" title="Seu perfil">JP</span></div>
+        <div class="topbar-left"><button class="icon-btn mobile-menu" id="menuBtn" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div class="breadcrumbs"><span>SigmaFiscal</span><svg><use href="#i-chevron"/></svg><strong id="breadcrumb">Visão geral</strong></div></div>
+        <div class="topbar-right"><button type="button" class="theme-toggle" data-theme-toggle aria-label="Alternar tema">☀ Modo claro</button><label class="global-search"><svg><use href="#i-search"/></svg><input id="globalSearch" aria-label="Buscar no módulo atual" placeholder="Buscar no módulo..." autocomplete="off"><kbd>/</kbd></label><span class="top-pill">AMBIENTE DE TESTES</span><span class="top-avatar" title="Seu perfil">JP</span></div>
       </header>
       <main class="content" id="content" tabindex="-1"></main>
       <footer class="footer"><span>© 2026 JVG Nota Fiscal · Ambiente piloto</span><span>Cadastro em implantação • Sem emissão fiscal real</span></footer>
