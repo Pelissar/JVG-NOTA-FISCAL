@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0f2334">
-  <meta name="description" content="Rascunhos de NF-e em homologação no JVG Nota Fiscal.">
-  <title>Rascunhos NF-e · JVG Nota Fiscal</title>
+  <meta name="description" content="Rascunhos de NF-e em homologação no SigmaFiscal.">
+  <title>Rascunhos NF-e · SigmaFiscal</title>
   <link rel="stylesheet" href="./nfe-drafts.css">
   <link rel="stylesheet" href="./fiscal-workspace.css">
   <link rel="stylesheet" href="/erp/fiscal-theme.css">
@@ -18,12 +18,12 @@
 <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg"><link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/theme-contrast.css"><script src="/erp/theme-switch.js"></script></head>
 <body><button type="button" class="theme-toggle" data-theme-toggle style="position:fixed;right:12px;bottom:12px;z-index:1000" aria-label="Alternar tema">☀ Modo claro</button>
   <header class="topbar">
-    <a href="/erp/index.html" class="brand" aria-label="Voltar ao painel JVG"><span class="brand-mark">J.</span><span><strong>JVG Nota Fiscal</strong><small>ERP · Central fiscal</small></span></a>
+    <a href="/erp/index.html" class="brand" aria-label="Voltar ao painel SigmaFiscal"><span class="brand-mark"><img src="/branding/sigmafiscal-icon.svg" width="38" height="38" alt=""></span><span><strong>SigmaFiscal</strong><small>ERP · Central fiscal</small></span></a>
     <div class="header-actions"><span class="environment">HOMOLOGAÇÃO · SEM EMISSÃO</span><a class="back-button" href="/erp/index.html">← Voltar ao painel</a></div>
   </header>
   <main class="layout">
     <div class="page-title"><div><div class="eyebrow">CENTRAL FISCAL / NF-e MODELO 55</div><h1>Nova NF-e · Modelo 55</h1><p>Preencha os dados da operação em etapas. A transmissão permanece bloqueada até a homologação fiscal.</p></div><span class="phase">Etapa de preparação</span></div>
-    <div id="status" class="notice" role="status">Conectando ao Supabase e carregando seus cadastros...</div>
+    <section class="panel" aria-labelledby="focus-heading" style="margin-bottom:16px"><div class="panel-body"><h2 id="focus-heading" style="margin:0 0 10px">Focus NFe · Diagnóstico de homologação</h2><p>Verifique a conexão do ambiente de testes. Disponível somente para administradores autorizados. Esta ação não emite notas fiscais.</p><button type="button" id="focusCheck" class="add-button">Verificar conexão Focus NFe</button><p id="focusResult" role="status" aria-live="polite">Nenhuma verificação realizada.</p></div></section><script defer src="./focus-diagnostic.js"></script><div id="status" class="notice" role="status">Conectando ao Supabase e carregando seus cadastros...</div>
     <nav class="fiscal-module-nav" aria-label="Navegação fiscal">
 <a href="/erp/#fiscal">Painel fiscal</a><a class="selected" href="/erp/nfe-drafts.html">NF-e · Modelo 55</a><a href="/erp/#fiscal">NFC-e · Em preparação</a><a href="/erp/#fiscal">NFS-e · Em preparação</a><a href="#fiscalHistory">Histórico de rascunhos</a><a href="/erp/tax-profiles.html">Configurações tributárias</a>
 </nav>
