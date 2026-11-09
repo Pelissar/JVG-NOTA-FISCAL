@@ -39,3 +39,19 @@ body{background:var(--jvg-bg);color:var(--jvg-ink)}
 @media(max-width:700px){.topbar{padding:0 12px}.content{padding:18px 12px}.page-heading{flex-wrap:wrap}.topbar-right .top-pill{display:none}.global-search{width:min(38vw,220px)}}
 @media(max-height:750px){.brand-row{padding-bottom:10px}.workspace-switch{margin-bottom:8px}.secondary-label{padding-top:11px}.nav-link{height:35px;min-height:35px}.nav-label{padding-top:6px}}
 @media(prefers-reduced-motion:reduce){.nav-link,.nav-group .nav-group-chevron{transition:none}}
+
+/* Navegação acessível e layout fluido também em zoom de 200%. */
+.skip-link{position:fixed;z-index:1000;left:14px;top:10px;transform:translateY(-160%);padding:11px 16px;border-radius:9px;background:#fff;color:#102d38;box-shadow:0 5px 20px #112a3a30;font-size:13px;font-weight:750}
+.skip-link:focus{transform:translateY(0)}
+.app-shell{width:100%;max-width:100%;min-width:0}
+.main-column{min-width:0;width:0}
+.topbar-left,.topbar-right{min-width:0}
+.breadcrumbs{min-width:0}
+.breadcrumbs strong{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.global-search{min-width:0;max-width:100%}
+.content,.panel,.panel-grid,.stats-grid,.fiscal-grid{min-width:0}
+.panel-grid,.stats-grid,.fiscal-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr))}
+.table-wrap{max-width:100%;overflow-x:auto}
+@media(max-width:1100px){.main-column{width:100%}.sidebar{width:min(286px,88vw)}}
+@media(max-width:480px){.topbar{gap:7px}.breadcrumbs>span,.breadcrumbs>svg{display:none}.global-search{width:min(44vw,190px)}.global-search kbd{display:none}.top-avatar{display:none}.topbar-right{gap:6px}.page-heading h1{font-size:clamp(22px,6vw,30px)}}
+@media(max-height:580px){.sidebar-bottom .support-box{display:none}.sidebar-scroll{min-height:0}.topbar{height:54px;min-height:54px}}
