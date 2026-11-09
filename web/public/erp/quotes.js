@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id);
 const money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n);
 const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let catalog=[],page=1,hasMore=false,busy=false,ready=false,historyBusy=false,quoteRows=[],customers=new Map();
+let catalog=[],page=1,hasMore=false,busy=false,ready=false,historyBusy=false,historyError='',quoteRows=[],customers=new Map();
 const notice=message=>{$('quoteNotice').textContent=message;};
 async function api(url,options){
  const response=await fetch(url,{credentials:'same-origin',cache:'no-store',...options});
@@ -30,16 +30,27 @@ function addRow(){
 async function history(nextPage=page){
  if(historyBusy)return;
  historyBusy=true;$('quotePrev').disabled=true;$('quoteNext').disabled=true;
+ historyError='';
  try{
  const data=await api('/api/quotes?page='+nextPage);page=data.page;hasMore=data.hasMore===true;
  quoteRows=Array.isArray(data.quotes)?data.quotes:[];
  renderHistory();
  $('quotePage').textContent='Página '+page;
+ }catch(error){
+  historyError=error.message||'Não foi possível carregar os orçamentos.';
+  quoteRows=[];hasMore=false;
+  renderHistory();notice(historyError);
  }finally{historyBusy=false;$('quotePrev').disabled=page<=1;$('quoteNext').disabled=!hasMore;}
 }
 const statusLabels={draft:'Rascunho',sent:'Enviado',accepted:'Aceito',rejected:'Recusado',expired:'Expirado'};
 const statusClasses={draft:'is-draft',sent:'is-sent',accepted:'is-accepted',rejected:'is-rejected',expired:'is-expired'};
 function renderHistory(){
+ if(historyError){
+  $('quoteCount').textContent='—';$('quoteWaiting').textContent='—';$('quoteValue').textContent='—';
+  $('quoteFiltered').textContent='Histórico indisponível';
+  $('quoteList').innerHTML='<div class="empty-state"><strong>Não foi possível carregar os orçamentos</strong><p>Confira a integração e use Atualizar para tentar novamente.</p></div>';
+  return;
+ }
  const query=$('quoteSearch').value.trim().toLocaleLowerCase('pt-BR'),status=$('quoteStatus').value;
  const rows=quoteRows.filter(q=>(!status||q.status===status)&&[q.id,q.status,q.notes,customers.get(q.customer_id)||''].join(' ').toLocaleLowerCase('pt-BR').includes(query));
  $('quoteCount').textContent=String(quoteRows.length);$('quoteWaiting').textContent=String(quoteRows.filter(q=>q.status==='draft'||q.status==='sent').length);$('quoteValue').textContent=money(quoteRows.reduce((sum,q)=>sum+(Number(q.total)||0),0));$('quoteFiltered').textContent=rows.length+' de '+quoteRows.length+' propostas nesta página';
@@ -82,8 +93,8 @@ async function start(){
   for(const customer of data.clients||[])customers.set(customer.id,customer.name);
   catalog=[...(data.products||[]).filter(x=>x.active).map(x=>({...x,kind:'product'})),...(data.services||[]).filter(x=>x.active).map(x=>({...x,kind:'service'}))];
   $('quoteCustomer').innerHTML='<option value="">Consumidor não identificado</option>'+(data.clients||[]).filter(x=>x.active&&x.isCustomer===true&&x.type!=='EXT').map(x=>'<option value="'+safe(x.id)+'">'+safe(x.name)+'</option>').join('');
-  ready=true;addRow();await history();notice('Orçamentos conectados à empresa.');
- }catch(error){notice(error.message);}
+  ready=true;addRow();await history();if(!historyError)notice('Orçamentos conectados à empresa.');
+ }catch(error){historyError=error.message||'Não foi possível carregar os dados da empresa.';renderHistory();notice(error.message);}
 }
 $('quoteAdd').addEventListener('click',addRow);
 $('quotePrev').addEventListener('click',()=>history(page-1).catch(e=>notice(e.message)));
