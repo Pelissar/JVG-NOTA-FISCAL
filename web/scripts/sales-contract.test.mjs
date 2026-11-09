@@ -31,7 +31,7 @@ test('interface usa somente APIs reais e apresenta histórico', () => {
   assert.match(page, /id="saleForm"/);
   assert.match(navigation, /href="\/erp\/sales\.html"/);
   assert.match(client, /request\('\/api\/records'\)/);
-  assert.match(client, /request\('\/api\/sales'/);
+  assert.match(client, /request\('\/api\/sales\?page='/);
   assert.doesNotMatch(client, /localStorage|dados fictícios|vendas demonstrativas/i);
 });
 
@@ -73,7 +73,25 @@ test('histórico de vendas permite pesquisar, filtrar e exportar dados reais', (
   assert.match(page, /id="exportSales"/);
   assert.match(client, /function filteredSales\(\)/);
   assert.match(client, /function exportSales\(\)/);
-  assert.match(client, /salesHistory=Array\.isArray\(data\.sales\)/);
+  assert.match(client, /salesHistory = Array\.isArray\(data\.sales\)/);
   assert.match(client, /URL\.createObjectURL\(blob\)/);
   assert.doesNotMatch(client, /localStorage|dados fictícios|vendas demonstrativas/i);
+});
+
+test('histórico tem paginação por empresa com limite por página', () => {
+  assert.match(api, /export async function GET\(request: Request\)/);
+  assert.match(api, /const pageSize = 50/);
+  assert.match(api, /offset=\$\{offset\}/);
+  assert.match(api, /hasMore: rows\.length > pageSize/);
+  assert.match(page, /id="salesPrevious"/);
+  assert.match(page, /id="salesNext"/);
+  assert.match(client, /loadSales\(salesPage\+1\)/);
+  assert.match(client, /loadSales\(salesPage-1\)/);
+});
+
+test('CSV de vendas neutraliza fórmulas e usa separadores reais', () => {
+  assert.match(client, /const protectedText =/);
+  assert.match(client, /protectedText\.replace/);
+  assert.match(client, /join\('\\\\r\\\\n'\)/);
+  assert.match(client, /new Blob\(\['\\\\uFEFF'/);
 });
