@@ -102,11 +102,12 @@ export async function PATCH(request: Request) {
     if (typeof from !== "string" || typeof to !== "string" || !transitions[from]?.includes(to))
       throw new JvgBackendError("Transição de situação não permitida.", 400);
     const companyScope = `tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}`;
+    const validityFilter = to === "accepted" ? `&or=(valid_until.is.null,valid_until.gte.${new Date().toISOString().slice(0,10)})` : "";
     const updated = await dbRequest<Array<{ id:string; status:string }>>(
-      `/rest/v1/jvg_quotes?${companyScope}&id=${filterEq(id)}&status=${filterEq(from)}&select=id,status`,
+      `/rest/v1/jvg_quotes?${companyScope}&id=${filterEq(id)}&status=${filterEq(from)}${validityFilter}&select=id,status`,
       { method: "PATCH", body: JSON.stringify({ status:to, updated_at:new Date().toISOString() }) }
     );
-    if (!updated.length) throw new JvgBackendError("Orçamento não encontrado ou situação alterada por outro usuário. Atualize a lista.", 409);
+    if (!updated.length) throw new JvgBackendError("Orçamento indisponível, vencido ou alterado por outro usuário. Atualize a lista.", 409);
     return apiJson({ ok:true, quote:updated[0] });
   } catch (error) { return safeError(error); }
 }
