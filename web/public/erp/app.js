@@ -104,7 +104,7 @@
     else content.innerHTML=(views[view]||dashboard)();
     var search=document.getElementById('globalSearch');search.value=query;
   }
-  function setView(next){if(!labels[next])return;view=next;query='';filter='all';if(window.location.hash!=='#'+next)history.replaceState(null,'','#'+next);document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');render();document.querySelector('.main-column').scrollTop=0;}
+  function setView(next){if(!labels[next])return;view=next;query='';filter='all';if(window.location.hash!=='#'+next)history.pushState(null,'','#'+next);document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');render();document.querySelector('.main-column').scrollTop=0;}
   function field(name,label,value,extra,full,help){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+(extra||'')+'>'+(help?'<small>'+h(help)+'</small>':'')+'</div>';}
   function lookupField(name,label,value,extra,kind,full){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><div class="input-action"><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+extra+'><button class="btn ghost lookup-btn" type="button" data-action="lookup-'+kind+'">Consultar</button></div></div>';}
   function select(name,label,options,value){return '<div class="field"><label for="f-'+h(name)+'">'+h(label)+'</label><select id="f-'+h(name)+'" name="'+h(name)+'">'+options.map(function(o){return '<option value="'+h(o[0])+'" '+(String(value)===String(o[0])?'selected':'')+'>'+h(o[1])+'</option>';}).join('')+'</select></div>';}
@@ -370,22 +370,23 @@
   });
   document.addEventListener('submit',function(e){if(e.target.id==='recordForm'){e.preventDefault();saveRecord(e.target);}if(e.target.id==='stockForm'){e.preventDefault();saveStock(e.target);}if(e.target.id==='companyForm'){e.preventDefault();saveCompany(e.target);}});
   document.addEventListener('input',function(e){
-    if(e.target.id==='globalSearch'){query=e.target.value;if(view==='dashboard')setView('products');else render();return;}
+    if(e.target.id==='globalSearch'){var searchText=e.target.value;if(view==='dashboard'){setView('products');query=searchText;render();}else{query=searchText;render();}return;}
     if(e.target.hasAttribute('data-search-input')){query=e.target.value;var pos=e.target.selectionStart;render();var next=document.querySelector('[data-search-input]');if(next){next.focus();next.setSelectionRange(pos,pos);}}
   });
   document.addEventListener('change',function(e){if(e.target.hasAttribute('data-filter')){filter=e.target.value;render();}if(e.target.id==='partyTypeFilter'){partyFilter=e.target.value;render();}});
-  function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');}
+  function closeSidebar(restoreFocus){var sidebar=document.getElementById('sidebar');var wasOpen=sidebar.classList.contains('open');sidebar.classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');if(restoreFocus&&wasOpen)document.getElementById('menuBtn').focus();}
   document.getElementById('menuBtn').setAttribute('aria-expanded','false');
-  document.getElementById('menuBtn').addEventListener('click',function(){document.getElementById('sidebar').classList.add('open');document.getElementById('mobileBackdrop').classList.add('active');this.setAttribute('aria-expanded','true');});
-  document.getElementById('closeMenuBtn').addEventListener('click',closeSidebar);
-  document.getElementById('mobileBackdrop').addEventListener('click',closeSidebar);
-  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSidebar();if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();document.getElementById('globalSearch').focus();}});
+  document.getElementById('menuBtn').addEventListener('click',function(){document.getElementById('sidebar').classList.add('open');document.getElementById('mobileBackdrop').classList.add('active');this.setAttribute('aria-expanded','true');document.getElementById('closeMenuBtn').focus();});
+  document.getElementById('closeMenuBtn').addEventListener('click',function(){closeSidebar(true);});
+  document.getElementById('mobileBackdrop').addEventListener('click',function(){closeSidebar(true);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSidebar(true);if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();document.getElementById('globalSearch').focus();}});
   if('scrollRestoration' in history)history.scrollRestoration='manual';
   window.scrollTo(0,0);
   document.querySelector('.main-column').scrollTop=0;
   var initialHash=decodeURIComponent(window.location.hash.slice(1));
   if(labels[initialHash])view=initialHash;
-  window.addEventListener('hashchange',function(){var next=decodeURIComponent(window.location.hash.slice(1));if(labels[next])setView(next);});
+  window.addEventListener('hashchange',function(){var next=decodeURIComponent(window.location.hash.slice(1))||'dashboard';if(labels[next]&&next!==view){view=next;query='';filter='all';closeSidebar();render();document.querySelector('.main-column').scrollTop=0;}});
+  window.addEventListener('popstate',function(){var next=decodeURIComponent(window.location.hash.slice(1))||'dashboard';if(labels[next]&&next!==view){view=next;query='';filter='all';closeSidebar();render();document.querySelector('.main-column').scrollTop=0;}});
   render();
   checkConnection();
 })();
