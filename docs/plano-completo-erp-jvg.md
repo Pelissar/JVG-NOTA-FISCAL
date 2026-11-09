@@ -154,3 +154,11 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - Testes de contrato ampliados. Testes de integração, build e validação de migrações **ainda pendentes**.
 - Cancelamento de pedido não estorna venda/estoque (a conversão pedido→venda ainda não foi implementada).
 - Sem alterações de produção, migração aplicada ou merge em `main`.
+
+### Requisito permanente: interface responsiva em qualquer computador (2026-11-09)
+- Todas as telas novas e alteradas devem adaptar-se automaticamente à largura e altura disponíveis, incluindo monitores grandes, notebooks, janelas lado a lado, tablets e celulares; nunca exigir resolução fixa.
+- Usar grids fluidos com `minmax(0,...)`, quebras progressivas, controles sem largura mínima indevida, modais limitados à altura da janela e tabelas com rolagem horizontal local.
+- CSS compartilhado `web/public/erp/commercial-responsive.css` aplicado a orçamentos e pedidos; remove estilos fixos/duplicados das páginas.
+- `responsive.css` agora mantém rolagem vertical normal nas páginas independentes e rolagem interna no painel com sidebar.
+- Contratos de responsividade incluídos em testes de orçamentos e pedidos. Revisão visual real em múltiplas resoluções continua pendente antes de publicação.
+- Regra de aceite futura: verificar pelo menos 1366×768, 1920×1080, 1280×720, 1024×768 e 390×844, inclusive com zoom de navegador e janela redimensionada.
