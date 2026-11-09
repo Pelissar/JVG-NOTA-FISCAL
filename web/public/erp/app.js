@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  var labels = {dashboard:'Visão geral',products:'Produtos',clients:'Clientes',services:'Serviços',fiscal:'Notas fiscais',inventory:'Estoque',finance:'Financeiro',transport:'Transporte',reports:'Relatórios',settings:'Configurações'};
+  var labels = {dashboard:'Visão geral',products:'Produtos',clients:'Clientes',services:'Serviços',fiscal:'Notas fiscais',inventory:'Estoque',reports:'Relatórios',settings:'Configurações'};
   // Nunca mostrar dados locais como se fossem cadastros reais da empresa.
   var state = emptyState();
   var view = 'dashboard', query = '', filter = 'all', partyFilter = 'all';
@@ -99,9 +99,7 @@
     var companyTitle=document.querySelector('.workspace-switch strong');if(companyTitle)companyTitle.textContent=state.companyName;
     document.querySelectorAll('.sidebar .nav-link').forEach(function(b){var active=b.dataset.view===view;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     var views={dashboard:dashboard,products:products,clients:clients,services:services,fiscal:fiscal,inventory:inventory,reports:reports,settings:settings};
-    if(view==='finance')content.innerHTML=simpleSoon('Financeiro','Contas, parcelas, caixa e conciliação futura.','cash',[['Contas a receber','Planejadas'],['Contas a pagar','Planejadas'],['Conciliação bancária','Planejada']]);
-    else if(view==='transport')content.innerHTML=simpleSoon('Transporte','Cadastros e operações de CT-e e MDF-e em etapas futuras.','truck',[['Transportadoras e motoristas','Planejados'],['CT-e','Planejado'],['MDF-e','Planejado']]);
-    else content.innerHTML=(views[view]||dashboard)();
+    content.innerHTML=(views[view]||dashboard)();
     var search=document.getElementById('globalSearch');search.value=query;
   }
   function setView(next){if(!labels[next])return;view=next;query='';filter='all';if(window.location.hash!=='#'+next)history.pushState(null,'','#'+next);document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');render();document.querySelector('.main-column').scrollTop=0;}
