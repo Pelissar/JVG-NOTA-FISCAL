@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   try {
     const scope = await account();
     const raw = new URL(request.url).searchParams.get("page") ?? "1";
-    if (!/^[1-9]\\d{0,4}$/.test(raw)) throw new JvgBackendError("Página inválida.", 400);
+    if (!/^[1-9]\d{0,4}$/.test(raw)) throw new JvgBackendError("Página inválida.", 400);
     const page = Number(raw), size = 30;
     const rows = await dbRequest<Array<Record<string, unknown>>>(
       `/rest/v1/jvg_quotes?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&select=id,customer_id,status,notes,valid_until,total,items,created_at,updated_at&order=created_at.desc,id.desc&limit=${size+1}&offset=${(page-1)*size}`
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const notes = data.notes == null ? "" : data.notes;
     if (typeof notes !== "string" || notes.length > 2000) throw new JvgBackendError("Observações inválidas.", 400);
     const validUntil = data.validUntil == null || data.validUntil === "" ? null : data.validUntil;
-    if (validUntil !== null && (typeof validUntil !== "string" || !/^\\d{4}-\\d{2}-\\d{2}$/.test(validUntil) || !Number.isFinite(Date.parse(validUntil)) || new Date(validUntil).toISOString().slice(0,10) !== validUntil))
+    if (validUntil !== null && (typeof validUntil !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(validUntil) || !Number.isFinite(Date.parse(validUntil)) || new Date(validUntil).toISOString().slice(0,10) !== validUntil))
       throw new JvgBackendError("Validade inválida.", 400);
     if (!Array.isArray(data.items) || data.items.length < 1 || data.items.length > 100) throw new JvgBackendError("Informe entre 1 e 100 itens.", 400);
     const companyScope = `tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}`;
