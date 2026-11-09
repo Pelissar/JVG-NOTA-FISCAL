@@ -178,3 +178,11 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - `navigation.js` adiciona destaque para links de rota atual e atalhos Home/End no menu lateral; `index.html` declara `aria-controls`.
 - Testes estáticos adicionados para verificar navegação e acessibilidade.
 - Sem build local ou teste visual em navegador nesta etapa; revisar em preview isolado antes de liberar. Sem deploy manual, merge ou migração de produção.
+
+### Correções de usabilidade após redesign (2026-11-09)
+- Corrigida busca global: ao iniciar busca na Visão geral, texto digitado é preservado ao abrir Produtos, em vez de ser perdido.
+- Navegação entre seções usa histórico do navegador (`pushState`) e trata voltar/avançar (`popstate` e `hashchange`), preservando acesso direto por fragmento.
+- Menu móvel devolve foco ao botão de abertura quando fechado por Escape, botão fechar ou fundo; ao abrir, foco vai ao botão fechar.
+- Link de salto ao conteúdo, rótulo acessível de busca e regras extras para telas estreitas/baixas e zoom.
+- Testes de contrato atualizados. **Execução automatizada e revisão visual em navegadores ainda não realizadas.**
+- Sem deploy, merge ou mudanças no Supabase de produção.
