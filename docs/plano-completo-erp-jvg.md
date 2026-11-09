@@ -1,0 +1,93 @@
+# JVG NOTA FISCAL — Auditoria e plano de entrega por etapas
+Data da revisão: 2026-11-09. Base: branch feature/erp-vendas-design-unificado. Documento de trabalho; não é certificado de homologação.
+
+## Legenda
+- Implementado no código: funcionalidade identificada no repositório, mas não necessariamente testada em produção.
+- Parcial: há telas, APIs ou estruturas, porém falta fluxo de ponta a ponta.
+- Não concluído: não demonstrado ou ainda não desenvolvido.
+- Bloqueio de produção: exige migração, homologação, segurança, teste ou aprovação antes de ativar.
+
+## Etapa 0 — Estabilização e auditoria (EM ANDAMENTO)
+1. Inventariar telas, rotas, APIs, banco, migrações e permissões por empresa.
+2. Revisar mudanças não publicadas e corrigir navegação entre módulos.
+3. Executar pnpm test:erp, node --check e pnpm build no CI.
+4. Testar manualmente desktop/mobile e navegação; registrar evidências.
+5. Revisar RLS, permissões, segregação de dados e segredos.
+6. Criar critérios de aceite para cada etapa.
+
+## Etapa 1 — Cadastros (PARCIAL)
+- Pessoas: cliente/fornecedor/transportadora, múltiplos papéis, filtro, número sequencial por empresa, IE, IM, razão social, CPF/CNPJ, endereço e código IBGE.
+- Produtos: SKU, NCM, CEST, GTIN, CFOP, origem, unidade, preços, categoria, perfil tributário.
+- Serviços: códigos LC 116/NBS, preço e dados fiscais.
+- Empresa/estabelecimentos: CNPJ, IE, IM, CNAE, regime, município IBGE, endereços e responsáveis.
+- Faltam: migração de numeração aplicada, testes de persistência e edição, CPF com dígitos verificadores, IE por UF e indicador de contribuinte, inscrição SUFRAMA quando aplicável, importação/exportação segura, deduplicação, cadastro de unidades/filiais e regras de validação por tipo de documento.
+- Aceite: CRUD e filtros com banco real, isolamento por empresa, registros antigos preservados e teste de concorrência de numeração.
+
+## Etapa 2 — Vendas (PARCIAL)
+- Fluxo de venda e baixa transacional de estoque existe no código; interface redesenhada na branch.
+- Faltam: teste real da RPC com autenticação/service role, idempotência de requisição, devolução/cancelamento com estorno, descontos, frete, múltiplos pagamentos, integração financeiro/caixa, reserva e permissões.
+- Aceite: criar venda, impedir estoque negativo e duplicidade, conferir saldo e trilha de auditoria.
+
+## Etapa 3 — Estoque (PARCIAL)
+- Há produtos, movimentos e cálculo de saldo.
+- Faltam: entradas por compra/XML, inventário, transferências, depósitos, lotes/validade/série quando aplicável, custo médio, ajustes auditados, reservas e relatórios de divergência.
+- Aceite: saldo conciliado por local e rastreabilidade de cada movimento.
+
+## Etapa 4 — Financeiro (NÃO CONCLUÍDO)
+- Contas a pagar/receber, títulos, parcelas, vencimentos, baixa, juros/multa/desconto, conciliação, fornecedores e relatórios.
+- Integração com vendas, compras e documentos fiscais.
+- Aceite: saldos e títulos conciliados, com permissões e auditoria.
+
+## Etapa 5 — Caixa/PDV (NÃO CONCLUÍDO)
+- Abertura, suprimento, sangria, fechamento, operadores, meios de pagamento, estorno e conciliação.
+- Integrar NFC-e conforme UF, CSC e homologação.
+- Aceite: fechamento reproduzível e trilha de cada operação.
+
+## Etapa 6 — Fiscal NF-e modelo 55 (RASCUNHOS, NÃO EMISSOR)
+- A interface de rascunhos foi dividida em abas. Transporte e pagamento ainda não persistem; não existe emissão oficial.
+- Implementar emitente, destinatário, cabeçalho, finalidade, série, número, CFOP, itens, NCM/CEST/GTIN, CST/CSOSN, ICMS, IPI, PIS/COFINS e IBS/CBS/IS conforme leiaute e vigência.
+- Implementar frete/volumes, pagamentos, totais, informações adicionais e documentos referenciados.
+- Validar e montar payload Focus NFe, transmitir em homologação, consultar retorno, tratar rejeição/timeout/idempotência, registrar chave, protocolo, XML e DANFE.
+- Eventos: cancelamento, CC-e, inutilização, manifestação quando aplicável, armazenamento e auditoria.
+- Aceite: homologação ponta a ponta com SEFAZ e validação fiscal; produção somente com autorização explícita.
+
+## Etapa 7 — Outros documentos fiscais (NÃO CONCLUÍDO)
+- NFC-e 65: venda ao consumidor, CSC, QR Code, contingência e regras da UF.
+- NFS-e: DPS, município/padrão nacional, retenções e eventos.
+- CT-e 57 e MDF-e 58: requisitos específicos de transporte, quando necessários.
+- NF-e recebidas: distribuição/manifestação, XML, conferência e entrada de estoque/financeiro.
+- Aceite: fluxos independentes homologados por modelo e localidade.
+
+## Etapa 8 — Relatórios e indicadores (PARCIAL)
+- Indicadores básicos e exportação CSV existem.
+- Faltam: vendas por período, margens, estoque, compras, contas, fluxo de caixa, tributos, notas autorizadas/rejeitadas e relatórios por empresa/filial.
+- Aceite: resultados reconciliados com registros transacionais e filtros.
+
+## Etapa 9 — Segurança e conformidade (PARCIAL)
+- Autenticação, permissões viewer, RLS e segregação por empresa existem em parte.
+- Revisar todas as rotas, auditoria de alterações, backup/restauração, retenção LGPD, limites de taxa, CSRF, segredos, certificados, webhooks e alertas.
+- Revogar qualquer chave privada anteriormente exposta e rotacionar credenciais.
+- Aceite: testes negativos de acesso entre empresas, análise de vulnerabilidades e restauração ensaiada.
+
+## Etapa 10 — Offline/sincronização (NÃO CONCLUÍDO)
+- Definir quais operações podem ficar offline, fila local segura, conflitos, reenvio idempotente e sincronização.
+- Não transmitir documento fiscal sem as condições legais e técnicas do modelo/UF.
+- Aceite: testes de desconexão, reconexão, duplicação e conflito.
+
+## Etapa 11 — Qualidade, publicação e operação (PENDENTE)
+- CI de lint/test/build, testes de integração, E2E, acessibilidade, mobile, performance e observabilidade.
+- Ambiente de homologação isolado, migrações reversíveis, backup e plano de rollback.
+- Publicar somente após aprovação, validar Netlify e percorrer fluxos reais sem dados fictícios.
+- Aceite: checklist assinado, métricas, monitoramento e plano de suporte.
+
+## Riscos prioritários identificados
+1. Branch contém mudanças ainda não publicadas e sem validação completa.
+2. Migração de numeração de cadastros pendente no banco.
+3. Tela fiscal mostra abas de transporte e pagamento sem persistência.
+4. Emissão fiscal está bloqueada e não deve ser chamada de pronta.
+5. Venda não foi testada ponta a ponta e precisa de idempotência de API.
+6. Financeiro/caixa e demais modelos fiscais não estão concluídos.
+7. RLS, segredos, homologação, backup e rollback exigem revisão.
+
+## Ordem recomendada
+Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 55 homologada → NFC-e/NFS-e → Relatórios → Segurança e Offline → Publicação validada. Segurança e testes acompanham todas as etapas.
