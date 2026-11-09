@@ -44,7 +44,9 @@ test('formulário impede mais de 100 itens e valida centavos', () => {
 
 test('falha na confirmação não permite reenvio cego', () => {
   assert.match(client, /writable=true;\s*notice\(error\.message/);
-  assert.match(client, /mesma chave impedirá duplicidade/);
+  assert.match(client, /pendingPayload \|\|= \{requestId:pendingRequestId/);
+  assert.match(client, /body:JSON\.stringify\(pendingPayload\)/);
+  assert.match(client, /querySelectorAll\('input,select,textarea,\.remove'\)/);
   assert.match(client, /writable=false;\s*\$\('items'\)\.replaceChildren/);
 });
 
