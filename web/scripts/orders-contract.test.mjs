@@ -41,3 +41,15 @@ test('cancelamento de pedido é autorizado somente quando aberto',()=>{
  assert.match(ui,/method:'PATCH'/);
  assert.match(ui,/confirm\('Cancelar este pedido/);
 });
+
+test('tela de pedidos se adapta à largura e preserva rolagem horizontal da tabela',()=>{
+ const html=read('../public/erp/orders.html');
+ const css=read('../public/erp/commercial-responsive.css');
+ const responsive=read('../public/erp/responsive.css');
+ assert.match(html,/class="commercial-page"/);
+ assert.match(html,/class="commercial-table"/);
+ assert.match(html,/commercial-responsive\.css/);
+ assert.match(css,/overflow-x:auto/);
+ assert.match(css,/@media\(max-width:640px\)/);
+ assert.match(responsive,/body:not\(:has\(> \.app-shell\)\)/);
+});
