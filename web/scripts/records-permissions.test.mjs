@@ -36,7 +36,7 @@ test('origem usa Host público no proxy Netlify sem liberar domínios externos',
   assert.match(fn, /source\.host\.toLowerCase\(\) === host\.trim\(\)\.toLowerCase\(\)/);
   assert.doesNotMatch(fn, /x-forwarded-host/i);
   assert.match(fn, /if \(!origin \|\| origin === "null"\) return false/);
-  const isSameOrigin = new Function('request', fn.replace(/\n}\s*$/, '\n}'));
+  const isSameOrigin = new Function('request', fn.replace(/}\s*$/, ''));
   const request = (origin, host, url = 'https://internal.netlify/functions/api') => ({
     headers: { get(name) { return name === 'origin' ? origin : name === 'host' ? host : null; } },
     url
