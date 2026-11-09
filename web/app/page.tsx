@@ -15,7 +15,7 @@ export default function Home() {
   return <main className={styles.site}>
     <header className={styles.header}>
       <nav className={styles.nav} aria-label="Navegação principal">
-        <Link href="/" aria-label="SigmaFiscal — início">
+        <Link href="/" className={styles.brandLink} aria-label="SigmaFiscal — início">
           <Image className={styles.brandIcon} src="/branding/sigmafiscal-icon.svg" width={56} height={56} alt="" priority /><span className={styles.brandName}><strong>Sigma<span>Fiscal</span></strong><small>ERP EMPRESARIAL</small></span>
         </Link>
         <div className={styles.navlinks}><a href="#sistema">O sistema</a><a href="#modulos">Módulos</a><a href="#acesso">Começar</a></div>
