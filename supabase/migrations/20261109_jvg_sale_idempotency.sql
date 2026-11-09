@@ -113,7 +113,7 @@ begin
         ) values (p_tenant_id,p_company_id,v_product,v_location,v_sale,-v_qty,'sale','Venda confirmada');
       end if;
     else
-      select name,unit into v_name,v_unit from public.jvg_services
+      select name,'UN' into v_name,v_unit from public.jvg_services
         where id=v_service and tenant_id=p_tenant_id and company_id=p_company_id and active;
       if not found then raise exception 'Servico indisponivel'; end if;
     end if;
