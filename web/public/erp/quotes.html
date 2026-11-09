@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>JVG · Orçamentos</title><link rel="stylesheet" href="/erp/styles.css"><link rel="stylesheet" href="/erp/responsive.css"><link rel="stylesheet" href="/erp/sales.css">
-<style>.quote-wrap{max-width:1200px;margin:24px auto;padding:0 18px}.quote-form{display:grid;gap:16px}.quote-grid{display:grid;grid-template-columns:2fr 1fr;gap:12px}.quote-row{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:end}.quote-wrap label{display:grid;gap:6px}.quote-wrap input,.quote-wrap select,.quote-wrap textarea{width:100%;min-height:40px;padding:8px;border:1px solid #cbd8e1;border-radius:8px;background:white}.quote-wrap .panel{padding:20px;margin-bottom:20px}.quote-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.quote-list{overflow-x:auto}.quote-list table{width:100%;border-collapse:collapse}.quote-list td,.quote-list th{padding:12px;text-align:left;border-bottom:1px solid #e5edf2}@media(max-width:700px){.quote-grid,.quote-row{grid-template-columns:1fr}}</style>
+<title>JVG · Orçamentos</title><link rel="stylesheet" href="/erp/styles.css"><link rel="stylesheet" href="/erp/responsive.css"><link rel="stylesheet" href="/erp/sales.css"><link rel="stylesheet" href="/erp/commercial-responsive.css">
+
 <script defer src="/erp/quotes.js"></script></head><body>
-<main class="quote-wrap"><div class="page-heading"><div><div class="eyebrow">COMERCIAL / ORÇAMENTOS</div><h1>Orçamentos</h1><p>Prepare propostas comerciais e consulte os rascunhos da empresa.</p></div><a class="btn" href="/erp/">Voltar ao painel</a></div>
+<main class="commercial-page quote-wrap"><div class="page-heading"><div><div class="eyebrow">COMERCIAL / ORÇAMENTOS</div><h1>Orçamentos</h1><p>Prepare propostas comerciais e consulte os rascunhos da empresa.</p></div><a class="btn" href="/erp/">Voltar ao painel</a></div>
 <div id="quoteNotice" role="status" aria-live="polite">Carregando cadastros...</div>
 <section class="panel"><h2>Novo orçamento</h2><form id="quoteForm" class="quote-form">
 <div class="quote-grid"><label>Cliente<select id="quoteCustomer"><option value="">Consumidor não identificado</option></select></label><label>Validade<input id="quoteValidity" type="date"></label></div>
@@ -11,5 +11,5 @@
 <label>Observações<textarea id="quoteNotes" maxlength="2000" rows="3"></textarea></label>
 <div class="quote-actions"><span>Orçamentos não movimentam estoque nem emitem nota fiscal.</span><button id="quoteSave" type="submit" class="btn primary" disabled>Salvar rascunho</button></div>
 </form></section>
-<section class="panel"><h2>Orçamentos recentes</h2><div id="quoteList" class="quote-list">Carregando...</div><nav class="sales-pagination"><button id="quotePrev" class="btn" disabled>Anterior</button><span id="quotePage">Página 1</span><button id="quoteNext" class="btn" disabled>Próxima</button></nav></section>
+<section class="panel"><h2>Orçamentos recentes</h2><div id="quoteList" class="commercial-table quote-list">Carregando...</div><nav class="sales-pagination"><button id="quotePrev" class="btn" disabled>Anterior</button><span id="quotePage">Página 1</span><button id="quoteNext" class="btn" disabled>Próxima</button></nav></section>
 </main></body></html>
