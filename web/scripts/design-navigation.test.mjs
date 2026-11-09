@@ -60,16 +60,18 @@ test('rotas de módulos ainda não implementados não permanecem acessíveis por
  assert.doesNotMatch(js,/view==='transport'/);
 });
 
-test('tema glass flutuante preserva acessibilidade e responsividade',()=>{
- const glass=read('../public/erp/glass-ui.css');
- assert.match(html,/href="\.\/glass-ui\.css"/);
- assert.match(glass,/backdrop-filter:blur/);
- assert.match(glass,/\.main-column\{/);
- assert.match(glass,/@media\(max-width:1100px\)/);
- assert.match(glass,/@media\(max-width:700px\)/);
- assert.match(glass,/prefers-reduced-motion:reduce/);
- assert.match(glass,/prefers-reduced-transparency:reduce/);
- assert.match(glass,/focus-visible/);
+test('tema unificado preserva contraste, acessibilidade e navegação responsiva',()=>{
+ const design=read('../public/erp/erp-design-v2.css');
+ const nav=read('../public/erp/erp-page-nav.js');
+ assert.match(html,/href="\.\/erp-design-v2\.css"/);
+ assert.match(design,/--canvas:/);
+ assert.match(design,/html\[data-theme="dark"\]/);
+ assert.match(design,/\.erp-global-nav/);
+ assert.match(design,/@media \(max-width: 900px\)/);
+ assert.match(design,/prefers-reduced-motion:\s*reduce/);
+ assert.match(design,/focus-visible/);
+ assert.match(nav,/aria-expanded/);
+ assert.match(nav,/aria-label="Módulos do sistema"/);
 });
 
 test('todas as páginas comerciais e fiscais carregam tema e favicon compartilhados',()=>{
