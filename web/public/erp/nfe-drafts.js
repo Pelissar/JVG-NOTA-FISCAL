@@ -234,7 +234,7 @@
       } catch { /* campo livre continua disponível */ }
       await refreshHistory();
       state.ready = state.products.some(function (p) { return p.active; }) &&
-        state.clients.some(function (c) { return c.active && c.type !== 'EXT'; });
+        state.clients.some(function (c) { return c.active && c.isCustomer === true && c.type !== 'EXT'; });
       saveButton.disabled = !state.ready;
       report(state.ready ?
         'Conectado ao Supabase. Os rascunhos serão salvos somente para esta empresa e não serão transmitidos.' :
