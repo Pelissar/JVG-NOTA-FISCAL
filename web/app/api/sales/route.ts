@@ -26,7 +26,7 @@ function itemsFrom(value: unknown) {
     const price = item.unitPrice;
     if (typeof quantity !== "number" || !Number.isFinite(quantity) || quantity <= 0 || quantity > 999999 ||
         typeof price !== "number" || !Number.isFinite(price) || price < 0 || price > 999999999 ||
-        Math.round(price * 100) !== price * 100 && Math.abs(Math.round(price * 100) - price * 100) > 1e-7) {
+        Math.abs(Math.round(price * 100) - price * 100) > 1e-7) {
       throw new JvgBackendError("Quantidade ou preço inválido.", 400);
     }
     return { product_id: productId, service_id: serviceId, quantity, unit_price: price };
@@ -38,7 +38,6 @@ async function accountForRequest() {
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
   const account = await getSiteAccount(user);
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
-  if (account.role === "viewer") throw new JvgBackendError("Sem permissão para registrar vendas.", 403);
   return account;
 }
 
@@ -57,6 +56,7 @@ export async function POST(request: Request) {
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {
     const account = await accountForRequest();
+    if (account.role === "viewer") throw new JvgBackendError("Sem permissão para registrar vendas.", 403);
     const input: unknown = await request.json();
     if (!input || typeof input !== "object" || Array.isArray(input)) throw new JvgBackendError("Venda inválida.", 400);
     const data = input as Record<string, unknown>;
