@@ -23,6 +23,9 @@ group by company_id
 on conflict (company_id) do update
 set last_number = greatest(public.jvg_party_counters.last_number, excluded.last_number);
 
+alter table public.jvg_party_counters enable row level security;
+revoke all on table public.jvg_party_counters from anon, authenticated;
+
 create or replace function public.jvg_assign_party_registration_number()
 returns trigger
 language plpgsql
@@ -40,6 +43,8 @@ begin
   return new;
 end;
 $$;
+
+revoke all on function public.jvg_assign_party_registration_number() from public, anon, authenticated;
 
 drop trigger if exists jvg_parties_assign_registration_number on public.jvg_parties;
 create trigger jvg_parties_assign_registration_number
