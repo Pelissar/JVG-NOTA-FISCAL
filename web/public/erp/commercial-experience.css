@@ -1,0 +1,45 @@
+.workflow-strip{display:flex;align-items:center;justify-content:center;gap:clamp(8px,2vw,28px);margin:0 0 20px;padding:15px 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow-sm)}
+.workflow-strip article{display:flex;align-items:center;gap:11px;min-width:0}
+.workflow-strip article>span{display:grid;place-items:center;width:31px;height:31px;flex:0 0 31px;border:1px solid var(--line);border-radius:9px;background:var(--surface-soft);color:var(--muted);font-size:10px;font-weight:800}
+.workflow-strip article.current>span{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-strong)}
+.workflow-strip article div{display:grid;gap:3px;min-width:0}
+.workflow-strip strong{color:var(--ink);font-size:11px}
+.workflow-strip small{color:var(--muted);font-size:10px}
+.workflow-strip>i{color:var(--muted-soft);font-size:20px;font-style:normal}
+.summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:0 0 20px}
+.summary-tile{display:grid;gap:8px;min-width:0;padding:16px 18px;border:1px solid var(--line);border-radius:13px;background:var(--surface);box-shadow:var(--shadow-sm)}
+.summary-tile>span{color:var(--muted);font-size:11px;font-weight:650}
+.summary-tile>strong{overflow:hidden;color:var(--ink);font-size:24px;letter-spacing:-.5px;text-overflow:ellipsis;white-space:nowrap}
+.summary-tile>small{color:var(--muted-soft);font-size:10px;line-height:1.5}
+.order-list-panel{overflow:hidden}
+.order-list-panel .panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.order-list-panel .panel-head h2{margin:0 0 4px}
+.order-list-panel .panel-head p{margin:0;color:var(--muted);font-size:11px}
+.list-toolbar{display:flex;align-items:end;gap:12px;flex-wrap:wrap;padding:14px 18px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface-soft)}
+.list-toolbar label{display:grid;gap:6px;min-width:min(220px,100%);color:var(--muted);font-size:10px;font-weight:750}
+.list-toolbar input,.list-toolbar select{width:100%;min-width:0;height:38px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-size:12px}
+.list-toolbar>span{margin:0 0 10px auto;color:var(--muted);font-size:10px}
+.status-pill{display:inline-flex;align-items:center;min-height:24px;padding:0 9px;border:1px solid var(--line);border-radius:999px;background:var(--surface-soft);color:var(--ink-soft);font-size:10px;font-weight:750;white-space:nowrap}
+.status-pill.is-open,.status-pill.is-draft,.status-pill.is-diagnosis{border-color:color-mix(in srgb,var(--warning) 34%,var(--line));background:var(--warning-soft);color:var(--warning)}
+.status-pill.is-accepted,.status-pill.is-ready,.status-pill.is-fulfilled,.status-pill.is-delivered{border-color:color-mix(in srgb,var(--success) 30%,var(--line));background:var(--success-soft);color:var(--success)}
+.status-pill.is-cancelled,.status-pill.is-rejected,.status-pill.is-expired{border-color:color-mix(in srgb,var(--danger) 30%,var(--line));background:var(--danger-soft);color:var(--danger)}
+.status-pill.is-sent,.status-pill.is-awaiting_approval,.status-pill.is-awaiting_parts,.status-pill.is-in_progress{border-color:color-mix(in srgb,var(--accent) 32%,var(--line));background:var(--accent-soft);color:var(--accent-strong)}
+.record-dialog{width:min(680px,calc(100% - 28px));max-width:680px;max-height:min(88dvh,900px);overflow:auto;padding:22px;border:1px solid var(--line);border-radius:18px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-pop)}
+.record-dialog::backdrop{background:#07111f99;backdrop-filter:blur(3px)}
+.dialog-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:0 0 18px;padding:0 0 15px;border-bottom:1px solid var(--line)}
+.dialog-heading h2{margin:5px 0 0;color:var(--ink);font-size:22px}
+.record-dialog dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:0}
+.record-dialog dl div{min-width:0;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft)}
+.record-dialog dt{margin-bottom:5px;color:var(--muted);font-size:10px;font-weight:700}
+.record-dialog dd{margin:0;color:var(--ink);font-size:12px;overflow-wrap:anywhere;white-space:pre-wrap}
+.record-dialog .detail-items{display:grid;gap:8px;margin:14px 0}
+.record-dialog .detail-items article{display:flex;justify-content:space-between;gap:14px;padding:10px 12px;border-bottom:1px solid var(--line);color:var(--ink-soft);font-size:12px}
+.record-dialog .detail-items article strong{color:var(--ink)}
+.record-dialog .dialog-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:18px}
+.record-dialog .dialog-note{margin:14px 0 0;padding:12px;border-radius:10px;background:var(--surface-soft);color:var(--muted);font-size:11px;line-height:1.6;white-space:pre-wrap}
+.quote-list table td:last-child,.order-list-panel table td:last-child{min-width:205px}
+.quote-list table td,.order-list-panel table td{vertical-align:middle}
+.quote-list .btn,.order-list-panel .btn{min-height:32px;padding:0 9px;font-size:10px}
+.quote-list .status-pill,.order-list-panel .status-pill{margin-right:4px}
+@media(max-width:760px){.workflow-strip{justify-content:flex-start;overflow-x:auto}.workflow-strip article{min-width:175px}.summary-grid{grid-template-columns:1fr}.list-toolbar{align-items:stretch}.list-toolbar label{width:100%;min-width:0}.list-toolbar>span{margin:0}.record-dialog{padding:17px}.record-dialog dl{grid-template-columns:1fr}.commercial-switcher{width:calc(100% - 24px);margin-top:12px}}
+@media(prefers-reduced-motion:reduce){.commercial-switcher a{transition:none}}
