@@ -102,7 +102,10 @@ export async function PATCH(request: Request) {
     if (typeof from !== "string" || typeof to !== "string" || !transitions[from]?.includes(to))
       throw new JvgBackendError("Transição de situação não permitida.", 400);
     const companyScope = `tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}`;
-    const validityFilter = to === "accepted" ? `&or=(valid_until.is.null,valid_until.gte.${new Date().toISOString().slice(0,10)})` : "";
+    const todayParts = new Intl.DateTimeFormat("en-US", { timeZone:"America/Sao_Paulo", year:"numeric", month:"2-digit", day:"2-digit" }).formatToParts(new Date());
+    const part = (type:string) => todayParts.find(item=>item.type===type)?.value ?? "";
+    const today = `${part("year")}-${part("month")}-${part("day")}`;
+    const validityFilter = to === "accepted" ? `&or=(valid_until.is.null,valid_until.gte.${today})` : "";
     const updated = await dbRequest<Array<{ id:string; status:string }>>(
       `/rest/v1/jvg_quotes?${companyScope}&id=${filterEq(id)}&status=${filterEq(from)}${validityFilter}&select=id,status`,
       { method: "PATCH", body: JSON.stringify({ status:to, updated_at:new Date().toISOString() }) }
