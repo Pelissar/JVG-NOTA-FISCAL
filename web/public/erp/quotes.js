@@ -50,10 +50,10 @@ $('quoteForm').addEventListener('submit',async event=>{
  busy=true;update();notice('Salvando orçamento...');
  try{
   const result=await api('/api/quotes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerId:$('quoteCustomer').value||null,validUntil:$('quoteValidity').value||null,notes:$('quoteNotes').value,items})});
-  $('quoteItems').replaceChildren();$('quoteNotes').value='';$('quoteValidity').value='';addRow();await history(1);
+  $('quoteItems').replaceChildren();$('quoteNotes').value='';$('quoteValidity').value='';await history(1);
   notice('Orçamento salvo: '+result.id);
  }catch(error){notice(error.message);}
- finally{busy=false;update();}
+ finally{busy=false;if(!rows().length)addRow();update();}
 });
 start();
 })();
