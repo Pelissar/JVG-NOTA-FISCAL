@@ -203,3 +203,8 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 ### Verificação automatizada do PR (2026-11-09)
 - Criado `.github/workflows/erp-contracts.yml` para executar `node --check` nos scripts do ERP e `npm run test:erp` em pull requests e pushes da branch de desenvolvimento, sem credenciais do banco e sem deploy.
 - O fluxo não substitui build Next.js nem teste integrado com banco em homologação. Aguardar execução real do GitHub Actions e corrigir falhas antes do merge.
+
+### CI validado e build adicionado (2026-11-09)
+- GitHub Actions execução 42648749255: job `Testes ERP (sem banco de produção)` concluído com sucesso, incluindo sintaxe JS e contratos estáticos. Deploy Preview Netlify também aprovado para aquele commit.
+- Ampliado workflow com job independente `next-build`, usando pnpm fixado e lockfile, para executar build de produção Next.js sem deploy e revelar erros de compilação antes de merge. Aguardar resultado deste novo job.
+- Build verde não equivale a operações de banco disponíveis ou autorização fiscal.
