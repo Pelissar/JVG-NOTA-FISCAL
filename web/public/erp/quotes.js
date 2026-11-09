@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id);
 const money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n);
 const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let catalog=[],page=1,hasMore=false,busy=false,ready=false;
+let catalog=[],page=1,hasMore=false,busy=false,ready=false,historyBusy=false;
 const notice=message=>{$('quoteNotice').textContent=message;};
 async function api(url,options){
  const response=await fetch(url,{credentials:'same-origin',cache:'no-store',...options});
@@ -28,11 +28,31 @@ function addRow(){
  $('quoteItems').append(row);update();
 }
 async function history(nextPage=page){
+ if(historyBusy)return;
+ historyBusy=true;$('quotePrev').disabled=true;$('quoteNext').disabled=true;
+ try{
  const data=await api('/api/quotes?page='+nextPage);page=data.page;hasMore=data.hasMore===true;
  const quotes=Array.isArray(data.quotes)?data.quotes:[];
- $('quoteList').innerHTML=quotes.length?'<table><thead><tr><th>Data</th><th>Orçamento</th><th>Situação</th><th>Validade</th><th>Total</th></tr></thead><tbody>'+quotes.map(q=>'<tr><td>'+safe(new Date(q.created_at).toLocaleDateString('pt-BR'))+'</td><td title="'+safe(q.id)+'">'+safe(q.id.slice(0,8))+'</td><td>'+safe(q.status)+'</td><td>'+safe(q.valid_until||'—')+'</td><td>'+safe(money(q.total))+'</td></tr>').join('')+'</tbody></table>':'Nenhum orçamento nesta página.';
- $('quotePage').textContent='Página '+page;$('quotePrev').disabled=page<=1;$('quoteNext').disabled=!hasMore;
+ $('quoteList').innerHTML=quotes.length?'<table><thead><tr><th>Data</th><th>Orçamento</th><th>Situação</th><th>Validade</th><th>Total</th></tr></thead><tbody>'+quotes.map(q=>'<tr><td>'+safe(new Date(q.created_at).toLocaleDateString('pt-BR'))+'</td><td title="'+safe(q.id)+'">'+safe(q.id.slice(0,8))+'</td><td>'+safe(q.status)+'</td><td>'+safe(q.valid_until||'—')+'</td><td>'+safe(money(q.total))+'</td><td>'+actions(q)+'</td></tr>').join('')+'</tbody></table>':'Nenhum orçamento nesta página.';
+ $('quotePage').textContent='Página '+page;
+ }finally{historyBusy=false;$('quotePrev').disabled=page<=1;$('quoteNext').disabled=!hasMore;}
 }
+const statusLabels={draft:'Rascunho',sent:'Enviado',accepted:'Aceito',rejected:'Recusado',expired:'Expirado'};
+function actions(q){
+ const next=q.status==='draft'?[['sent','Marcar enviado'],['rejected','Recusar']]:q.status==='sent'?[['accepted','Aceitar'],['rejected','Recusar'],['expired','Expirar']]:[];
+ return next.map(([status,label])=>'<button type="button" class="btn quote-status" data-id="'+safe(q.id)+'" data-from="'+safe(q.status)+'" data-to="'+safe(status)+'">'+safe(label)+'</button>').join(' ')||'—';
+}
+$('quoteList').addEventListener('click',async event=>{
+ const button=event.target.closest('button.quote-status');
+ if(!button||busy||historyBusy)return;
+ const {id,from,to}=button.dataset;
+ if(!confirm('Alterar situação do orçamento para '+(statusLabels[to]||to)+'?'))return;
+ button.disabled=true;
+ try{
+  await api('/api/quotes',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,fromStatus:from,status:to})});
+  await history();notice('Situação do orçamento atualizada.');
+ }catch(error){notice(error.message);button.disabled=false;}
+});
 async function start(){
  try{
   const data=await api('/api/records');
