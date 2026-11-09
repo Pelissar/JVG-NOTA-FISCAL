@@ -116,3 +116,9 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - `web/scripts/sales-contract.test.mjs`: testes de contrato para os controles.
 - **Limitação:** a API `/api/sales` retorna somente as 200 vendas mais recentes; a exportação é apenas desse conjunto carregado, não de todo o histórico. Paginação e exportação server-side são trabalho futuro.
 - Testes automatizados e deploy não foram verificados nesta etapa.
+
+### Paginação de vendas e proteção de exportação CSV (2026-11-09)
+- `GET /api/sales?page=N` retorna até 50 vendas por página, mais `hasMore`, respeitando tenant e empresa; paginação por offset com limite de página validado.
+- Histórico com botões Anterior/Próxima; KPIs e pesquisa continuam representando apenas a página carregada, não o universo inteiro.
+- CSV corrigido para usar CRLF e BOM UTF-8 reais, e neutralizar células iniciadas por operadores de fórmula; exporta somente a página filtrada.
+- Testes de contrato atualizados. **Sem migração ou publicação em produção**; execução completa dos testes ainda não confirmada.
