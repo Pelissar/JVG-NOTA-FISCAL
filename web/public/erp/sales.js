@@ -55,7 +55,7 @@
       products=Array.isArray(data.products)?data.products:[];
       services=Array.isArray(data.services)?data.services:[];
       const clients=Array.isArray(data.clients)?data.clients:[];
-      $('customer').innerHTML='<option value="">Consumidor não identificado</option>'+clients.filter(x=>x.active).map(x=>'<option value="'+safe(x.id)+'">'+safe(x.name)+'</option>').join('');
+      $('customer').innerHTML='<option value="">Consumidor não identificado</option>'+clients.filter(x=>x.active && x.isCustomer === true && x.type !== 'EXT').map(x=>'<option value="'+safe(x.id)+'">'+safe(x.name)+'</option>').join('');
       $('customer').addEventListener('change',()=>{$('customerSummary').textContent=$('customer').selectedOptions[0]?.textContent||'Consumidor não identificado';});
       addItem();await loadSales();loaded=true;writable=true;recalculate();notice('Dados carregados da empresa conectada.');
     } catch(error) {loaded=false;notice(error.message);$('submit').disabled=true;$('addItem').disabled=true;}
