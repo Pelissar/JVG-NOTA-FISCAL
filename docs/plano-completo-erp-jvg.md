@@ -147,3 +147,10 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - Contratos de teste adicionados, **execução integral ainda pendente**.
 - Próximas etapas: aprovar pedidos, reservar/baixar estoque somente em confirmação transacional, evitar duplicidade na conversão pedido→venda e conferir regras de vencimento dos orçamentos.
 - **Não publicar sem migrações homologadas, testes e autorização explícita.**
+
+### Controle de cancelamento e validade comercial (2026-11-09)
+- API `PATCH /api/orders` permite cancelar somente pedido aberto, com origem, autenticação, permissão e filtros por empresa e estado; ação com confirmação na tela de pedidos.
+- Aceite de orçamento verifica `valid_until` em data local de São Paulo, na mesma atualização condicional; propostas vencidas não podem ser aceitas.
+- Testes de contrato ampliados. Testes de integração, build e validação de migrações **ainda pendentes**.
+- Cancelamento de pedido não estorna venda/estoque (a conversão pedido→venda ainda não foi implementada).
+- Sem alterações de produção, migração aplicada ou merge em `main`.
