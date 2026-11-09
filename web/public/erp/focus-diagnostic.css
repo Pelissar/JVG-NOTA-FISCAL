@@ -1,0 +1,23 @@
+/* SigmaFiscal Focus diagnostic: readable in dark and light modes. */
+.focus-panel{margin-bottom:18px}
+.focus-panel-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+.focus-panel-heading h2{margin:7px 0 0;color:#f4f8ff;font-size:clamp(18px,2vw,24px)}
+.focus-eyebrow{font-size:11px;font-weight:900;letter-spacing:.11em;color:#8ecfff}
+.focus-status-badge{display:inline-flex;padding:8px 11px;border-radius:999px;background:#49371e;border:1px solid #b68a48;color:#ffdfab;font-weight:900;font-size:11px;letter-spacing:.05em}
+.focus-panel .panel-body>p{line-height:1.65;color:#d0deef}
+.focus-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:16px 0}
+.focus-actions button{min-height:42px;padding:10px 16px;cursor:pointer}
+.focus-actions button:disabled{opacity:.65;cursor:wait}
+.focus-subtext{font-size:12px;color:#bfd2e6}
+.focus-panel .focus-result{padding:12px 14px;background:#102b45;border:1px solid #3f6b91;border-radius:10px;color:#e9f5ff;overflow-wrap:anywhere}
+.focus-panel .focus-disclaimer{font-size:12px;color:#bfd1e5}
+.fiscal-inline-link{color:#9cdbff!important;font-weight:800;text-decoration:underline;text-underline-offset:3px}
+.fiscal-inline-link:focus-visible{outline:3px solid #8ed1ff;outline-offset:3px}
+html[data-theme=light] .focus-panel-heading h2{color:#19324c}
+html[data-theme=light] .focus-eyebrow{color:#155c9b}
+html[data-theme=light] .focus-status-badge{background:#fff0d4;border-color:#b77b29;color:#7a4300}
+html[data-theme=light] .focus-panel .panel-body>p{color:#314d69}
+html[data-theme=light] .focus-panel .focus-result{background:#eaf3ff;color:#183b60;border-color:#9fbcd8}
+html[data-theme=light] .focus-subtext,html[data-theme=light] .focus-panel .focus-disclaimer{color:#38536e}
+html[data-theme=light] .fiscal-inline-link{color:#135d9f!important}
+@media(max-width:560px){.focus-panel-heading{align-items:flex-start}.focus-actions{align-items:stretch;flex-direction:column}.focus-actions button{width:100%}}
