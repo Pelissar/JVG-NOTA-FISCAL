@@ -79,3 +79,31 @@ export async function POST(request: Request) {
     return apiJson({ ok:true, id:created[0]?.id }, 201);
   } catch (error) { return safeError(error); }
 }
+
+/** Mudança de situação com transição condicional para evitar sobrescrever atualizações concorrentes. */
+export async function PATCH(request: Request) {
+  if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
+  try {
+    const scope = await account();
+    if (scope.role === "viewer") throw new JvgBackendError("Sem permissão para alterar orçamentos.", 403);
+    const input: unknown = await request.json();
+    if (!input || typeof input !== "object" || Array.isArray(input)) throw new JvgBackendError("Alteração inválida.", 400);
+    const data = input as Record<string, unknown>;
+    const id = uuid(data.id);
+    const from = data.fromStatus;
+    const to = data.status;
+    const transitions: Record<string, readonly string[]> = {
+      draft: ["sent", "rejected"],
+      sent: ["accepted", "rejected", "expired"],
+    };
+    if (typeof from !== "string" || typeof to !== "string" || !transitions[from]?.includes(to))
+      throw new JvgBackendError("Transição de situação não permitida.", 400);
+    const companyScope = `tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}`;
+    const updated = await dbRequest<Array<{ id:string; status:string }>>(
+      `/rest/v1/jvg_quotes?${companyScope}&id=${filterEq(id)}&status=${filterEq(from)}&select=id,status`,
+      { method: "PATCH", body: JSON.stringify({ status:to, updated_at:new Date().toISOString() }) }
+    );
+    if (!updated.length) throw new JvgBackendError("Orçamento não encontrado ou situação alterada por outro usuário. Atualize a lista.", 409);
+    return apiJson({ ok:true, quote:updated[0] });
+  } catch (error) { return safeError(error); }
+}
