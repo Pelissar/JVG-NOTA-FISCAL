@@ -122,3 +122,11 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - Histórico com botões Anterior/Próxima; KPIs e pesquisa continuam representando apenas a página carregada, não o universo inteiro.
 - CSV corrigido para usar CRLF e BOM UTF-8 reais, e neutralizar células iniciadas por operadores de fórmula; exporta somente a página filtrada.
 - Testes de contrato atualizados. **Sem migração ou publicação em produção**; execução completa dos testes ainda não confirmada.
+
+### Orçamentos comerciais — implementação inicial (2026-11-09)
+- Migração **pendente**, não aplicada: `supabase/migrations/20261109_jvg_quotes.sql`, com rascunhos por empresa, itens em JSONB, validade, situação e total.
+- API `GET/POST /api/quotes`: autenticação, escopo tenant/empresa, validação de cliente, produtos, serviços, quantidades, centavos, totais e permissões; listagem paginada de 30 registros.
+- Interface `/erp/quotes.html` e `quotes.js`: seleção de cliente, itens de catálogo real, validade, observações, cálculo de total, gravação de rascunho e histórico; link no menu.
+- Não converte em venda, não movimenta estoque, não gera cobrança ou NF-e. Status adicionais ainda não têm fluxo de aprovação.
+- Corrigido snapshot de unidade para serviços nos SQLs de venda (serviços não possuem coluna `unit`).
+- **Não publicar** sem revisão de migração, testes e autorização do usuário. Não houve deploy manual nem aplicação em Supabase nesta etapa.
