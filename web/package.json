@@ -11,14 +11,15 @@
     "build": "next build && node scripts/purge-turbopack-cache.mjs",
     "test:nfe": "node --experimental-strip-types --test scripts/nfe-draft.test.mjs",
     "test:cfop": "node --test scripts/cfop.test.mjs",
-    "test:erp": "node --test scripts/erp-data.test.mjs scripts/sales-contract.test.mjs scripts/records-permissions.test.mjs",
+    "test:erp": "node --test scripts/erp-data.test.mjs scripts/sales-contract.test.mjs scripts/records-permissions.test.mjs scripts/party-registration.test.mjs",
     "start": "next start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "test:operation": "node --experimental-strip-types --test scripts/operation-review.test.mjs",
     "test:tax-preview": "node --experimental-strip-types --test scripts/tax-preview.test.mjs",
     "test:preflight": "node --experimental-strip-types --test scripts/nfe-preflight.test.mjs",
-    "test:document-review": "node --experimental-strip-types --test scripts/nfe-document-review.test.mjs"
+    "test:document-review": "node --experimental-strip-types --test scripts/nfe-document-review.test.mjs",
+    "test:parties": "node --test scripts/party-registration.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
