@@ -52,3 +52,10 @@ test('menu acessível e adaptado a telas estreitas',()=>{
  assert.match(js,/closeSidebar\(true\)/);
  assert.match(js,/closeMenuBtn'\)\.focus\(\)/);
 });
+
+test('rotas de módulos ainda não implementados não permanecem acessíveis por hash',()=>{
+ assert.doesNotMatch(js,/finance:'Financeiro'/);
+ assert.doesNotMatch(js,/transport:'Transporte'/);
+ assert.doesNotMatch(js,/view==='finance'/);
+ assert.doesNotMatch(js,/view==='transport'/);
+});
