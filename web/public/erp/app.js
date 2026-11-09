@@ -97,14 +97,14 @@
   function render(){
     document.getElementById('breadcrumb').textContent=labels[view]||labels.dashboard;
     var companyTitle=document.querySelector('.workspace-switch strong');if(companyTitle)companyTitle.textContent=state.companyName;
-    document.querySelectorAll('.nav-link').forEach(function(b){b.classList.toggle('active',b.dataset.view===view);});
+    document.querySelectorAll('.sidebar .nav-link').forEach(function(b){var active=b.dataset.view===view;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     var views={dashboard:dashboard,products:products,clients:clients,services:services,fiscal:fiscal,inventory:inventory,reports:reports,settings:settings};
     if(view==='finance')content.innerHTML=simpleSoon('Financeiro','Contas, parcelas, caixa e conciliação futura.','cash',[['Contas a receber','Planejadas'],['Contas a pagar','Planejadas'],['Conciliação bancária','Planejada']]);
     else if(view==='transport')content.innerHTML=simpleSoon('Transporte','Cadastros e operações de CT-e e MDF-e em etapas futuras.','truck',[['Transportadoras e motoristas','Planejados'],['CT-e','Planejado'],['MDF-e','Planejado']]);
     else content.innerHTML=(views[view]||dashboard)();
     var search=document.getElementById('globalSearch');search.value=query;
   }
-  function setView(next){if(!labels[next])return;view=next;query='';filter='all';document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');render();document.querySelector('.main-column').scrollTop=0;}
+  function setView(next){if(!labels[next])return;view=next;query='';filter='all';if(window.location.hash!=='#'+next)history.replaceState(null,'','#'+next);document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');render();document.querySelector('.main-column').scrollTop=0;}
   function field(name,label,value,extra,full,help){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+(extra||'')+'>'+(help?'<small>'+h(help)+'</small>':'')+'</div>';}
   function lookupField(name,label,value,extra,kind,full){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><div class="input-action"><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+extra+'><button class="btn ghost lookup-btn" type="button" data-action="lookup-'+kind+'">Consultar</button></div></div>';}
   function select(name,label,options,value){return '<div class="field"><label for="f-'+h(name)+'">'+h(label)+'</label><select id="f-'+h(name)+'" name="'+h(name)+'">'+options.map(function(o){return '<option value="'+h(o[0])+'" '+(String(value)===String(o[0])?'selected':'')+'>'+h(o[1])+'</option>';}).join('')+'</select></div>';}
@@ -375,6 +375,7 @@
   });
   document.addEventListener('change',function(e){if(e.target.hasAttribute('data-filter')){filter=e.target.value;render();}if(e.target.id==='partyTypeFilter'){partyFilter=e.target.value;render();}});
   function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');}
+  document.getElementById('menuBtn').setAttribute('aria-expanded','false');
   document.getElementById('menuBtn').addEventListener('click',function(){document.getElementById('sidebar').classList.add('open');document.getElementById('mobileBackdrop').classList.add('active');this.setAttribute('aria-expanded','true');});
   document.getElementById('closeMenuBtn').addEventListener('click',closeSidebar);
   document.getElementById('mobileBackdrop').addEventListener('click',closeSidebar);
