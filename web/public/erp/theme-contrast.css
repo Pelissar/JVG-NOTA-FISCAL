@@ -1,0 +1,35 @@
+/* Readability patch and user-selectable light theme. Load last. */
+:root{--sf-text:#f4f8ff;--sf-muted:#bed0e7;--sf-link:#b9ddff}
+body:has(> .app-shell) .quick-card,body:has(> .app-shell) .quick-card :is(a,strong,span,p,small){color:#eaf5ff!important;text-decoration:none}
+body:has(> .app-shell) .quick-card a{text-decoration:underline;text-decoration-color:#7fbaff}
+body:has(> .app-shell) :is(.panel,.stat-card,.table-panel,.banner) :is(p,small,span,label){color:inherit}
+body:has(> .app-shell) :is(.panel,.stat-card,.table-panel) :is(.panel-head p,.stat-foot){color:#c1d2e8}
+body:has(> .app-shell) :is(.panel,.stat-card,.table-panel) a{color:#acd5ff}
+.theme-toggle{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 12px;border-radius:11px;border:1px solid #86baff60;background:#ffffff15;color:#f1f7ff;font-weight:700;cursor:pointer;white-space:nowrap}
+.theme-toggle:focus-visible{outline:3px solid #69adff;outline-offset:2px}
+html[data-theme=light]{color-scheme:light}
+html[data-theme=light] body:has(> .app-shell){color:#132a45;background:radial-gradient(ellipse at 85% 5%,#d5e9ff,transparent 55%),linear-gradient(135deg,#f4f8ff,#e7f1fc)}
+html[data-theme=light] .app-shell{background:transparent}
+html[data-theme=light] :is(.sidebar,.main-column,.topbar,.panel,.stat-card,.table-panel,.banner){background:#ffffffeb!important;border-color:#b9cfe6!important;color:#17304c!important;box-shadow:0 10px 30px #315a8414}
+html[data-theme=light] :is(.sidebar,.main-column,.topbar,.panel,.stat-card,.table-panel,.banner) :is(h1,h2,h3,h4,strong,p,span,small,label,td,th){color:#17304c}
+html[data-theme=light] .sidebar{background:#f6faff!important}
+html[data-theme=light] .nav-link{color:#2e4966}
+html[data-theme=light] .nav-link.active,html[data-theme=light] .nav-link[aria-current=page]{color:white;background:#1768cf}
+html[data-theme=light] .nav-link.active :is(span,small,strong){color:white}
+html[data-theme=light] .quick-card{background:#f1f7ff!important;border-color:#bdd4ee!important}
+html[data-theme=light] .quick-card,html[data-theme=light] .quick-card :is(a,strong,span,p,small){color:#163c64!important}
+html[data-theme=light] .quick-card a{color:#125aa8!important}
+html[data-theme=light] .global-search,html[data-theme=light] .toolbar-search,html[data-theme=light] .filter-select{background:#f4f8ff;color:#183b5b;border-color:#aec5df}
+html[data-theme=light] :is(.global-search input,.toolbar-search input,.field input,.field select,.field textarea){background:#fff;color:#183b5b;border-color:#aac3df}
+html[data-theme=light] :is(input,textarea)::placeholder{color:#59718d}
+html[data-theme=light] .theme-toggle{background:#e5f0ff;color:#17416b;border-color:#b6cde8}
+html[data-theme=light] .top-pill{background:#e5f1ff;color:#1d548a}
+html[data-theme=light] .modal{background:#fff;color:#17304c}
+html[data-theme=light] .footer{color:#49647d}
+html[data-theme=light] body:not(:has(> .app-shell)){background:#f3f8fe;color:#19324c}
+html[data-theme=light] body:not(:has(> .app-shell)) :is(.panel,.table-panel,.cfop-summary,.card,.record-card,.notice,.summary-card){background:#fff;color:#19324c;border-color:#c3d5e8}
+html[data-theme=light] body:not(:has(> .app-shell)) :is(h1,h2,h3,h4,strong,label,p,small){color:#19324c}
+html[data-theme=light] body:not(:has(> .app-shell)) :is(input,select,textarea){background:#fff;color:#19324c;border-color:#9db7d1}
+html[data-theme=light] body:not(:has(> .app-shell)) :is(input,textarea)::placeholder{color:#526b85}
+html[data-theme=light] body:not(:has(> .app-shell)) .theme-toggle{background:#e5f0ff;color:#17416b}
+@media(max-width:760px){.theme-toggle{font-size:12px;padding:7px 9px}}
