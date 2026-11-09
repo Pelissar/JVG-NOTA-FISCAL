@@ -1,5 +1,5 @@
 # JVG NOTA FISCAL — Auditoria e plano de entrega por etapas
-Data da revisão: 2026-11-09. Base: branch feature/erp-vendas-design-unificado. Documento de trabalho; não é certificado de homologação.
+Data da revisão: 2026-11-09. Base: branch feature/erp-vendas-design-unificado. Atualização: auditoria de 53 rotas da Nuts incorporada em `docs/auditoria-referencia-nuts-53-rotas.md`. Documento de trabalho; não é certificado de homologação.
 
 ## Legenda
 - Implementado no código: funcionalidade identificada no repositório, mas não necessariamente testada em produção.
@@ -20,7 +20,7 @@ Data da revisão: 2026-11-09. Base: branch feature/erp-vendas-design-unificado. 
 - Produtos: SKU, NCM, CEST, GTIN, CFOP, origem, unidade, preços, categoria, perfil tributário.
 - Serviços: códigos LC 116/NBS, preço e dados fiscais.
 - Empresa/estabelecimentos: CNPJ, IE, IM, CNAE, regime, município IBGE, endereços e responsáveis.
-- Faltam: migração de numeração aplicada, testes de persistência e edição, CPF com dígitos verificadores, IE por UF e indicador de contribuinte, inscrição SUFRAMA quando aplicável, importação/exportação segura, deduplicação, cadastro de unidades/filiais e regras de validação por tipo de documento.
+- Migração de numeração aplicada ao Supabase em 2026-11-09 e verificada para o registro existente; faltam testes de persistência e edição, CPF com dígitos verificadores, IE por UF e indicador de contribuinte, inscrição SUFRAMA quando aplicável, importação/exportação segura, deduplicação, cadastro de unidades/filiais e regras de validação por tipo de documento.
 - Aceite: CRUD e filtros com banco real, isolamento por empresa, registros antigos preservados e teste de concorrência de numeração.
 
 ## Etapa 2 — Vendas (PARCIAL)
@@ -82,7 +82,7 @@ Data da revisão: 2026-11-09. Base: branch feature/erp-vendas-design-unificado. 
 
 ## Riscos prioritários identificados
 1. Branch contém mudanças ainda não publicadas e sem validação completa.
-2. Migração de numeração de cadastros pendente no banco.
+2. Migração de numeração de cadastros aplicada no banco; ainda faltam testes de concorrência e novos cadastros.
 3. Tela fiscal mostra abas de transporte e pagamento sem persistência.
 4. Emissão fiscal está bloqueada e não deve ser chamada de pronta.
 5. Venda não foi testada ponta a ponta e precisa de idempotência de API.
@@ -91,3 +91,10 @@ Data da revisão: 2026-11-09. Base: branch feature/erp-vendas-design-unificado. 
 
 ## Ordem recomendada
 Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 55 homologada → NFC-e/NFS-e → Relatórios → Segurança e Offline → Publicação validada. Segurança e testes acompanham todas as etapas.
+
+## Backlog GitHub derivado da auditoria Nuts (2026-11-09)
+- [#3](https://github.com/Pelissar/JVG-NOTA-FISCAL/issues/3): P0 verificar/revogar chave privada comprometida, registrar apenas prova de revogação.
+- [#4](https://github.com/Pelissar/JVG-NOTA-FISCAL/issues/4): P0 idempotência transacional de venda.
+- [#5](https://github.com/Pelissar/JVG-NOTA-FISCAL/issues/5): P1 paginação e agregação de estoque sem limites silenciosos.
+- Correção aplicada: seletor da tela de vendas filtra clientes ativos e elegíveis, sem fornecedores/transportadoras exclusivos; teste de contrato incluído.
+- PR de integração: [#2](https://github.com/Pelissar/JVG-NOTA-FISCAL/pull/2), não integrado nem implantado, aguarda testes de CI/preview.
