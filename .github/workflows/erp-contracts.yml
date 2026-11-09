@@ -40,3 +40,22 @@ jobs:
           node --check public/erp/sales.js
       - name: Executar contratos de ERP
         run: npm run test:erp
+
+  next-build:
+    name: Build Next.js (sem deploy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+      - name: Instalar pnpm fixado no projeto
+        run: npm install --global pnpm@11.25.0
+      - name: Instalar dependências do lockfile
+        run: pnpm install --frozen-lockfile
+      - name: Validar build de produção sem publicar
+        run: pnpm build
