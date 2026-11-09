@@ -30,3 +30,14 @@ test('histórico e conversão aparecem no ERP',()=>{
  assert.match(quotes,/method:'POST'/);
  assert.match(quotes,/quoteId:orderButton\.dataset\.id/);
 });
+
+test('cancelamento de pedido é autorizado somente quando aberto',()=>{
+ assert.match(api,/export async function PATCH\(request:Request\)/);
+ assert.match(api,/scope\.role==="viewer"/);
+ assert.match(api,/status=eq\.open&select=id,status/);
+ assert.match(api,/status:"cancelled"/);
+ assert.match(api,/if\(!updated\.length\)/);
+ assert.match(ui,/order-cancel/);
+ assert.match(ui,/method:'PATCH'/);
+ assert.match(ui,/confirm\('Cancelar este pedido/);
+});
