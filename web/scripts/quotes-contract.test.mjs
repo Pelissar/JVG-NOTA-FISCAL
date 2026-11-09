@@ -43,3 +43,9 @@ test('situações de orçamento têm transições autorizadas e escrita condicio
  assert.match(client,/method:'PATCH'/);
  assert.match(client,/history\(\)/);
 });
+
+test('orçamento vencido não pode ser aceito',()=>{
+ assert.match(api,/timeZone:"America\/Sao_Paulo"/);
+ assert.match(api,/valid_until\.gte\.\$\{today\}/);
+ assert.match(api,/to === "accepted"/);
+});
