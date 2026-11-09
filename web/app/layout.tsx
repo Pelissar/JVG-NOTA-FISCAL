@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "JVG Nota Fiscal | Gestão empresarial e emissão fiscal",
-  description: "Plataforma web de gestão empresarial, cadastros, estoque e preparação para emissão de documentos fiscais.",
+  title: "SigmaFiscal | ERP Empresarial",
+  description: "SigmaFiscal: gestão empresarial, clientes, produtos, estoque, orçamentos, pedidos, vendas e preparação fiscal.",
   icons: {
     icon: "/branding/sigmafiscal-icon.svg",
     shortcut: "/branding/sigmafiscal-icon.svg",
