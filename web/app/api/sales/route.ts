@@ -61,6 +61,7 @@ export async function POST(request: Request) {
     if (!input || typeof input !== "object" || Array.isArray(input)) throw new JvgBackendError("Venda inválida.", 400);
     const data = input as Record<string, unknown>;
     const customerId = data.customerId == null ? null : uuid(data.customerId);
+    const requestId = uuid(data.requestId);
     const items = itemsFrom(data.items);
     const notes = data.notes == null ? null : data.notes;
     if (notes !== null && (typeof notes !== "string" || notes.length > 2000)) {
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
         p_customer_id: customerId,
         p_items: items,
         p_notes: notes,
+        p_request_id: requestId,
       }),
     });
     return apiJson({ ok: true, saleId }, 201);
