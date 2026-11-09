@@ -16,7 +16,7 @@ export default function Home() {
     <header className={styles.header}>
       <nav className={styles.nav} aria-label="Navegação principal">
         <Link href="/" aria-label="SigmaFiscal — início">
-          <Image className={styles.logo} src="/branding/sigmafiscal-logo.svg" width={740} height={180} alt="SigmaFiscal ERP Empresarial" priority />
+          <Image className={styles.brandIcon} src="/branding/sigmafiscal-icon.svg" width={56} height={56} alt="" priority /><span className={styles.brandName}><strong>Sigma<span>Fiscal</span></strong><small>ERP EMPRESARIAL</small></span>
         </Link>
         <div className={styles.navlinks}><a href="#sistema">O sistema</a><a href="#modulos">Módulos</a><a href="#acesso">Começar</a></div>
         <Link href="/login" className={styles.login}>Acessar plataforma ↗</Link>
@@ -28,19 +28,24 @@ export default function Home() {
         <div>
           <span className={styles.eyebrow}>SigmaFiscal · ERP Empresarial</span>
           <h1>Seu negócio.<br/><em>Mais controle.</em><br/>Menos complicação.</h1>
-          <p>Cadastros, estoque, orçamentos, pedidos e vendas em uma experiência moderna. Uma plataforma de gestão feita para acompanhar sua operação.</p>
+          <p>Cadastros, estoque, orçamentos, pedidos e vendas em uma experiência moderna. Gestão simples para sua empresa, com clareza em cada etapa da operação.</p>
           <div className={styles.actions}>
             <Link href="/login" className={styles.primary}>Acessar meu sistema →</Link>
             <a href="#modulos" className={styles.secondary}>Conhecer os módulos</a>
           </div>
           <div className={styles.points}><span>✓ Interface responsiva</span><span>✓ Dados da sua empresa</span><span>✓ Ambiente em evolução</span></div>
         </div>
-        <div className={styles.visual}>
-          <div className={styles.visualTop}><strong>SigmaFiscal / Painel de gestão</strong><span className={styles.dots}>● ● ●</span></div>
-          <div className={styles.live}>
-            <iframe src="/erp/index.html" title="Prévia da interface real do SigmaFiscal" loading="lazy" tabIndex={-1} aria-hidden="true" />
+        <div className={styles.showcase} aria-label="Apresentação dos módulos do SigmaFiscal">
+          <div className={styles.showcaseHead}><span className={styles.showcaseLogo}><Image src="/branding/sigmafiscal-icon.svg" alt="" width={38} height={38}/> SigmaFiscal</span><span className={styles.showcaseStatus}>● AMBIENTE DE TESTES</span></div>
+          <div className={styles.showcaseBody}>
+            <div className={styles.showcaseSide}><strong>Visão geral</strong><span>Clientes</span><span>Produtos</span><span>Estoque</span><span>Orçamentos</span><span>Vendas</span><span>Central fiscal</span></div>
+            <div className={styles.showcaseMain}>
+              <span className={styles.showcaseLabel}>GESTÃO EMPRESARIAL</span><h3>Organize sua operação.</h3><p>Os módulos do seu negócio em uma experiência integrada.</p>
+              <div className={styles.showcaseStats}><div><span>01</span><strong>Cadastros</strong><small>Clientes e produtos</small></div><div><span>02</span><strong>Comercial</strong><small>Pedidos e vendas</small></div><div><span>03</span><strong>Estoque</strong><small>Controle operacional</small></div></div>
+              <div className={styles.showcaseFlow}><strong>Fluxo de trabalho</strong><div><span>Cadastro</span><b>→</b><span>Orçamento</span><b>→</b><span>Pedido</span><b>→</b><span>Venda</span></div></div>
+            </div>
           </div>
-          <div className={styles.visualBottom}><span>Prévia do ERP real · acesso aos dados exige autenticação</span><Link href="/login">Abrir sistema ↗</Link></div>
+          <div className={styles.showcaseFoot}>Ilustração dos módulos existentes · sem dados fictícios de clientes ou vendas</div>
         </div>
       </div>
     </section>
