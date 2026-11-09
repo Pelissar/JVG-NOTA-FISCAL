@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const money = n => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n);
   const notice = message => { $('notice').textContent = message; };
-  let products = [], services = [], busy = false, loaded = false, writable = false, pendingRequestId = null;
+  let products = [], services = [], busy = false, loaded = false, writable = false, pendingRequestId = null, pendingPayload = null;
   const safe = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   async function request(url, init) {
     const response = await fetch(url,{credentials:'same-origin',cache:'no-store',...init});
@@ -73,19 +73,22 @@
       notice('Revise as quantidades e os preços dos itens.');return;
     }
     pendingRequestId ||= crypto.randomUUID();
+    pendingPayload ||= {requestId:pendingRequestId,customerId:$('customer').value||null,items,notes:$('notes').value};
     busy=true;recalculate();notice('Confirmando venda...');
     try {
-      const confirmed = await request('/api/sales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:pendingRequestId,customerId:$('customer').value||null,items,notes:$('notes').value})});
+      const confirmed = await request('/api/sales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pendingPayload)});
       writable=false;
       pendingRequestId=null;
+      pendingPayload=null;
       $('items').replaceChildren();$('notes').value='';
       notice('Venda confirmada: '+confirmed.saleId+'. Atualize a página antes de registrar outra venda.');
       try { await loadSales(); } catch(error) { notice('Venda confirmada: '+confirmed.saleId+'. Não foi possível atualizar o histórico: '+error.message); }
     }catch(error){
-      // Uma falha de rede pode ocorrer depois da confirmação no servidor.
-      // Não permitir reenvio sem consulta ao histórico.
+      // Reenvios usam exatamente o mesmo payload, mesmo que o usuário altere campos.
+      // Os campos ficam bloqueados até a resposta definitiva ou recarga da página.
+      $('saleForm').querySelectorAll('input,select,textarea,.remove').forEach(el=>{el.disabled=true;});
       writable=true;
-      notice(error.message+' Você pode tentar confirmar novamente sem alterar os dados; a mesma chave impedirá duplicidade. Se quiser iniciar outra venda, recarregue a página.');
+      notice(error.message+' Você pode tentar novamente com os mesmos dados. Os campos foram bloqueados para evitar alterações; para iniciar outra venda, recarregue a página.');
       try { await loadSales(); } catch (_) { /* histórico indisponível */ }
     }finally{busy=false;recalculate();}
   });
