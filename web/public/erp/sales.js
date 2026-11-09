@@ -54,10 +54,15 @@
   $('addItem').addEventListener('click',addItem);
   $('saleForm').addEventListener('submit',async event=>{
     event.preventDefault();if(busy||!loaded||!writable||$('submit').disabled)return;
-    const items=[...document.querySelectorAll('.sale-row')].map(row=>{
+    const rows=[...document.querySelectorAll('.sale-row')];
+    if(!rows.length||rows.length>100){notice('Informe entre 1 e 100 itens.');return;}
+    const items=rows.map(row=>{
       const [kind,id]=row.querySelector('.item').value.split(':');
       return {productId:kind==='product'?id:null,serviceId:kind==='service'?id:null,quantity:Number(row.querySelector('.quantity').value),unitPrice:Number(row.querySelector('.price').value)};
     });
+    if(items.some(x=>!Number.isFinite(x.quantity)||x.quantity<=0||x.quantity>999999||!Number.isFinite(x.unitPrice)||x.unitPrice<0||x.unitPrice>999999999||Math.abs(Math.round(x.unitPrice*100)-x.unitPrice*100)>1e-7)){
+      notice('Revise as quantidades e os preços dos itens.');return;
+    }
     busy=true;recalculate();notice('Confirmando venda...');
     try {
       const confirmed = await request('/api/sales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerId:$('customer').value||null,items,notes:$('notes').value})});
@@ -65,7 +70,13 @@
       $('items').replaceChildren();$('notes').value='';
       notice('Venda confirmada: '+confirmed.saleId+'. Atualize a página antes de registrar outra venda.');
       try { await loadSales(); } catch(error) { notice('Venda confirmada: '+confirmed.saleId+'. Não foi possível atualizar o histórico: '+error.message); }
-    }catch(error){notice(error.message);}finally{busy=false;recalculate();}
+    }catch(error){
+      // Uma falha de rede pode ocorrer depois da confirmação no servidor.
+      // Não permitir reenvio sem consulta ao histórico.
+      writable=false;
+      notice(error.message+' Verifique o histórico e atualize a página antes de tentar novamente, para evitar venda duplicada.');
+      try { await loadSales(); } catch (_) { /* histórico indisponível */ }
+    }finally{busy=false;recalculate();}
   });
   start();
 })();
