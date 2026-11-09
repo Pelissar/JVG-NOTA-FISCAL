@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const money = n => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n);
   const notice = message => { $('notice').textContent = message; };
-  let products = [], services = [], busy = false, loaded = false, writable = false, pendingRequestId = null, pendingPayload = null;
+  let products = [], services = [], busy = false, loaded = false, writable = false, pendingRequestId = null, pendingPayload = null, salesHistory = [];
   const safe = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   async function request(url, init) {
     const response = await fetch(url,{credentials:'same-origin',cache:'no-store',...init});
@@ -41,13 +41,44 @@
     $('addItem').disabled=busy||!loaded||!writable||rows.length>=100;
     $('submit').disabled=!loaded||!writable||busy||!rows.length||rows.some(row=>!row.querySelector('.item').value||!(Number(row.querySelector('.quantity').value)>0)||row.querySelector('.price').value===''||Number(row.querySelector('.price').value)<0);
   }
+  function filteredSales() {
+    const query = ($('salesSearch')?.value || '').trim().toLocaleLowerCase('pt-BR');
+    const status = $('salesStatus')?.value || '';
+    return salesHistory.filter(sale => {
+      const matchesStatus = !status || sale.status === status;
+      const searchable = [sale.id, sale.status, sale.notes, sale.customer_id].join(' ').toLocaleLowerCase('pt-BR');
+      return matchesStatus && (!query || searchable.includes(query));
+    });
+  }
+  function renderSales() {
+    const sales = filteredSales();
+    $('salesCount').textContent = String(salesHistory.length);
+    $('salesValue').textContent = money(salesHistory.reduce((sum,sale)=>sum+(Number(sale.total)||0),0));
+    $('salesFilteredCount').textContent = sales.length+' de '+salesHistory.length+' vendas';
+    $('sales').innerHTML = sales.length
+      ? '<table><thead><tr><th>Data</th><th>Identificador</th><th>Situação</th><th>Total</th></tr></thead><tbody>'+
+        sales.map(x=>'<tr><td>'+safe(new Date(x.created_at).toLocaleString('pt-BR'))+'</td><td title="'+safe(x.id)+'">'+safe(String(x.id).slice(0,8))+'</td><td>'+safe(x.status)+'</td><td>'+safe(money(x.total))+'</td></tr>').join('')+'</tbody></table>'
+      : 'Nenhuma venda encontrada para os filtros selecionados.';
+    $('exportSales').disabled = sales.length===0;
+  }
+  function exportSales() {
+    const sales = filteredSales();
+    if (!sales.length) return;
+    const csvValue = value => '"'+String(value??'').replace(/"/g,'""')+'"';
+    const lines = [['ID','Data','Situação','Cliente ID','Total','Observações'],...sales.map(s=>[
+      s.id,s.created_at,s.status,s.customer_id,Number(s.total||0).toFixed(2),s.notes||''
+    ])].map(row=>row.map(csvValue).join(';')).join('\\r\\n');
+    const blob = new Blob(['\\uFEFF'+lines],{type:'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href=url;anchor.download='jvg-vendas-'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.append(anchor);anchor.click();anchor.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
   async function loadSales() {
     const data=await request('/api/sales');
-    const sales=Array.isArray(data.sales)?data.sales:[];
-    $('salesCount').textContent=String(sales.length);
-    $('salesValue').textContent=money(sales.reduce((sum,sale)=>sum+(Number(sale.total)||0),0));
-    $('sales').innerHTML=sales.length?'<table><thead><tr><th>Data</th><th>Situação</th><th>Total</th></tr></thead><tbody>'+
-      sales.map(x=>'<tr><td>'+safe(new Date(x.created_at).toLocaleString('pt-BR'))+'</td><td>'+safe(x.status)+'</td><td>'+safe(money(x.total))+'</td></tr>').join('')+'</tbody></table>':'Nenhuma venda registrada.';
+    salesHistory=Array.isArray(data.sales)?data.sales:[];
+    renderSales();
   }
   async function start() {
     try {
@@ -60,6 +91,9 @@
       addItem();await loadSales();loaded=true;writable=true;recalculate();notice('Dados carregados da empresa conectada.');
     } catch(error) {loaded=false;notice(error.message);$('submit').disabled=true;$('addItem').disabled=true;}
   }
+  $('salesSearch').addEventListener('input',renderSales);
+  $('salesStatus').addEventListener('change',renderSales);
+  $('exportSales').addEventListener('click',exportSales);
   $('addItem').addEventListener('click',addItem);
   $('saleForm').addEventListener('submit',async event=>{
     event.preventDefault();if(busy||!loaded||!writable||$('submit').disabled)return;
