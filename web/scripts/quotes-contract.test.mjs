@@ -32,3 +32,14 @@ test('interface salva orçamentos reais e exibe histórico',()=>{
  assert.match(client,/await history\(1\)/);
  assert.doesNotMatch(client,/localStorage|dados fictícios/i);
 });
+
+test('situações de orçamento têm transições autorizadas e escrita condicional',()=>{
+ assert.match(api,/export async function PATCH\(request: Request\)/);
+ assert.match(api,/draft: \["sent", "rejected"\]/);
+ assert.match(api,/sent: \["accepted", "rejected", "expired"\]/);
+ assert.match(api,/status=\$\{filterEq\(from\)\}/);
+ assert.match(api,/if \(!updated\.length\)/);
+ assert.match(client,/data-from=/);
+ assert.match(client,/method:'PATCH'/);
+ assert.match(client,/history\(\)/);
+});
