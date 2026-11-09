@@ -38,3 +38,23 @@ export async function POST(request:Request){
   return apiJson({ok:true,orderId},201);
  }catch(error){return safeError(error);}
 }
+
+/** Cancelamento condicionado ao estado aberto; pedido cancelado não gera movimentação de estoque. */
+export async function PATCH(request:Request){
+ if(!isSameOrigin(request))return apiJson({error:"Origem não autorizada."},403);
+ try{
+  const scope=await account();
+  if(scope.role==="viewer")throw new JvgBackendError("Sem permissão para cancelar pedidos.",403);
+  const input:unknown=await request.json();
+  if(!input||typeof input!=="object"||Array.isArray(input))throw new JvgBackendError("Pedido inválido.",400);
+  const data=input as Record<string,unknown>;
+  if(typeof data.id!=="string"||!uuidPattern.test(data.id))throw new JvgBackendError("Pedido inválido.",400);
+  if(data.status!=="cancelled")throw new JvgBackendError("Alteração não permitida.",400);
+  const updated=await dbRequest<Array<{id:string;status:string}>>(
+   `/rest/v1/jvg_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=${filterEq(data.id)}&status=eq.open&select=id,status`,
+   {method:"PATCH",body:JSON.stringify({status:"cancelled",updated_at:new Date().toISOString()})}
+  );
+  if(!updated.length)throw new JvgBackendError("Pedido não encontrado ou já alterado. Atualize a lista.",409);
+  return apiJson({ok:true,order:updated[0]});
+ }catch(error){return safeError(error);}
+}
