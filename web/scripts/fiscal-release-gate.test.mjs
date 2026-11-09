@@ -51,3 +51,14 @@ test('Focus nunca usa URL de produção nem expõe token no cliente',()=>{
  assert.match(runtime,/process\.env/);
  assert.doesNotMatch(status,/NEXT_PUBLIC_FOCUS/);
 });
+
+test('diagnóstico Focus é somente leitura e não mostra token',()=>{
+ const html=read('../public/erp/nfe-drafts.html');
+ const ui=read('../public/erp/focus-diagnostic.js');
+ assert.match(html,/id="focusCheck"/);
+ assert.match(html,/focus-diagnostic\.js/);
+ assert.match(ui,/\/api\/focus\/status/);
+ assert.match(ui,/method:'GET'/);
+ assert.doesNotMatch(ui,/Authorization|process\.env|method:'POST'/);
+ assert.match(ui,/emissionEnabled!==false/);
+});
