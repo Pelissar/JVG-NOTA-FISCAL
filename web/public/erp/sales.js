@@ -16,7 +16,7 @@
     if(document.querySelectorAll('.sale-row').length>=100){notice('Limite de 100 itens por venda.');return;}
     const row = document.createElement('div');
     row.className = 'sale-row';
-    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:12px;margin:16px 0;align-items:end';
+    
     const options = [
       ...products.filter(x=>x.active).map(x=>({kind:'product',...x})),
       ...services.filter(x=>x.active).map(x=>({kind:'service',...x}))
@@ -35,12 +35,17 @@
     const rows=[...document.querySelectorAll('.sale-row')];
     const total=rows.reduce((sum,row)=>sum+(Number(row.querySelector('.quantity').value)||0)*(Number(row.querySelector('.price').value)||0),0);
     $('total').textContent='Total: '+money(total);
+    $('draftValue').textContent=money(total);
+    $('summaryTotal').textContent=money(total);
+    $('itemCount').textContent=String(rows.length);
     $('addItem').disabled=busy||!loaded||!writable||rows.length>=100;
     $('submit').disabled=!loaded||!writable||busy||!rows.length||rows.some(row=>!row.querySelector('.item').value||!(Number(row.querySelector('.quantity').value)>0)||row.querySelector('.price').value===''||Number(row.querySelector('.price').value)<0);
   }
   async function loadSales() {
     const data=await request('/api/sales');
     const sales=Array.isArray(data.sales)?data.sales:[];
+    $('salesCount').textContent=String(sales.length);
+    $('salesValue').textContent=money(sales.reduce((sum,sale)=>sum+(Number(sale.total)||0),0));
     $('sales').innerHTML=sales.length?'<table><thead><tr><th>Data</th><th>Situação</th><th>Total</th></tr></thead><tbody>'+
       sales.map(x=>'<tr><td>'+safe(new Date(x.created_at).toLocaleString('pt-BR'))+'</td><td>'+safe(x.status)+'</td><td>'+safe(money(x.total))+'</td></tr>').join('')+'</tbody></table>':'Nenhuma venda registrada.';
   }
@@ -51,6 +56,7 @@
       services=Array.isArray(data.services)?data.services:[];
       const clients=Array.isArray(data.clients)?data.clients:[];
       $('customer').innerHTML='<option value="">Consumidor não identificado</option>'+clients.filter(x=>x.active).map(x=>'<option value="'+safe(x.id)+'">'+safe(x.name)+'</option>').join('');
+      $('customer').addEventListener('change',()=>{$('customerSummary').textContent=$('customer').selectedOptions[0]?.textContent||'Consumidor não identificado';});
       addItem();await loadSales();loaded=true;writable=true;recalculate();notice('Dados carregados da empresa conectada.');
     } catch(error) {loaded=false;notice(error.message);$('submit').disabled=true;$('addItem').disabled=true;}
   }
