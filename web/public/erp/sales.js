@@ -75,8 +75,8 @@
     };
     const lines = [['ID','Data','Situação','Cliente ID','Total','Observações'],...sales.map(s=>[
       s.id,s.created_at,s.status,s.customer_id,Number(s.total||0).toFixed(2),s.notes||''
-    ])].map(row=>row.map(csvValue).join(';')).join('\\r\\n');
-    const blob = new Blob(['\\uFEFF'+lines],{type:'text/csv;charset=utf-8'});
+    ])].map(row=>row.map(csvValue).join(';')).join('\r\n');
+    const blob = new Blob(['\uFEFF'+lines],{type:'text/csv;charset=utf-8'});
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href=url;anchor.download='jvg-vendas-'+new Date().toISOString().slice(0,10)+'.csv';
