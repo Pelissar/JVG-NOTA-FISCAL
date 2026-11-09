@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6f8">
+  <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
+  <meta name="description" content="JVG Nota Fiscal — painel privado de gestão empresarial, cadastros e preparação fiscal.">
+  <title>JVG Nota Fiscal · Painel</title>
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./responsive.css">
+  <link rel="stylesheet" href="./design-system.css">
+  <link rel="stylesheet" href="./erp-design-v2.css">
+  <script src="./theme-switch.js"></script>
+  <script defer src="./app.js"></script>
+  <script defer src="./navigation.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Pular para o conteúdo principal</a>
+  <svg class="svg-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="m3 7.5 9 4.5 9-4.5M12 12v9"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2c0-3 2.7-5 6-5s6 2 6 5v2H3ZM16 5c2 0 3 1.5 3 3s-1 3-3 3M17 14c2.6.3 4 2 4 4v2h-4"/></symbol>
+    <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M5 3h14v18l-3-2-4 2-4-2-3 2zM9 8h6M9 12h6M9 16h3"/></symbol>
+    <symbol id="i-warehouse" viewBox="0 0 24 24"><path d="m3 9 9-6 9 6v12H3zM3 9h18M8 21v-8h8v8M11 17h2"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18M7 15l4-5 4 3 5-8"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="m10 2 1 2h2l1-2 3 2-.5 2 2 2 2-.5 1 3-2 1v2l2 1-1 3-2-.5-2 2 .5 2-3 1-1-2h-2l-1 2-3-1 .5-2-2-2-2 .5-1-3 2-1v-2l-2-1 1-3 2 .5 2-2-.5-2z"/></symbol>
+    <symbol id="i-tool" viewBox="0 0 24 24"><path d="M14.5 6a5 5 0 0 0-6.4 6.4L3 17.5 6.5 21l5.1-5.1A5 5 0 0 0 18 9.5L14.5 13 11 9.5z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 8-3 8-3 10h18c0-2-3-2-3-10ZM10 21h4"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4l12-12-4-4L4 16zM14 6l4 4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M5 5 19 19M19 5 5 19"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 2 9 4v6c0 5-3.8 8.3-9 10-5.2-1.7-9-5-9-10V6zM8 12l3 3 5-6"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><path d="M2 6h12v12H2zM14 10h4l4 4v4h-8z"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 10 6-10 6L2 9zM2 13l10 6 10-6"/></symbol>
+    <symbol id="i-cash" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M6 3h12"/></symbol>
+  </svg>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Navegação principal">
+      <div class="brand-row">
+        <div class="brand-mark"><img src="/branding/sigmafiscal-icon.svg" alt="" width="40" height="40"></div>
+        <div class="brand-text"><strong>Sigma<span>Fiscal</span></strong><small>ERP Empresarial</small></div>
+        <button class="sidebar-close" type="button" id="closeMenuBtn" aria-label="Fechar menu">×</button>
+      </div>
+      <div class="workspace-switch"><span class="workspace-avatar" id="workspaceAvatar"><img id="workspaceLogo" alt=""><span id="workspaceInitials">SF</span></span><div><strong id="workspaceName">Minha empresa</strong><small>Empresa ativa</small></div></div>
+      <div class="sidebar-scroll" id="sidebarNavigation">
+        <button type="button" class="nav-link active" data-view="dashboard"><svg><use href="#i-grid"/></svg><span>Visão geral</span></button>
+        <details class="nav-group"><summary><svg><use href="#i-cash"/></svg><span>Comercial</span><svg class="nav-group-chevron"><use href="#i-chevron"/></svg></summary><div class="nav-group-items"><a class="nav-link" href="/erp/quotes.html">Orçamentos</a><a class="nav-link" href="/erp/orders.html">Pedidos</a><a class="nav-link" href="/erp/sales.html">Vendas</a></div></details>
+        <details class="nav-group"><summary><svg><use href="#i-tool"/></svg><span>Assistência</span><svg class="nav-group-chevron"><use href="#i-chevron"/></svg></summary><div class="nav-group-items"><a class="nav-link" href="/erp/service-orders.html">Ordens de serviço</a></div></details>
+        <details class="nav-group"><summary><svg><use href="#i-users"/></svg><span>Cadastros</span><svg class="nav-group-chevron"><use href="#i-chevron"/></svg></summary><div class="nav-group-items"><button type="button" class="nav-link" data-view="clients">Pessoas e clientes</button><button type="button" class="nav-link" data-view="products">Produtos</button><button type="button" class="nav-link" data-view="services">Serviços</button></div></details>
+        <details class="nav-group"><summary><svg><use href="#i-warehouse"/></svg><span>Operação</span><svg class="nav-group-chevron"><use href="#i-chevron"/></svg></summary><div class="nav-group-items"><button type="button" class="nav-link" data-view="inventory">Estoque</button><button type="button" class="nav-link" data-view="reports">Relatórios</button></div></details>
+        <details class="nav-group"><summary><svg><use href="#i-receipt"/></svg><span>Fiscal</span><svg class="nav-group-chevron"><use href="#i-chevron"/></svg></summary><div class="nav-group-items"><button type="button" class="nav-link" data-view="fiscal">Central fiscal</button><a class="nav-link" href="/erp/nfe-drafts.html">Rascunhos NF-e</a><a class="nav-link" href="/erp/cfop.html">CFOP</a><a class="nav-link" href="/erp/tax-profiles.html">Perfis tributários</a></div></details>
+        <details class="nav-group"><summary><svg><use href="#i-settings"/></svg><span>Conta</span><svg class="nav-group-chevron"><use href="#i-chevron"/></svg></summary><div class="nav-group-items"><button type="button" class="nav-link" data-view="profile">Meu perfil</button><button type="button" class="nav-link" data-view="settings">Empresa e sistema</button></div></details>
+      </div>
+      <div class="sidebar-bottom"><div class="release-status"><span class="pulse"></span> Ambiente piloto</div><div class="support-box"><strong>SigmaFiscal</strong><small>Área da sua empresa.</small><a href="/" class="site-back">← Ver site público</a></div></div>
+    </aside>
+    <div class="mobile-backdrop" id="mobileBackdrop" aria-hidden="true"></div>
+    <div class="main-column">
+      <header class="topbar">
+        <div class="topbar-left"><button class="icon-btn mobile-menu" id="menuBtn" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div class="breadcrumbs"><span>SigmaFiscal</span><svg><use href="#i-chevron"/></svg><strong id="breadcrumb">Visão geral</strong></div></div>
+        <div class="topbar-right"><label class="global-search"><svg><use href="#i-search"/></svg><input id="globalSearch" aria-label="Buscar no módulo atual" placeholder="Buscar neste módulo..." autocomplete="off"><kbd>/</kbd></label><button type="button" class="theme-toggle" data-theme-toggle aria-label="Alternar tema">◐ Modo escuro</button><span class="top-pill">HOMOLOGAÇÃO</span><button type="button" class="top-avatar profile-shortcut" data-view="profile" aria-label="Abrir meu perfil" title="Meu perfil">SF</button></div>
+      </header>
+      <main class="content" id="content" tabindex="-1"></main>
+      <footer class="footer"><span>© 2026 JVG Nota Fiscal · Ambiente piloto</span><span>Cadastro em implantação • Sem emissão fiscal real</span></footer>
+    </div>
+  </div>
+  <div id="modalRoot"></div>
+  <datalist id="productCfopOptions"></datalist>
+  <div id="toastRoot" aria-live="polite"></div>
+</body>
+</html>
