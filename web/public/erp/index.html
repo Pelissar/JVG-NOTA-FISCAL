@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="./responsive.css">
   <link rel="stylesheet" href="./design-system.css">
   <script defer src="./app.js"></script>
+  <script defer src="./navigation.js"></script>
 </head>
 <body>
   <svg class="svg-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -86,7 +87,7 @@
     <div class="mobile-backdrop" id="mobileBackdrop"></div>
     <div class="main-column">
       <header class="topbar">
-        <div class="topbar-left"><button class="icon-btn mobile-menu" id="menuBtn" aria-label="Abrir menu"><svg><use href="#i-menu"/></svg></button><div class="breadcrumbs"><span>JVG ERP</span><svg><use href="#i-chevron"/></svg><strong id="breadcrumb">Visão geral</strong></div></div>
+        <div class="topbar-left"><button class="icon-btn mobile-menu" id="menuBtn" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div class="breadcrumbs"><span>JVG ERP</span><svg><use href="#i-chevron"/></svg><strong id="breadcrumb">Visão geral</strong></div></div>
         <div class="topbar-right"><label class="global-search"><svg><use href="#i-search"/></svg><input id="globalSearch" placeholder="Buscar no módulo..." autocomplete="off"><kbd>/</kbd></label><span class="top-pill">AMBIENTE DE TESTES</span><span class="top-avatar" title="Seu perfil">JP</span></div>
       </header>
       <main class="content" id="content" tabindex="-1"></main>
