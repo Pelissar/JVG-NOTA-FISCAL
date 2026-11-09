@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="./nfe-drafts.css">
   <link rel="stylesheet" href="./fiscal-workspace.css">
   <script defer src="./nfe-drafts.js"></script>
+  <script defer src="./fiscal-workspace.js"></script>
 <style>
 .draft-inspect{margin-top:10px;border:1px solid #138b75;border-radius:9px;background:#e9f9f3;color:#086f5d;font-weight:700;cursor:pointer;padding:9px 12px;font:inherit;font-size:12px;text-align:left}
 .draft-inspect:hover{background:#d4f2e7}.draft-details{padding:20px;overflow-wrap:anywhere}.draft-details h3,.draft-details h4{margin:10px 0}.draft-details p,.draft-details li{font-size:13px;line-height:1.6}.draft-details ul{padding-left:22px}.draft-details[hidden]{display:none}
@@ -23,7 +24,7 @@
     <div class="page-title"><div><div class="eyebrow">CENTRAL FISCAL / NF-e MODELO 55</div><h1>Nova NF-e · Modelo 55</h1><p>Preencha os dados da operação em etapas. A transmissão permanece bloqueada até a homologação fiscal.</p></div><span class="phase">Etapa de preparação</span></div>
     <div id="status" class="notice" role="status">Conectando ao Supabase e carregando seus cadastros...</div>
     <nav class="fiscal-module-nav" aria-label="Navegação fiscal">
-<a href="/erp/#fiscal">Painel fiscal</a><a class="selected" href="/erp/nfe-drafts.html">NF-e · Modelo 55</a><a href="/erp/#fiscal">NFC-e · Em preparação</a><a href="/erp/#fiscal">NFS-e · Em preparação</a><a href="#history">Histórico de rascunhos</a><a href="/erp/tax-profiles.html">Configurações tributárias</a>
+<a href="/erp/#fiscal">Painel fiscal</a><a class="selected" href="/erp/nfe-drafts.html">NF-e · Modelo 55</a><a href="/erp/#fiscal">NFC-e · Em preparação</a><a href="/erp/#fiscal">NFS-e · Em preparação</a><a href="#fiscalHistory">Histórico de rascunhos</a><a href="/erp/tax-profiles.html">Configurações tributárias</a>
 </nav>
 <div class="fiscal-steps" role="tablist" aria-label="Etapas de preenchimento da NF-e">
 <button type="button" role="tab" class="selected" data-fiscal-tab="general" aria-selected="true">01 · Dados gerais</button>
@@ -53,13 +54,12 @@
         </form>
       </section>
       <aside class="side">
-        <section class="panel history" id="history"><div class="panel-head"><div><h2>Rascunhos salvos</h2><p>Somente desta empresa e em homologação.</p></div><span class="step-tag">02 / HISTÓRICO</span></div><div class="panel-body"><div id="history" class="history-list"><p>Carregando...</p></div></div></section>
+        <section class="panel history" id="fiscalHistory"><div class="panel-head"><div><h2>Rascunhos salvos</h2><p>Somente desta empresa e em homologação.</p></div><span class="step-tag">02 / HISTÓRICO</span></div><div class="panel-body"><div id="history" class="history-list"><p>Carregando...</p></div></div></section>
         <section class="panel draft-details" id="draftDetails" hidden aria-live="polite" aria-label="Detalhes do rascunho"></section>
         <section class="next-panel"><div class="next-icon">✓</div><h3>Uma etapa de cada vez.</h3><p>Os rascunhos usam seus cadastros atuais. O cálculo tributário, a transmissão fiscal, o retorno da SEFAZ e os arquivos fiscais serão implementados e validados nas próximas fases.</p><span>Transmissão desativada por segurança</span></section>
       </aside>
     </div>
   </main>
-  <script defer src="./fiscal-workspace.js"></script>
   <footer>© 2026 JVG Nota Fiscal · Homologação em preparação. Todos os valores exibidos são comerciais e não representam apuração de tributos.</footer>
 </body>
 </html>
