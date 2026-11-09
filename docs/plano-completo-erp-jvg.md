@@ -130,3 +130,10 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - Não converte em venda, não movimenta estoque, não gera cobrança ou NF-e. Status adicionais ainda não têm fluxo de aprovação.
 - Corrigido snapshot de unidade para serviços nos SQLs de venda (serviços não possuem coluna `unit`).
 - **Não publicar** sem revisão de migração, testes e autorização do usuário. Não houve deploy manual nem aplicação em Supabase nesta etapa.
+
+### Ciclo de situação dos orçamentos (2026-11-09)
+- API `PATCH /api/quotes` com autenticação, permissão de escrita, validação de transições e atualização condicional por tenant, empresa, ID e situação anterior.
+- Rascunho → enviado ou recusado; enviado → aceito, recusado ou expirado. Situações finais não têm transição reversa nesta versão.
+- Histórico de orçamentos oferece ações com confirmação e atualização da lista; testes de contrato adicionados.
+- Aceitar orçamento **não** cria pedido, venda ou movimentação de estoque; conversão transacional será etapa separada.
+- Migração `jvg_quotes` permanece pendente. Sem publicação em produção.
