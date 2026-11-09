@@ -162,3 +162,13 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - `responsive.css` agora mantém rolagem vertical normal nas páginas independentes e rolagem interna no painel com sidebar.
 - Contratos de responsividade incluídos em testes de orçamentos e pedidos. Revisão visual real em múltiplas resoluções continua pendente antes de publicação.
 - Regra de aceite futura: verificar pelo menos 1366×768, 1920×1080, 1280×720, 1024×768 e 390×844, inclusive com zoom de navegador e janela redimensionada.
+
+### Redesign JVG Horizon e simplificação da navegação (2026-11-09)
+- Nova identidade visual própria `design-system.css`: cores, hierarquia, cards, foco acessível, responsividade para monitores grandes e janelas pequenas.
+- Menu principal reorganizado por tarefas: Início, Comercial (Orçamentos, Pedidos, Vendas), Cadastros (Pessoas e clientes, Produtos, Serviços), Operação (Estoque, Relatórios), Fiscal (Central, Rascunhos NF-e, Configuração fiscal expansível) e Administração (Configurações).
+- Removidos links duplicados para a mesma central fiscal e itens de navegação que aparentavam funcionalidades ainda indisponíveis (NFC-e, NFS-e, Financeiro e Transporte). Nenhum módulo de dados foi apagado; funcionalidades futuras permanecem documentadas e podem voltar ao menu quando operacionais.
+- Painel inicial: retirados cards de módulos repetidos e incluídos atalhos comerciais reais para orçamento, pedido, venda e rascunho NF-e.
+- Identidade aplicada ao painel, vendas, orçamentos, pedidos e páginas fiscais; tema fiscal separado para preservar estilos específicos.
+- Teste estático `design-navigation.test.mjs` incluído na suíte; **revisão visual, navegação por teclado e execução de testes/build ainda pendentes**.
+- Referência Nuts usada apenas como inspiração de organização por módulos; JVG mantém identidade e implementação próprias, sem copiar marca ou layout.
+- Não houve merge, deploy manual nem migração no banco de produção.
