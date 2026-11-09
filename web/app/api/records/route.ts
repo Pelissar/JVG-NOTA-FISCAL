@@ -1,6 +1,7 @@
 import { getJvgUser } from "../../jvg-auth";
 import { apiJson, dbRequest, filterEq, getCompany, getSiteAccount, isSameOrigin, JvgBackendError, positiveMoney, safeError, str, type SiteAccount } from "../../../lib/jvg-backend";
 import { fiscalAddress, validCnpj } from "../../../lib/fiscal-company";
+import { isValidCpf } from "../../../lib/fiscal/cpf";
 import { isOfficialCfopCode } from "../../../lib/fiscal/cfop";
 
 export const dynamic = "force-dynamic";
@@ -22,16 +23,6 @@ function validUuid(input: unknown): string {
   return input;
 }
 
-function validCpf(value: string): boolean {
-  if (!/^\d{11}$/.test(value) || /^(\d)\1{10}$/.test(value)) return false;
-  const digit = (size: number) => {
-    const sum = Array.from({ length: size }, (_, i) => Number(value[i]) * (size + 1 - i))
-      .reduce((total, part) => total + part, 0);
-    const remainder = (sum * 10) % 11;
-    return remainder === 10 ? 0 : remainder;
-  };
-  return digit(9) === Number(value[9]) && digit(10) === Number(value[10]);
-}
 
 function buildRow(kind: RecordKind, input: Record<string, unknown>, account: SiteAccount) {
   const base = { tenant_id: account.tenant_id, company_id: account.company_id };
@@ -54,7 +45,7 @@ function buildRow(kind: RecordKind, input: Record<string, unknown>, account: Sit
     const displayName = str(input.name, 160), type = input.type;
     const document = str(input.document, 22).toUpperCase().replace(/[^A-Z0-9]/g, "");
     if (!displayName) throw new JvgBackendError("Nome é obrigatório.", 400);
-    if (type === "PF" && document && !validCpf(document))
+    if (type === "PF" && document && !isValidCpf(document))
       throw new JvgBackendError("CPF inválido: confira os dígitos verificadores.", 400);
     if (type === "PJ" && document && !validCnpj(document))
       throw new JvgBackendError("CNPJ inválido: confira os caracteres e dígitos verificadores.", 400);
