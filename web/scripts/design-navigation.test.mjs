@@ -38,3 +38,17 @@ test('navegação mantém estado acessível e rota sincronizada',()=>{
  assert.match(navigation,/event\.key==='Home'/);
  assert.match(navigation,/event\.key==='End'/);
 });
+
+test('pesquisa preserva texto e histórico respeita voltar/avançar',()=>{
+ assert.match(js,/query=searchText;render\(\)/);
+ assert.match(js,/window\.addEventListener\('popstate'/);
+ assert.match(js,/window\.addEventListener\('hashchange'/);
+});
+test('menu acessível e adaptado a telas estreitas',()=>{
+ assert.match(html,/class="skip-link" href="#content"/);
+ assert.match(html,/aria-label="Buscar no módulo atual"/);
+ assert.match(css,/\.skip-link:focus/);
+ assert.match(css,/@media\(max-width:480px\)/);
+ assert.match(js,/closeSidebar\(true\)/);
+ assert.match(js,/closeMenuBtn'\)\.focus\(\)/);
+});
