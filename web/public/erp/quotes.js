@@ -33,7 +33,7 @@ async function history(nextPage=page){
  try{
  const data=await api('/api/quotes?page='+nextPage);page=data.page;hasMore=data.hasMore===true;
  const quotes=Array.isArray(data.quotes)?data.quotes:[];
- $('quoteList').innerHTML=quotes.length?'<table><thead><tr><th>Data</th><th>Orçamento</th><th>Situação</th><th>Validade</th><th>Total</th></tr></thead><tbody>'+quotes.map(q=>'<tr><td>'+safe(new Date(q.created_at).toLocaleDateString('pt-BR'))+'</td><td title="'+safe(q.id)+'">'+safe(q.id.slice(0,8))+'</td><td>'+safe(q.status)+'</td><td>'+safe(q.valid_until||'—')+'</td><td>'+safe(money(q.total))+'</td><td>'+actions(q)+'</td></tr>').join('')+'</tbody></table>':'Nenhum orçamento nesta página.';
+ $('quoteList').innerHTML=quotes.length?'<table><thead><tr><th>Data</th><th>Orçamento</th><th>Situação</th><th>Validade</th><th>Total</th><th>Ações</th></tr></thead><tbody>'+quotes.map(q=>'<tr><td>'+safe(new Date(q.created_at).toLocaleDateString('pt-BR'))+'</td><td title="'+safe(q.id)+'">'+safe(q.id.slice(0,8))+'</td><td>'+safe(q.status)+'</td><td>'+safe(q.valid_until||'—')+'</td><td>'+safe(money(q.total))+'</td><td>'+actions(q)+'</td></tr>').join('')+'</tbody></table>':'Nenhum orçamento nesta página.';
  $('quotePage').textContent='Página '+page;
  }finally{historyBusy=false;$('quotePrev').disabled=page<=1;$('quoteNext').disabled=!hasMore;}
 }
