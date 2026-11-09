@@ -47,7 +47,7 @@ test('falha na confirmação não permite reenvio cego', () => {
   assert.match(client, /pendingPayload \|\|= \{requestId:pendingRequestId/);
   assert.match(client, /body:JSON\.stringify\(pendingPayload\)/);
   assert.match(client, /querySelectorAll\('input,select,textarea,\.remove'\)/);
-  assert.match(client, /writable=false;\s*\$\('items'\)\.replaceChildren/);
+  assert.match(client, /writable=false;[\s\S]*\$\('items'\)\.replaceChildren/);
 });
 
 test('seletor de clientes não inclui somente fornecedores ou transportadoras', () => {
@@ -81,6 +81,7 @@ test('histórico de vendas permite pesquisar, filtrar e exportar dados reais', (
 test('histórico tem paginação por empresa com limite por página', () => {
   assert.match(api, /export async function GET\(request: Request\)/);
   assert.match(api, /const pageSize = 50/);
+  assert.match(api, /\^\[1-9\]\\d\{0,5\}\$/);
   assert.match(api, /offset=\$\{offset\}/);
   assert.match(api, /hasMore: rows\.length > pageSize/);
   assert.match(page, /id="salesPrevious"/);
@@ -91,6 +92,7 @@ test('histórico tem paginação por empresa com limite por página', () => {
 
 test('CSV de vendas neutraliza fórmulas e usa separadores reais', () => {
   assert.match(client, /const protectedText =/);
+  assert.match(client, /\[=\+@-\]/);
   assert.match(client, /protectedText\.replace/);
   assert.match(client, /join\('\\r\\n'\)/);
   assert.match(client, /new Blob\(\['\\uFEFF'/);
