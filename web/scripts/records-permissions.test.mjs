@@ -28,3 +28,22 @@ test('dados fiscais da empresa exigem owner ou admin', () => {
   assert.match(company, /\['owner', 'admin'\]\.includes\(account\.role/);
   assert.match(backend, /user_id=\$\{filterEq\(user\.userId\)\}/);
 });
+
+test('origem usa Host público no proxy Netlify sem liberar domínios externos', () => {
+  const fn = backend.split('export function isSameOrigin(request: Request): boolean {')[1]?.split('\nexport function ')[0];
+  assert.ok(fn, 'função de validação presente');
+  assert.match(fn, /request\.headers\.get\("host"\)/);
+  assert.match(fn, /source\.host\.toLowerCase\(\) === host\.trim\(\)\.toLowerCase\(\)/);
+  assert.doesNotMatch(fn, /x-forwarded-host/i);
+  assert.match(fn, /if \(!origin \|\| origin === "null"\) return false/);
+  const isSameOrigin = new Function('request', fn.replace(/\n}\s*$/, '\n}'));
+  const request = (origin, host, url = 'https://internal.netlify/functions/api') => ({
+    headers: { get(name) { return name === 'origin' ? origin : name === 'host' ? host : null; } },
+    url
+  });
+  assert.equal(isSameOrigin(request('https://deploy-preview-2--jvgnotafiscal.netlify.app', 'deploy-preview-2--jvgnotafiscal.netlify.app')), true);
+  assert.equal(isSameOrigin(request('https://outro-site.example', 'deploy-preview-2--jvgnotafiscal.netlify.app')), false);
+  assert.equal(isSameOrigin(request(null, 'deploy-preview-2--jvgnotafiscal.netlify.app')), false);
+  assert.equal(isSameOrigin(request('null', 'deploy-preview-2--jvgnotafiscal.netlify.app')), false);
+  assert.equal(isSameOrigin(request('http://deploy-preview-2--jvgnotafiscal.netlify.app', 'deploy-preview-2--jvgnotafiscal.netlify.app')), false);
+});
