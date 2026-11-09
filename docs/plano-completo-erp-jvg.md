@@ -105,3 +105,8 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - `web/public/erp/sales.js`: mantém a mesma chave nas tentativas de reenvio da tela e restringe seleção a clientes ativos.
 - `web/scripts/sales-contract.test.mjs`: testes de contrato atualizados; não substituem testes integrados.
 - **Bloqueio:** não integrar/deployar esta mudança antes de aplicar a migração em ambiente alvo; caso contrário a API de venda falhará por assinatura RPC ausente. Não aplicada à produção nesta sessão.
+
+### Validação de CPF isolada (2026-11-09)
+- Extraído `isValidCpf` para `web/lib/fiscal/cpf.ts` para reutilização e teste direto.
+- `web/scripts/cpf-validation.test.mjs` cobre CPFs válidos e inválidos; incluído na suíte `test:erp` com suporte a strip-types do Node 22.
+- Execução local/CI ainda pendente; código registrado na branch de desenvolvimento.
