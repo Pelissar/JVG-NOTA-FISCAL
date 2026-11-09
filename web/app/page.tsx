@@ -37,7 +37,7 @@ export default function Home() {
       </div>
       <div className={styles.previewArea}>
         <div className={styles.preview} style={{overflow:"hidden",padding:0,aspectRatio:"16 / 10",minHeight:300,background:"#091a2b"}} aria-label="Visualização do painel real do SigmaFiscal">
-          <iframe src="/erp/index.html" title="Visualização do sistema SigmaFiscal em funcionamento" loading="lazy" tabIndex={-1} style={{display:"block",width:"1440px",height:"900px",border:0,transform:"scale(.57)",transformOrigin:"top left",pointerEvents:"none"}} />
+          <iframe src="/erp/index.html" title="Visualização do sistema SigmaFiscal em funcionamento" loading="lazy" tabIndex={-1} style={{display:"block",width:"100%",height:"100%",border:0,pointerEvents:"none"}} />
           <span style={{position:"absolute",bottom:12,left:12,background:"#081b2ce8",color:"#dcefff",padding:"7px 12px",borderRadius:10,fontSize:12}}>Interface real do ERP · ambiente de testes</span>
         </div>
         <div className={styles.floatBadge}><span>✓</span><div><strong>Gestão integrada</strong><small>Acesso e dados organizados</small></div></div>
