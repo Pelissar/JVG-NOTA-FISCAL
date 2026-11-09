@@ -214,3 +214,9 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - Layout adaptável a 1100px, 700px e telas baixas; respeita preferências de redução de movimento/transparência e foco de teclado.
 - Primeira etapa **somente na tela principal do ERP**: páginas comerciais independentes ainda precisam de harmonização, auditoria visual e testes de navegador.
 - Nenhuma alteração de lógica de negócio, emissão SEFAZ ou banco de produção.
+
+### Unificação visual SigmaFiscal — páginas internas (2026-11-09)
+- Identidade SVG SigmaFiscal copiada da branch de branding para a branch de redesign e favicon configurado no layout Next.js e nas páginas HTML do ERP.
+- Novo `web/public/erp/unified-pages.css` compartilhado pelas páginas independentes `quotes.html`, `orders.html`, `sales.html`, `cfop.html`, `nfe-drafts.html`, `tax-profiles.html`. Mantém as regras de negócio intactas e aplica superfícies glass, fundo escuro, contraste e estados de foco.
+- Teste de contrato de presença do tema/favicons incluído em `design-navigation.test.mjs`.
+- Pendente: revisão visual real em navegadores, auditoria de contraste sobre CSS legados, marca horizontal no site público, testes E2E e homologação fiscal. Nenhum deploy de produção.
