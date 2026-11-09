@@ -12,7 +12,7 @@
     return data;
   }
   function addItem() {
-    if(busy||!loaded&&products.length===0&&services.length===0&&document.querySelectorAll('.sale-row').length>0)return;
+    if(busy || !writable && loaded || pendingPayload || !loaded && document.querySelectorAll('.sale-row').length>0)return;
     if(document.querySelectorAll('.sale-row').length>=100){notice('Limite de 100 itens por venda.');return;}
     const row = document.createElement('div');
     row.className = 'sale-row';
@@ -38,7 +38,7 @@
     $('draftValue').textContent=money(total);
     $('summaryTotal').textContent=money(total);
     $('itemCount').textContent=String(rows.length);
-    $('addItem').disabled=busy||!loaded||!writable||rows.length>=100;
+    $('addItem').disabled=busy||!loaded||!writable||!!pendingPayload||rows.length>=100;
     $('submit').disabled=!loaded||!writable||busy||!rows.length||rows.some(row=>!row.querySelector('.item').value||!(Number(row.querySelector('.quantity').value)>0)||row.querySelector('.price').value===''||Number(row.querySelector('.price').value)<0);
   }
   function filteredSales() {
@@ -70,7 +70,7 @@
     const csvValue = value => {
       const text = String(value ?? '');
       // Impede que conteúdo de clientes seja interpretado como fórmula no Excel/Calc.
-      const protectedText = /^[\\s\\u0000-\\u001f]*[=+@-]/.test(text) ? "'"+text : text;
+      const protectedText = /^[\s\u0000-\u001f]*[=+@-]/.test(text) ? "'"+text : text;
       return '"'+protectedText.replace(/"/g,'""')+'"';
     };
     const lines = [['ID','Data','Situação','Cliente ID','Total','Observações'],...sales.map(s=>[
@@ -132,6 +132,7 @@
     try {
       const confirmed = await request('/api/sales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pendingPayload)});
       writable=false;
+      $('saleForm').querySelectorAll('input,select,textarea,.remove').forEach(el=>{el.disabled=true;});
       pendingRequestId=null;
       pendingPayload=null;
       $('items').replaceChildren();$('notes').value='';
