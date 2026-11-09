@@ -27,3 +27,14 @@ test('identidade visual preserva responsividade e acessibilidade',()=>{
  assert.match(css, /focus-visible/);
  assert.match(css,/prefers-reduced-motion/);
 });
+
+test('navegação mantém estado acessível e rota sincronizada',()=>{
+ const navigation=read('../public/erp/navigation.js');
+ assert.match(html,/aria-controls="sidebar" aria-expanded="false"/);
+ assert.match(html,/src="\.\/navigation\.js"/);
+ assert.match(js,/history\.replaceState\(null,'','#'\+next\)/);
+ assert.match(js,/setAttribute\('aria-current','page'\)/);
+ assert.match(js,/setAttribute\('aria-expanded','false'\)/);
+ assert.match(navigation,/event\.key==='Home'/);
+ assert.match(navigation,/event\.key==='End'/);
+});
