@@ -34,3 +34,16 @@ test('interface usa somente APIs reais e apresenta histórico', () => {
   assert.match(client, /request\('\/api\/sales'/);
   assert.doesNotMatch(client, /localStorage|dados fictícios|vendas demonstrativas/i);
 });
+
+test('formulário impede mais de 100 itens e valida centavos', () => {
+  assert.match(client, /rows\.length>100/);
+  assert.match(client, /length>=100/);
+  assert.match(client, /Math\.abs\(Math\.round\(x\.unitPrice\*100\)-x\.unitPrice\*100\)>1e-7/);
+  assert.match(api, /Math\.abs\(Math\.round\(price \* 100\) - price \* 100\) > 1e-7/);
+});
+
+test('falha na confirmação não permite reenvio cego', () => {
+  assert.match(client, /writable=false;\s*notice\(error\.message/);
+  assert.match(client, /Verifique o histórico e atualize a página/);
+  assert.match(client, /writable=false;\s*\$\('items'\)\.replaceChildren/);
+});
