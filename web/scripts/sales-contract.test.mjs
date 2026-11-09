@@ -47,3 +47,7 @@ test('falha na confirmação não permite reenvio cego', () => {
   assert.match(client, /Verifique o histórico e atualize a página/);
   assert.match(client, /writable=false;\s*\$\('items'\)\.replaceChildren/);
 });
+
+test('seletor de clientes não inclui somente fornecedores ou transportadoras', () => {
+  assert.match(client, /clients\.filter\(x=>x\.active && x\.isCustomer === true && x\.type !== 'EXT'\)/);
+});
