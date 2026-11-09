@@ -12,6 +12,8 @@
     return data;
   }
   function addItem() {
+    if(busy||!loaded&&products.length===0&&services.length===0&&document.querySelectorAll('.sale-row').length>0)return;
+    if(document.querySelectorAll('.sale-row').length>=100){notice('Limite de 100 itens por venda.');return;}
     const row = document.createElement('div');
     row.className = 'sale-row';
     row.style.cssText = 'display:flex;flex-wrap:wrap;gap:12px;margin:16px 0;align-items:end';
@@ -33,6 +35,7 @@
     const rows=[...document.querySelectorAll('.sale-row')];
     const total=rows.reduce((sum,row)=>sum+(Number(row.querySelector('.quantity').value)||0)*(Number(row.querySelector('.price').value)||0),0);
     $('total').textContent='Total: '+money(total);
+    $('addItem').disabled=busy||!loaded||!writable||rows.length>=100;
     $('submit').disabled=!loaded||!writable||busy||!rows.length||rows.some(row=>!row.querySelector('.item').value||!(Number(row.querySelector('.quantity').value)>0)||row.querySelector('.price').value===''||Number(row.querySelector('.price').value)<0);
   }
   async function loadSales() {
