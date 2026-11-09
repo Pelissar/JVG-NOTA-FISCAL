@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     const account = await accountForRequest();
     const url = new URL(request.url);
     const pageRaw = url.searchParams.get("page") ?? "1";
-    if (!/^[1-9]\\d{0,5}$/.test(pageRaw)) throw new JvgBackendError("Página inválida.", 400);
+    if (!/^[1-9]\d{0,5}$/.test(pageRaw)) throw new JvgBackendError("Página inválida.", 400);
     const page = Number(pageRaw);
     const pageSize = 50;
     const offset = (page - 1) * pageSize;
