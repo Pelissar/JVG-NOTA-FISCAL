@@ -39,3 +39,15 @@ test('Focus homologação exige autorização por empresa e mantém emissão des
  assert.match(client,/method: "GET"/);
  assert.doesNotMatch(client,/method: "POST"/);
 });
+
+test('Focus nunca usa URL de produção nem expõe token no cliente',()=>{
+ const status=read('../app/api/focus/status/route.ts');
+ const client=read('../lib/focus/client.ts');
+ const runtime=read('../lib/focus/runtime-env.ts');
+ assert.doesNotMatch(client,/https:\/\/api\.focusnfe\.com\.br/);
+ assert.match(client,/AbortSignal\.timeout\(8000\)/);
+ assert.match(status,/getPlatformRole\(user\)/);
+ assert.match(status,/pilotCompany !== account\.company_id/);
+ assert.match(runtime,/process\.env/);
+ assert.doesNotMatch(status,/NEXT_PUBLIC_FOCUS/);
+});
