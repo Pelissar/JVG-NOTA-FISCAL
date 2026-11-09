@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import styles from "./landing.module.css";
 
 const features = [
@@ -20,7 +21,7 @@ export default function Home() {
   return <main className={styles.site}>
     <header className={styles.header}>
       <nav className={styles.nav} aria-label="Navegação principal">
-        <Link href="/" className={styles.brand}><span className={styles.brandIcon}>J<span>.</span></span><span><strong>JVG</strong><small>NOTA FISCAL</small></span></Link>
+        <Link href="/" className={styles.brand}><Image src="/branding/sigmafiscal-logo.svg" alt="SigmaFiscal ERP Empresarial" width={196} height={48} style={{width:"clamp(145px,16vw,196px)",height:"auto"}} /></Link>
         <div className={styles.navLinks}><a href="#solucao">A solução</a><a href="#modulos">Módulos</a><a href="#jornada">Como funciona</a></div>
         <Link href="/login" className={styles.loginLink}>Acessar plataforma <span>↗</span></Link>
       </nav>
@@ -30,20 +31,14 @@ export default function Home() {
       <div className={styles.heroCopy}>
         <span className={styles.eyebrow}><i /> UM NOVO JEITO DE GERIR SEU NEGÓCIO</span>
         <h1>Seu negócio no controle. <em>Do cadastro à nota fiscal.</em></h1>
-        <p>O JVG Nota Fiscal nasce para reunir gestão empresarial, estoque e documentos fiscais em uma experiência simples, moderna e preparada para acompanhar o crescimento da sua empresa.</p>
+        <p>O SigmaFiscal reúne gestão empresarial, estoque e documentos fiscais em uma experiência simples, moderna e preparada para acompanhar o crescimento da sua empresa.</p>
         <div className={styles.actions}><Link href="/login" className={styles.primaryButton}>Entrar no sistema <span>→</span></Link><a href="#solucao" className={styles.secondaryButton}>Conhecer a solução ↘</a></div>
         <div className={styles.assurance}><span>✓ Plataforma web responsiva</span><span>✓ Ambiente piloto em evolução</span></div>
       </div>
       <div className={styles.previewArea}>
-        <div className={styles.preview} aria-label="Ilustração do painel de gestão">
-          <div className={styles.previewHead}><strong className={styles.miniBrand}>J.</strong><span>Painel de gestão</span><span className={styles.windowDots}>● ● ●</span></div>
-          <div className={styles.previewBody}>
-            <aside className={styles.previewSide}><b>▦ &nbsp; Visão geral</b><span>⬡ &nbsp; Produtos</span><span>◉ &nbsp; Clientes</span><span>▤ &nbsp; Notas fiscais</span><span>⌁ &nbsp; Estoque</span><span>◫ &nbsp; Relatórios</span></aside>
-            <div className={styles.previewContent}><small className={styles.previewCaption}>VISÃO GERAL <em>AMBIENTE PILOTO</em></small><h3>Seu negócio em um só lugar ✦</h3>
-              <div className={styles.stats}><div><small>Produtos</small><strong>SKU</strong><span>Cadastro fiscal</span></div><div><small>Clientes</small><strong>CPF/CNPJ</strong><span>Dados reais</span></div><div><small>Serviços</small><strong>NBS</strong><span>Catálogo</span></div></div>
-              <div className={styles.chart}><div><b>Fluxo de trabalho</b><small>Estrutura do produto</small></div><div className={styles.workflow}><span>Cadastros</span><span>Estoque</span><span>Rascunho fiscal</span></div><div className={styles.axis}><span>Sem dados demonstrativos</span><span>Emissão em homologação pendente</span></div></div>
-            </div>
-          </div>
+        <div className={styles.preview} style={{overflow:"hidden",padding:0,aspectRatio:"16 / 10",minHeight:300,background:"#091a2b"}} aria-label="Visualização do painel real do SigmaFiscal">
+          <iframe src="/erp/index.html" title="Visualização do sistema SigmaFiscal em funcionamento" loading="lazy" tabIndex={-1} style={{display:"block",width:"1440px",height:"900px",border:0,transform:"scale(.57)",transformOrigin:"top left",pointerEvents:"none"}} />
+          <span style={{position:"absolute",bottom:12,left:12,background:"#081b2ce8",color:"#dcefff",padding:"7px 12px",borderRadius:10,fontSize:12}}>Interface real do ERP · ambiente de testes</span>
         </div>
         <div className={styles.floatBadge}><span>✓</span><div><strong>Gestão integrada</strong><small>Acesso e dados organizados</small></div></div>
       </div>
