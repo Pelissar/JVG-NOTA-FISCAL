@@ -48,3 +48,10 @@ test('rascunho só fica disponível quando há cliente ativo e apto', () => {
   const draftUi = readFileSync(new URL('../public/erp/nfe-drafts.js', import.meta.url), 'utf8');
   assert.match(draftUi, /state\.clients\.some\(function \(c\) \{ return c\.active && c\.isCustomer === true && c\.type !== 'EXT'; \}\)/);
 });
+
+test('CPF brasileiro exige dígitos verificadores válidos', () => {
+  assert.match(api, /function validCpf\(value: string\): boolean/);
+  assert.match(api, /digit\(9\) === Number\(value\[9\]\)/);
+  assert.match(api, /digit\(10\) === Number\(value\[10\]\)/);
+  assert.match(api, /type === "PF" && document && !validCpf\(document\)/);
+});
