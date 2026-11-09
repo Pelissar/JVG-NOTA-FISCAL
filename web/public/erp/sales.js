@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const money = n => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n);
   const notice = message => { $('notice').textContent = message; };
-  let products = [], services = [], busy = false, loaded = false, writable = false, pendingRequestId = null, pendingPayload = null, salesHistory = [];
+  let products = [], services = [], busy = false, loaded = false, writable = false, pendingRequestId = null, pendingPayload = null, salesHistory = [], salesPage = 1, salesHasMore = false, loadingSales = false;
   const safe = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   async function request(url, init) {
     const response = await fetch(url,{credentials:'same-origin',cache:'no-store',...init});
@@ -54,7 +54,10 @@
     const sales = filteredSales();
     $('salesCount').textContent = String(salesHistory.length);
     $('salesValue').textContent = money(salesHistory.reduce((sum,sale)=>sum+(Number(sale.total)||0),0));
-    $('salesFilteredCount').textContent = sales.length+' de '+salesHistory.length+' vendas';
+    $('salesFilteredCount').textContent = sales.length+' de '+salesHistory.length+' vendas nesta página';
+    $('salesPage').textContent = 'Página '+salesPage;
+    $('salesPrevious').disabled = loadingSales || salesPage <= 1;
+    $('salesNext').disabled = loadingSales || !salesHasMore;
     $('sales').innerHTML = sales.length
       ? '<table><thead><tr><th>Data</th><th>Identificador</th><th>Situação</th><th>Total</th></tr></thead><tbody>'+
         sales.map(x=>'<tr><td>'+safe(new Date(x.created_at).toLocaleString('pt-BR'))+'</td><td title="'+safe(x.id)+'">'+safe(String(x.id).slice(0,8))+'</td><td>'+safe(x.status)+'</td><td>'+safe(money(x.total))+'</td></tr>').join('')+'</tbody></table>'
@@ -64,7 +67,12 @@
   function exportSales() {
     const sales = filteredSales();
     if (!sales.length) return;
-    const csvValue = value => '"'+String(value??'').replace(/"/g,'""')+'"';
+    const csvValue = value => {
+      const text = String(value ?? '');
+      // Impede que conteúdo de clientes seja interpretado como fórmula no Excel/Calc.
+      const protectedText = /^[\\s\\u0000-\\u001f]*[=+@-]/.test(text) ? "'"+text : text;
+      return '"'+protectedText.replace(/"/g,'""')+'"';
+    };
     const lines = [['ID','Data','Situação','Cliente ID','Total','Observações'],...sales.map(s=>[
       s.id,s.created_at,s.status,s.customer_id,Number(s.total||0).toFixed(2),s.notes||''
     ])].map(row=>row.map(csvValue).join(';')).join('\\r\\n');
@@ -75,10 +83,20 @@
     document.body.append(anchor);anchor.click();anchor.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
-  async function loadSales() {
-    const data=await request('/api/sales');
-    salesHistory=Array.isArray(data.sales)?data.sales:[];
-    renderSales();
+  async function loadSales(page = salesPage) {
+    if (loadingSales) return;
+    loadingSales = true;
+    $('salesPrevious').disabled = true;
+    $('salesNext').disabled = true;
+    try {
+      const data = await request('/api/sales?page='+page);
+      salesHistory = Array.isArray(data.sales) ? data.sales : [];
+      salesPage = data.page || page;
+      salesHasMore = data.hasMore === true;
+    } finally {
+      loadingSales = false;
+      renderSales();
+    }
   }
   async function start() {
     try {
@@ -91,6 +109,8 @@
       addItem();await loadSales();loaded=true;writable=true;recalculate();notice('Dados carregados da empresa conectada.');
     } catch(error) {loaded=false;notice(error.message);$('submit').disabled=true;$('addItem').disabled=true;}
   }
+  $('salesPrevious').addEventListener('click',()=>loadSales(salesPage-1).catch(error=>notice(error.message)));
+  $('salesNext').addEventListener('click',()=>loadSales(salesPage+1).catch(error=>notice(error.message)));
   $('salesSearch').addEventListener('input',renderSales);
   $('salesStatus').addEventListener('change',renderSales);
   $('exportSales').addEventListener('click',exportSales);
