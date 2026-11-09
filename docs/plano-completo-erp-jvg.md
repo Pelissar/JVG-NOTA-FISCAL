@@ -137,3 +137,13 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - Histórico de orçamentos oferece ações com confirmação e atualização da lista; testes de contrato adicionados.
 - Aceitar orçamento **não** cria pedido, venda ou movimentação de estoque; conversão transacional será etapa separada.
 - Migração `jvg_quotes` permanece pendente. Sem publicação em produção.
+
+### Pedido comercial a partir de orçamento aceito (2026-11-09)
+- Migração **não aplicada** `supabase/migrations/20261109_jvg_orders.sql`: tabela de pedidos isolada por empresa, snapshot de itens, vínculo obrigatório ao orçamento e unicidade por empresa/orçamento.
+- RPC `jvg_create_order_from_quote` cria pedido somente de orçamento aceito, com `ON CONFLICT DO NOTHING` e retorno do mesmo pedido em reenvios. Não movimenta estoque, não confirma venda, não cria cobrança ou nota.
+- API autenticada `GET/POST /api/orders`, listagem paginada e conversão com validação de permissões.
+- Tela `/erp/orders.html` e menu; botão **Gerar pedido** nos orçamentos aceitos.
+- Corrigida consulta de catálogo dos orçamentos: verifica IDs solicitados, sem limitar validação aos primeiros mil produtos/serviços.
+- Contratos de teste adicionados, **execução integral ainda pendente**.
+- Próximas etapas: aprovar pedidos, reservar/baixar estoque somente em confirmação transacional, evitar duplicidade na conversão pedido→venda e conferir regras de vencimento dos orçamentos.
+- **Não publicar sem migrações homologadas, testes e autorização explícita.**
