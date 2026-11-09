@@ -199,3 +199,7 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - Nova verificação estática `web/scripts/fiscal-release-gate.test.mjs` protege dependências no repositório; **não valida o esquema real**. Executar teste de compatibilidade de esquema em ambiente isolado antes de aprovar migrações e deploy.
 - Sequência de liberação: (1) corrigir CI e executar testes/build; (2) ambiente de homologação Supabase separado, aplicar e testar migrações em ordem; (3) testes E2E de orçamento→pedido→venda, permissão, estoque e idempotência; (4) preparar XML, assinatura A1, regras tributárias, integração SEFAZ homologação e rejeições; (5) só após autorização explícita planejar migração/deploy em produção.
 - **Não existe emissão fiscal oficial nesta branch.** Nenhuma mudança no banco de produção foi executada.
+
+### Verificação automatizada do PR (2026-11-09)
+- Criado `.github/workflows/erp-contracts.yml` para executar `node --check` nos scripts do ERP e `npm run test:erp` em pull requests e pushes da branch de desenvolvimento, sem credenciais do banco e sem deploy.
+- O fluxo não substitui build Next.js nem teste integrado com banco em homologação. Aguardar execução real do GitHub Actions e corrigir falhas antes do merge.
