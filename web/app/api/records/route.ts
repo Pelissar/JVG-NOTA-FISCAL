@@ -109,6 +109,7 @@ export async function POST(request: Request) {
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {
     const account = await authenticatedAccount();
+    if (account.role === 'viewer') throw new JvgBackendError('Sem permissão para alterar cadastros.', 403);
     const data = await request.json() as Record<string, unknown>;
     const kind = validKind(data.kind);
     const record = data.record && typeof data.record === "object" ? data.record as Record<string, unknown> : {};
@@ -138,6 +139,7 @@ export async function DELETE(request: Request) {
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {
     const account = await authenticatedAccount();
+    if (account.role === 'viewer') throw new JvgBackendError('Sem permissão para alterar cadastros.', 403);
     const data = await request.json() as Record<string, unknown>;
     const kind = validKind(data.kind), id = validUuid(data.id);
     await dbRequest(`/rest/v1/${tableByKind[kind]}?id=${filterEq(id)}&tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`, {

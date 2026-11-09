@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vendas · JVG ERP</title><link rel="stylesheet" href="/erp/styles.css"><link rel="stylesheet" href="/erp/responsive.css"></head>
+<body style="background:#f4f7fb;color:#17243a"><main style="max-width:1040px;margin:32px auto;padding:20px">
+<a href="/erp/">← Voltar ao painel</a><h1>Vendas</h1><p>Registre vendas da empresa conectada. A confirmação exige estoque disponível e autorização no servidor.</p>
+<div id="notice" role="status" aria-live="polite"></div>
+<section class="panel" style="padding:22px;margin:20px 0"><h2>Nova venda</h2><form id="saleForm">
+<label>Cliente <select id="customer"><option value="">Consumidor não identificado</option></select></label>
+<div id="items"></div><button type="button" class="btn" id="addItem">Adicionar item</button>
+<p><label>Observações <textarea id="notes" maxlength="2000" rows="2" style="width:100%"></textarea></label></p>
+<strong id="total">Total: R$ 0,00</strong><p><button class="btn primary" id="submit" type="submit" disabled>Confirmar venda</button></p>
+</form></section>
+<section class="panel" style="padding:22px"><h2>Vendas recentes</h2><div id="sales"></div></section>
+</main><script defer src="/erp/sales.js"></script></body></html>

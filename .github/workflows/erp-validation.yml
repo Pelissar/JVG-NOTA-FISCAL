@@ -1,0 +1,33 @@
+name: ERP validation (development)
+on:
+  push:
+    branches:
+      - feature/erp-vendas-estoque-financeiro
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Validate ERP tests
+        run: pnpm test:erp
+      - name: Validate JavaScript syntax
+        run: node --check public/erp/sales.js
+      - name: Compile production application
+        run: pnpm build
