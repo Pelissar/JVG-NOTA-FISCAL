@@ -41,14 +41,20 @@ async function accountForRequest() {
   return account;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const account = await accountForRequest();
+    const url = new URL(request.url);
+    const pageRaw = url.searchParams.get("page") ?? "1";
+    if (!/^[1-9]\\d{0,5}$/.test(pageRaw)) throw new JvgBackendError("Página inválida.", 400);
+    const page = Number(pageRaw);
+    const pageSize = 50;
+    const offset = (page - 1) * pageSize;
     const scope = `tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`;
-    const sales = await dbRequest<Array<Record<string, unknown>>>(
-      `/rest/v1/jvg_sales?${scope}&select=id,customer_id,status,subtotal,discount_total,total,notes,created_at&order=created_at.desc&limit=200`,
+    const rows = await dbRequest<Array<Record<string, unknown>>>(
+      `/rest/v1/jvg_sales?${scope}&select=id,customer_id,status,subtotal,discount_total,total,notes,created_at&order=created_at.desc,id.desc&limit=${pageSize + 1}&offset=${offset}`,
     );
-    return apiJson({ sales });
+    return apiJson({ sales: rows.slice(0, pageSize), page, pageSize, hasMore: rows.length > pageSize });
   } catch (error) { return safeError(error); }
 }
 
