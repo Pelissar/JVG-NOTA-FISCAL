@@ -62,3 +62,14 @@ test('diagnóstico Focus é somente leitura e não mostra token',()=>{
  assert.doesNotMatch(ui,/Authorization|process\.env|method:'POST'/);
  assert.match(ui,/emissionEnabled!==false/);
 });
+
+test('diagnóstico Focus tem contraste nos dois temas e informa que não emite',()=>{
+ const html=read('../public/erp/nfe-drafts.html');
+ const css=read('../public/erp/focus-diagnostic.css');
+ assert.match(html,/focus-diagnostic\.css/);
+ assert.match(html,/focus-panel-heading/);
+ assert.match(html,/A verificação não transmite, autoriza ou cancela NF-e/);
+ assert.match(css,/html\[data-theme=light\]/);
+ assert.match(css,/focus-visible/);
+ assert.match(css,/@media\(max-width:560px\)/);
+});
