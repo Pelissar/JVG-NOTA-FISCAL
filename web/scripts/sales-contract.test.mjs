@@ -66,3 +66,14 @@ test('venda idempotente usa chave UUID e bloqueio transacional', () => {
   assert.match(idemSql, /v_existing_sale is not null then return v_existing_sale/i);
   assert.match(idemSql, /v_existing_hash is distinct from v_payload_hash/i);
 });
+
+test('histórico de vendas permite pesquisar, filtrar e exportar dados reais', () => {
+  assert.match(page, /id="salesSearch"/);
+  assert.match(page, /id="salesStatus"/);
+  assert.match(page, /id="exportSales"/);
+  assert.match(client, /function filteredSales\(\)/);
+  assert.match(client, /function exportSales\(\)/);
+  assert.match(client, /salesHistory=Array\.isArray\(data\.sales\)/);
+  assert.match(client, /URL\.createObjectURL\(blob\)/);
+  assert.doesNotMatch(client, /localStorage|dados fictícios|vendas demonstrativas/i);
+});
