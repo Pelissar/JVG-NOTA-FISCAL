@@ -172,3 +172,9 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - Teste estático `design-navigation.test.mjs` incluído na suíte; **revisão visual, navegação por teclado e execução de testes/build ainda pendentes**.
 - Referência Nuts usada apenas como inspiração de organização por módulos; JVG mantém identidade e implementação próprias, sem copiar marca ou layout.
 - Não houve merge, deploy manual nem migração no banco de produção.
+
+### Polimento da navegação JVG Horizon (2026-11-09)
+- `app.js` agora sincroniza seção selecionada com fragmento da URL e atualiza `aria-current`; o menu móvel mantém `aria-expanded` consistente ao abrir/fechar/navegar.
+- `navigation.js` adiciona destaque para links de rota atual e atalhos Home/End no menu lateral; `index.html` declara `aria-controls`.
+- Testes estáticos adicionados para verificar navegação e acessibilidade.
+- Sem build local ou teste visual em navegador nesta etapa; revisar em preview isolado antes de liberar. Sem deploy manual, merge ou migração de produção.
