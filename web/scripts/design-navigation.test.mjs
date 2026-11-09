@@ -71,3 +71,16 @@ test('tema glass flutuante preserva acessibilidade e responsividade',()=>{
  assert.match(glass,/prefers-reduced-transparency:reduce/);
  assert.match(glass,/focus-visible/);
 });
+
+test('todas as páginas comerciais e fiscais carregam tema e favicon compartilhados',()=>{
+ const pages=['quotes','orders','sales','cfop','nfe-drafts','tax-profiles'];
+ for(const page of pages){
+  const source=read('../public/erp/'+page+'.html');
+  assert.match(source,/\/erp\/unified-pages\.css/);
+  assert.match(source,/\/branding\/sigmafiscal-icon\.svg/);
+ }
+ const theme=read('../public/erp/unified-pages.css');
+ assert.match(theme,/prefers-reduced-motion:reduce/);
+ assert.match(theme,/prefers-reduced-transparency:reduce/);
+ assert.match(theme,/focus-visible/);
+});
