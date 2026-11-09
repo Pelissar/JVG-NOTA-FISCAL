@@ -1,6 +1,6 @@
 /** Valida CPF brasileiro pelo cálculo oficial dos dois dígitos verificadores. */
 export function isValidCpf(value: string): boolean {
-  if (!/^\\d{11}$/.test(value) || /^(\\d)\\1{10}$/.test(value)) return false;
+  if (!/^\d{11}$/.test(value) || /^(\d)\1{10}$/.test(value)) return false;
   const checkDigit = (length: number): number => {
     const sum = Array.from({ length }, (_, index) => Number(value[index]) * (length + 1 - index))
       .reduce((total, part) => total + part, 0);
