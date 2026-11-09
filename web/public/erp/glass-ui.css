@@ -45,3 +45,6 @@ body:has(> .app-shell){color:#eaf3ff;background:radial-gradient(ellipse 65% 55% 
 @media(max-height:580px){.topbar{height:54px;min-height:54px}.content{padding-top:14px}}
 @media(prefers-reduced-transparency:reduce){.sidebar,.topbar,.panel,.stat-card,.table-panel,.banner,.modal{backdrop-filter:none;-webkit-backdrop-filter:none;background-color:#102039}}
 @media(prefers-reduced-motion:reduce){.stat-card,.quick-card{transition:none}.stat-card:hover{transform:none}}
+
+/* Brand mark uses the supplied SVG artwork, not the old receipt glyph. */
+.brand-mark img{display:block;width:100%;height:100%;object-fit:contain;border-radius:12px}
