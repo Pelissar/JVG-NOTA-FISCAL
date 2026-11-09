@@ -59,3 +59,15 @@ test('rotas de módulos ainda não implementados não permanecem acessíveis por
  assert.doesNotMatch(js,/view==='finance'/);
  assert.doesNotMatch(js,/view==='transport'/);
 });
+
+test('tema glass flutuante preserva acessibilidade e responsividade',()=>{
+ const glass=read('../public/erp/glass-ui.css');
+ assert.match(html,/href="\.\/glass-ui\.css"/);
+ assert.match(glass,/backdrop-filter:blur/);
+ assert.match(glass,/\.main-column\{/);
+ assert.match(glass,/@media\(max-width:1100px\)/);
+ assert.match(glass,/@media\(max-width:700px\)/);
+ assert.match(glass,/prefers-reduced-motion:reduce/);
+ assert.match(glass,/prefers-reduced-transparency:reduce/);
+ assert.match(glass,/focus-visible/);
+});
