@@ -10,6 +10,7 @@ export async function POST(request: Request) {
   try {
     const account = await getSiteAccount(user);
     if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
+    if (account.role === "viewer") throw new JvgBackendError("Sem permissão para ajustar o estoque.", 403);
     const data = await request.json() as Record<string, unknown>;
     const productId = str(data.productId, 40);
     if (!/^[0-9a-f]{8}-[0-9a-f-]{27,36}$/i.test(productId)) throw new JvgBackendError("Produto inválido.", 400);

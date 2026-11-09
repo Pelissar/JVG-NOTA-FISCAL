@@ -2,6 +2,7 @@
   'use strict';
 
   var state = { products: [], clients: [], drafts: [], ready: false };
+  var idempotencyKey = null;
   var status = document.getElementById('status');
   var form = document.getElementById('draftForm');
   var items = document.getElementById('items');
@@ -252,18 +253,29 @@
     saveButton.disabled = true;
     saveButton.textContent = 'Salvando...';
     try {
+      if (!idempotencyKey) {
+        if (!window.crypto || typeof window.crypto.randomUUID !== 'function')
+          throw new Error('Este navegador não oferece uma chave segura para evitar duplicidade. Atualize o navegador.');
+        idempotencyKey = window.crypto.randomUUID();
+      }
       var result = await api('/api/fiscal/nfe-drafts', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
         body: JSON.stringify({
           nature: form.elements.namedItem('nature').value.trim(),
           recipientId: form.elements.namedItem('recipientId').value,
           items: readItems(),
         }),
       });
+      idempotencyKey = null;
       form.reset();
       items.replaceChildren();
       addItem();
-      await refreshHistory();
+      try {
+        await refreshHistory();
+      } catch {
+        report('Rascunho salvo com sucesso, mas não foi possível atualizar o histórico. Recarregue a página para conferir.', 'error');
+        return;
+      }
       report('Rascunho salvo no Supabase. Restam ' + result.pending.length +
         ' conferência(s) fiscais antes de qualquer emissão. Nenhum documento foi transmitido.');
     } catch (error) {

@@ -13,6 +13,16 @@ import { reviewNfeDocument } from "../../../../lib/fiscal/nfe-document-review";
 export const dynamic = "force-dynamic";
 
 type DbRow = Record<string, unknown>;
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([left], [right]) => left.localeCompare(right));
+    return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`).join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}
 
 async function currentAccount(): Promise<SiteAccount> {
   const user = await getJvgUser();
@@ -74,6 +84,10 @@ export async function POST(request: Request) {
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {
     const account = await currentAccount();
+    if (account.role === "viewer") throw new JvgBackendError("Sem permissão para criar rascunhos fiscais.", 403);
+    const idempotencyKey = request.headers.get("idempotency-key")?.trim() || "";
+    if (!uuidPattern.test(idempotencyKey))
+      throw new JvgBackendError("Identificador seguro da solicitação ausente ou inválido. Recarregue a página e tente novamente.", 400);
     const raw = await request.text();
     if (raw.length > 32_000) throw new JvgBackendError("Rascunho muito grande.", 413);
     let data: unknown;
@@ -167,12 +181,21 @@ export async function POST(request: Request) {
       items, totalCents: draft.totalCents, taxPreview, preflight, pending, readyToTransmit: false,
     };
 
+    const existing = await dbRequest<Array<{ id: string; status: string; fiscal_payload: unknown }>>(
+      `/rest/v1/jvg_fiscal_documents?${scope(account)}&document_type=eq.nfe&environment=eq.homologacao&idempotency_key=${filterEq(idempotencyKey)}&select=id,status,fiscal_payload&limit=1`,
+    );
+    if (existing[0]) {
+      if (stableJson(existing[0].fiscal_payload) !== stableJson(payload))
+        throw new JvgBackendError("Esta solicitação já foi usada com outros dados. Recarregue a página antes de salvar novamente.", 409);
+      return apiJson({ ok: true, id: existing[0].id, status: existing[0].status,
+        totalCents: draft.totalCents, pending, transmissionEnabled: false }, 200);
+    }
     const created = await dbRequest<Array<{ id: string }>>("/rest/v1/jvg_fiscal_documents", {
       method: "POST",
       body: JSON.stringify({
         tenant_id: account.tenant_id, company_id: account.company_id,
         document_type: "nfe", environment: "homologacao", status: "draft",
-        fiscal_payload: payload,
+        idempotency_key: idempotencyKey, fiscal_payload: payload,
       }),
     });
     if (!created[0]?.id) throw new JvgBackendError("Não foi possível salvar o rascunho.", 502);
