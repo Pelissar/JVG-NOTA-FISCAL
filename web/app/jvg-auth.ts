@@ -15,6 +15,8 @@ export async function getJvgUser(): Promise<JvgAuthUser | null> {
   return {
     userId: data.user.id,
     email: data.user.email,
-    displayName: data.user.email.split("@")[0] || "Usuário",
+    displayName: typeof data.user.user_metadata?.display_name === "string" && data.user.user_metadata.display_name.trim()
+      ? data.user.user_metadata.display_name.trim().slice(0, 80)
+      : data.user.email.split("@")[0] || "Usuário",
   };
 }

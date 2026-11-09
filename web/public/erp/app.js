@@ -1,10 +1,12 @@
 (function () {
   'use strict';
-  var labels = {dashboard:'Visão geral',products:'Produtos',clients:'Clientes',services:'Serviços',fiscal:'Notas fiscais',inventory:'Estoque',reports:'Relatórios',settings:'Configurações'};
+  var labels = {dashboard:'Visão geral',products:'Produtos',clients:'Clientes',services:'Serviços',fiscal:'Central fiscal',inventory:'Estoque',reports:'Relatórios',profile:'Meu perfil',settings:'Empresa e sistema'};
   // Nunca mostrar dados locais como se fossem cadastros reais da empresa.
   var state = emptyState();
   var view = 'dashboard', query = '', filter = 'all', partyFilter = 'all';
   var cloud = {status:'checking',displayName:'',company:null};
+  var profileData = {displayName:'',email:''};
+  var logoCompanyId = '';
   var content = document.getElementById('content');
   var modalRoot = document.getElementById('modalRoot');
   var toastRoot = document.getElementById('toastRoot');
@@ -94,13 +96,77 @@
       '<div class="heading-actions" style="margin-top:24px">'+action+'<button class="btn" data-action="logout">Sair da conta</button></div>'+
       '<p class="small-note" style="margin-top:16px">Credenciais de autorização fiscal e certificado A1 não são solicitados nesta página. Os segredos técnicos devem ser configurados apenas no servidor privado.</p></div></section></div>';
   }
+  function profile(){
+    return heading('Meu perfil','Atualize seus dados de acesso e a identidade visual da empresa.')+
+      '<div class="profile-grid">'+
+      '<section class="panel"><div class="panel-head"><div><h2>Dados da conta</h2><p>Seu nome e e-mail de acesso ao sistema.</p></div></div><div class="panel-body"><form id="profileForm" class="profile-form">'+
+      field('displayName','Como devemos chamar você',profileData.displayName,'required maxlength="80" autocomplete="name"',true)+
+      field('profileEmail','E-mail de acesso',profileData.email,'type="email" required maxlength="254" autocomplete="email"',true)+
+      '<div class="profile-form-actions"><button class="btn primary" type="submit">Salvar dados da conta</button></div><p class="small-note">Para confirmar a troca, siga as mensagens de verificação enviadas pelo sistema aos endereços envolvidos.</p></form></div></section>'+
+      '<section class="panel"><div class="panel-head"><div><h2>Segurança</h2><p>Defina uma nova senha para sua conta.</p></div></div><div class="panel-body"><form id="passwordForm" class="profile-form">'+
+      field('currentPassword','Senha atual','', 'type="password" required minlength="1" maxlength="128" autocomplete="current-password"',true)+
+      field('newPassword','Nova senha','', 'type="password" required minlength="12" maxlength="128" autocomplete="new-password"',true)+
+      field('confirmPassword','Confirme a nova senha','', 'type="password" required minlength="12" maxlength="128" autocomplete="new-password"',true)+
+      '<div class="profile-form-actions"><button class="btn primary" type="submit">Atualizar senha</button></div><p class="small-note">Use pelo menos 12 caracteres. Não reutilize uma senha de outro serviço.</p></form></div></section>'+
+      '<section class="panel profile-logo-panel"><div class="panel-head"><div><h2>Logo da empresa</h2><p>Ela aparece junto à empresa ativa no painel.</p></div></div><div class="panel-body"><form id="logoForm" class="profile-logo-form"><div class="profile-logo-preview"><img id="profileLogoPreview" alt="Prévia da logo da empresa" hidden><span id="profileLogoFallback">SF</span></div><div class="profile-logo-fields"><label class="field"><span>Escolha uma imagem PNG, JPEG ou WebP</span><input id="companyLogoFile" name="logo" type="file" accept="image/png,image/jpeg,image/webp" required></label><small>Até 2 MB. A imagem ficará pública para exibição da marca; os dados da empresa continuam privados.</small><button class="btn primary" type="submit">Enviar logo da empresa</button></div></form></div></section></div>';
+  }
+  async function loadProfile(){
+    try{
+      var data=await callApi('/api/profile');
+      profileData={displayName:data.displayName||'',email:data.email||''};
+      var name=document.getElementById('f-displayName'),email=document.getElementById('f-profileEmail');
+      if(name)name.value=profileData.displayName;if(email)email.value=profileData.email;
+      var preview=document.getElementById('profileLogoPreview'),fallback=document.getElementById('profileLogoFallback');
+      if(preview){preview.onload=function(){preview.hidden=false;if(fallback)fallback.hidden=true;};preview.onerror=function(){preview.hidden=true;if(fallback)fallback.hidden=false;};preview.src='/api/company/logo?v='+Date.now();}
+    }catch(error){toast(error.message,'error');}
+  }
+  async function saveProfile(form){
+    var values=Object.fromEntries(new FormData(form).entries()),button=form.querySelector('button[type="submit"]');
+    if(button)button.disabled=true;
+    try{
+      var result=await callApi('/api/profile',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({displayName:values.displayName,email:values.profileEmail})});
+      profileData={displayName:result.displayName||values.displayName,email:result.email||values.profileEmail};
+      cloud.displayName=profileData.displayName;
+      if(result.emailChangePending)toast('Dados salvos. Confirme o novo e-mail pelo link enviado.');else toast('Dados da conta atualizados.');
+      render();
+    }catch(error){toast(error.message,'error');}
+    finally{if(button)button.disabled=false;}
+  }
+  async function savePassword(form){
+    var values=Object.fromEntries(new FormData(form).entries()),button=form.querySelector('button[type="submit"]');
+    if(values.newPassword!==values.confirmPassword){toast('As senhas informadas não coincidem.','error');return;}
+    if(button)button.disabled=true;
+    try{await callApi('/api/profile',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:values.newPassword,currentPassword:values.currentPassword})});form.reset();toast('Senha atualizada com segurança.');}
+    catch(error){toast(error.message,'error');}
+    finally{if(button)button.disabled=false;}
+  }
+  async function uploadCompanyLogo(form){
+    var button=form.querySelector('button[type="submit"]'),file=form.elements.namedItem('logo');
+    if(!file||!file.files||!file.files[0]){toast('Escolha uma imagem para enviar.','error');return;}
+    if(button){button.disabled=true;button.textContent='Enviando...';}
+    try{
+      var data=new FormData();data.append('logo',file.files[0]);
+      await callApi('/api/company/logo',{method:'POST',body:data});
+      var preview=document.getElementById('profileLogoPreview'),fallback=document.getElementById('profileLogoFallback');
+      if(preview){preview.onload=function(){preview.hidden=false;if(fallback)fallback.hidden=true;};preview.src='/api/company/logo?v='+Date.now();}
+      var avatar=document.getElementById('workspaceAvatar');if(avatar){avatar.classList.remove('has-logo');var logo=document.getElementById('workspaceLogo');if(logo){logo.onload=function(){avatar.classList.add('has-logo');};logo.src='/api/company/logo?v='+Date.now();}}
+      form.reset();toast('Logo da empresa atualizada.');
+    }catch(error){toast(error.message,'error');}
+    finally{if(button){button.disabled=false;button.textContent='Enviar logo da empresa';}}
+  }
   function render(){
     document.getElementById('breadcrumb').textContent=labels[view]||labels.dashboard;
-    var companyTitle=document.querySelector('.workspace-switch strong');if(companyTitle)companyTitle.textContent=state.companyName;
-    document.querySelectorAll('.sidebar .nav-link').forEach(function(b){var active=b.dataset.view===view;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
-    var views={dashboard:dashboard,products:products,clients:clients,services:services,fiscal:fiscal,inventory:inventory,reports:reports,settings:settings};
+    var companyTitle=document.getElementById('workspaceName');if(companyTitle)companyTitle.textContent=state.companyName;
+    var initials=document.getElementById('workspaceInitials'),avatar=document.getElementById('workspaceAvatar'),logo=document.getElementById('workspaceLogo');
+    if(initials){var parts=String(state.companyName||'Minha empresa').trim().split(/\s+/).filter(Boolean);initials.textContent=(parts.length>1?parts[0][0]+parts[1][0]:parts[0].slice(0,2)).toUpperCase();}
+    var accountBadge=document.querySelector('.top-avatar');if(accountBadge){var userParts=String(cloud.displayName||'SF').trim().split(/\s+/).filter(Boolean);accountBadge.textContent=(userParts.length>1?userParts[0][0]+userParts[1][0]:userParts[0].slice(0,2)).toUpperCase();}
+    var companyId=cloud.company&&cloud.company.id?String(cloud.company.id):'';
+    if(logo&&companyId!==logoCompanyId){logoCompanyId=companyId;if(avatar)avatar.classList.remove('has-logo');logo.onload=function(){if(avatar)avatar.classList.add('has-logo');};logo.onerror=function(){if(avatar)avatar.classList.remove('has-logo');};logo.src=companyId?'/api/company/logo?v='+encodeURIComponent(companyId):'';}
+    document.querySelectorAll('.sidebar .nav-link').forEach(function(b){var active=b.dataset.view===view;b.classList.toggle('active',active);if(active){b.setAttribute('aria-current','page');var group=b.closest('details.nav-group');if(group)group.open=true;}else b.removeAttribute('aria-current');});
+    var views={dashboard:dashboard,products:products,clients:clients,services:services,fiscal:fiscal,inventory:inventory,reports:reports,profile:profile,settings:settings};
     content.innerHTML=(views[view]||dashboard)();
     var search=document.getElementById('globalSearch');search.value=query;
+    if(view==='profile')loadProfile();
   }
   function setView(next){if(!labels[next])return;view=next;query='';filter='all';if(window.location.hash!=='#'+next)history.pushState(null,'','#'+next);document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');render();document.querySelector('.main-column').scrollTop=0;}
   function field(name,label,value,extra,full,help){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+(extra||'')+'>'+(help?'<small>'+h(help)+'</small>':'')+'</div>';}
@@ -352,7 +418,7 @@
     a.href=url;a.download='JVG_'+kind+'_cadastros.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},300);toast('CSV exportado.');
   }
   document.addEventListener('click',function(e){
-    var v=e.target.closest('[data-view]');if(v){setView(v.dataset.view);return;}
+    var v=e.target.closest('[data-view]');if(v){var group=v.closest('.nav-group');if(group)group.open=false;setView(v.dataset.view);return;}
     var b=e.target.closest('[data-action]');if(!b)return;var a=b.dataset.action,recordId=b.dataset.id;
     if(a==='close-modal'){closeModal();return;}
     if(a==='lookup-cep'||a==='lookup-cnpj'){lookupRegistration(b,a.substring(7));return;}
@@ -366,7 +432,7 @@
     if(a==='adjust-stock'){adjustStock(recordId);return;}
     if(a.indexOf('goto-')===0){setView(a.substring(5));return;}
   });
-  document.addEventListener('submit',function(e){if(e.target.id==='recordForm'){e.preventDefault();saveRecord(e.target);}if(e.target.id==='stockForm'){e.preventDefault();saveStock(e.target);}if(e.target.id==='companyForm'){e.preventDefault();saveCompany(e.target);}});
+  document.addEventListener('submit',function(e){if(e.target.id==='recordForm'){e.preventDefault();saveRecord(e.target);}if(e.target.id==='stockForm'){e.preventDefault();saveStock(e.target);}if(e.target.id==='companyForm'){e.preventDefault();saveCompany(e.target);}if(e.target.id==='profileForm'){e.preventDefault();saveProfile(e.target);}if(e.target.id==='passwordForm'){e.preventDefault();savePassword(e.target);}if(e.target.id==='logoForm'){e.preventDefault();uploadCompanyLogo(e.target);}});
   document.addEventListener('input',function(e){
     if(e.target.id==='globalSearch'){var searchText=e.target.value;if(view==='dashboard'){setView('products');query=searchText;render();}else{query=searchText;render();}return;}
     if(e.target.hasAttribute('data-search-input')){query=e.target.value;var pos=e.target.selectionStart;render();var next=document.querySelector('[data-search-input]');if(next){next.focus();next.setSelectionRange(pos,pos);}}
@@ -388,4 +454,3 @@
   render();
   checkConnection();
 })();
-

@@ -20,15 +20,26 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const ready = Boolean(url && key);
 
   useEffect(() => {
+    const savedTheme = window.localStorage.getItem("sigmafiscal-theme") === "dark" ? "dark" : "light";
+    document.documentElement.dataset.theme = savedTheme;
+    setTheme(savedTheme);
     const client = browserAuth();
     if (!client) return;
     void client.auth.getUser().then(({ data }) => {
       if (data.user) window.location.replace("/erp/index.html");
     });
   }, []);
+
+  function toggleTheme() {
+    const next = theme === "light" ? "dark" : "light";
+    setTheme(next);
+    document.documentElement.dataset.theme = next;
+    try { window.localStorage.setItem("sigmafiscal-theme", next); } catch { /* Tema segue ativo nesta tela. */ }
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,6 +68,7 @@ export default function LoginPage() {
 
   return (
     <main className={styles.page}>
+      <button type="button" className={styles.theme} onClick={toggleTheme} aria-label={theme === "light" ? "Ativar modo escuro" : "Ativar modo claro"}>{theme === "light" ? "◐ Modo escuro" : "☀ Modo claro"}</button>
       <div className={styles.layout}>
         <section className={styles.intro}>
           <Link href="/" className={styles.brand}><Image src="/branding/sigmafiscal-icon.svg" alt="" width={62} height={62}/><span><strong>Sigma<span>Fiscal</span></strong><small>ERP EMPRESARIAL</small></span></Link>
