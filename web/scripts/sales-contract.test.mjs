@@ -92,6 +92,6 @@ test('histórico tem paginação por empresa com limite por página', () => {
 test('CSV de vendas neutraliza fórmulas e usa separadores reais', () => {
   assert.match(client, /const protectedText =/);
   assert.match(client, /protectedText\.replace/);
-  assert.match(client, /join\('\\\\r\\\\n'\)/);
-  assert.match(client, /new Blob\(\['\\\\uFEFF'/);
+  assert.match(client, /join\('\\r\\n'\)/);
+  assert.match(client, /new Blob\(\['\\uFEFF'/);
 });
