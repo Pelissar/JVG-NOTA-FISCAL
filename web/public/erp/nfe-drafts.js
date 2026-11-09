@@ -45,7 +45,7 @@
   function fillRecipients() {
     var select = document.getElementById('recipientId');
     select.replaceChildren(option('', 'Selecione um destinatário'));
-    state.clients.filter(function (c) { return c.active && c.type !== 'EXT'; }).forEach(function (client) {
+    state.clients.filter(function (c) { return c.active && c.isCustomer === true && c.type !== 'EXT'; }).forEach(function (client) {
       select.append(option(client.id, client.name + (client.document ? ' · ' + client.document : '')));
     });
   }
