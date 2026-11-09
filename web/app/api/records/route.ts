@@ -48,11 +48,14 @@ function buildRow(kind: RecordKind, input: Record<string, unknown>, account: Sit
     if (type === "PJ" && document && !validCnpj(document))
       throw new JvgBackendError("CNPJ inválido: confira os caracteres e dígitos verificadores.", 400);
     const documentType = type === "PF" ? "cpf" : type === "EXT" ? "foreign" : "cnpj";
-    return { ...base, display_name: displayName, document_type: documentType,
-      document_number: document || null, email: str(input.email, 160) || null,
+    const isCustomer = input.isCustomer === true, isSupplier = input.isSupplier === true, isCarrier = input.isCarrier === true;
+    if (!isCustomer && !isSupplier && !isCarrier) throw new JvgBackendError("Selecione ao menos um tipo de cadastro: cliente, fornecedor ou transportadora.", 400);
+    return { ...base, display_name: displayName, legal_name: str(input.legalName, 180) || null, document_type: documentType,
+      document_number: document || null, state_registration: str(input.stateRegistration, 40) || null,
+      municipal_registration: str(input.municipalRegistration, 40) || null, email: str(input.email, 160) || null,
       phone: str(input.phone, 25) || null,
       address: fiscalAddress(input),
-      is_customer: true, active: input.active !== false };
+      is_customer: isCustomer, is_supplier: isSupplier, is_carrier: isCarrier, active: input.active !== false };
   }
   const code = str(input.code, 40), name = str(input.name, 160);
   if (!code || !name) throw new JvgBackendError("Código e descrição são obrigatórios.", 400);
@@ -75,7 +78,7 @@ export async function GET() {
     const scope = `tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`;
     const [products, parties, services, movements, company] = await Promise.all([
       dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_products?${scope}&select=id,sku,name,category,unit,ncm,cest,gtin,origin,default_cfop,tax_profile_id,cost_price,sale_price,active&order=created_at.desc&limit=1000`),
-      dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_parties?${scope}&is_customer=eq.true&select=id,display_name,document_type,document_number,email,phone,address,active&order=created_at.desc&limit=1000`),
+      dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_parties?${scope}&select=id,registration_number,display_name,legal_name,document_type,document_number,state_registration,municipal_registration,email,phone,address,is_customer,is_supplier,is_carrier,active&order=registration_number.desc&limit=5000`),
       dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_services?${scope}&select=id,code,name,description,national_service_code,nbs,sale_price,active&order=created_at.desc&limit=1000`),
       dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_inventory_movements?${scope}&select=product_id,quantity_delta,reason,created_at&order=created_at.desc&limit=10000`),
       getCompany(account),
@@ -91,7 +94,7 @@ export async function GET() {
         cost: Number(p.cost_price), price: Number(p.sale_price), stock: balances.get(String(p.id)) || 0, active: p.active })),
       clients: parties.map(p => {
         const address = p.address && typeof p.address === "object" ? p.address as Record<string, unknown> : {};
-        return { id: p.id, name: p.display_name, type: p.document_type === "cpf" ? "PF" : p.document_type === "foreign" ? "EXT" : "PJ",
+        return { id: p.id, registrationNumber: p.registration_number, name: p.display_name, legalName: p.legal_name || "", stateRegistration: p.state_registration || "", municipalRegistration: p.municipal_registration || "", isCustomer: p.is_customer, isSupplier: p.is_supplier, isCarrier: p.is_carrier, type: p.document_type === "cpf" ? "PF" : p.document_type === "foreign" ? "EXT" : "PJ",
           document: p.document_number || "", email: p.email || "", phone: p.phone || "",
           street: address.street || "", number: address.number || "", complement: address.complement || "",
           district: address.district || "", postalCode: address.postalCode || "", cityCode: address.cityCode || "",
