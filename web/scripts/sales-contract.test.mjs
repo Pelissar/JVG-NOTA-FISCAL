@@ -43,11 +43,24 @@ test('formulário impede mais de 100 itens e valida centavos', () => {
 });
 
 test('falha na confirmação não permite reenvio cego', () => {
-  assert.match(client, /writable=false;\s*notice\(error\.message/);
-  assert.match(client, /Verifique o histórico e atualize a página/);
+  assert.match(client, /writable=true;\s*notice\(error\.message/);
+  assert.match(client, /mesma chave impedirá duplicidade/);
   assert.match(client, /writable=false;\s*\$\('items'\)\.replaceChildren/);
 });
 
 test('seletor de clientes não inclui somente fornecedores ou transportadoras', () => {
   assert.match(client, /clients\.filter\(x=>x\.active && x\.isCustomer === true && x\.type !== 'EXT'\)/);
+});
+
+const idemSql = read('../../supabase/migrations/20261109_jvg_sale_idempotency.sql');
+test('venda idempotente usa chave UUID e bloqueio transacional', () => {
+  assert.match(api, /const requestId = uuid\(data\.requestId\)/);
+  assert.match(api, /p_request_id: requestId/);
+  assert.match(client, /pendingRequestId \|\|= crypto\.randomUUID\(\)/);
+  assert.match(client, /requestId:pendingRequestId/);
+  assert.match(idemSql, /primary key \(tenant_id, company_id, request_id\)/i);
+  assert.match(idemSql, /on conflict do nothing/i);
+  assert.match(idemSql, /for update/i);
+  assert.match(idemSql, /v_existing_sale is not null then return v_existing_sale/i);
+  assert.match(idemSql, /v_existing_hash is distinct from v_payload_hash/i);
 });
