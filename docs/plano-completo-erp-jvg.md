@@ -208,3 +208,9 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - GitHub Actions execução 42648749255: job `Testes ERP (sem banco de produção)` concluído com sucesso, incluindo sintaxe JS e contratos estáticos. Deploy Preview Netlify também aprovado para aquele commit.
 - Ampliado workflow com job independente `next-build`, usando pnpm fixado e lockfile, para executar build de produção Next.js sem deploy e revelar erros de compilação antes de merge. Aguardar resultado deste novo job.
 - Build verde não equivale a operações de banco disponíveis ou autorização fiscal.
+
+### JVG Glass UI — primeira implementação (2026-11-09)
+- Novo `web/public/erp/glass-ui.css` e import no painel `index.html`: fundo escuro com halos suaves, sidebar e conteúdo flutuantes, painéis translúcidos, cartões com profundidade e azul luminoso.
+- Layout adaptável a 1100px, 700px e telas baixas; respeita preferências de redução de movimento/transparência e foco de teclado.
+- Primeira etapa **somente na tela principal do ERP**: páginas comerciais independentes ainda precisam de harmonização, auditoria visual e testes de navegador.
+- Nenhuma alteração de lógica de negócio, emissão SEFAZ ou banco de produção.
