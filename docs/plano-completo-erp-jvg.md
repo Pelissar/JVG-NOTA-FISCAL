@@ -192,3 +192,10 @@ Estabilização → Cadastros → Vendas/Estoque → Financeiro/Caixa → NF-e 5
 - Teste de contrato garante que os placeholders não reapareçam como rotas navegáveis.
 - Não foram removidos dados, tabelas ou funcionalidades comerciais; as futuras áreas continuam no planejamento.
 - Validação em navegador e execução de testes/build continuam pendentes. Nenhuma alteração de produção.
+
+### Bloqueadores verificados em produção — 2026-11-09 (somente leitura)
+- Consulta de catálogo PostgreSQL em produção confirmou `public.jvg_confirm_sale(p_tenant_id uuid,p_company_id uuid,p_customer_id uuid,p_items jsonb,p_notes text)`, **5 parâmetros**; API na branch envia também `p_request_id` (6 parâmetros). Sem aplicar a migração de idempotência, vendas da branch não devem ser promovidas.
+- Consulta confirmou ausência da RPC `public.jvg_create_order_from_quote` e das tabelas `public.jvg_quotes` e `public.jvg_orders` no banco de produção. APIs de orçamentos/pedidos não podem ser anunciadas como operacionais no ambiente atual.
+- Nova verificação estática `web/scripts/fiscal-release-gate.test.mjs` protege dependências no repositório; **não valida o esquema real**. Executar teste de compatibilidade de esquema em ambiente isolado antes de aprovar migrações e deploy.
+- Sequência de liberação: (1) corrigir CI e executar testes/build; (2) ambiente de homologação Supabase separado, aplicar e testar migrações em ordem; (3) testes E2E de orçamento→pedido→venda, permissão, estoque e idempotência; (4) preparar XML, assinatura A1, regras tributárias, integração SEFAZ homologação e rejeições; (5) só após autorização explícita planejar migração/deploy em produção.
+- **Não existe emissão fiscal oficial nesta branch.** Nenhuma mudança no banco de produção foi executada.
