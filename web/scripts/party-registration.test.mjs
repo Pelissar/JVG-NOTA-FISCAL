@@ -26,7 +26,8 @@ test('IE e inscrição municipal são persistidas e exibidas', () => {
 
 test('cadastro sequencial por empresa e unicidade', () => {
   assert.match(migration, /registration_number bigint/i);
-  assert.match(migration, /partition by company_id order by created_at, id/i);
+  assert.match(migration, /partition by p\.company_id order by p\.created_at, p\.id/i);
+  assert.match(migration, /coalesce\(e\.last_number, 0\) \+ row_number\(\)/i);
   assert.match(migration, /jvg_assign_party_registration_number/i);
   assert.match(migration, /unique index if not exists jvg_parties_company_registration_number_uidx/i);
   assert.match(api, /registration_number,display_name/);
@@ -41,4 +42,9 @@ test('não permite gravar pessoa sem classificação comercial', () => {
 test('rascunho NF-e oferece apenas destinatários cadastrados como clientes', () => {
   const draftUi = readFileSync(new URL('../public/erp/nfe-drafts.js', import.meta.url), 'utf8');
   assert.match(draftUi, /c\.active && c\.isCustomer === true/);
+});
+
+test('rascunho só fica disponível quando há cliente ativo e apto', () => {
+  const draftUi = readFileSync(new URL('../public/erp/nfe-drafts.js', import.meta.url), 'utf8');
+  assert.match(draftUi, /state\.clients\.some\(function \(c\) \{ return c\.active && c\.isCustomer === true && c\.type !== 'EXT'; \}\)/);
 });
