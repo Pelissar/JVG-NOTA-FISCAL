@@ -11,7 +11,7 @@
     "build": "next build && node scripts/purge-turbopack-cache.mjs",
     "test:nfe": "node --experimental-strip-types --test scripts/nfe-draft.test.mjs",
     "test:cfop": "node --test scripts/cfop.test.mjs",
-    "test:erp": "node --experimental-strip-types --test scripts/erp-data.test.mjs scripts/sales-contract.test.mjs scripts/records-permissions.test.mjs scripts/party-registration.test.mjs scripts/cpf-validation.test.mjs scripts/quotes-contract.test.mjs scripts/orders-contract.test.mjs scripts/design-navigation.test.mjs",
+    "test:erp": "node --experimental-strip-types --test scripts/erp-data.test.mjs scripts/sales-contract.test.mjs scripts/records-permissions.test.mjs scripts/party-registration.test.mjs scripts/cpf-validation.test.mjs scripts/quotes-contract.test.mjs scripts/orders-contract.test.mjs scripts/design-navigation.test.mjs scripts/fiscal-release-gate.test.mjs",
     "start": "next start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
