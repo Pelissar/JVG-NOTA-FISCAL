@@ -135,3 +135,42 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* JVG Glass: shared accessible foundations for all routes. */
+:root {
+  color-scheme: dark;
+  --background: #081321;
+  --foreground: #f2f7ff;
+  --card: rgba(20, 38, 60, .84);
+  --card-foreground: #f2f7ff;
+  --popover: #14263c;
+  --popover-foreground: #f2f7ff;
+  --primary: #77b7ff;
+  --primary-foreground: #071525;
+  --secondary: #20364f;
+  --secondary-foreground: #f2f7ff;
+  --muted: #20364f;
+  --muted-foreground: #c4d4e8;
+  --accent: #294969;
+  --accent-foreground: #ffffff;
+  --border: rgba(186, 215, 250, .26);
+  --input: rgba(186, 215, 250, .3);
+  --ring: #91c8ff;
+  --sidebar: rgba(12, 29, 48, .88);
+  --sidebar-foreground: #f2f7ff;
+  --sidebar-accent: #294969;
+  --sidebar-accent-foreground: #fff;
+}
+html { min-width: 320px; }
+body {
+  min-width: 320px;
+  background: radial-gradient(ellipse at 85% 5%, #173f64 0%, transparent 48%), linear-gradient(135deg, #081321, #0b1c30 70%, #091727);
+  color: var(--foreground);
+}
+button, input, select, textarea { font: inherit; }
+input, textarea, select { color: var(--foreground); }
+input::placeholder, textarea::placeholder { color: #bbcee2; opacity: 1; }
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
