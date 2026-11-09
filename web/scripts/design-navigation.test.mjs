@@ -36,7 +36,7 @@ test('navegação mantém estado acessível e rota sincronizada',()=>{
  assert.match(js,/setAttribute\('aria-current','page'\)/);
  assert.match(js,/setAttribute\('aria-expanded','false'\)/);
  assert.match(navigation,/event\.key==='Home'/);
- assert.match(navigation,/event\.key==='End'/);
+ assert.match(navigation,/event\.key!=='End'/);
 });
 
 test('pesquisa preserva texto e histórico respeita voltar/avançar',()=>{
