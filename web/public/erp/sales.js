@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const money = n => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n);
   const notice = message => { $('notice').textContent = message; };
-  let products = [], services = [], busy = false, loaded = false, writable = false;
+  let products = [], services = [], busy = false, loaded = false, writable = false, pendingRequestId = null;
   const safe = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   async function request(url, init) {
     const response = await fetch(url,{credentials:'same-origin',cache:'no-store',...init});
@@ -72,18 +72,20 @@
     if(items.some(x=>!Number.isFinite(x.quantity)||x.quantity<=0||x.quantity>999999||!Number.isFinite(x.unitPrice)||x.unitPrice<0||x.unitPrice>999999999||Math.abs(Math.round(x.unitPrice*100)-x.unitPrice*100)>1e-7)){
       notice('Revise as quantidades e os preços dos itens.');return;
     }
+    pendingRequestId ||= crypto.randomUUID();
     busy=true;recalculate();notice('Confirmando venda...');
     try {
-      const confirmed = await request('/api/sales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerId:$('customer').value||null,items,notes:$('notes').value})});
+      const confirmed = await request('/api/sales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:pendingRequestId,customerId:$('customer').value||null,items,notes:$('notes').value})});
       writable=false;
+      pendingRequestId=null;
       $('items').replaceChildren();$('notes').value='';
       notice('Venda confirmada: '+confirmed.saleId+'. Atualize a página antes de registrar outra venda.');
       try { await loadSales(); } catch(error) { notice('Venda confirmada: '+confirmed.saleId+'. Não foi possível atualizar o histórico: '+error.message); }
     }catch(error){
       // Uma falha de rede pode ocorrer depois da confirmação no servidor.
       // Não permitir reenvio sem consulta ao histórico.
-      writable=false;
-      notice(error.message+' Verifique o histórico e atualize a página antes de tentar novamente, para evitar venda duplicada.');
+      writable=true;
+      notice(error.message+' Você pode tentar confirmar novamente sem alterar os dados; a mesma chave impedirá duplicidade. Se quiser iniciar outra venda, recarregue a página.');
       try { await loadSales(); } catch (_) { /* histórico indisponível */ }
     }finally{busy=false;recalculate();}
   });
