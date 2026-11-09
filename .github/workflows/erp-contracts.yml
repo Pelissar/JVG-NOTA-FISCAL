@@ -1,0 +1,42 @@
+name: ERP - Contratos e sintaxe
+
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'supabase/migrations/**'
+      - '.github/workflows/erp-contracts.yml'
+  push:
+    branches:
+      - 'feature/erp-vendas-design-unificado'
+    paths:
+      - 'web/**'
+      - 'supabase/migrations/**'
+      - '.github/workflows/erp-contracts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  erp-contracts:
+    name: Testes ERP (sem banco de produção)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+      - name: Verificar sintaxe dos scripts do ERP
+        run: |
+          node --check public/erp/app.js
+          node --check public/erp/navigation.js
+          node --check public/erp/quotes.js
+          node --check public/erp/orders.js
+          node --check public/erp/sales.js
+      - name: Executar contratos de ERP
+        run: npm run test:erp
