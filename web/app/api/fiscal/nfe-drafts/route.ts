@@ -52,6 +52,9 @@ export async function GET(request: Request) {
         draft: {
           id: selected[0].id, status: selected[0].status, createdAt: selected[0].created_at,
           nature: payload.nature,
+          purpose: payload.purpose ?? null, issueAt: payload.issueAt ?? null,
+          consumerFinal: payload.consumerFinal ?? null, buyerPresence: payload.buyerPresence ?? null,
+          transportMode: (payload.transport as DbRow | undefined)?.mode ?? null,
           sourceOrder: payload.sourceOrder ?? null,
           issuer: payload.issuer, recipient: payload.recipient,
           items: payload.items, totalCents: payload.totalCents,
@@ -217,13 +220,21 @@ export async function POST(request: Request) {
     pending.push(...preflight.issues);
     if (items.some(item => item.taxProfile?.reviewStatus !== "reviewed"))
       pending.push("Registre a revisão das regras cadastradas com a contabilidade antes de prosseguir.");
+    if (draft.purpose === null) pending.push("Informe explicitamente a finalidade da NF-e.");
+    else if (draft.purpose !== 1) pending.push("Este fluxo prepara apenas NF-e normal; outras finalidades exigem dados de referência ainda não capturados.");
+    if (!draft.issueAt) pending.push("Informe data e hora de emissão com fuso horário.");
+    if (draft.consumerFinal === null) pending.push("Indique se a operação é com consumidor final.");
+    if (draft.buyerPresence === null) pending.push("Informe a presença do comprador conforme a operação.");
+    if (draft.transportMode === null) pending.push("Informe a modalidade de frete conforme a operação.");
     const taxPreview = {
       sumOfEstimatesCents: 0,
       provisional: true, validForEmission: false, calculationMethod: "not_calculated",
     };
 
     const payload = {
-      schemaVersion: 4, nature: draft.nature,
+      schemaVersion: 4, nature: draft.nature, purpose: draft.purpose, issueAt: draft.issueAt,
+      consumerFinal: draft.consumerFinal, buyerPresence: draft.buyerPresence,
+      transport: { mode: draft.transportMode },
       sourceOrder: sourceOrder ? {
         id: String(sourceOrder.id),
         number: "PED-" + String(sourceOrder.id).slice(0, 8).toUpperCase(),

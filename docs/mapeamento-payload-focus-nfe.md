@@ -18,8 +18,12 @@ O ERP não escolhe CFOP, CSOSN/CST, alíquotas, bases, créditos ou valores. Nã
 | --- | --- | --- |
 | Natureza do rascunho | `natureza_operacao` | Obrigatório; finalidade da nota não é presumida. |
 | Tipo de documento | `tipo_documento` | `1`, pois o rascunho atual prepara NF-e de saída. |
-| Data/hora de emissão | `data_emissao` | Obrigatória no payload; ainda não gravada no rascunho, portanto fica pendente. |
+| Finalidade selecionada | `finalidade_emissao` | Sem padrão. A prévia aceita somente `1` (normal); complementar, ajuste e devolução exigem referências ainda não capturadas. |
+| Data/hora informada no rascunho | `data_emissao` | Obrigatória, ISO 8601 com fuso; validada no servidor. Não recebe data atual automaticamente. |
 | UFs do emitente/destinatário | `local_destino` | Interna/interestadual derivada das UFs; exterior não está habilitado. |
+| Indicação manual da operação | `consumidor_final` | Sem inferência pelo CPF/CNPJ; converte para `0` ou `1` apenas quando escolhido. |
+| Presença informada no rascunho | `presenca_comprador` | Sem valor implícito; aceita os códigos Focus `0`, `1`, `2`, `3`, `4`, `5`, `9`. |
+| Modalidade de frete informada | `modalidade_frete` | Sem padrão; aceita `0`, `1`, `2`, `3`, `4`, `9`. Transportadora, veículo e volumes seguem pendentes. |
 | Empresa da sessão | campos do emitente | CNPJ, nome, IE, regime confirmado e endereço fiscal da empresa autenticada. |
 | Cadastro do cliente | campos do destinatário | CPF/CNPJ, nome, endereço, contato e IE quando cadastrados. |
 | Produto + item do rascunho | `codigo_produto`, `descricao`, `codigo_ncm`, `cfop`, unidade, quantidade, preço, `valor_bruto` | Valores comerciais em centavos convertidos para número no preview. |
@@ -46,6 +50,6 @@ O preview aceita somente nomes de campos fiscais da lista interna autorizada; re
 
 - Os perfis ficam no status `draft` até um usuário autorizado registrar que recebeu revisão da contabilidade. A tela esclarece que essa declaração não autentica o contador.
 - Mesmo com perfil revisado, qualquer grupo obrigatório ausente, finalidade/condição comercial não definida ou dados cadastrais pendentes mantêm a prévia bloqueada.
-- A Focus exige `data_emissao`; `tipo_documento`, `local_destino`, `finalidade_emissao`, `consumidor_final`, `presenca_comprador` e `modalidade_frete` também precisam vir definidos. Série e número ficam a cargo da Focus somente quando a numeração automática estiver configurada.
+- A Focus exige `data_emissao`, `tipo_documento`, `local_destino`, `finalidade_emissao`, `consumidor_final`, `presenca_comprador` e `modalidade_frete`. Os campos editáveis ficam sem padrão no rascunho. Por enquanto só a finalidade normal está coberta; série e número não são preenchidos pelo ERP nem alterados em produção.
 - `canSend` e `transmissionEnabled` seguem `false`; nenhuma chamada de emissão Focus foi executada.
 - Não há XML de NF-e da JVG no repositório. Um XML emitido anteriormente, anonimizado, permitiria conferir o mapeamento sem transformá-lo em regra universal.

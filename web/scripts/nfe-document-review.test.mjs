@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { reviewNfeDocument, reviewFocusNfePayload } from '../lib/fiscal/nfe-document-review.ts';
+import { parseNfeDraftInput } from '../lib/fiscal/nfe-draft.ts';
 
 const valid = () => ({
   schemaVersion: 3,
@@ -48,7 +49,7 @@ test('rascunho antigo ou sem dados não causa erro e não autoriza transmissão'
 });
 
 const focusPayload = () => ({
-  nature:'Venda de mercadoria', issuer:{cnpj:'12345678000195',legalName:'Empresa Exemplo',stateRegistration:'123456789',
+  nature:'Venda de mercadoria', purpose:1, issuer:{cnpj:'12345678000195',legalName:'Empresa Exemplo',stateRegistration:'123456789',
     taxRegime:'simples_nacional',taxRegimeConfirmed:true,state:'SP',address:{street:'Rua A',number:'1',district:'Centro',
       cityCode:'3550308',city:'São Paulo',state:'SP',postalCode:'01001000'}},
   recipient:{name:'Cliente Exemplo',documentType:'cpf',documentNumber:'52998224725',state:'SP',
@@ -113,6 +114,60 @@ test('modalidades de frete oficiais 3 e 4 sao aceitas e CSOSN 900 nao exige grup
   payload.items[0].csosn='900';
   const result=reviewFocusNfePayload(payload);
   assert.equal(result.checks.find(row=>row.key==='icms_campos_condicionais').ok,true);
+});
+
+test('cabecalho incompleto permanece pendente sem converter campos vazios em zero', () => {
+  const payload=focusPayload();
+  payload.purpose=null;
+  payload.issueAt=null;
+  payload.consumerFinal=null;
+  payload.buyerPresence='';
+  payload.transport.mode=null;
+  const result=reviewFocusNfePayload(payload);
+  for (const key of ['finalidade_emissao','data_emissao','consumidor_final','presenca_comprador','modalidade_frete']) {
+    assert.equal(result.checks.find(row=>row.key===key).ok,false);
+    assert.equal(key in result.requestPreview,false);
+  }
+});
+
+test('prepara apenas finalidade normal e mapeia os campos explicitamente informados', () => {
+  const payload=focusPayload();
+  payload.issueAt='2026-11-10T18:00:00-03:00';
+  payload.consumerFinal=false;
+  payload.buyerPresence=2;
+  payload.transport.mode=4;
+  const result=reviewFocusNfePayload(payload);
+  assert.equal(result.requestPreview.finalidade_emissao,1);
+  assert.equal(result.requestPreview.data_emissao,payload.issueAt);
+  assert.equal(result.requestPreview.consumidor_final,0);
+  assert.equal(result.requestPreview.presenca_comprador,2);
+  assert.equal(result.requestPreview.modalidade_frete,4);
+  payload.purpose=2;
+  const complementary=reviewFocusNfePayload(payload);
+  assert.equal(complementary.checks.find(row=>row.key==='finalidade_emissao').ok,false);
+  assert.equal('finalidade_emissao' in complementary.requestPreview,false);
+});
+
+test('parser salva campos opcionais sem presumir valores e rejeita codigos ou data invalidos', () => {
+  const base={recipientId:'123e4567-e89b-42d3-a456-426614174000',nature:'Venda de mercadoria',items:[{
+    productId:'123e4567-e89b-42d3-a456-426614174001',quantity:1,unitPrice:10,cfop:'',csosn:''
+  }]};
+  const incomplete=parseNfeDraftInput(base);
+  assert.equal(incomplete.purpose,null);
+  assert.equal(incomplete.issueAt,null);
+  assert.equal(incomplete.consumerFinal,null);
+  assert.equal(incomplete.buyerPresence,null);
+  assert.equal(incomplete.transportMode,null);
+  const complete=parseNfeDraftInput({...base,purpose:'1',issueAt:'2026-11-10T18:00:00-03:00',consumerFinal:'0',buyerPresence:'2',transportMode:'4'});
+  assert.equal(complete.purpose,1);
+  assert.equal(complete.consumerFinal,false);
+  assert.equal(complete.buyerPresence,2);
+  assert.equal(complete.transportMode,4);
+  assert.throws(()=>parseNfeDraftInput({...base,purpose:'5'}),/Finalidade/);
+  assert.throws(()=>parseNfeDraftInput({...base,buyerPresence:'6'}),/Presen/);
+  assert.throws(()=>parseNfeDraftInput({...base,issueAt:'2026-11-10T18:00'}),/fuso/);
+  assert.throws(()=>parseNfeDraftInput({...base,issueAt:'2026-02-30T18:00:00-03:00'}),/fuso/);
+  assert.throws(()=>parseNfeDraftInput({...base,nature:'x'.repeat(61)}),/3 a 60/);
 });
 
 test('pagamento usa o contrato Focus e nao repassa objetos internos sem validacao', () => {

@@ -14,6 +14,24 @@
     status.className = 'notice' + (kind ? ' ' + kind : '');
   }
 
+  function selectedNumber(name) {
+    var value = form.elements.namedItem(name).value;
+    return value === '' ? null : Number(value);
+  }
+
+  function selectedIssueAt() {
+    var value = form.elements.namedItem('issueAt').value;
+    if (!value) return null;
+    var date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return null;
+    var offset = -date.getTimezoneOffset();
+    var sign = offset >= 0 ? '+' : '-';
+    var absolute = Math.abs(offset);
+    var hours = String(Math.floor(absolute / 60)).padStart(2, '0');
+    var minutes = String(absolute % 60).padStart(2, '0');
+    return value + ':00' + sign + hours + ':' + minutes;
+  }
+
   async function api(endpoint, options) {
     var controller = new AbortController();
     var timer = setTimeout(function () { controller.abort(); }, 15000);
@@ -162,6 +180,13 @@
       var recipient = draft.recipient || {};
       appendLine(target, 'h3', 'Rascunho · ' + (recipient.name || 'Destinatário'));
       appendLine(target, 'p', 'Natureza: ' + (draft.nature || 'não informada'));
+      var purposeNames = { 1: 'Normal', 2: 'Complementar', 3: 'Ajuste', 4: 'Devolução' };
+      appendLine(target, 'p', 'Finalidade: ' + (purposeNames[draft.purpose] || 'não informada') +
+        ' · Data/hora: ' + (draft.issueAt || 'não informada'));
+      appendLine(target, 'p', 'Consumidor final: ' + (draft.consumerFinal === true ? 'Sim' :
+        draft.consumerFinal === false ? 'Não' : 'não informado') +
+        ' · Presença: ' + (draft.buyerPresence == null ? 'não informada' : String(draft.buyerPresence)) +
+        ' · Frete: ' + (draft.transportMode == null ? 'não informado' : String(draft.transportMode)));
       if (draft.sourceOrder && draft.sourceOrder.number)
         appendLine(target, 'p', 'Pedido de origem: ' + draft.sourceOrder.number + ' · situação ' + (draft.sourceOrder.status || ''));
       appendLine(target, 'p', 'Total comercial: ' + money.format(Number(draft.totalCents || 0) / 100));
@@ -374,6 +399,12 @@
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
         body: JSON.stringify({
           nature: form.elements.namedItem('nature').value.trim(),
+          purpose: selectedNumber('purpose'),
+          issueAt: selectedIssueAt(),
+          consumerFinal: form.elements.namedItem('consumerFinal').value === '' ? null :
+            form.elements.namedItem('consumerFinal').value === '1',
+          buyerPresence: selectedNumber('buyerPresence'),
+          transportMode: selectedNumber('transportMode'),
           recipientId: form.elements.namedItem('recipientId').value,
           sourceOrderId: state.sourceOrderId,
           items: readItems(),

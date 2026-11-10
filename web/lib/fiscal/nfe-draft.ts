@@ -13,6 +13,11 @@ export type NfeDraftItemInput = {
 export type NfeDraftInput = {
   recipientId: string;
   nature: string;
+  purpose: number | null;
+  issueAt: string | null;
+  consumerFinal: boolean | null;
+  buyerPresence: number | null;
+  transportMode: number | null;
   items: NfeDraftItemInput[];
   totalCents: number;
   sourceOrderId: string | null;
@@ -20,6 +25,43 @@ export type NfeDraftInput = {
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const csosnCodes = new Set(["101", "102", "103", "201", "202", "203", "300", "400", "500", "900"]);
+const purposeCodes = new Set([1, 2, 3, 4]);
+const buyerPresenceCodes = new Set([0, 1, 2, 3, 4, 5, 9]);
+const freightModeCodes = new Set([0, 1, 2, 3, 4, 9]);
+
+function optionalCode(value: unknown, allowed: Set<number>, label: string): number | null {
+  if (value == null || value === "") return null;
+  const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  if (!Number.isInteger(parsed) || !allowed.has(parsed)) throw new Error(`${label} inválido.`);
+  return parsed;
+}
+
+function optionalBoolean(value: unknown): boolean | null {
+  if (value == null || value === "") return null;
+  if (value === true || value === 1 || value === "1") return true;
+  if (value === false || value === 0 || value === "0") return false;
+  throw new Error("Informe se a operação é com consumidor final.");
+}
+
+function optionalIssueAt(value: unknown): string | null {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string") throw new Error("Data e hora devem incluir um fuso horário válido.");
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?(Z|([+-])(\d{2}):(\d{2}))$/.exec(value);
+  if (!match || !Number.isFinite(Date.parse(value)))
+    throw new Error("Data e hora devem incluir um fuso horário válido.");
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , , offsetHourText, offsetMinuteText] = match;
+  const year = Number(yearText), month = Number(monthText), day = Number(dayText);
+  const hour = Number(hourText), minute = Number(minuteText), second = Number(secondText);
+  const offsetHour = Number(offsetHourText || 0), offsetMinute = Number(offsetMinuteText || 0);
+  const calendar = new Date(Date.UTC(year, month - 1, day));
+  const validCalendar = year >= 1900 && month >= 1 && month <= 12 && day >= 1 &&
+    calendar.getUTCFullYear() === year && calendar.getUTCMonth() === month - 1 && calendar.getUTCDate() === day;
+  const validTime = hour <= 23 && minute <= 59 && second <= 59;
+  const validOffset = offsetHour < 14 || (offsetHour === 14 && offsetMinute === 0);
+  if (!validCalendar || !validTime || !validOffset || offsetMinute > 59)
+    throw new Error("Data e hora devem incluir um fuso horário válido.");
+  return value;
+}
 
 /** Valida rascunho comercial; NÃO calcula tributos nem cria um XML fiscal. */
 export function parseNfeDraftInput(raw: unknown): NfeDraftInput {
@@ -32,7 +74,12 @@ export function parseNfeDraftInput(raw: unknown): NfeDraftInput {
     throw new Error("Pedido de origem inválido.");
   const sourceOrderId = typeof sourceOrderRaw === "string" && sourceOrderRaw ? sourceOrderRaw : null;
   const nature = typeof data.nature === "string" ? data.nature.trim() : "";
-  if (nature.length < 3 || nature.length > 100) throw new Error("Informe a natureza da operação (3 a 100 caracteres).");
+  if (nature.length < 3 || nature.length > 60) throw new Error("Informe a natureza da operação (3 a 60 caracteres).");
+  const purpose = optionalCode(data.purpose, purposeCodes, "Finalidade da emissão");
+  const issueAt = optionalIssueAt(data.issueAt);
+  const consumerFinal = optionalBoolean(data.consumerFinal);
+  const buyerPresence = optionalCode(data.buyerPresence, buyerPresenceCodes, "Presença do comprador");
+  const transportMode = optionalCode(data.transportMode, freightModeCodes, "Modalidade do frete");
   if (!Array.isArray(data.items) || data.items.length === 0 || data.items.length > MAX_NFE_DRAFT_ITEMS)
     throw new Error("Informe entre 1 e 20 produtos.");
 
@@ -59,5 +106,5 @@ export function parseNfeDraftInput(raw: unknown): NfeDraftInput {
     return { productId: p.productId, quantity, quantityMilli, unitPriceCents, subtotalCents, cfop, csosn };
   });
 
-  return { recipientId, nature, items, totalCents, sourceOrderId };
+  return { recipientId, nature, purpose, issueAt, consumerFinal, buyerPresence, transportMode, items, totalCents, sourceOrderId };
 }

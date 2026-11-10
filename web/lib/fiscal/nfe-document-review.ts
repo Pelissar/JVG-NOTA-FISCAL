@@ -173,28 +173,38 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
   add("natureza_operacao", "Natureza da operação", nature.length >= 1 && nature.length <= 60,
       "A Focus aceita até 60 caracteres.", nature.length >= 1 && nature.length <= 60 ? nature : undefined);
   add("tipo_documento", "Tipo da NF-e", true, "Fluxo de NF-e de saída.", 1);
-  const purpose = Number(payload.purpose);
+  const purpose = payload.purpose === "" || payload.purpose == null ? NaN : Number(payload.purpose);
+  const purposeDetail = purpose === 1 ? "NF-e normal; as demais finalidades exigem dados de referência ainda não capturados por este fluxo." :
+    Number.isInteger(purpose) && [2, 3, 4].includes(purpose) ? "Esta versão só prepara NF-e normal; a finalidade selecionada exige dados de referência ainda não capturados." :
+    "Selecione explicitamente a finalidade da emissão; ela não é presumida pelo ERP.";
   add("finalidade_emissao", "Finalidade da emissão",
-      Number.isInteger(purpose) && [1,2,3,4,5,6].includes(purpose),
-      "Precisa corresponder à finalidade real da operação.", Number.isInteger(purpose) ? purpose : undefined);
+      purpose === 1,
+      purposeDetail, purpose === 1 ? 1 : undefined);
   const issuerUf = text(issuer.state).toUpperCase(), recipientUf = text(recipient.state).toUpperCase();
   const validUfs = /^[A-Z]{2}$/.test(issuerUf) && /^[A-Z]{2}$/.test(recipientUf);
   add("local_destino", "Local de destino", validUfs,
       "Derivado das UFs do emitente e destinatário.", validUfs ? (issuerUf === recipientUf ? 1 : 2) : undefined);
   const issueAt = text(payload.issueAt);
-  const issueAtValid = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(issueAt) &&
-    Number.isFinite(Date.parse(issueAt));
+  const issueAtParts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?(Z|([+-])(\d{2}):(\d{2}))$/.exec(issueAt);
+  const issueAtCalendar = issueAtParts ? new Date(Date.UTC(Number(issueAtParts[1]), Number(issueAtParts[2]) - 1, Number(issueAtParts[3]))) : null;
+  const issueAtValid = Boolean(issueAtParts && Number.isFinite(Date.parse(issueAt)) &&
+    Number(issueAtParts[1]) >= 1900 && Number(issueAtParts[2]) >= 1 && Number(issueAtParts[2]) <= 12 &&
+    Number(issueAtParts[3]) >= 1 && issueAtCalendar?.getUTCFullYear() === Number(issueAtParts[1]) &&
+    issueAtCalendar?.getUTCMonth() === Number(issueAtParts[2]) - 1 && issueAtCalendar?.getUTCDate() === Number(issueAtParts[3]) &&
+    Number(issueAtParts[4]) <= 23 && Number(issueAtParts[5]) <= 59 && Number(issueAtParts[6]) <= 59 &&
+    Number(issueAtParts[10] || 0) <= 59 &&
+    (Number(issueAtParts[9] || 0) < 14 || (Number(issueAtParts[9] || 0) === 14 && Number(issueAtParts[10] || 0) === 0)));
   add("data_emissao", "Data/hora de emissão", issueAtValid,
-      "Campo obrigatório da Focus; ainda não está gravado no rascunho.", issueAtValid ? issueAt : undefined);
+      "Informe data e hora explicitamente, com fuso horário.", issueAtValid ? issueAt : undefined);
   const finalConsumer = payload.consumerFinal;
   const finalConsumerValid = typeof finalConsumer === "boolean";
   add("consumidor_final", "Consumidor final", finalConsumerValid,
       "Precisa ser indicado por operação; não é inferido pelo tipo de pessoa.",
       finalConsumerValid ? (finalConsumer ? 1 : 0) : undefined);
-  const presence = Number(payload.buyerPresence);
+  const presence = payload.buyerPresence === "" || payload.buyerPresence == null ? NaN : Number(payload.buyerPresence);
   const presenceValid = Number.isInteger(presence) && [0,1,2,3,4,5,9].includes(presence);
   add("presenca_comprador", "Presença do comprador", presenceValid,
-      "Ainda não é capturada no rascunho.", presenceValid ? presence : undefined);
+      "Informe a condição real da operação; o ERP não infere presença ou canal de venda.", presenceValid ? presence : undefined);
 
   const cnpj = textDigits(issuer.cnpj), issuerName = text(issuer.legalName || issuer.name);
   const ie = text(issuer.stateRegistration);
@@ -351,10 +361,11 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
       itemIbsDetailsMissing.length ? itemIbsDetailsMissing.slice(0,8).join("; ") :
       itemIbsMissing.length ? "Informe CST e cClassTrib orientados pela contabilidade." : "Grupo numérico ainda não cadastrado para as classificações deste item.");
 
-  const transport = obj(payload.transport), freightMode = Number(transport.mode);
+  const transport = obj(payload.transport);
+  const freightMode = transport.mode === "" || transport.mode == null ? NaN : Number(transport.mode);
   const freightValid = Number.isInteger(freightMode) && [0,1,2,3,4,9].includes(freightMode);
   add("modalidade_frete", "Modalidade do frete", freightValid,
-      "A Focus aceita 0, 1, 2, 3, 4 ou 9; ainda não é salvo no rascunho.", freightValid ? freightMode : undefined);
+      "Selecione a modalidade efetivamente contratada; não há valor padrão.", freightValid ? freightMode : undefined);
   const payments = Array.isArray(payload.payments) ? payload.payments : [];
   const paymentMethods = new Set(["01", "02", "03", "04", "05", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "90", "91", "99"]);
   const mappedPayments: Json[] = [];
