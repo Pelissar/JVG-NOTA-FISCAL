@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var state = { products: [], clients: [], drafts: [], ready: false };
+  var state = { products: [], clients: [], drafts: [], ready: false, sourceOrderId: null, sourceOrderNumber: '' };
   var idempotencyKey = null;
   var status = document.getElementById('status');
   var form = document.getElementById('draftForm');
@@ -123,6 +123,8 @@
       name.textContent = draft.recipientName;
       var date = document.createElement('small');
       date.textContent = draft.itemsCount + ' produto(s) · ' + new Date(draft.createdAt).toLocaleString('pt-BR');
+      var source = document.createElement('small');
+      source.textContent = draft.sourceOrderNumber ? 'Pedido de origem: ' + draft.sourceOrderNumber : 'Criado sem pedido de origem';
       var foot = document.createElement('div');
       var price = document.createElement('b');
       price.textContent = money.format(draft.totalCents / 100);
@@ -136,7 +138,7 @@
       inspect.className = 'draft-inspect';
       inspect.textContent = 'Ver pendências e detalhes';
       inspect.addEventListener('click', function () { inspectDraft(draft.id); });
-      row.append(name, date, foot, preview, inspect);
+      row.append(name, date, source, foot, preview, inspect);
       target.append(row);
     });
   }
@@ -160,6 +162,8 @@
       var recipient = draft.recipient || {};
       appendLine(target, 'h3', 'Rascunho · ' + (recipient.name || 'Destinatário'));
       appendLine(target, 'p', 'Natureza: ' + (draft.nature || 'não informada'));
+      if (draft.sourceOrder && draft.sourceOrder.number)
+        appendLine(target, 'p', 'Pedido de origem: ' + draft.sourceOrder.number + ' · situação ' + (draft.sourceOrder.status || ''));
       appendLine(target, 'p', 'Total comercial: ' + money.format(Number(draft.totalCents || 0) / 100));
       if (draft.preflight) {
         appendLine(target, 'h4', 'Pré-conferência cadastral');
@@ -218,9 +222,85 @@
     renderHistory();
   }
 
+  function clearOrderQuery() {
+    var url = new URL(window.location.href);
+    url.searchParams.delete('orderId');
+    window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+  }
+
+  function unlinkSourceOrder() {
+    state.sourceOrderId = null;
+    state.sourceOrderNumber = '';
+    idempotencyKey = null;
+    items.querySelectorAll('.product, .quantity, .price, .remove-item').forEach(function (field) {
+      field.disabled = false;
+    });
+    document.getElementById('addItem').disabled = !state.ready || items.children.length >= 20;
+    document.getElementById('sourceOrderNotice').hidden = true;
+    document.getElementById('recipientId').disabled = false;
+    clearOrderQuery();
+    report('Vínculo com o pedido removido. Você pode editar os itens; a origem não será registrada no rascunho.');
+  }
+
+  function importOrder(order) {
+    if (!order || !order.id) throw new Error('Pedido inválido.');
+    if (order.status !== 'open' && order.status !== 'fulfilled')
+      throw new Error('Somente pedidos em aberto ou concluídos podem ser preparados para NF-e.');
+    if (!order.customer_id) throw new Error('O pedido precisa ter um cliente cadastrado.');
+    if (!Array.isArray(order.items) || order.items.length < 1 || order.items.length > 20)
+      throw new Error('A NF-e aceita até 20 itens por rascunho; este pedido não pode ser importado.');
+    var recipient = state.clients.find(function (client) {
+      return client.id === order.customer_id && client.active && client.isCustomer === true && client.type !== 'EXT';
+    });
+    if (!recipient) throw new Error('O cliente do pedido está inativo ou não está disponível para NF-e.');
+    var mapped = order.items.map(function (item) {
+      if (!item || !item.productId || item.serviceId)
+        throw new Error('Este pedido contém serviço ou item sem produto vinculado. O rascunho atual é para mercadorias.');
+      var product = state.products.find(function (entry) { return entry.id === item.productId && entry.active; });
+      if (!product) throw new Error('Um produto do pedido está inativo ou não pertence ao catálogo carregado.');
+      var quantity = Number(item.quantity), unitPrice = Number(item.unitPrice);
+      if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(unitPrice) || unitPrice < 0)
+        throw new Error('Quantidade ou preço do pedido está inválido.');
+      return { productId: item.productId, quantity: quantity, unitPrice: unitPrice, product: product };
+    });
+    if (state.drafts.some(function (draft) { return draft.sourceOrderId === order.id; }) &&
+        !window.confirm('Já existe um rascunho NF-e vinculado a este pedido. Criar outro rascunho de preparação?'))
+      return;
+    if (items.children.length && !window.confirm('Carregar este pedido substituirá os dados atuais do formulário. Continuar?'))
+      return;
+
+    form.reset();
+    items.replaceChildren();
+    document.getElementById('recipientId').value = order.customer_id;
+    document.getElementById('recipientId').disabled = true;
+    mapped.forEach(function (entry) {
+      addItem();
+      var row = items.lastElementChild;
+      var productSelect = row.querySelector('.product');
+      productSelect.value = entry.productId;
+      productSelect.dispatchEvent(new Event('change'));
+      row.querySelector('.quantity').value = String(entry.quantity);
+      row.querySelector('.price').value = Number(entry.unitPrice).toFixed(2);
+      row.querySelector('.cfop').value = entry.product.defaultCfop || '';
+      productSelect.disabled = true;
+      row.querySelector('.quantity').disabled = true;
+      row.querySelector('.price').disabled = true;
+      row.querySelector('.remove-item').disabled = true;
+    });
+    state.sourceOrderId = order.id;
+    state.sourceOrderNumber = 'PED-' + String(order.id).slice(0, 8).toUpperCase();
+    idempotencyKey = null;
+    document.getElementById('sourceOrderLabel').textContent = state.sourceOrderNumber;
+    document.getElementById('sourceOrderNotice').hidden = false;
+    document.getElementById('addItem').disabled = true;
+    updateTotal();
+    report('Pedido carregado. Revise a natureza, CFOP e CSOSN com a contabilidade. Nenhuma nota foi transmitida.');
+    document.getElementById('draftForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   async function load() {
     try {
-      var data = await api('/api/records');
+      var data = await api('/api/records?scope=quotes');
       state.products = Array.isArray(data.products) ? data.products : [];
       state.clients = Array.isArray(data.clients) ? data.clients : [];
       fillRecipients();
@@ -240,6 +320,15 @@
       report(state.ready ?
         'Conectado ao Supabase. Os rascunhos serão salvos somente para esta empresa e não serão transmitidos.' :
         'Cadastre pelo menos um produto e um cliente ativos no ERP para preparar a NF-e.', state.ready ? '' : 'info');
+      var sourceOrderId = new URLSearchParams(window.location.search).get('orderId');
+      if (sourceOrderId) {
+        try {
+          var orderResponse = await api('/api/orders?id=' + encodeURIComponent(sourceOrderId));
+          importOrder(orderResponse.order);
+        } catch (error) {
+          report('Não foi possível carregar o pedido no rascunho: ' + error.message, 'error');
+        }
+      }
     } catch (error) {
       report('Falha ao carregar a central fiscal: ' + error.message + ' Volte ao ERP ou recarregue esta página.', 'error');
       saveButton.disabled = true;
@@ -247,6 +336,7 @@
   }
 
   document.getElementById('addItem').addEventListener('click', addItem);
+  document.getElementById('unlinkSourceOrder').addEventListener('click', unlinkSourceOrder);
   form.addEventListener('submit', async function (event) {
     event.preventDefault();
     if (!state.ready) return;
@@ -263,10 +353,16 @@
         body: JSON.stringify({
           nature: form.elements.namedItem('nature').value.trim(),
           recipientId: form.elements.namedItem('recipientId').value,
+          sourceOrderId: state.sourceOrderId,
           items: readItems(),
         }),
       });
       idempotencyKey = null;
+      state.sourceOrderId = null;
+      state.sourceOrderNumber = '';
+      document.getElementById('sourceOrderNotice').hidden = true;
+      document.getElementById('recipientId').disabled = false;
+      clearOrderQuery();
       form.reset();
       items.replaceChildren();
       addItem();

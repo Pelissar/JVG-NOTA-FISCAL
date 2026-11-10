@@ -15,6 +15,7 @@ export type NfeDraftInput = {
   nature: string;
   items: NfeDraftItemInput[];
   totalCents: number;
+  sourceOrderId: string | null;
 };
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -26,6 +27,10 @@ export function parseNfeDraftInput(raw: unknown): NfeDraftInput {
   const data = raw as Record<string, unknown>;
   const recipientId = typeof data.recipientId === "string" ? data.recipientId : "";
   if (!uuid.test(recipientId)) throw new Error("Escolha um destinatário cadastrado.");
+  const sourceOrderRaw = data.sourceOrderId;
+  if (sourceOrderRaw != null && sourceOrderRaw !== "" && (typeof sourceOrderRaw !== "string" || !uuid.test(sourceOrderRaw)))
+    throw new Error("Pedido de origem inválido.");
+  const sourceOrderId = typeof sourceOrderRaw === "string" && sourceOrderRaw ? sourceOrderRaw : null;
   const nature = typeof data.nature === "string" ? data.nature.trim() : "";
   if (nature.length < 3 || nature.length > 100) throw new Error("Informe a natureza da operação (3 a 100 caracteres).");
   if (!Array.isArray(data.items) || data.items.length === 0 || data.items.length > MAX_NFE_DRAFT_ITEMS)
@@ -54,5 +59,5 @@ export function parseNfeDraftInput(raw: unknown): NfeDraftInput {
     return { productId: p.productId, quantity, quantityMilli, unitPriceCents, subtotalCents, cfop, csosn };
   });
 
-  return { recipientId, nature, items, totalCents };
+  return { recipientId, nature, items, totalCents, sourceOrderId };
 }

@@ -53,6 +53,7 @@ export async function GET(request: Request) {
         draft: {
           id: selected[0].id, status: selected[0].status, createdAt: selected[0].created_at,
           nature: payload.nature,
+          sourceOrder: payload.sourceOrder ?? null,
           issuer: payload.issuer, recipient: payload.recipient,
           items: payload.items, totalCents: payload.totalCents,
           pending: payload.pending, taxPreview: payload.taxPreview,
@@ -73,6 +74,8 @@ export async function GET(request: Request) {
       return {
         id: row.id, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at,
         recipientName: String(recipient.name || "Destinatário"), itemsCount: items.length,
+        sourceOrderId: String((payload.sourceOrder as DbRow | undefined)?.id || ""),
+        sourceOrderNumber: String((payload.sourceOrder as DbRow | undefined)?.number || ""),
         totalCents: Number(payload.totalCents || 0), pendingCount: warnings.length,
         previewTotalCents: Number((payload.taxPreview as DbRow | undefined)?.sumOfEstimatesCents || 0),
       };
@@ -106,6 +109,35 @@ export async function POST(request: Request) {
       throw new JvgBackendError("Esta versão do rascunho NF-e está disponível apenas para o Simples Nacional.", 400);
 
     const scoped = scope(account);
+    let sourceOrder: DbRow | null = null;
+    if (draft.sourceOrderId) {
+      const orders = await dbRequest<DbRow[]>(
+        `/rest/v1/jvg_orders?${scoped}&id=${filterEq(draft.sourceOrderId)}&select=id,quote_id,customer_id,status,total,items&limit=1`,
+      );
+      sourceOrder = orders[0] ?? null;
+      if (!sourceOrder) throw new JvgBackendError("Pedido de origem não encontrado nesta empresa.", 404);
+      if (sourceOrder.status !== "open" && sourceOrder.status !== "fulfilled")
+        throw new JvgBackendError("Somente pedidos em aberto ou concluídos podem originar rascunho NF-e.", 409);
+      if (!sourceOrder.customer_id || String(sourceOrder.customer_id) !== draft.recipientId)
+        throw new JvgBackendError("O destinatário do rascunho precisa ser o mesmo do pedido.", 400);
+      const orderItems = Array.isArray(sourceOrder.items) ? sourceOrder.items as DbRow[] : [];
+      if (orderItems.length !== draft.items.length)
+        throw new JvgBackendError("Os itens do rascunho precisam corresponder ao pedido de origem.", 400);
+      orderItems.forEach((orderItem, index) => {
+        const productId = typeof orderItem.productId === "string" ? orderItem.productId : "";
+        if (!productId || orderItem.serviceId)
+          throw new JvgBackendError("Este pedido contém serviço ou item sem produto vinculado; o rascunho NF-e aceita somente mercadorias.", 400);
+        const quantityMilli = Math.round(Number(orderItem.quantity) * 1000);
+        const unitPriceCents = Math.round(Number(orderItem.unitPrice) * 100);
+        if (productId !== draft.items[index].productId ||
+            !Number.isSafeInteger(quantityMilli) || quantityMilli !== draft.items[index].quantityMilli ||
+            !Number.isSafeInteger(unitPriceCents) || unitPriceCents !== draft.items[index].unitPriceCents)
+          throw new JvgBackendError("Produtos, quantidades e preços devem permanecer iguais aos do pedido vinculado.", 400);
+      });
+      const orderTotalCents = Math.round(Number(sourceOrder.total) * 100);
+      if (!Number.isSafeInteger(orderTotalCents) || orderTotalCents !== draft.totalCents)
+        throw new JvgBackendError("O total do rascunho não corresponde ao total do pedido.", 400);
+    }
     const [recipientRows, products] = await Promise.all([
       dbRequest<DbRow[]>(`/rest/v1/jvg_parties?${scoped}&id=${filterEq(draft.recipientId)}&is_customer=eq.true&active=eq.true&select=id,display_name,document_type,document_number,address&limit=1`),
       dbRequest<DbRow[]>(`/rest/v1/jvg_products?${scoped}&id=in.(${draft.items.map(i => i.productId).join(",")})&active=eq.true&select=id,sku,name,unit,ncm,cest,gtin,origin,tax_profile_id,sale_price`),
@@ -180,7 +212,12 @@ export async function POST(request: Request) {
     };
 
     const payload = {
-      schemaVersion: 3, nature: draft.nature, purpose: "1",
+      schemaVersion: 4, nature: draft.nature, purpose: "1",
+      sourceOrder: sourceOrder ? {
+        id: String(sourceOrder.id),
+        number: "PED-" + String(sourceOrder.id).slice(0, 8).toUpperCase(),
+        quoteId: String(sourceOrder.quote_id || ""), status: String(sourceOrder.status || ""),
+      } : null,
       issuer, recipient: recipientSnapshot,
       items, totalCents: draft.totalCents, taxPreview, preflight, pending, readyToTransmit: false,
     };
@@ -192,7 +229,7 @@ export async function POST(request: Request) {
       if (stableJson(existing[0].fiscal_payload) !== stableJson(payload))
         throw new JvgBackendError("Esta solicitação já foi usada com outros dados. Recarregue a página antes de salvar novamente.", 409);
       return apiJson({ ok: true, id: existing[0].id, status: existing[0].status,
-        totalCents: draft.totalCents, pending, transmissionEnabled: false }, 200);
+        totalCents: draft.totalCents, pending, sourceOrderId: draft.sourceOrderId, transmissionEnabled: false }, 200);
     }
     const created = await dbRequest<Array<{ id: string }>>("/rest/v1/jvg_fiscal_documents", {
       method: "POST",
@@ -204,6 +241,6 @@ export async function POST(request: Request) {
     });
     if (!created[0]?.id) throw new JvgBackendError("Não foi possível salvar o rascunho.", 502);
     return apiJson({ ok: true, id: created[0].id, status: "draft",
-      totalCents: draft.totalCents, pending, transmissionEnabled: false }, 201);
+      totalCents: draft.totalCents, pending, sourceOrderId: draft.sourceOrderId, transmissionEnabled: false }, 201);
   } catch (error) { return safeError(error); }
 }

@@ -12,6 +12,22 @@ async function account(){
 export async function GET(request:Request){
  try{
   const scope=await account();
+  const requestedId=new URL(request.url).searchParams.get("id");
+  if(requestedId){
+   if(!uuidPattern.test(requestedId))throw new JvgBackendError("Identificador de pedido inválido.",400);
+   const selected=await dbRequest<Array<Record<string,unknown>>>(
+    `/rest/v1/jvg_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=${filterEq(requestedId)}&select=id,quote_id,customer_id,status,total,items,notes,created_at&limit=1`
+   );
+   if(!selected[0])throw new JvgBackendError("Pedido não encontrado nesta empresa.",404);
+   let quoteNumber:unknown=null;
+   try{
+    const quotes=await dbRequest<Array<{quote_number:number|string}>>(
+     `/rest/v1/jvg_quotes?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=${filterEq(String(selected[0].quote_id))}&select=quote_number&limit=1`
+    );
+    quoteNumber=quotes[0]?.quote_number??null;
+   }catch{/* A numeração sequencial pode aguardar a migration. */}
+   return apiJson({order:{...selected[0],quote_number:quoteNumber}});
+  }
   const raw=new URL(request.url).searchParams.get("page")??"1";
   if(!/^[1-9]\d{0,4}$/.test(raw))throw new JvgBackendError("Página inválida.",400);
   const page=Number(raw),size=30;

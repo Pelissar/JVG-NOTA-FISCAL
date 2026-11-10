@@ -13,7 +13,7 @@
   <script defer src="./fiscal-workspace.js"></script>
 <style>
 .draft-inspect{margin-top:10px;border:1px solid var(--accent,#075ec7);border-radius:9px;background:var(--accent-soft,#eaf2ff);color:var(--accent-strong,#084a9e);font-weight:700;cursor:pointer;padding:9px 12px;font:inherit;font-size:12px;text-align:left}
-.draft-inspect:hover{background:var(--blue-soft,#eaf2ff)}.draft-details{padding:20px;overflow-wrap:anywhere}.draft-details h3,.draft-details h4{margin:10px 0}.draft-details p,.draft-details li{font-size:13px;line-height:1.6}.draft-details ul{padding-left:22px}.draft-details[hidden]{display:none}
+.draft-inspect:hover{background:var(--blue-soft,#eaf2ff)}.draft-details{padding:20px;overflow-wrap:anywhere}.draft-details h3,.draft-details h4{margin:10px 0}.draft-details p,.draft-details li{font-size:13px;line-height:1.6}.draft-details ul{padding-left:22px}.draft-details[hidden]{display:none}.source-order-notice{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:14px 0;padding:14px 16px;border:1px solid var(--accent);border-radius:12px;background:var(--accent-soft);color:var(--ink)}.source-order-notice p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}.source-order-notice[hidden]{display:none}@media(max-width:620px){.source-order-notice{align-items:stretch;flex-direction:column}}
 </style>
 <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg"><link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/focus-diagnostic.css"><link rel="stylesheet" href="/erp/erp-design-v2.css"><script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js"></script></head>
 <body><div id="erpGlobalNav"></div><button type="button" class="theme-toggle" data-theme-toggle aria-label="Alternar tema">◐ Modo escuro</button>
@@ -42,7 +42,7 @@
           <div class="panel-body">
             <div class="field-grid" data-fiscal-section="general">
               <label class="field"><span>Natureza da operação *</span><input name="nature" maxlength="100" minlength="3" placeholder="Ex.: Venda de mercadoria" required></label>
-              </div><div class="field-grid" data-fiscal-section="recipient" hidden><label class="field"><span>Destinatário *</span><select id="recipientId" name="recipientId" required><option value="">Carregando clientes...</option></select></label>
+              </div><section class="source-order-notice" id="sourceOrderNotice" hidden role="status" aria-live="polite"><div><strong>Pedido vinculado: <span id="sourceOrderLabel"></span></strong><p>Produtos, quantidades e preços foram copiados do pedido e ficam bloqueados para preservar a origem. Revise natureza e tributos antes de salvar.</p></div><button type="button" class="add-button" id="unlinkSourceOrder">Desvincular e editar itens</button></section><div class="field-grid" data-fiscal-section="recipient" hidden><label class="field"><span>Destinatário *</span><select id="recipientId" name="recipientId" required><option value="">Carregando clientes...</option></select></label>
             </div>
             <div data-fiscal-section="items" hidden><div class="items-heading"><div><h3>Produtos</h3><p>Até 20 itens, com quantidade e preço unitário.</p></div><button type="button" class="add-button" id="addItem">+ Adicionar produto</button></div>
             <div id="items" class="items" aria-live="polite"></div>
