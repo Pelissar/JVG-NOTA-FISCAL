@@ -4,7 +4,7 @@ import { reviewNfeDocument } from '../lib/fiscal/nfe-document-review.ts';
 
 const valid = () => ({
   schemaVersion: 3,
-  issuer: {cnpj:'12345678000195', stateRegistration:'123', taxRegime:'simples_nacional'},
+  issuer: {cnpj:'12345678000195', stateRegistration:'123', taxRegime:'simples_nacional',taxRegimeConfirmed:true},
   recipient: {name:'Cliente', documentNumber:'52998224725', documentType:'cpf'},
   preflight: {dataComplete:true,issues:[]},
   items: [{ncm:'85176299',cfop:'5102',csosn:'102',subtotalCents:3085,
@@ -28,6 +28,10 @@ test('revisa estrutura interna e totais comerciais sem habilitar emissão', () =
 test('divergência entre soma e total comercial é bloqueio', () => {
   const payload=valid();payload.totalCents=3084;
   assert.equal(check(reviewNfeDocument(payload),'items').ok,false);
+});
+test('regime sem confirmação contábil não passa na revisão do emitente', () => {
+  const payload=valid();payload.issuer.taxRegimeConfirmed=false;
+  assert.equal(check(reviewNfeDocument(payload),'issuer').ok,false);
 });
 test('pendências e perfis não revisados são exibidos', () => {
   const payload=valid();payload.pending=['Revisão fiscal'];payload.items[0].taxProfile.reviewStatus='draft';

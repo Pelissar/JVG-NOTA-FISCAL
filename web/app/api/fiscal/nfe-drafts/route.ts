@@ -98,6 +98,10 @@ export async function POST(request: Request) {
 
     const company = await getCompany(account);
     if (!company) throw new JvgBackendError("Empresa não encontrada.", 404);
+    if (company.tax_regime_confirmation_available !== true)
+      throw new JvgBackendError("Aplique a migration fiscal pendente no Supabase antes de preparar rascunhos de NF-e.", 409);
+    if (company.tax_regime_confirmed !== true)
+      throw new JvgBackendError("Confirme o regime tributário com a contabilidade nos dados da empresa antes de preparar NF-e.", 409);
     if (company.tax_regime !== "simples_nacional")
       throw new JvgBackendError("Esta versão do rascunho NF-e está disponível apenas para o Simples Nacional.", 400);
 
@@ -160,7 +164,7 @@ export async function POST(request: Request) {
     const issuer = {
       companyId: account.company_id, name: company.trade_name || company.legal_name,
       cnpj: company.cnpj, stateRegistration: company.state_registration,
-      taxRegime: company.tax_regime, state: issuerUf,
+      taxRegime: company.tax_regime, taxRegimeConfirmed: company.tax_regime_confirmed === true, state: issuerUf,
     };
     const recipientSnapshot = {
       id: recipient.id, name: recipient.display_name,

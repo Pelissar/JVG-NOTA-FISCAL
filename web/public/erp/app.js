@@ -69,7 +69,7 @@
   function fiscal(){
     var models=[['NF-e','Modelo 55','Venda de mercadorias e operações fiscais','receipt'],['NFC-e','Modelo 65','Venda ao consumidor e frente de caixa','cash'],['NFS-e','Padrão Nacional','Prestação de serviços / DPS','layers'],['CT-e','Modelo 57','Conhecimento de transporte eletrônico','truck'],['MDF-e','Modelo 58','Manifesto eletrônico de documentos','warehouse']];
     return heading('Central de notas fiscais','Os cinco modelos já estão previstos na navegação do JVG.')+banner()+
-      '<section class="panel" style="margin-bottom:22px"><div class="panel-head"><div><h2>Entrada de NF-e · XML</h2><p>Receba documentos de fornecedores e confira produtos antes de movimentar estoque</p></div><a class="btn" href="/erp/inbound-nfe.html">Abrir notas de entrada →</a></div><div class="panel-body"><p class="small-note">Entrada e estoque não substituem escrituração fiscal; PDF/DANFE serve para conferência manual.</p></div></section><section class="panel" style="margin-bottom:22px"><div class="panel-head"><div><h2>NF-e · Rascunhos em homologação</h2><p>Primeira etapa do fluxo fiscal: preparar e salvar notas sem transmitir à SEFAZ</p></div><a class="btn primary" href="/erp/nfe-drafts.html">Abrir rascunhos NF-e →</a></div><div class="panel-body"><p class="small-note">Selecione destinatários e produtos cadastrados. Os campos fiscais e tributos precisam de revisão do contador antes da futura integração de emissão.</p></div></section>'+ 
+      '<section class="panel" style="margin-bottom:22px"><div class="panel-head"><div><h2>Entrada de NF-e · XML</h2><p>Receba documentos de fornecedores e confira produtos antes de movimentar estoque</p></div><a class="btn" href="/erp/inbound-nfe.html">Abrir notas de entrada →</a></div><div class="panel-body"><p class="small-note">Entrada e estoque não substituem escrituração fiscal; PDF/DANFE serve para conferência manual.</p></div></section><section class="panel" style="margin-bottom:22px"><div class="panel-head"><div><h2>NF-e · Rascunhos em homologação</h2><p>Primeira etapa do fluxo fiscal: preparar e salvar notas sem transmitir à SEFAZ</p></div><a class="btn primary" href="/erp/nfe-drafts.html">Abrir rascunhos NF-e →</a></div><div class="panel-body"><p class="small-note">Selecione destinatários e produtos cadastrados. Os campos fiscais e tributos precisam de revisão do contador antes da futura integração de emissão.</p></div></section>'+
       '<section class="panel" style="margin-bottom:22px"><div class="panel-head"><div><h2>Perfis tributários</h2><p>Cadastre e revise as regras fiscais da empresa para a futura NF-e</p></div><a class="btn primary" href="/erp/tax-profiles.html">Abrir perfis fiscais →</a></div></section>'+ 
       '<section class="panel" style="margin-bottom:22px"><div class="panel-head"><div><h2>Tabela nacional de CFOP</h2><p>619 códigos com títulos e descrições oficiais; personalize o nome usado pela empresa</p></div><a class="btn primary" href="/erp/cfop.html">Consultar CFOP →</a></div></section>'+
       '<div class="fiscal-grid">'+models.map(function(x){return '<article class="fiscal-card"><div class="fiscal-card-top"><div class="fiscal-icon">'+ico(x[3])+'</div><span class="badge amber">Em preparação</span></div><h3>'+x[0]+' <span class="muted" style="font-weight:400;font-size:10px">'+x[1]+'</span></h3><p>'+x[2]+'. A transmissão real será habilitada após validação fiscal e homologação do emissor.</p><div class="fiscal-bottom"><span>Credenciamento fiscal em andamento</span><span>'+ico('clock')+'</span></div></article>';}).join('')+'</div>'+
@@ -276,7 +276,15 @@
   }
   function companyFiscalFields(company){
     var a=company.address||{};
+    var regimes=[['mei','MEI'],['simples_nacional','Simples Nacional'],['lucro_presumido','Lucro Presumido'],['lucro_real','Lucro Real'],['outro','Outro']];
+    var selectedRegime=company.tax_regime_confirmed===true?company.tax_regime:'';
+    var confirmationAvailable=company.tax_regime_confirmation_available===true;
+    var regimeOptions='<option value="">Selecione após consultar a contabilidade</option>'+regimes.map(function(item){return '<option value="'+item[0]+'" '+(selectedRegime===item[0]?'selected':'')+'>'+item[1]+'</option>';}).join('');
+    var regimeBlock='<label class="field full"><span>Regime tributário informado</span><select name="taxRegime">'+regimeOptions+'</select><small>O regime só será usado em preparação fiscal quando estiver confirmado pela contabilidade.</small></label>'+
+      '<label class="field full" style="display:flex;align-items:flex-start;gap:9px"><input type="checkbox" name="taxRegimeConfirmed" value="true" '+(company.tax_regime_confirmed===true?'checked ':'')+(!confirmationAvailable?'disabled ':'')+'style="width:auto;margin-top:3px"><span>Confirmo que este regime foi conferido com a contabilidade.</span></label>'+
+      (!confirmationAvailable?'<p class="small-note field full">A confirmação será habilitada após aplicar a migration fiscal pendente no Supabase.</p>':'');
     return '<div class="field full"><strong>Identificação e contato fiscal</strong></div>'+
+      '<div class="field full"><strong>Enquadramento tributário</strong></div>'+regimeBlock+
       field('tradeName','Nome fantasia',company.trade_name||'','maxlength="160"',false)+
       lookupField('cnpj','CNPJ (numérico ou alfanumérico)',company.cnpj||'','maxlength="18" placeholder="00.000.000/0000-00"','cnpj',false)+
       field('stateRegistration','Inscrição Estadual (IE)',company.state_registration||'','maxlength="40"',false)+
@@ -303,7 +311,7 @@
     modalRoot.innerHTML='<div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><h2 id="modalTitle">'+(existing?'Editar empresa piloto':'Cadastrar minha empresa piloto')+'</h2><p>Seus dados serão vinculados somente à sua conta.</p></div><button class="icon-btn" type="button" data-action="close-modal">'+ico('x')+'</button></div><form id="companyForm"><div class="modal-body"><div class="form-grid">'+
       field('legalName','Razão social ou nome da empresa *',company.legal_name||'','required maxlength="160"',true)+
       (existing?companyFiscalFields(company):'')+
-      '</div><p class="small-note" style="margin-top:16px">Regime piloto: Simples Nacional. Salvar este cadastro não transmite NF-e. Confira os dados com seu contador e a numeração na autorização fiscal.</p></div><div class="modal-footer"><small>* Obrigatório</small><div class="modal-footer-actions"><button class="btn" type="button" data-action="close-modal">Cancelar</button><button class="btn primary" type="submit">Salvar empresa</button></div></div></form></div></div>';
+      '</div><p class="small-note" style="margin-top:16px">O sistema não considera o regime padrão como confirmação fiscal. Perfis e rascunhos de NF-e exigem a confirmação da contabilidade. Salvar este cadastro não transmite nota.</p></div><div class="modal-footer"><small>* Obrigatório</small><div class="modal-footer-actions"><button class="btn" type="button" data-action="close-modal">Cancelar</button><button class="btn primary" type="submit">Salvar empresa</button></div></div></form></div></div>';
     // O formulario permanece aberto ao clicar no fundo: somente os botoes
     // Fechar/Cancelar ou a conclusao do cadastro podem dispensa-lo.
     modalRoot.querySelector('[name]').focus();
@@ -312,6 +320,7 @@
     var values=Object.fromEntries(new FormData(form).entries()),existing=cloud.status==='ready';
     var button=form.querySelector('button[type="submit"]');if(button)button.disabled=true;
     try{
+      values.taxRegimeConfirmed=!!form.querySelector('[name="taxRegimeConfirmed"]')?.checked;
       var result=await callApi('/api/company',{method:existing?'PATCH':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(values)});
       cloud.status='ready';cloud.company=result.company;closeModal();await checkConnection();toast('Empresa piloto salva no Supabase.');
     }catch(error){toast(error.message,'error');if(button)button.disabled=false;}

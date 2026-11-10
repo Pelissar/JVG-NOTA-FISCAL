@@ -4,6 +4,7 @@ import { fiscalMissing } from '../lib/fiscal-company-profile.ts';
 
 const company = {
   legal_name: 'Exemplo Fiscal Ltda',
+  tax_regime_confirmed: true,
   cnpj: '11222333000181',
   state_registration: '123456789',
   municipal_registration: null,
@@ -26,5 +27,12 @@ test('CNAE e inscrição municipal precisam ser informados juntos quando usados'
   assert.ok(fiscalMissing({ ...company, cnae: '6201501' })
     .includes('Inscrição Municipal (obrigatória com CNAE)'));
   assert.deepEqual(fiscalMissing({ ...company, municipal_registration: '12345', cnae: '6201501' }), []);
+});
+
+test('regime tributário precisa de confirmação explícita da contabilidade', () => {
+  assert.ok(fiscalMissing({ ...company, tax_regime_confirmed: false })
+    .includes('Regime tributário confirmado pela contabilidade'));
+  assert.ok(fiscalMissing({ ...company, tax_regime_confirmed: undefined })
+    .includes('Regime tributário confirmado pela contabilidade'));
 });
 

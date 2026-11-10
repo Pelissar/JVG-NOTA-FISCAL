@@ -1,6 +1,6 @@
 import { getJvgUser } from "../../../jvg-auth";
 import {
-  apiJson, dbRequest, filterEq, getSiteAccount, isSameOrigin, JvgBackendError, safeError,
+  apiJson, dbRequest, filterEq, getCompany, getSiteAccount, isSameOrigin, JvgBackendError, safeError,
   type SiteAccount,
 } from "../../../../lib/jvg-backend";
 import { isOfficialCfopCode } from "../../../../lib/fiscal/cfop";
@@ -35,7 +35,12 @@ export async function GET() {
     const rows = await dbRequest<Profile[]>(
       `/rest/v1/jvg_tax_profiles?${scope(a)}&document_type=eq.nfe&select=id,name,rules,review_status,created_at&order=created_at.desc&limit=200`,
     );
-    return apiJson({ records: rows, editable: canEdit(a), transmissionEnabled: false });
+    const company = await getCompany(a);
+    return apiJson({ records: rows, editable: canEdit(a),
+      taxRegime: company?.tax_regime_confirmed === true ? company.tax_regime : null,
+      taxRegimeConfirmed: company?.tax_regime_confirmed === true,
+      regimeConfirmationAvailable: company?.tax_regime_confirmation_available === true,
+      transmissionEnabled: false });
   } catch (error) { return safeError(error); }
 }
 export async function POST(request: Request) {
@@ -43,6 +48,13 @@ export async function POST(request: Request) {
   try {
     const a = await account();
     if (!canEdit(a)) throw new JvgBackendError("Sua conta não pode alterar perfis fiscais.", 403);
+    const company = await getCompany(a);
+    if (company?.tax_regime_confirmation_available !== true)
+      throw new JvgBackendError("Aplique a migration fiscal pendente no Supabase para registrar a confirmação do regime.", 409);
+    if (company.tax_regime_confirmed !== true)
+      throw new JvgBackendError("Confirme o regime tributário com a contabilidade nos dados da empresa antes de criar perfis fiscais.", 409);
+    if (company.tax_regime !== "simples_nacional")
+      throw new JvgBackendError("Esta versão aceita perfis fiscais apenas para empresas confirmadas no Simples Nacional.", 409);
     const raw = await request.text();
     if (raw.length > 5000) throw new JvgBackendError("Cadastro muito extenso.", 413);
     let input: Record<string, unknown>;
@@ -70,7 +82,7 @@ export async function POST(request: Request) {
       catch (error) { throw new JvgBackendError(`${tax.toUpperCase()}: ${error instanceof Error ? error.message : "Alíquota inválida."}`, 400); }
       if (value !== null) previewRates[tax] = value;
     }
-    const rules = { regime: "simples_nacional", cfop, csosn: taxSituation, pisCst, cofinsCst,
+    const rules = { regime: company.tax_regime, cfop, csosn: taxSituation, pisCst, cofinsCst,
       cstIbsCbs, classTrib, previewRates, previewOnly: true, taxCalculationEnabled: false, requiresAccountantReview: true };
     const result = await dbRequest<Array<{ id: string }>>("/rest/v1/jvg_tax_profiles", {
       method: "POST",

@@ -37,6 +37,17 @@ export async function PATCH(request: Request) {
     if (fiscalEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fiscalEmail)) throw new JvgBackendError("E-mail fiscal inválido.", 400);
     const fiscalPhone = str(data.fiscalPhone, 24).replace(/\D/g, "");
     if (fiscalPhone && (fiscalPhone.length < 10 || fiscalPhone.length > 13)) throw new JvgBackendError("Telefone deve ter DDD e entre 10 e 13 dígitos.", 400);
+    const supportedRegimes = new Set(["mei", "simples_nacional", "lucro_presumido", "lucro_real", "outro"]);
+    const taxRegime = str(data.taxRegime, 40);
+    if (taxRegime && !supportedRegimes.has(taxRegime)) throw new JvgBackendError("Selecione um regime tributário válido.", 400);
+    const currentCompany = await getCompany(account);
+    const confirmsTaxRegime = data.taxRegimeConfirmed === true;
+    if (data.taxRegimeConfirmed !== undefined && typeof data.taxRegimeConfirmed !== "boolean")
+      throw new JvgBackendError("Confirmação do regime tributário inválida.", 400);
+    if (confirmsTaxRegime && !taxRegime)
+      throw new JvgBackendError("Selecione o regime informado pela contabilidade antes de confirmar.", 400);
+    if (confirmsTaxRegime && currentCompany?.tax_regime_confirmation_available !== true)
+      throw new JvgBackendError("A confirmação do regime depende da migration fiscal pendente no Supabase.", 409);
     const allowed: Record<string, unknown> = {
       legal_name: legalName,
       trade_name: str(data.tradeName, 160) || null,
@@ -48,6 +59,9 @@ export async function PATCH(request: Request) {
       fiscal_phone: fiscalPhone || null,
       updated_at: new Date().toISOString(),
     };
+    if (taxRegime && confirmsTaxRegime) allowed.tax_regime = taxRegime;
+    if (currentCompany?.tax_regime_confirmation_available === true && data.taxRegimeConfirmed !== undefined)
+      allowed.tax_regime_confirmed = confirmsTaxRegime;
     if ('street' in data) allowed.address = fiscalAddress(data);
     if ('nfeSeries' in data) allowed.nfe_series_homologacao = fiscalInteger(data.nfeSeries, "Série de NF-e", 1, 999);
     if ('nfeNextNumber' in data) allowed.nfe_next_number_homologacao = fiscalInteger(data.nfeNextNumber, "Próximo número de NF-e", 1, 999999999);

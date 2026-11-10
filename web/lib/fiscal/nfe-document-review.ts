@@ -42,8 +42,8 @@ export function reviewNfeDocument(value: unknown): NfeDocumentReview {
   add("version", "Versão do rascunho", payload.schemaVersion === 3,
       payload.schemaVersion === 3 ? "Estrutura interna atual" : "Rascunho legado: refaça a preparação");
   add("issuer", "Dados do emitente",
-      Boolean(text(issuer.cnpj) && text(issuer.stateRegistration) && issuer.taxRegime === "simples_nacional"),
-      "CNPJ, inscrição estadual e regime Simples Nacional devem estar informados");
+      Boolean(text(issuer.cnpj) && text(issuer.stateRegistration) && issuer.taxRegime === "simples_nacional" && issuer.taxRegimeConfirmed === true),
+      "CNPJ, inscrição estadual e regime Simples Nacional confirmado pela contabilidade devem estar informados");
   add("recipient", "Identificação do destinatário",
       Boolean(text(recipient.name) && text(recipient.documentNumber) && text(recipient.documentType)),
       "Destinatário identificado no cadastro da empresa");

@@ -71,10 +71,23 @@ export async function ensureSiteAccount(user: JvgAuthUser, companyName: string):
 }
 
 export async function getCompany(account: SiteAccount): Promise<(Record<string, unknown> & { fiscal_missing: string[]; fiscal_profile_complete: boolean }) | null> {
-  const rows = await dbRequest<Array<Record<string, unknown>>>(
-    `/rest/v1/jvg_companies?tenant_id=${filterEq(account.tenant_id)}&id=${filterEq(account.company_id)}&select=id,legal_name,trade_name,cnpj,state_registration,municipal_registration,tax_regime,status,address,cnae,fiscal_email,fiscal_phone,nfe_series_homologacao,nfe_next_number_homologacao&limit=1`,
-  );
-  const company = rows[0];
+  const scope = `tenant_id=${filterEq(account.tenant_id)}&id=${filterEq(account.company_id)}`;
+  const base = "id,legal_name,trade_name,cnpj,state_registration,municipal_registration,tax_regime,status,address,cnae,fiscal_email,fiscal_phone,nfe_series_homologacao,nfe_next_number_homologacao";
+  let rows: Array<Record<string, unknown>>;
+  let confirmationAvailable = true;
+  try {
+    rows = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_companies?${scope}&select=${base},tax_regime_confirmed&limit=1`);
+  } catch {
+    // Mantém o restante do ERP funcional enquanto a migration manual está pendente.
+    confirmationAvailable = false;
+    rows = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_companies?${scope}&select=${base}&limit=1`);
+  }
+  const stored = rows[0];
+  const company = stored ? {
+    ...stored,
+    tax_regime_confirmed: confirmationAvailable && stored.tax_regime_confirmed === true,
+    tax_regime_confirmation_available: confirmationAvailable,
+  } : null;
   if (!company) return null;
   const missing = fiscalMissing(company);
   return { ...company, fiscal_missing: missing, fiscal_profile_complete: missing.length === 0 };

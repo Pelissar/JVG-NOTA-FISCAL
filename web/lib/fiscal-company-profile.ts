@@ -20,6 +20,7 @@ export function fiscalMissing(company: Record<string, unknown>): string[] {
   const municipalRegistration = txt(company.municipal_registration, 40);
   const cnae = digits(company.cnae);
   const checks: Array<[string, boolean]> = [
+    ["Regime tributário confirmado pela contabilidade", company.tax_regime_confirmed === true],
     ["Razão social definitiva", Boolean(txt(company.legal_name, 160)) && txt(company.legal_name, 160) !== "Empresa Piloto JVG"],
     ["CNPJ válido", validCnpj(company.cnpj)],
     ["Inscrição Estadual", Boolean(txt(company.state_registration, 40))],
