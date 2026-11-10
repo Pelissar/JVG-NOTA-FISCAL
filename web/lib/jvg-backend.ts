@@ -87,10 +87,38 @@ export async function getPlatformRole(user: JvgAuthUser): Promise<"platform_admi
 }
 
 export async function getSiteAccount(user: JvgAuthUser): Promise<SiteAccount | null> {
-  const result = await dbRequest<SiteAccount[]>(
-    `/rest/v1/jvg_company_memberships?user_id=${filterEq(user.userId)}&active=eq.true&select=tenant_id,company_id,role&order=created_at.asc&limit=1`,
+  try {
+    const resolved = await dbRequest<SiteAccount[]>("/rest/v1/rpc/jvg_resolve_site_account", {
+      method: "POST",
+      body: JSON.stringify({ p_user_id: user.userId }),
+    });
+    return resolved[0] ?? null;
+  } catch {
+    // Preview environments may not have received the security migration yet.
+    // Keep the fallback equally strict while using the slower REST path.
+  }
+
+  const memberships = await dbRequest<SiteAccount[]>(
+    `/rest/v1/jvg_company_memberships?user_id=${filterEq(user.userId)}&active=eq.true&select=tenant_id,company_id,role&order=created_at.asc&limit=50`,
   );
-  return result[0] ?? null;
+  const tenantIds = [...new Set(memberships.map((membership) => membership.tenant_id))]
+    .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+  if (!memberships.length || !tenantIds.length) return null;
+
+  const tenantFilter = encodeURIComponent(`in.(${tenantIds.join(",")})`);
+  const [tenantMemberships, tenants] = await Promise.all([
+    dbRequest<Array<{ tenant_id: string }>>(
+      `/rest/v1/jvg_tenant_memberships?user_id=${filterEq(user.userId)}&active=eq.true&tenant_id=${tenantFilter}&select=tenant_id&limit=50`,
+    ),
+    dbRequest<Array<{ id: string; status: string }>>(
+      `/rest/v1/jvg_tenants?id=${tenantFilter}&status=in.(pilot,active)&select=id,status&limit=50`,
+    ),
+  ]);
+  const activeTenantIds = new Set(tenantMemberships.map((membership) => membership.tenant_id));
+  const availableTenantIds = new Set(tenants.map((tenant) => tenant.id));
+  return memberships.find((membership) =>
+    activeTenantIds.has(membership.tenant_id) && availableTenantIds.has(membership.tenant_id),
+  ) ?? null;
 }
 
 export async function ensureSiteAccount(user: JvgAuthUser, companyName: string): Promise<SiteAccount> {

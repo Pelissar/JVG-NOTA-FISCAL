@@ -30,7 +30,7 @@ test('vendas são confirmadas somente pela transação do banco', () => {
 test('interface usa somente APIs reais e apresenta histórico', () => {
   assert.match(page, /id="saleForm"/);
   assert.match(navigation, /href="\/erp\/sales\.html"/);
-  assert.match(client, /request\('\/api\/records'\)/);
+  assert.match(client, /request\('\/api\/records\?scope=sales'\)/);
   assert.match(client, /request\('\/api\/sales\?page='/);
   assert.doesNotMatch(client, /localStorage|dados fictícios|vendas demonstrativas/i);
 });

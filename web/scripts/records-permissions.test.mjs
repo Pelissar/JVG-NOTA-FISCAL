@@ -25,7 +25,7 @@ test('viewer pode consultar mas não alterar ou desativar cadastros', () => {
     assert.match(handler, /account\.role === 'viewer'/);
     assert.match(handler, /403/);
   }
-  assert.doesNotMatch(records.split('export async function GET() {')[1].split('export async function POST(request: Request) {')[0], /account\.role === 'viewer'/);
+  assert.doesNotMatch(records.split('export async function GET(request: Request) {')[1].split('export async function POST(request: Request) {')[0], /account\.role === 'viewer'/);
 });
 
 test('dados fiscais da empresa exigem owner ou admin', () => {

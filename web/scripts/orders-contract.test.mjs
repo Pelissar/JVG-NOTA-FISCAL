@@ -4,6 +4,7 @@ import {test} from 'node:test';
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 const api=read('../app/api/orders/route.ts');
 const sql=read('../../supabase/migrations/20261109_jvg_orders.sql');
+const cancelSql=read('../../supabase/migrations/20261110_jvg_commercial_workflow_documents.sql');
 const ui=read('../public/erp/orders.js');
 const quotes=read('../public/erp/quotes.js');
 const nav=read('../public/erp/index.html');
@@ -34,9 +35,11 @@ test('histórico e conversão aparecem no ERP',()=>{
 test('cancelamento de pedido é autorizado somente quando aberto',()=>{
  assert.match(api,/export async function PATCH\(request:Request\)/);
  assert.match(api,/scope\.role==="viewer"/);
- assert.match(api,/status=eq\.open&select=id,status/);
- assert.match(api,/status:"cancelled"/);
- assert.match(api,/if\(!updated\.length\)/);
+ assert.match(api,/\/rest\/v1\/rpc\/jvg_cancel_order/);
+ assert.match(api,/p_tenant_id:scope\.tenant_id,p_company_id:scope\.company_id,p_order_id:data\.id/);
+ assert.match(cancelSql,/status = 'open'[\s\S]*FOR UPDATE/i);
+ assert.match(cancelSql,/UPDATE public\.jvg_quotes[\s\S]*status = 'cancelled'/i);
+ assert.match(cancelSql,/UPDATE public\.jvg_orders[\s\S]*status = 'cancelled'/i);
  assert.match(ui,/order-cancel/);
  assert.match(ui,/method:'PATCH'/);
  assert.match(ui,/confirm\('Cancelar este pedido/);
