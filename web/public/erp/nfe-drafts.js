@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var state = { products: [], clients: [], drafts: [], ready: false };
+  var state = { products: [], clients: [], drafts: [], orders: [], ready: false };
   var idempotencyKey = null;
   var status = document.getElementById('status');
   var form = document.getElementById('draftForm');
@@ -49,6 +49,80 @@
     state.clients.filter(function (c) { return c.active && c.isCustomer === true && c.type !== 'EXT'; }).forEach(function (client) {
       select.append(option(client.id, client.name + (client.document ? ' · ' + client.document : '')));
     });
+  }
+
+  async function refreshOrderOptions() {
+    var select = document.getElementById('orderImportSelect');
+    select.replaceChildren(option('', 'Selecione um pedido'));
+    try {
+      var result = await api('/api/orders?page=1');
+      state.orders = Array.isArray(result.orders) ? result.orders : [];
+      var labels = { open: 'Em aberto', fulfilled: 'Concluído', cancelled: 'Cancelado' };
+      state.orders.forEach(function (order) {
+        var customer = state.clients.find(function (client) { return client.id === order.customer_id; });
+        var label = '#' + String(order.id).slice(0, 8).toUpperCase() + ' · ' +
+          (customer ? customer.name : 'Cliente não identificado') + ' · ' +
+          money.format(Number(order.total) || 0) + ' · ' + (labels[order.status] || order.status);
+        select.append(option(order.id, label));
+      });
+      if (!state.orders.length) select.replaceChildren(option('', 'Nenhum pedido encontrado'));
+      document.getElementById('orderImportButton').disabled = !state.orders.length;
+    } catch (error) {
+      select.replaceChildren(option('', 'Não foi possível carregar pedidos'));
+      document.getElementById('orderImportButton').disabled = true;
+      document.getElementById('orderImportNotice').textContent = 'Consulta de pedidos indisponível: ' + error.message;
+      document.getElementById('orderImportNotice').className = 'order-import-notice error';
+    }
+  }
+
+  async function importOrder(orderId) {
+    var button = document.getElementById('orderImportButton');
+    var message = document.getElementById('orderImportNotice');
+    if (!orderId) { message.textContent = 'Selecione um pedido comercial.'; message.className = 'order-import-notice error'; return; }
+    button.disabled = true;
+    message.textContent = 'Carregando o pedido da empresa...';
+    message.className = 'order-import-notice';
+    try {
+      var response = await api('/api/orders?id=' + encodeURIComponent(orderId));
+      var order = response.order;
+      if (!order || !Array.isArray(order.items)) throw new Error('O pedido não possui itens para importar.');
+      var recipient = document.getElementById('recipientId');
+      var recipientExists = Array.from(recipient.options).some(function (entry) { return entry.value === order.customer_id; });
+      recipient.value = recipientExists ? order.customer_id : '';
+      var imported = 0, serviceCount = 0, unavailableCount = 0;
+      items.replaceChildren();
+      order.items.forEach(function (line) {
+        if (line.serviceId) { serviceCount++; return; }
+        var product = state.products.find(function (entry) { return entry.id === line.productId && entry.active; });
+        if (!product || imported >= 20) { unavailableCount++; return; }
+        addItem();
+        var row = items.lastElementChild;
+        var select = row.querySelector('.product');
+        select.value = product.id;
+        select.dispatchEvent(new Event('change'));
+        row.querySelector('.quantity').value = String(line.quantity || 1);
+        row.querySelector('.price').value = Number(line.unitPrice || 0).toFixed(2);
+        imported++;
+      });
+      if (!imported) addItem();
+      var shortId = String(order.id).slice(0, 8).toUpperCase();
+      form.elements.namedItem('nature').value = 'REVISAR natureza da operação · pedido #' + shortId;
+      updateTotal();
+      var itemsTab = document.querySelector('[data-fiscal-tab="items"]');
+      if (itemsTab) itemsTab.click();
+      var warnings = [];
+      if (!recipientExists) warnings.push('selecione manualmente um destinatário ativo');
+      if (serviceCount) warnings.push(serviceCount + ' serviço(s) não foram importados: este rascunho é apenas para NF-e de produtos');
+      if (unavailableCount) warnings.push(unavailableCount + ' produto(s) inativo(s), ausente(s) ou além do limite de 20 foram ignorados');
+      warnings.push('revise CFOP, CSOSN, natureza e demais dados com a contabilidade');
+      message.textContent = imported + ' produto(s) copiado(s) do pedido #' + shortId + '. ' + warnings.join('; ') + '. Nenhuma nota foi emitida.';
+      message.className = 'order-import-notice ' + (!recipientExists || serviceCount || unavailableCount ? 'error' : 'success');
+    } catch (error) {
+      message.textContent = 'Não foi possível preparar o pedido: ' + error.message;
+      message.className = 'order-import-notice error';
+    } finally {
+      button.disabled = false;
+    }
   }
 
   function addItem() {
@@ -240,6 +314,15 @@
       report(state.ready ?
         'Conectado ao Supabase. Os rascunhos serão salvos somente para esta empresa e não serão transmitidos.' :
         'Cadastre pelo menos um produto e um cliente ativos no ERP para preparar a NF-e.', state.ready ? '' : 'info');
+      await refreshOrderOptions();
+      var orderId = new URLSearchParams(window.location.search).get('orderId');
+      if (orderId) {
+        var orderSelect = document.getElementById('orderImportSelect');
+        if (!Array.from(orderSelect.options).some(function (entry) { return entry.value === orderId; }))
+          orderSelect.append(option(orderId, 'Pedido #' + orderId.slice(0, 8).toUpperCase()));
+        orderSelect.value = orderId;
+        await importOrder(orderId);
+      }
     } catch (error) {
       report('Falha ao carregar a central fiscal: ' + error.message + ' Volte ao ERP ou recarregue esta página.', 'error');
       saveButton.disabled = true;
@@ -247,6 +330,9 @@
   }
 
   document.getElementById('addItem').addEventListener('click', addItem);
+  document.getElementById('orderImportButton').addEventListener('click', function () {
+    importOrder(document.getElementById('orderImportSelect').value);
+  });
   form.addEventListener('submit', async function (event) {
     event.preventDefault();
     if (!state.ready) return;

@@ -12,10 +12,20 @@ async function account(){
 export async function GET(request:Request){
  try{
   const scope=await account();
-  const raw=new URL(request.url).searchParams.get("page")??"1";
+  const params=new URL(request.url).searchParams;
+  const id=params.get("id");
+  if(id){
+   if(!uuidPattern.test(id))throw new JvgBackendError("Identificador de pedido inválido.",400);
+   const rows=await dbRequest<Array<Record<string,unknown>>>(
+    "/rest/v1/jvg_orders?tenant_id="+filterEq(scope.tenant_id)+"&company_id="+filterEq(scope.company_id)+"&id="+filterEq(id)+"&select=id,quote_id,customer_id,status,total,items,notes,created_at&limit=1"
+   );
+   if(!rows[0])throw new JvgBackendError("Pedido não encontrado nesta empresa.",404);
+   return apiJson({order:rows[0]});
+  }
+  const raw=params.get("page")??"1";
   if(!/^[1-9]\d{0,4}$/.test(raw))throw new JvgBackendError("Página inválida.",400);
   const page=Number(raw),size=30;
-  const status=new URL(request.url).searchParams.get("status")??"";
+  const status=params.get("status")??"";
   if(status&&!['open','fulfilled','cancelled'].includes(status))throw new JvgBackendError("Situação de pedido inválida.",400);
   const orders=await dbRequest<Array<Record<string,unknown>>>(
    `/rest/v1/jvg_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}${status?`&status=${filterEq(status)}`:""}&select=id,quote_id,customer_id,status,total,items,notes,created_at&order=created_at.desc,id.desc&limit=${size+1}&offset=${(page-1)*size}`

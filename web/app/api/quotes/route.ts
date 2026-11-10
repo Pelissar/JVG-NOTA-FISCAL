@@ -72,7 +72,19 @@ export async function POST(request: Request) {
       if (!Number.isSafeInteger(lineCents)) throw new JvgBackendError("Total inválido.", 400);
       totalCents += lineCents;
       if (!Number.isSafeInteger(totalCents) || totalCents > 99999999999) throw new JvgBackendError("Total excede o limite.", 400);
-      return { productId, serviceId, description: product?.name ?? service?.name, unit: product?.unit ?? "UN", quantity, unitPrice, lineTotal: lineCents/100 };
+      const optionalText = (value: unknown, label: string, max: number) => {
+        if (value == null || value === "") return "";
+        if (typeof value !== "string" || value.length > max) throw new JvgBackendError(label + " inválido.", 400);
+        return value.trim();
+      };
+      return {
+        productId, serviceId, description: product?.name ?? service?.name, unit: product?.unit ?? "UN",
+        quantity, unitPrice, lineTotal: lineCents/100,
+        brand: optionalText(row.brand, "Marca", 80),
+        model: optionalText(row.model, "Modelo", 120),
+        serialNumber: optionalText(row.serialNumber, "Número de série", 120),
+        serviceDescription: optionalText(row.serviceDescription, "Descrição do serviço", 2000),
+      };
     });
     const created = await dbRequest<Array<{id:string}>>("/rest/v1/jvg_quotes", {
       method: "POST",

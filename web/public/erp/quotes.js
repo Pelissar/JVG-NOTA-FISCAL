@@ -21,7 +21,7 @@ function update(){
 function addRow(){
  if(!ready||busy||rows().length>=100)return;
  const row=document.createElement('div');row.className='quote-row';
- row.innerHTML='<label>Produto ou serviço<select class="item" required><option value="">Selecione</option>'+catalog.map(x=>'<option value="'+safe(x.kind+':'+x.id)+'">'+safe(x.name)+'</option>').join('')+'</select></label><label>Quantidade<input class="quantity" type="number" min="0.001" max="999999" step="0.001" value="1" required></label><label>Preço (R$)<input class="price" type="number" min="0" max="999999999" step="0.01" required></label><button type="button" class="btn remove">Remover</button>';
+ row.innerHTML='<label>Produto ou serviço<select class="item" required><option value="">Selecione</option>'+catalog.map(x=>'<option value="'+safe(x.kind+':'+x.id)+'">'+safe(x.name)+'</option>').join('')+'</select></label><label>Quantidade<input class="quantity" type="number" min="0.001" max="999999" step="0.001" value="1" required></label><label>Preço (R$)<input class="price" type="number" min="0" max="999999999" step="0.01" required></label><details class="quote-item-extra"><summary>Detalhes opcionais do item</summary><div><label>Marca<input class="brand" maxlength="80"></label><label>Modelo<input class="model" maxlength="120"></label><label>Número de série<input class="serial-number" maxlength="120"></label><label>Descrição do serviço<input class="service-description" maxlength="2000"></label></div></details><button type="button" class="btn remove">Remover</button>';
  row.querySelector('.item').addEventListener('change',()=>{const x=catalog.find(x=>x.kind+':'+x.id===row.querySelector('.item').value);row.querySelector('.price').value=x?Number(x.price).toFixed(2):'';update();});
  row.querySelectorAll('input').forEach(el=>el.addEventListener('input',update));
  row.querySelector('.remove').addEventListener('click',()=>{row.remove();update();});
@@ -60,11 +60,15 @@ function actions(q){
  const next=q.status==='draft'?[['sent','Marcar enviado'],['rejected','Recusar']]:q.status==='sent'?[['accepted','Aceitar'],['rejected','Recusar'],['expired','Expirar']]:[];
  const buttons=next.map(([status,label])=>'<button type="button" class="btn quote-status" data-id="'+safe(q.id)+'" data-from="'+safe(q.status)+'" data-to="'+safe(status)+'">'+safe(label)+'</button>');
  if(q.status==='accepted')buttons.push('<button type="button" class="btn quote-order" data-id="'+safe(q.id)+'">Gerar pedido</button>');
+ buttons.unshift('<button type="button" class="btn quote-print" data-id="'+safe(q.id)+'">PDF / Imprimir</button>');
  buttons.unshift('<button type="button" class="btn quote-details" data-id="'+safe(q.id)+'">Ver proposta</button>');
  return buttons.join(' ')||'—';
 }
-function showDetails(q){const items=Array.isArray(q.items)?q.items:[];$('quoteDetailsTitle').textContent='Orçamento #'+q.id.slice(0,8).toUpperCase();$('quoteDetailsBody').innerHTML='<dl><div><dt>Cliente</dt><dd>'+safe(customers.get(q.customer_id)||'Consumidor não identificado')+'</dd></div><div><dt>Situação</dt><dd><span class="status-pill '+(statusClasses[q.status]||'')+'">'+safe(statusLabels[q.status]||q.status)+'</span></dd></div><div><dt>Criado em</dt><dd>'+safe(new Date(q.created_at).toLocaleString('pt-BR'))+'</dd></div><div><dt>Validade</dt><dd>'+safe(q.valid_until||'Sem validade definida')+'</dd></div></dl><div class="detail-items">'+items.map(item=>'<article><span>'+safe(item.description||'Item comercial')+' · '+safe(item.quantity)+' × '+safe(money(item.unitPrice))+'</span><strong>'+safe(money(item.lineTotal))+'</strong></article>').join('')+'</div><p class="dialog-note">'+safe(q.notes||'Nenhuma observação registrada.')+'</p><div class="dialog-actions"><strong>Total: '+safe(money(q.total))+'</strong></div>';$('quoteDetails').showModal();}
+function lineMeta(item){return [item.brand?'Marca: '+item.brand:'',item.model?'Modelo: '+item.model:'',item.serialNumber?'Nº de série: '+item.serialNumber:'',item.serviceDescription||''].filter(Boolean).map(safe).join(' · ');}
+function printQuote(q){if(window.JvgCommercialDocuments)window.JvgCommercialDocuments.print('quote',Object.assign({},q,{customerId:q.customer_id}));else notice('O módulo de impressão não foi carregado. Recarregue a página.');}
+function showDetails(q){const items=Array.isArray(q.items)?q.items:[];$('quoteDetailsTitle').textContent='Orçamento #'+q.id.slice(0,8).toUpperCase();$('quoteDetailsBody').innerHTML='<dl><div><dt>Cliente</dt><dd>'+safe(customers.get(q.customer_id)||'Consumidor não identificado')+'</dd></div><div><dt>Situação</dt><dd><span class="status-pill '+(statusClasses[q.status]||'')+'">'+safe(statusLabels[q.status]||q.status)+'</span></dd></div><div><dt>Criado em</dt><dd>'+safe(new Date(q.created_at).toLocaleString('pt-BR'))+'</dd></div><div><dt>Validade</dt><dd>'+safe(q.valid_until||'Sem validade definida')+'</dd></div></dl><div class="detail-items">'+items.map(item=>'<article><span>'+safe(item.description||'Item comercial')+' · '+safe(item.quantity)+' × '+safe(money(item.unitPrice))+(lineMeta(item)?'<small class="line-detail">'+lineMeta(item)+'</small>':'')+'</span><strong>'+safe(money(item.lineTotal))+'</strong></article>').join('')+'</div><p class="dialog-note">'+safe(q.notes||'Nenhuma observação registrada.')+'</p><div class="dialog-actions"><strong>Total: '+safe(money(q.total))+'</strong><button type="button" class="btn quote-print-detail" data-id="'+safe(q.id)+'">PDF / Imprimir</button></div>';$('quoteDetails').showModal();}
 $('quoteList').addEventListener('click',async event=>{
+ const printButton=event.target.closest('button.quote-print');if(printButton){const quote=quoteRows.find(q=>q.id===printButton.dataset.id);if(quote)printQuote(quote);return;}
  const detailButton=event.target.closest('button.quote-details');if(detailButton){const quote=quoteRows.find(q=>q.id===detailButton.dataset.id);if(quote)showDetails(quote);return;}
  const orderButton=event.target.closest('button.quote-order');
  if(orderButton){
@@ -87,22 +91,43 @@ $('quoteList').addEventListener('click',async event=>{
   await history();notice('Situação do orçamento atualizada.');
  }catch(error){notice(error.message);button.disabled=false;}
 });
+function setOptionalFields(row,item){row.querySelector('.brand').value=item.brand||'';row.querySelector('.model').value=item.model||'';row.querySelector('.serial-number').value=item.serialNumber||'';row.querySelector('.service-description').value=item.serviceDescription||'';}
+async function loadSourceOrder(){
+ const orderId=new URLSearchParams(location.search).get('fromOrder');if(!orderId)return;
+ try{
+  const data=await api('/api/orders?id='+encodeURIComponent(orderId)),order=data.order;
+  if(!order)throw Error('Pedido não encontrado.');
+  $('quoteCustomer').value=order.customer_id||'';$('quoteItems').replaceChildren();
+  const unavailable=[];
+  (Array.isArray(order.items)?order.items:[]).forEach(item=>{
+   const kind=item.serviceId?'service':'product',id=item.serviceId||item.productId;
+   if(!id||!catalog.some(x=>x.kind===kind&&x.id===id)){unavailable.push(item.description||'Item sem cadastro ativo');return;}
+   addRow();const row=rows().at(-1);row.querySelector('.item').value=kind+':'+id;row.querySelector('.item').dispatchEvent(new Event('change'));
+   row.querySelector('.quantity').value=String(item.quantity||1);row.querySelector('.price').value=Number(item.unitPrice||0).toFixed(2);setOptionalFields(row,item);
+  });
+  if(!rows().length)addRow();
+  const reference='Reorçamento baseado no pedido #'+String(order.id).slice(0,8).toUpperCase();
+  $('quoteNotes').value=[reference,order.notes||''].filter(Boolean).join('\n');update();
+  notice((unavailable.length?'Alguns itens não estão mais ativos no catálogo e foram omitidos. ':'')+'Pedido carregado como novo rascunho de orçamento. Confira os dados e salve a proposta.');
+ }catch(error){notice('Não foi possível carregar o pedido para reorçamento: '+error.message);}
+}
 async function start(){
  try{
   const data=await api('/api/records');
   for(const customer of data.clients||[])customers.set(customer.id,customer.name);
   catalog=[...(data.products||[]).filter(x=>x.active).map(x=>({...x,kind:'product'})),...(data.services||[]).filter(x=>x.active).map(x=>({...x,kind:'service'}))];
   $('quoteCustomer').innerHTML='<option value="">Consumidor não identificado</option>'+(data.clients||[]).filter(x=>x.active&&x.isCustomer===true&&x.type!=='EXT').map(x=>'<option value="'+safe(x.id)+'">'+safe(x.name)+'</option>').join('');
-  ready=true;addRow();await history();if(!historyError)notice('Orçamentos conectados à empresa.');
+  ready=true;addRow();await history();if(!historyError)notice('Orçamentos conectados à empresa.');await loadSourceOrder();
  }catch(error){historyError=error.message||'Não foi possível carregar os dados da empresa.';renderHistory();notice(error.message);}
 }
 $('quoteAdd').addEventListener('click',addRow);
 $('quotePrev').addEventListener('click',()=>history(page-1).catch(e=>notice(e.message)));
 $('quoteNext').addEventListener('click',()=>history(page+1).catch(e=>notice(e.message)));
 $('quoteSearch').addEventListener('input',renderHistory);$('quoteStatus').addEventListener('change',renderHistory);$('quoteRefresh').addEventListener('click',()=>history(page).catch(e=>notice(e.message)));$('quoteDetailsClose').addEventListener('click',()=>$('quoteDetails').close());$('quoteDetails').addEventListener('click',event=>{if(event.target===$('quoteDetails'))$('quoteDetails').close();});
+$('quoteDetailsBody').addEventListener('click',event=>{const button=event.target.closest('button.quote-print-detail');if(!button)return;const quote=quoteRows.find(q=>q.id===button.dataset.id);if(quote)printQuote(quote);});
 $('quoteForm').addEventListener('submit',async event=>{
  event.preventDefault();if(!ready||busy||$('quoteSave').disabled)return;
- const items=rows().map(row=>{const [kind,id]=row.querySelector('.item').value.split(':');return {productId:kind==='product'?id:null,serviceId:kind==='service'?id:null,quantity:Number(row.querySelector('.quantity').value),unitPrice:Number(row.querySelector('.price').value)};});
+ const items=rows().map(row=>{const [kind,id]=row.querySelector('.item').value.split(':');return {productId:kind==='product'?id:null,serviceId:kind==='service'?id:null,quantity:Number(row.querySelector('.quantity').value),unitPrice:Number(row.querySelector('.price').value),brand:row.querySelector('.brand').value.trim(),model:row.querySelector('.model').value.trim(),serialNumber:row.querySelector('.serial-number').value.trim(),serviceDescription:row.querySelector('.service-description').value.trim()};});
  busy=true;update();notice('Salvando orçamento...');
  try{
   const result=await api('/api/quotes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerId:$('quoteCustomer').value||null,validUntil:$('quoteValidity').value||null,notes:$('quoteNotes').value,items})});

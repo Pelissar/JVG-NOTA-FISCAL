@@ -91,6 +91,13 @@ export async function GET() {
       balances.set(key, (balances.get(key) ?? 0) + Number(m.quantity_delta || 0));
     }
     return apiJson({ status: "ready", companyName: String(company?.trade_name || company?.legal_name || "Empresa piloto"),
+      company: company ? {
+        legalName: company.legal_name || "", tradeName: company.trade_name || "",
+        cnpj: company.cnpj || "", stateRegistration: company.state_registration || "",
+        municipalRegistration: company.municipal_registration || "",
+        email: company.fiscal_email || "", phone: company.fiscal_phone || "",
+        address: company.address || {},
+      } : null,
       products: products.map(p => ({ id: p.id, sku: p.sku, name: p.name, category: p.category || "", unit: p.unit,
         ncm: p.ncm || "", cest: p.cest || "", gtin: p.gtin || "SEM GTIN", origin: p.origin || "0", defaultCfop: p.default_cfop || "", taxProfileId: p.tax_profile_id || "",
         cost: Number(p.cost_price), price: Number(p.sale_price), stock: balances.get(String(p.id)) || 0, active: p.active })),
