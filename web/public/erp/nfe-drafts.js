@@ -132,7 +132,7 @@
       badge.textContent = draft.status === 'draft' ? 'Rascunho · ' + draft.pendingCount + ' pendência(s)' : draft.status;
       foot.append(price, badge);
       const preview = document.createElement('small');
-      preview.textContent = draft.previewTotalCents ? 'Estimativa aritmética de tributos: ' + money.format(draft.previewTotalCents / 100) + ' · não válida para emissão' : 'Sem estimativa de tributos';
+      preview.textContent = 'Impostos não calculados';
       var inspect = document.createElement('button');
       inspect.type = 'button';
       inspect.className = 'draft-inspect';
@@ -226,10 +226,8 @@
       } else {
         appendLine(target, 'p', 'Sem pendências registradas neste rascunho. Isso não representa aprovação fiscal.');
       }
-      var preview = draft.taxPreview || {};
-      appendLine(target, 'h4', 'Prévia matemática não fiscal');
-      appendLine(target, 'p', 'Estimativa total: ' + money.format(Number(preview.sumOfEstimatesCents || 0) / 100) +
-        '. Não é valor autorizado, nem apuração tributária.');
+      appendLine(target, 'h4', 'Apuração tributária');
+      appendLine(target, 'p', 'Não realizada. O ERP ainda não calcula bases, alíquotas ou valores de impostos. A prévia mostra os campos da Focus já mapeados e os dados que dependem da contabilidade.');
       appendLine(target, 'p', 'Emissão e transmissão indisponíveis nesta fase.');
       target.hidden = false;
       target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

@@ -74,10 +74,9 @@ export function reviewNfeDocument(value: unknown): NfeDocumentReview {
   });
   add("profiles", "Perfis tributários", profilesReviewed,
       "Todos os perfis vinculados devem ter revisão registrada");
-  add("taxPreview", "Estimativa separada do valor da nota",
-      preview.provisional === true && preview.validForEmission === false &&
-      integerCents(preview.sumOfEstimatesCents) !== null,
-      "Estimativas de percentuais informados não são impostos apurados");
+  add("taxPreview", "Cálculo dos tributos",
+      preview.validForEmission === true && preview.calculationMethod === "approved_rule_engine",
+      "Impostos ainda não calculados por regras aprovadas; a conferência fiscal permanece bloqueada");
   add("pending", "Pendências fiscais", pending.length === 0,
       pending.length ? pending.length + " pendência(s) aguardando conferência" :
       "Nenhuma pendência cadastrada; isso não representa autorização");
@@ -108,6 +107,56 @@ export type FocusNfePayloadReview = {
   canSend: false;
 };
 
+const requiredIcmsFieldsForCsosn: Record<string, string[]> = {
+  "101": ["icms_aliquota_credito_simples", "icms_valor_credito_simples"],
+  "201": ["icms_modalidade_base_calculo_st", "icms_margem_valor_adicionado_st", "icms_reducao_base_calculo_st", "icms_base_calculo_st", "icms_aliquota_st", "icms_valor_st", "icms_aliquota_credito_simples", "icms_valor_credito_simples"],
+  "202": ["icms_modalidade_base_calculo_st", "icms_margem_valor_adicionado_st", "icms_reducao_base_calculo_st", "icms_base_calculo_st", "icms_aliquota_st", "icms_valor_st"],
+  "203": ["icms_modalidade_base_calculo_st", "icms_margem_valor_adicionado_st", "icms_reducao_base_calculo_st", "icms_base_calculo_st", "icms_aliquota_st", "icms_valor_st"],
+};
+
+// Somente campos tributários de item aceitos pela Focus. Campos calculados
+// pela API, como ibs_valor_total, não entram no payload preparado pelo ERP.
+const focusTaxFieldNames = new Set([
+  "icms_modalidade_base_calculo", "icms_reducao_base_calculo", "icms_base_calculo", "icms_aliquota", "icms_valor",
+  "icms_modalidade_base_calculo_st", "icms_margem_valor_adicionado_st", "icms_reducao_base_calculo_st",
+  "icms_base_calculo_st", "icms_aliquota_st", "icms_valor_st", "icms_aliquota_credito_simples", "icms_valor_credito_simples",
+  "icms_base_calculo_retido_st", "icms_valor_retido_st", "icms_valor_substituto", "icms_aliquota_final",
+  "pis_base_calculo", "pis_aliquota_porcentual", "pis_quantidade_vendida", "pis_aliquota_valor", "pis_valor",
+  "pis_base_calculo_st", "pis_aliquota_porcentual_st", "pis_quantidade_vendida_st", "pis_aliquota_valor_st", "pis_valor_st",
+  "cofins_base_calculo", "cofins_aliquota_porcentual", "cofins_quantidade_vendida", "cofins_aliquota_valor", "cofins_valor",
+  "cofins_base_calculo_st", "cofins_aliquota_porcentual_st", "cofins_quantidade_vendida_st", "cofins_aliquota_valor_st", "cofins_valor_st",
+  "ibs_cbs_base_calculo", "ibs_uf_aliquota", "ibs_uf_valor", "ibs_mun_aliquota", "ibs_mun_valor", "cbs_aliquota", "cbs_valor",
+]);
+const supportedCsosn = new Set(["101", "102", "103", "201", "202", "203", "300", "400", "500", "900"]);
+
+function missingTaxFields(fields: string[], focusFields: Json): string[] {
+  return fields.filter(field => focusFields[field] === undefined || focusFields[field] === null || focusFields[field] === "");
+}
+
+function conditionalIcmsMissing(csosn: string, focusFields: Json): string[] {
+  const required = requiredIcmsFieldsForCsosn[csosn];
+  if (required) return missingTaxFields(required, focusFields);
+  if (csosn === "900") {
+    const basic = ["icms_modalidade_base_calculo", "icms_base_calculo", "icms_reducao_base_calculo", "icms_aliquota", "icms_valor"];
+    const substitution = ["icms_modalidade_base_calculo_st", "icms_margem_valor_adicionado_st", "icms_reducao_base_calculo_st", "icms_base_calculo_st", "icms_aliquota_st", "icms_valor_st"];
+    const basicPresent = basic.some(field => focusFields[field] !== undefined && focusFields[field] !== "");
+    const substitutionPresent = substitution.some(field => focusFields[field] !== undefined && focusFields[field] !== "");
+    const missing = [
+      ...(basicPresent ? missingTaxFields(basic, focusFields) : []),
+      ...(substitutionPresent ? missingTaxFields(substitution, focusFields) : []),
+    ];
+    return missing;
+  }
+  return [];
+}
+
+function conditionalPisCofinsFields(cst: string, prefix: "pis" | "cofins"): string[] {
+  if (cst === "01" || cst === "02") return [`${prefix}_base_calculo`, `${prefix}_aliquota_porcentual`, `${prefix}_valor`];
+  if (cst === "03") return [`${prefix}_quantidade_vendida`, `${prefix}_aliquota_valor`, `${prefix}_valor`];
+  if (cst === "05") return [`${prefix}_base_calculo_st`, `${prefix}_aliquota_porcentual_st`, `${prefix}_valor_st`];
+  return [];
+}
+
 /** Prévia estrutural parcial; nunca habilita ou chama a transmissão Focus. */
 export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
   const payload = obj(value), issuer = obj(payload.issuer), recipient = obj(payload.recipient);
@@ -119,7 +168,7 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
     checks.push({ key, label, ok, detail });
     if (ok && mappedValue !== undefined) requestPreview[key] = mappedValue;
   };
-  const textDigits = (raw: unknown) => text(raw).replace(/\\D/g, "");
+  const textDigits = (raw: unknown) => text(raw).replace(/\D/g, "");
   const nature = text(payload.nature);
   add("natureza_operacao", "Natureza da operação", nature.length >= 1 && nature.length <= 60,
       "A Focus aceita até 60 caracteres.", nature.length >= 1 && nature.length <= 60 ? nature : undefined);
@@ -132,8 +181,11 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
   const validUfs = /^[A-Z]{2}$/.test(issuerUf) && /^[A-Z]{2}$/.test(recipientUf);
   add("local_destino", "Local de destino", validUfs,
       "Derivado das UFs do emitente e destinatário.", validUfs ? (issuerUf === recipientUf ? 1 : 2) : undefined);
-  add("data_emissao", "Data/hora de emissão", true,
-      "Será criada no servidor no momento de transmitir; não é fixada no rascunho.");
+  const issueAt = text(payload.issueAt);
+  const issueAtValid = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(issueAt) &&
+    Number.isFinite(Date.parse(issueAt));
+  add("data_emissao", "Data/hora de emissão", issueAtValid,
+      "Campo obrigatório da Focus; ainda não está gravado no rascunho.", issueAtValid ? issueAt : undefined);
   const finalConsumer = payload.consumerFinal;
   const finalConsumerValid = typeof finalConsumer === "boolean";
   add("consumidor_final", "Consumidor final", finalConsumerValid,
@@ -148,8 +200,8 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
   const ie = text(issuer.stateRegistration);
   const regime = issuer.taxRegime === "simples_nacional" ? 1 :
     issuer.taxRegime === "lucro_presumido" || issuer.taxRegime === "lucro_real" ? 3 : null;
-  add("cnpj_emitente", "CNPJ do emitente", /^\\d{14}$/.test(cnpj),
-      "Informe o CNPJ numérico do estabelecimento.", /^\\d{14}$/.test(cnpj) ? cnpj : undefined);
+  add("cnpj_emitente", "CNPJ do emitente", /^\d{14}$/.test(cnpj),
+      "Informe o CNPJ numérico do estabelecimento.", /^\d{14}$/.test(cnpj) ? cnpj : undefined);
   add("nome_emitente", "Razão social do emitente", issuerName.length >= 2 && issuerName.length <= 60,
       "Razão social deve ter de 2 a 60 caracteres.", issuerName.length >= 2 && issuerName.length <= 60 ? issuerName : undefined);
   add("inscricao_estadual_emitente", "Inscrição estadual do emitente", ie.length >= 2 && ie.length <= 14,
@@ -162,7 +214,7 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
       const raw = text(address[source]);
       const mapped = source === "postalCode" || source === "cityCode" ? textDigits(raw) :
         source === "state" ? raw.toUpperCase() : raw;
-      const pattern = source === "cityCode" ? /^\\d{7}$/ : source === "postalCode" ? /^\\d{8}$/ : null;
+      const pattern = source === "cityCode" ? /^\d{7}$/ : source === "postalCode" ? /^\d{8}$/ : null;
       const ok = pattern ? pattern.test(mapped) : mapped.length > 0;
       add(focusField, label, ok, "Conferir endereço fiscal cadastrado.", ok ? mapped : undefined);
     });
@@ -186,8 +238,8 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
 
   const recipientType = text(recipient.documentType).toLowerCase();
   const recipientDocument = textDigits(recipient.documentNumber);
-  const validCpf = recipientType === "cpf" && /^\\d{11}$/.test(recipientDocument);
-  const validCnpj = recipientType === "cnpj" && /^\\d{14}$/.test(recipientDocument);
+  const validCpf = recipientType === "cpf" && /^\d{11}$/.test(recipientDocument);
+  const validCnpj = recipientType === "cnpj" && /^\d{14}$/.test(recipientDocument);
   const docOk = validCpf || validCnpj;
   add("documento_destinatario", "CPF/CNPJ do destinatário", docOk,
       "Documento nacional do destinatário; estrangeiro ainda não está mapeado.");
@@ -207,7 +259,7 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
     ["uf_destinatario","state","UF do destinatário"],
   ]);
   const recipientPostal = textDigits(recipientAddress.postalCode);
-  if (/^\\d{8}$/.test(recipientPostal)) requestPreview.cep_destinatario = recipientPostal;
+  if (/^\d{8}$/.test(recipientPostal)) requestPreview.cep_destinatario = recipientPostal;
   if (text(recipient.email)) requestPreview.email_destinatario = text(recipient.email);
   if (textDigits(recipient.phone)) requestPreview.telefone_destinatario = textDigits(recipient.phone);
   if (text(recipient.stateRegistration)) requestPreview.inscricao_estadual_destinatario = text(recipient.stateRegistration);
@@ -219,6 +271,7 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
 
   const mappedItems: Json[] = [];
   const itemBasicMissing: string[] = [], itemCodeMissing: string[] = [], itemIbsMissing: string[] = [];
+  const itemIcmsMissing: string[] = [], itemPisCofinsMissing: string[] = [], itemIbsDetailsMissing: string[] = [];
   sourceItems.forEach((raw, index) => {
     const item = obj(raw), row: Json = { numero_item: index + 1 };
     const put = (key: string, valid: boolean, mapped: unknown) => {
@@ -232,62 +285,129 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
     const originText = text(item.origin), origin = Number(originText), originValid = /^[0-8]$/.test(originText);
     put("codigo_produto", productCode.length > 0, productCode);
     put("descricao", description.length > 0, description);
-    put("codigo_ncm", /^\\d{8}$/.test(ncm), ncm);
-    put("cfop", /^\\d{4}$/.test(cfop), cfop);
+    put("codigo_ncm", /^\d{8}$/.test(ncm), ncm);
+    put("cfop", /^\d{4}$/.test(cfop), cfop);
     put("unidade_comercial", unit.length > 0, unit);
     put("quantidade_comercial", Number.isFinite(quantity) && quantity > 0, quantity);
     put("valor_unitario_comercial", Number.isFinite(unitPrice) && unitPrice >= 0, unitPrice);
     put("valor_bruto", Number.isFinite(gross) && gross >= 0, gross);
     put("icms_origem", originValid, origin);
-    const rules = obj(obj(item.taxProfile).rules);
+    const rules = obj(item.taxRules);
+    const focusFields = obj(rules.focusFields);
     const csosn = text(item.csosn), pis = text(rules.pisCst), cofins = text(rules.cofinsCst);
-    if (/^\\d{3}$/.test(csosn)) row.icms_situacao_tributaria = csosn;
+    if (/^\d{3}$/.test(csosn) && supportedCsosn.has(csosn)) row.icms_situacao_tributaria = csosn;
     else itemCodeMissing.push("Item " + (index + 1) + " CSOSN/ICMS");
-    if (/^\\d{2}$/.test(pis)) row.pis_situacao_tributaria = pis;
+    if (/^\d{2}$/.test(pis)) row.pis_situacao_tributaria = pis;
     else itemCodeMissing.push("Item " + (index + 1) + " CST PIS");
-    if (/^\\d{2}$/.test(cofins)) row.cofins_situacao_tributaria = cofins;
+    if (/^\d{2}$/.test(cofins)) row.cofins_situacao_tributaria = cofins;
     else itemCodeMissing.push("Item " + (index + 1) + " CST COFINS");
     const cstIbs = text(rules.cstIbsCbs), classTrib = text(rules.classTrib);
-    if (/^\\d{3}$/.test(cstIbs) && /^\\d{6}$/.test(classTrib)) {
+    if (/^\d{3}$/.test(cstIbs) && /^\d{6}$/.test(classTrib)) {
       row.ibs_cbs_situacao_tributaria = cstIbs;
       row.ibs_cbs_classificacao_tributaria = classTrib;
     } else itemIbsMissing.push("Item " + (index + 1));
+    for (const [field, rawValue] of Object.entries(focusFields)) {
+      if (!focusTaxFieldNames.has(field)) continue;
+      const numericValue = typeof rawValue === "number" ? rawValue :
+        typeof rawValue === "string" && /^\d+(?:\.\d+)?$/.test(rawValue.trim()) ? Number(rawValue) : Number.NaN;
+      if (Number.isFinite(numericValue) && numericValue >= 0) row[field] = numericValue;
+    }
+    const missingIcms = conditionalIcmsMissing(csosn, focusFields);
+    if (!supportedCsosn.has(csosn)) missingIcms.push("CSOSN válido para o regime confirmado");
+    if (missingIcms.length) itemIcmsMissing.push(`Item ${index + 1}: ${missingIcms.join(", ")}`);
+    for (const [prefix, cst] of [["pis", pis], ["cofins", cofins]] as const) {
+      const expectedFields = conditionalPisCofinsFields(cst, prefix);
+      const missing = missingTaxFields(expectedFields, focusFields);
+      if (missing.length) itemPisCofinsMissing.push(`Item ${index + 1}: ${missing.join(", ")}`);
+      if (cst && !expectedFields.length && !["04", "06", "07", "08", "09"].includes(cst))
+        itemPisCofinsMissing.push(`Item ${index + 1}: revisar o grupo condicional do ${prefix.toUpperCase()} para CST ${cst} com a tabela Focus e a contabilidade`);
+    }
+    if (cstIbs && classTrib) {
+      if (cstIbs === "000") {
+        const required = ["ibs_cbs_base_calculo", "ibs_uf_aliquota", "ibs_uf_valor", "ibs_mun_aliquota", "ibs_mun_valor", "cbs_aliquota", "cbs_valor"];
+        const missing = missingTaxFields(required, focusFields);
+        if (missing.length) itemIbsDetailsMissing.push(`Item ${index + 1}: ${missing.join(", ")}`);
+      } else {
+        itemIbsDetailsMissing.push(`Item ${index + 1}: campos IBS/CBS condicionais ao CST ${cstIbs} e classificação ${classTrib} precisam de definição e revisão específica`);
+      }
+    }
     const gtin = textDigits(item.gtin);
-    if (/^(?:\\d{8}|\\d{12}|\\d{13}|\\d{14})$/.test(gtin)) row.codigo_barras_comercial = gtin;
+    if (/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/.test(gtin)) row.codigo_barras_comercial = gtin;
     mappedItems.push(row);
   });
   const itemsComplete = sourceItems.length > 0 && itemBasicMissing.length === 0;
-  if (itemsComplete) requestPreview.items = mappedItems;
+  requestPreview.items = mappedItems;
   add("itens", "Dados básicos dos itens", itemsComplete,
       itemBasicMissing.length ? itemBasicMissing.slice(0,8).join("; ") : "Código, descrição, NCM, CFOP, unidade, quantidade e valores mapeados.");
   add("codigos_tributarios", "CSOSN e CST de PIS/COFINS", itemCodeMissing.length === 0 && sourceItems.length > 0,
       itemCodeMissing.length ? itemCodeMissing.slice(0,8).join("; ") : "Códigos disponíveis no rascunho.");
   add("ibs_cbs", "CST/classificação IBS-CBS", itemIbsMissing.length === 0 && sourceItems.length > 0,
       itemIbsMissing.length ? itemIbsMissing.slice(0,8).join("; ") : "Códigos disponíveis; ainda precisam de conferência.");
-  add("detalhes_tributarios", "Cálculo tributário", false,
-      "Bases, alíquotas e valores por CST/CSOSN ainda não estão estruturados; estimativas não podem ser enviadas.");
+  add("icms_campos_condicionais", "Campos de ICMS exigidos pelo CSOSN", itemIcmsMissing.length === 0 && sourceItems.length > 0,
+      itemIcmsMissing.length ? itemIcmsMissing.slice(0,8).join("; ") : "A combinação exige apenas origem e CSOSN, ou não pede grupo numérico adicional.");
+  add("pis_cofins_campos_condicionais", "Campos condicionais de PIS/Cofins", itemCodeMissing.length === 0 && itemPisCofinsMissing.length === 0 && sourceItems.length > 0,
+      itemPisCofinsMissing.length ? itemPisCofinsMissing.slice(0,8).join("; ") : "Confira se os grupos numéricos exigidos para cada CST foram informados e revisados.");
+  add("ibs_cbs_campos_condicionais", "Campos condicionais de IBS/CBS", itemIbsMissing.length === 0 && itemIbsDetailsMissing.length === 0 && sourceItems.length > 0,
+      itemIbsDetailsMissing.length ? itemIbsDetailsMissing.slice(0,8).join("; ") :
+      itemIbsMissing.length ? "Informe CST e cClassTrib orientados pela contabilidade." : "Grupo numérico ainda não cadastrado para as classificações deste item.");
 
   const transport = obj(payload.transport), freightMode = Number(transport.mode);
   const freightValid = Number.isInteger(freightMode) && [0,1,2,3,4,9].includes(freightMode);
   add("modalidade_frete", "Modalidade do frete", freightValid,
-      "Campo obrigatório da Focus ainda não é salvo no rascunho.", freightValid ? freightMode : undefined);
+      "A Focus aceita 0, 1, 2, 3, 4 ou 9; ainda não é salvo no rascunho.", freightValid ? freightMode : undefined);
   const payments = Array.isArray(payload.payments) ? payload.payments : [];
-  add("formas_pagamento", "Dados de pagamento", payments.length > 0,
-      "O rascunho ainda não persiste meio, condição e valor de pagamento.",
-      payments.length > 0 ? payments : undefined);
+  const paymentMethods = new Set(["01", "02", "03", "04", "05", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "90", "91", "99"]);
+  const mappedPayments: Json[] = [];
+  const paymentMissing: string[] = [];
+  payments.forEach((raw, index) => {
+    const payment = obj(raw);
+    const indicator = Number(payment.indicator);
+    const method = text(payment.method);
+    const amountCents = integerCents(payment.amountCents);
+    const mapped: Json = {};
+    if (payment.indicator != null && Number.isInteger(indicator) && [0, 1].includes(indicator)) mapped.indicador_pagamento = indicator;
+    else paymentMissing.push(`Pagamento ${index + 1}: indicador 0/1`);
+    if (paymentMethods.has(method)) mapped.forma_pagamento = method;
+    else paymentMissing.push(`Pagamento ${index + 1}: forma_pagamento Focus válida`);
+    if (amountCents !== null) mapped.valor_pagamento = amountCents / 100;
+    else paymentMissing.push(`Pagamento ${index + 1}: valor em centavos`);
+    if (method === "99") {
+      const description = text(payment.description);
+      if (description.length >= 2 && description.length <= 60) mapped.descricao_pagamento = description;
+      else paymentMissing.push(`Pagamento ${index + 1}: descrição de 2 a 60 caracteres para a forma 99`);
+    }
+    if (["03", "04", "05"].includes(method)) {
+      const integration = Number(payment.integration);
+      if ([1, 2].includes(integration)) mapped.tipo_integracao = integration;
+      else paymentMissing.push(`Pagamento ${index + 1}: tipo de integração para cartão`);
+      if (integration === 1) {
+        const acquirer = textDigits(payment.acquirerCnpj);
+        const authorization = text(payment.authorizationNumber);
+        if (/^\d{14}$/.test(acquirer)) mapped.cnpj_credenciadora = acquirer;
+        else paymentMissing.push(`Pagamento ${index + 1}: CNPJ da credenciadora`);
+        if (authorization.length > 0 && authorization.length <= 60) mapped.numero_autorizacao = authorization;
+        else paymentMissing.push(`Pagamento ${index + 1}: número de autorização`);
+      }
+    }
+    mappedPayments.push(mapped);
+  });
+  const paymentsValid = payments.length === 0 || paymentMissing.length === 0;
+  add("formas_pagamento", "Formas de pagamento", paymentsValid,
+      payments.length === 0 ? "Coleção opcional da Focus; o rascunho ainda não captura pagamentos." :
+      paymentMissing.length ? paymentMissing.slice(0, 8).join("; ") : "Campos comerciais convertidos para os nomes Focus.",
+      payments.length > 0 && paymentsValid ? mappedPayments : undefined);
   const productCents = sourceItems.reduce((sum, raw) => sum + (Number(obj(raw).subtotalCents) || 0), 0);
-  add("valor_produtos", "Total dos produtos", Number.isSafeInteger(productCents) && productCents >= 0,
-      "Soma comercial em centavos; a Focus também calcula este total.",
-      Number.isSafeInteger(productCents) && productCents >= 0 ? productCents / 100 : undefined);
+  add("valor_produtos", "Totalização de produtos", Number.isSafeInteger(productCents) && productCents >= 0,
+      "A soma comercial foi conferida; a Focus totaliza os itens. O total não é enviado duas vezes.");
   add("valor_total", "Total fiscal", false,
-      "Depende dos tributos, frete, descontos e demais totais aprovados.");
+      "A Focus calcula os totais a partir dos itens e dos valores fiscais informados; esses grupos ainda estão incompletos.");
   return {
     environment: "homologacao",
     endpoint: "POST /v2/nfe?ref",
     requestPreview,
     checks,
     missingCount: checks.filter(check => !check.ok).length,
-    autoAssignedFields: ["ref (ID fiscal interno)", "data_emissao (gerada ao transmitir)", "serie e numero (Focus)"],
+    autoAssignedFields: ["ref (ID fiscal interno)", "serie e numero (Focus, se a numeração automática estiver configurada)"],
     transmissionEnabled: false,
     canSend: false,
   };

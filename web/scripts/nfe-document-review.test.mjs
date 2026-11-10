@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { reviewNfeDocument } from '../lib/fiscal/nfe-document-review.ts';
+import { reviewNfeDocument, reviewFocusNfePayload } from '../lib/fiscal/nfe-document-review.ts';
 
 const valid = () => ({
   schemaVersion: 3,
@@ -24,6 +24,7 @@ test('revisa estrutura interna e totais comerciais sem habilitar emissão', () =
   assert.equal(result.transmissionEnabled,false);
   assert.equal(result.canGenerateFiscalXml,false);
   assert.equal(check(result,'transmission').ok,false);
+  assert.equal(check(result,'taxPreview').ok,false);
 });
 test('divergência entre soma e total comercial é bloqueio', () => {
   const payload=valid();payload.totalCents=3084;
@@ -44,4 +45,85 @@ test('rascunho antigo ou sem dados não causa erro e não autoriza transmissão'
   assert.equal(check(result,'version').ok,false);
   assert.equal(check(result,'items').ok,false);
   assert.equal(result.transmissionEnabled,false);
+});
+
+const focusPayload = () => ({
+  nature:'Venda de mercadoria', issuer:{cnpj:'12345678000195',legalName:'Empresa Exemplo',stateRegistration:'123456789',
+    taxRegime:'simples_nacional',taxRegimeConfirmed:true,state:'SP',address:{street:'Rua A',number:'1',district:'Centro',
+      cityCode:'3550308',city:'São Paulo',state:'SP',postalCode:'01001000'}},
+  recipient:{name:'Cliente Exemplo',documentType:'cpf',documentNumber:'52998224725',state:'SP',
+    address:{street:'Rua B',number:'2',district:'Centro',cityCode:'3550308',city:'São Paulo',state:'SP',postalCode:'01001000'}},
+  consumerFinal:true,buyerPresence:1,recipientIeIndicator:9,transport:{mode:9},payments:[{method:'not-configured'}],
+  items:[{sku:'SKU-1',description:'Produto de teste',ncm:'85176299',cfop:'5102',unit:'UN',quantity:1,
+    unitPriceCents:1000,subtotalCents:1000,origin:'0',csosn:'102',
+    taxRules:{pisCst:'06',cofinsCst:'06',cstIbsCbs:'000',classTrib:'000001',focusFields:{
+      ibs_cbs_base_calculo:10,ibs_uf_aliquota:0,ibs_uf_valor:0,ibs_mun_aliquota:0,ibs_mun_valor:0,
+      cbs_aliquota:0,cbs_valor:0,ibs_valor_total:999
+    }}}],
+});
+
+test('prévia mapeia códigos e somente valores Focus permitidos, sem inventar totalização', () => {
+  const result = reviewFocusNfePayload(focusPayload());
+  const item = result.requestPreview.items[0];
+  assert.equal(item.icms_origem,0);
+  assert.equal(item.icms_situacao_tributaria,'102');
+  assert.equal(item.pis_situacao_tributaria,'06');
+  assert.equal(item.cofins_situacao_tributaria,'06');
+  assert.equal(item.ibs_cbs_situacao_tributaria,'000');
+  assert.equal(item.ibs_cbs_classificacao_tributaria,'000001');
+  assert.equal(item.ibs_uf_valor,0);
+  assert.equal('ibs_valor_total' in item,false);
+  assert.equal('valor_total' in result.requestPreview,false);
+  assert.equal('formas_pagamento' in result.requestPreview,false);
+  assert.equal(result.checks.find(row=>row.key==='formas_pagamento').ok,false);
+  assert.equal(result.canSend,false);
+  assert.equal(result.transmissionEnabled,false);
+});
+
+test('prévia aponta os campos ICMS exigidos por CSOSN sem completar valores', () => {
+  const payload=focusPayload();
+  payload.items[0].csosn='101';
+  const result=reviewFocusNfePayload(payload);
+  const check=result.checks.find(row=>row.key==='icms_campos_condicionais');
+  assert.equal(check.ok,false);
+  assert.match(check.detail,/icms_aliquota_credito_simples/);
+  assert.match(check.detail,/icms_valor_credito_simples/);
+  assert.equal(result.canSend,false);
+});
+
+test('data de emissao e obrigatoria no payload e nao e declarada como automatica pela Focus', () => {
+  const payload=focusPayload();
+  const result=reviewFocusNfePayload(payload);
+  assert.equal(result.checks.find(row=>row.key==='data_emissao').ok,false);
+  assert.equal('data_emissao' in result.requestPreview,false);
+  assert.equal(result.autoAssignedFields.some(field=>field.includes('data_emissao')),false);
+  payload.issueAt='2026-11-10T18:00:00-03:00';
+  const withIssueAt=reviewFocusNfePayload(payload);
+  assert.equal(withIssueAt.checks.find(row=>row.key==='data_emissao').ok,true);
+  assert.equal(withIssueAt.requestPreview.data_emissao,payload.issueAt);
+});
+
+test('modalidades de frete oficiais 3 e 4 sao aceitas e CSOSN 900 nao exige grupo opcional', () => {
+  for (const mode of [3,4]) {
+    const payload=focusPayload();
+    payload.transport.mode=mode;
+    assert.equal(reviewFocusNfePayload(payload).checks.find(row=>row.key==='modalidade_frete').ok,true);
+  }
+  const payload=focusPayload();
+  payload.items[0].csosn='900';
+  const result=reviewFocusNfePayload(payload);
+  assert.equal(result.checks.find(row=>row.key==='icms_campos_condicionais').ok,true);
+});
+
+test('pagamento usa o contrato Focus e nao repassa objetos internos sem validacao', () => {
+  const payload=focusPayload();
+  payload.payments=[{indicator:0,method:'01',amountCents:1000}];
+  const result=reviewFocusNfePayload(payload);
+  assert.deepEqual(result.requestPreview.formas_pagamento,[{
+    indicador_pagamento:0,forma_pagamento:'01',valor_pagamento:10
+  }]);
+  payload.payments=[{indicator:0,method:'03',amountCents:1000}];
+  const cardResult=reviewFocusNfePayload(payload);
+  assert.equal(cardResult.checks.find(row=>row.key==='formas_pagamento').ok,false);
+  assert.equal('formas_pagamento' in cardResult.requestPreview,false);
 });

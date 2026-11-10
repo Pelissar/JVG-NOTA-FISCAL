@@ -38,9 +38,13 @@ export function reviewProfileConsistency(
   cfop: string,
   csosn: string,
   itemNumber: number,
+  operation: OperationReview["operation"],
 ): string[] {
-  if (!profileRules) return [];
   const pending: string[] = [];
+  if (!profileRules) {
+    pending.push(`Item ${itemNumber}: perfil sem regra configurada para operação ${operation}`);
+    return pending;
+  }
   if (profileRules.regime && profileRules.regime !== "simples_nacional")
     pending.push(`Item ${itemNumber}: regime do perfil não corresponde ao piloto Simples Nacional`);
   if (profileRules.cfop && profileRules.cfop !== cfop)

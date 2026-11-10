@@ -6,7 +6,6 @@ import {
 import { parseNfeDraftInput } from "../../../../lib/fiscal/nfe-draft";
 import { isOfficialCfopCode } from "../../../../lib/fiscal/cfop";
 import { reviewNfeOperation, reviewProfileConsistency } from "../../../../lib/fiscal/operation-review";
-import { calculateTaxPreview, parsePreviewRate, PREVIEW_TAXES, type PreviewRates } from "../../../../lib/fiscal/tax-preview";
 import { reviewNfePreparation } from "../../../../lib/fiscal/nfe-preflight";
 import { reviewNfeDocument, reviewFocusNfePayload } from "../../../../lib/fiscal/nfe-document-review";
 
@@ -78,7 +77,6 @@ export async function GET(request: Request) {
         sourceOrderId: String((payload.sourceOrder as DbRow | undefined)?.id || ""),
         sourceOrderNumber: String((payload.sourceOrder as DbRow | undefined)?.number || ""),
         totalCents: Number(payload.totalCents || 0), pendingCount: warnings.length,
-        previewTotalCents: Number((payload.taxPreview as DbRow | undefined)?.sumOfEstimatesCents || 0),
       };
     }) });
   } catch (error) { return safeError(error); }
@@ -159,7 +157,6 @@ export async function POST(request: Request) {
     const recipientAddress = recipient.address && typeof recipient.address === "object" ? recipient.address as DbRow : {};
     const issuerUf = issuerAddress.state;
     const recipientUf = recipientAddress.state;
-    const estimatedLines: Array<{ tax: string; amountCents: number }> = [];
     const items = draft.items.map((input, index) => {
       const product = byId.get(input.productId)!;
       if (!/^[0-9]{8}$/.test(String(product.ncm || ""))) pending.push(`Item ${index + 1}: NCM pendente`);
@@ -172,26 +169,28 @@ export async function POST(request: Request) {
       if (!profile) pending.push(`Item ${index + 1}: perfil tributário não associado ou indisponível`);
       else {
         if (profile.review_status !== 'reviewed') pending.push(`Item ${index + 1}: perfil tributário ainda não revisado`);
-        const rules = profile.rules && typeof profile.rules === "object" && !Array.isArray(profile.rules) ? profile.rules as DbRow : {};
-        pending.push(...reviewProfileConsistency(rules, input.cfop, input.csosn, index + 1));
       }
       const rules = profile?.rules && typeof profile.rules === "object" && !Array.isArray(profile.rules) ? profile.rules as DbRow : {};
-      const rawRates = rules.previewRates && typeof rules.previewRates === "object" && !Array.isArray(rules.previewRates) ? rules.previewRates as DbRow : {};
-      const previewRates: PreviewRates = {};
-      for (const tax of PREVIEW_TAXES) {
-        try { const rate = parsePreviewRate(rawRates[tax]); if (rate !== null) previewRates[tax] = rate; }
-        catch { pending.push(`Item ${index + 1}: alíquota ${tax.toUpperCase()} inválida no perfil`); }
-      }
-      const taxPreview = calculateTaxPreview(input.subtotalCents, previewRates);
-      for (const line of taxPreview.lines) estimatedLines.push({ tax: line.tax, amountCents: line.estimateCents });
-      if (taxPreview.lines.length) pending.push(`Item ${index + 1}: estimativas tributárias exigem conferência; não são impostos apurados`);
+      const operationRules = rules.operations && typeof rules.operations === "object" && !Array.isArray(rules.operations)
+        ? rules.operations as DbRow : {};
+      const selectedRules = operationRules[review.operation] && typeof operationRules[review.operation] === "object" && !Array.isArray(operationRules[review.operation])
+        ? operationRules[review.operation] as DbRow : undefined;
+      const hasOperationRule = Boolean(selectedRules && review.operation !== "indeterminada");
+      pending.push(...reviewProfileConsistency(selectedRules, input.cfop, input.csosn, index + 1, review.operation));
+      if (rules.operations && !hasOperationRule)
+        pending.push(`Item ${index + 1}: cadastre e aprove uma regra fiscal específica para a operação ${review.operation}`);
+      if (!rules.operations && profile)
+        pending.push(`Item ${index + 1}: regra fiscal antiga sem separação por operação; revise antes de usar`);
+      const taxPreview = { lines: [], sumOfEstimatesCents: 0, provisional: true, validForEmission: false, calculationMethod: "not_calculated" };
       return {
         productId: product.id, sku: product.sku, description: product.name,
         unit: product.unit, ncm: product.ncm, cest: product.cest, gtin: product.gtin, origin: product.origin,
         quantity: input.quantity, unitPriceCents: input.unitPriceCents,
         subtotalCents: input.subtotalCents, cfop: input.cfop, csosn: input.csosn,
         operation: review.operation, taxPreview,
-        taxProfile: profile ? { id: profile.id, name: profile.name, reviewStatus: profile.review_status, rules: profile.rules } : null,
+        taxRules: hasOperationRule ? selectedRules : null,
+        taxProfile: profile ? { id: profile.id, name: profile.name, reviewStatus: profile.review_status,
+          operationRuleConfigured: hasOperationRule } : null,
       };
     });
     const issuer = {
@@ -216,14 +215,15 @@ export async function POST(request: Request) {
     };
     const preflight = reviewNfePreparation(issuer, recipientSnapshot, items);
     pending.push(...preflight.issues);
-    pending.push("Conferência tributária com contador: ICMS, PIS/Cofins, IBS/CBS e demais totalizadores");
+    if (items.some(item => item.taxProfile?.reviewStatus !== "reviewed"))
+      pending.push("Registre a revisão das regras cadastradas com a contabilidade antes de prosseguir.");
     const taxPreview = {
-      sumOfEstimatesCents: estimatedLines.reduce((sum, line) => sum + line.amountCents, 0),
-      provisional: true, validForEmission: false, calculationMethod: "arithmetic_only",
+      sumOfEstimatesCents: 0,
+      provisional: true, validForEmission: false, calculationMethod: "not_calculated",
     };
 
     const payload = {
-      schemaVersion: 4, nature: draft.nature, purpose: "1",
+      schemaVersion: 4, nature: draft.nature,
       sourceOrder: sourceOrder ? {
         id: String(sourceOrder.id),
         number: "PED-" + String(sourceOrder.id).slice(0, 8).toUpperCase(),

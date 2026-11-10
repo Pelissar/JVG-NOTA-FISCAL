@@ -20,9 +20,10 @@ test("CFOP do exterior não é automaticamente aceito", () => {
 });
 test("perfil divergente gera pendências e não calcula tributos", () => {
   const rules = {regime:"simples_nacional",cfop:"5102",csosn:"102",pisCst:"01",cofinsCst:"01",cstIbsCbs:"000",classTrib:"000001"};
-  assert.deepEqual(reviewProfileConsistency(rules,"5102","102",1),[]);
-  const issues=reviewProfileConsistency(rules,"6102","500",1).join(" ");
+  assert.deepEqual(reviewProfileConsistency(rules,"5102","102",1,"interna"),[]);
+  const issues=reviewProfileConsistency(rules,"6102","500",1,"interestadual").join(" ");
   assert.match(issues,/CFOP/);
   assert.match(issues,/CSOSN/);
-  assert.match(reviewProfileConsistency({}, "5102", "102", 1).join(" "),/IBS\/CBS/);
+  assert.match(reviewProfileConsistency({}, "5102", "102", 1, "interna").join(" "),/IBS\/CBS/);
+  assert.match(reviewProfileConsistency(undefined, "5102", "102", 1, "interestadual").join(" "),/interestadual/);
 });
