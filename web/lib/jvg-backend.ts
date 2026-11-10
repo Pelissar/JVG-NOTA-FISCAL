@@ -41,6 +41,22 @@ export async function dbRequest<T = unknown>(path: string, init: RequestInit = {
 
 export function filterEq(value: string): string { return encodeURIComponent(`eq.${value}`); }
 
+export type JvgDashboardSummary = {
+  productsCount: number;
+  clientsCount: number;
+  unitsStock: number;
+  lowStockCount: number;
+  stockValue: number;
+  recentMovements: Array<{ productId: string; delta: number; reason: string | null; at: string; name: string | null }>;
+};
+
+export async function getDashboardSummary(account: SiteAccount): Promise<JvgDashboardSummary> {
+  return dbRequest<JvgDashboardSummary>("/rest/v1/rpc/jvg_dashboard_summary", {
+    method: "POST",
+    body: JSON.stringify({ p_tenant_id: account.tenant_id, p_company_id: account.company_id }),
+  });
+}
+
 /** Acesso global e separado da empresa: so apos verificacao do email no Auth. */
 export async function getPlatformRole(user: JvgAuthUser): Promise<"platform_admin" | null> {
   const role = await dbRequest<string | null>("/rest/v1/rpc/jvg_claim_platform_admin", {

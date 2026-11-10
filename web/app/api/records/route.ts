@@ -1,5 +1,5 @@
 import { getJvgUser } from "../../jvg-auth";
-import { apiJson, dbRequest, filterEq, getCompany, getSiteAccount, isSameOrigin, JvgBackendError, positiveMoney, safeError, str, type SiteAccount } from "../../../lib/jvg-backend";
+import { apiJson, dbRequest, filterEq, getCompany, getDashboardSummary, getSiteAccount, isSameOrigin, JvgBackendError, positiveMoney, safeError, str, type SiteAccount } from "../../../lib/jvg-backend";
 import { fiscalAddress, validCnpj } from "../../../lib/fiscal-company";
 import { isValidCpf } from "../../../lib/fiscal/cpf";
 import { isOfficialCfopCode } from "../../../lib/fiscal/cfop";
@@ -79,22 +79,96 @@ async function authenticatedAccount() {
   return account;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const account = await authenticatedAccount();
     const scope = `tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`;
+    const requestedScope = new URL(request.url).searchParams.get("scope") || "full";
+    const supportedScopes = ["dashboard", "products", "clients", "services", "inventory", "reports", "full"];
+    const dataScope = supportedScopes.includes(requestedScope) ? requestedScope : "full";
+
+    const shouldTryDashboardRpc = dataScope === "dashboard" && new URL(request.url).searchParams.get("summary") !== "skip";
+    if (shouldTryDashboardRpc) {
+      try {
+        const dashboard = await getDashboardSummary(account);
+        return apiJson({ status: "ready", dashboardAvailable: true, dashboard: {
+          productsCount: Number(dashboard.productsCount || 0),
+          clientsCount: Number(dashboard.clientsCount || 0),
+          unitsStock: Number(dashboard.unitsStock || 0),
+          lowStockCount: Number(dashboard.lowStockCount || 0),
+          stockValue: Number(dashboard.stockValue || 0),
+          recentMovements: Array.isArray(dashboard.recentMovements) ? dashboard.recentMovements : [],
+        } });
+      } catch {
+        // Mantém a tela funcional enquanto a migração do resumo agregado não for aplicada.
+      }
+    }
+
+    const dashboardFallback = dataScope === "dashboard";
+    const wantsProducts = ["full", "reports", "products", "inventory", "dashboard"].includes(dataScope);
+    const wantsParties = ["full", "reports", "clients", "dashboard"].includes(dataScope);
+    const wantsServices = ["full", "reports", "services"].includes(dataScope);
+    const wantsMovements = ["full", "reports", "products", "inventory", "dashboard"].includes(dataScope);
+    const wantsCompany = ["full", "reports"].includes(dataScope);
+    const emptyRows: Array<Record<string, unknown>> = [];
     const [products, parties, services, movements, company] = await Promise.all([
-      dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_products?${scope}&select=id,sku,name,category,unit,ncm,cest,gtin,origin,default_cfop,tax_profile_id,cost_price,sale_price,tracks_stock,active&order=created_at.desc&limit=1000`),
-      dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_parties?${scope}&select=id,registration_number,display_name,legal_name,document_type,document_number,state_registration,municipal_registration,email,phone,address,is_customer,is_supplier,is_carrier,active&order=registration_number.desc&limit=5000`),
-      dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_services?${scope}&select=id,code,name,description,national_service_code,nbs,sale_price,active&order=created_at.desc&limit=1000`),
-      dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_inventory_movements?${scope}&select=product_id,quantity_delta,reason,created_at&order=created_at.desc&limit=10000`),
-      getCompany(account),
+      wantsProducts
+        ? dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_products?${scope}&select=id,sku,name,category,unit,ncm,cest,gtin,origin,default_cfop,tax_profile_id,cost_price,sale_price,tracks_stock,active&order=created_at.desc&limit=1000`)
+        : Promise.resolve(emptyRows),
+      wantsParties
+        ? dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_parties?${scope}&select=id,registration_number,display_name,legal_name,document_type,document_number,state_registration,municipal_registration,email,phone,address,is_customer,is_supplier,is_carrier,active&order=registration_number.desc&limit=5000`)
+        : Promise.resolve(emptyRows),
+      wantsServices
+        ? dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_services?${scope}&select=id,code,name,description,national_service_code,nbs,sale_price,active&order=created_at.desc&limit=1000`)
+        : Promise.resolve(emptyRows),
+      wantsMovements
+        ? dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_inventory_movements?${scope}&select=product_id,quantity_delta,reason,created_at&order=created_at.desc&limit=10000`)
+        : Promise.resolve(emptyRows),
+      wantsCompany ? getCompany(account) : Promise.resolve(null),
     ]);
     const balances = new Map<string, number>();
     for (const m of movements) {
       const key = String(m.product_id);
       balances.set(key, (balances.get(key) ?? 0) + Number(m.quantity_delta || 0));
     }
+    const productRecords = products.map(p => ({ id: p.id, sku: p.sku, name: p.name, category: p.category || "", unit: p.unit,
+      ncm: p.ncm || "", cest: p.cest || "", gtin: p.gtin || "SEM GTIN", origin: p.origin || "", defaultCfop: p.default_cfop || "", taxProfileId: p.tax_profile_id || "",
+      cost: Number(p.cost_price), price: Number(p.sale_price), stock: balances.get(String(p.id)) || 0, tracksStock: p.tracks_stock !== false, active: p.active }));
+    const clientRecords = parties.map(p => {
+      const address = p.address && typeof p.address === "object" ? p.address as Record<string, unknown> : {};
+      return { id: p.id, registrationNumber: p.registration_number, name: p.display_name, legalName: p.legal_name || "", stateRegistration: p.state_registration || "", municipalRegistration: p.municipal_registration || "", isCustomer: p.is_customer, isSupplier: p.is_supplier, isCarrier: p.is_carrier, type: p.document_type === "cpf" ? "PF" : p.document_type === "foreign" ? "EXT" : "PJ",
+        document: p.document_number || "", email: p.email || "", phone: p.phone || "",
+        street: address.street || "", number: address.number || "", complement: address.complement || "",
+        district: address.district || "", postalCode: address.postalCode || "", cityCode: address.cityCode || "",
+        city: address.city || "", state: address.state || "", active: p.active };
+    });
+    const serviceRecords = services.map(p => ({ id: p.id, code: p.code, name: p.name, description: p.description || "",
+      lc116: p.national_service_code || "", nbs: p.nbs || "", price: Number(p.sale_price), active: p.active }));
+    const movementRecords = movements.map(m => ({ productId: m.product_id, delta: Number(m.quantity_delta), reason: m.reason || "",
+      at: m.created_at }));
+    if (dashboardFallback) {
+      const names = new Map<string, string>();
+      for (const product of productRecords) names.set(String(product.id), String(product.name || "produto"));
+      const recentMovements = movements.slice(0, 4).map(m => ({
+        productId: String(m.product_id),
+        delta: Number(m.quantity_delta || 0),
+        reason: m.reason ? String(m.reason) : null,
+        at: String(m.created_at || ""),
+        name: names.get(String(m.product_id)) || "produto",
+      }));
+      return apiJson({ status: "ready", dashboardAvailable: false, dashboard: {
+        productsCount: products.length,
+        clientsCount: parties.length,
+        unitsStock: productRecords.reduce((sum, p) => sum + Number(p.stock || 0), 0),
+        lowStockCount: productRecords.filter(p => p.active && Number(p.stock) <= 10).length,
+        stockValue: productRecords.reduce((sum, p) => sum + Number(p.stock || 0) * Number(p.cost || 0), 0),
+        recentMovements,
+      } });
+    }
+    if (dataScope === "products" || dataScope === "inventory") return apiJson({ status: "ready", products: productRecords });
+    if (dataScope === "clients") return apiJson({ status: "ready", clients: clientRecords });
+    if (dataScope === "services") return apiJson({ status: "ready", services: serviceRecords });
+
     return apiJson({ status: "ready", companyName: String(company?.trade_name || company?.legal_name || "Empresa piloto"),
       company: company ? {
         legalName: company.legal_name || "", tradeName: company.trade_name || "",
@@ -103,21 +177,10 @@ export async function GET() {
         email: company.fiscal_email || "", phone: company.fiscal_phone || "",
         address: company.address || {},
       } : null,
-      products: products.map(p => ({ id: p.id, sku: p.sku, name: p.name, category: p.category || "", unit: p.unit,
-        ncm: p.ncm || "", cest: p.cest || "", gtin: p.gtin || "SEM GTIN", origin: p.origin || "", defaultCfop: p.default_cfop || "", taxProfileId: p.tax_profile_id || "",
-        cost: Number(p.cost_price), price: Number(p.sale_price), stock: balances.get(String(p.id)) || 0, tracksStock: p.tracks_stock !== false, active: p.active })),
-      clients: parties.map(p => {
-        const address = p.address && typeof p.address === "object" ? p.address as Record<string, unknown> : {};
-        return { id: p.id, registrationNumber: p.registration_number, name: p.display_name, legalName: p.legal_name || "", stateRegistration: p.state_registration || "", municipalRegistration: p.municipal_registration || "", isCustomer: p.is_customer, isSupplier: p.is_supplier, isCarrier: p.is_carrier, type: p.document_type === "cpf" ? "PF" : p.document_type === "foreign" ? "EXT" : "PJ",
-          document: p.document_number || "", email: p.email || "", phone: p.phone || "",
-          street: address.street || "", number: address.number || "", complement: address.complement || "",
-          district: address.district || "", postalCode: address.postalCode || "", cityCode: address.cityCode || "",
-          city: address.city || "", state: address.state || "", active: p.active };
-      }),
-      services: services.map(p => ({ id: p.id, code: p.code, name: p.name, description: p.description || "",
-        lc116: p.national_service_code || "", nbs: p.nbs || "", price: Number(p.sale_price), active: p.active })),
-      movements: movements.map(m => ({ productId: m.product_id, delta: Number(m.quantity_delta), reason: m.reason || "",
-        at: m.created_at })),
+      products: productRecords,
+      clients: clientRecords,
+      services: serviceRecords,
+      movements: movementRecords,
     });
   } catch (error) { return safeError(error); }
 }

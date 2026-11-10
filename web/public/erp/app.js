@@ -10,7 +10,14 @@
   var content = document.getElementById('content');
   var modalRoot = document.getElementById('modalRoot');
   var toastRoot = document.getElementById('toastRoot');
-  function emptyState(){return {products:[],clients:[],services:[],movements:[],companyName:'Minha empresa'};}
+  function emptyState(){return {products:[],clients:[],services:[],movements:[],dashboard:null,companyName:'Minha empresa'};}
+  var loadedScopes={dashboard:false,products:false,clients:false,services:false,reports:false};
+  var loadingScope='';
+  var scopeErrors={};
+  var dashboardRpcAvailable=null;
+  function scopeForView(name){if(name==='dashboard')return 'dashboard';if(name==='products'||name==='inventory')return 'products';if(name==='clients')return 'clients';if(name==='services')return 'services';if(name==='reports')return 'reports';return '';}
+  function loadingPanel(scope){var message=scopeErrors[scope]?'Não foi possível carregar os dados deste módulo.':'Carregando os dados da empresa…';return '<section class="panel"><div class="panel-body" role="status" aria-live="polite"><p>'+message+'</p>'+(scopeErrors[scope]?'<button class="btn" data-action="retry-data">Tentar novamente</button>':'')+'</div></section>';}
+  function loadViewData(name){var scope=scopeForView(name);if(!scope||loadedScopes[scope]||loadingScope===scope||cloud.status!=='ready')return;refreshCloud(scope).catch(function(error){toast(error.message,'error');});}
   function h(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
   function ico(name){return '<svg aria-hidden="true"><use href="#i-'+name+'"></use></svg>';}
   function money(n){return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(n)||0);}
@@ -32,13 +39,16 @@
   function rowActions(kind,recordId){return '<div class="table-actions"><button class="icon-btn" title="Editar" data-action="edit-'+kind+'" data-id="'+h(recordId)+'">'+ico('edit')+'</button><button class="icon-btn" title="Excluir" data-action="remove-'+kind+'" data-id="'+h(recordId)+'">'+ico('trash')+'</button></div>';}
   function matches(row,keys){var hay=keys.map(function(k){return String(row[k]||'');}).join(' ').toLowerCase();return hay.indexOf(query.toLowerCase())!==-1 &&(filter==='all'||(filter==='active'?row.active:!row.active));}
   function dashboard(){
-    var totalStock=state.products.reduce(function(s,p){return s+Number(p.stock||0);},0);
-    var low=state.products.filter(function(p){return p.active&&Number(p.stock)<=10;}).length;
-    var valuation=state.products.reduce(function(s,p){return s+Number(p.stock||0)*Number(p.cost||0);},0);
-    var recent=[].concat(state.movements.map(function(m){return {title:'Estoque '+(m.delta>0?'adicionado: ':'reduzido: ')+(state.products.find(function(p){return p.id===m.productId;})||{}).name,at:m.at,icon:'warehouse'};})).sort(function(a,b){return new Date(b.at)-new Date(a.at);}).slice(0,4);
+    var summary=state.dashboard;
+    var totalStock=summary?Number(summary.unitsStock||0):state.products.reduce(function(s,p){return s+Number(p.stock||0);},0);
+    var low=summary?Number(summary.lowStockCount||0):state.products.filter(function(p){return p.active&&Number(p.stock)<=10;}).length;
+    var valuation=summary?Number(summary.stockValue||0):state.products.reduce(function(s,p){return s+Number(p.stock||0)*Number(p.cost||0);},0);
+    var recent=summary?(summary.recentMovements||[]).map(function(m){return {title:'Estoque '+(Number(m.delta)>0?'adicionado: ':'reduzido: ')+(m.name||'produto'),at:m.at,icon:'warehouse'};}):[].concat(state.movements.map(function(m){return {title:'Estoque '+(m.delta>0?'adicionado: ':'reduzido: ')+(state.products.find(function(p){return p.id===m.productId;})||{}).name,at:m.at,icon:'warehouse'};})).sort(function(a,b){return new Date(b.at)-new Date(a.at);}).slice(0,4);
+    var productCount=summary?Number(summary.productsCount||0):state.products.length;
+    var clientCount=summary?Number(summary.clientsCount||0):state.clients.length;
     var quick=[['Novo orçamento','Preparar proposta comercial','receipt','/erp/quotes.html'],['Ver pedidos','Acompanhar pedidos','layers','/erp/orders.html'],['Registrar venda','Confirmar operação comercial','cash','/erp/sales.html'],['Abrir ordem de serviço','Receber equipamento para manutenção','layers','/erp/service-orders.html'],['Rascunhos NF-e','Preparação fiscal sem emissão','receipt','/erp/nfe-drafts.html']];
     return heading('Seu negócio, em um só lugar.','Acesse as operações mais importantes e acompanhe os dados da empresa.')+banner()+
-      '<div class="stats-grid">'+stat('Produtos cadastrados',state.products.length,'box','','Itens no catálogo')+stat('Clientes cadastrados',state.clients.length,'users','blue','Pessoas e empresas')+stat('Unidades em estoque',num(totalStock),'warehouse','purple',low+' produto(s) com estoque baixo')+stat('Valor de custo em estoque',money(valuation),'cash','amber','Estimativa dos itens cadastrados')+'</div>'+
+      '<div class="stats-grid">'+stat('Produtos cadastrados',productCount,'box','','Itens no catálogo')+stat('Clientes cadastrados',clientCount,'users','blue','Pessoas e empresas')+stat('Unidades em estoque',num(totalStock),'warehouse','purple',low+' produto(s) com estoque baixo')+stat('Valor de custo em estoque',money(valuation),'cash','amber','Estimativa dos itens cadastrados')+'</div>'+
       '<div class="panel-grid"><section class="panel"><div class="panel-head"><div><h2>Comece por aqui</h2><p>Atalhos para as operações do dia a dia</p></div></div><div class="panel-body"><div class="quick-grid">'+quick.map(function(x){return '<a class="quick-card" href="'+x[3]+'" aria-label="'+x[0]+': '+x[1]+'"><span class="quick-icon">'+ico(x[2])+'</span><span class="quick-copy"><strong>'+x[0]+'</strong><small>'+x[1]+'</small></span><span class="quick-arrow" aria-hidden="true">'+ico('arrow')+'</span></a>';}).join('')+'</div></div></section>'+
       '<section class="panel"><div class="panel-head"><div><h2>Atividades recentes</h2><p>Movimentações registradas no banco</p></div><button data-view="inventory">Ver estoque</button></div><div class="panel-body"><div class="timeline">'+(recent.length?recent.map(function(x){return '<div class="timeline-row"><span class="timeline-dot">'+ico(x.icon)+'</span><div class="timeline-info"><strong>'+h(x.title)+'</strong><small>'+dateStr(x.at)+'</small></div></div>';}).join(''):'<div class="empty-mini">Nenhuma movimentação registrada ainda. Cadastre ou ajuste itens para começar.</div>')+'</div></div></section></div>';
   }
@@ -164,11 +174,13 @@
     if(logo&&companyId!==logoCompanyId){logoCompanyId=companyId;if(avatar)avatar.classList.remove('has-logo');logo.onload=function(){if(avatar)avatar.classList.add('has-logo');};logo.onerror=function(){if(avatar)avatar.classList.remove('has-logo');};logo.src=companyId?'/api/company/logo?v='+encodeURIComponent(companyId):'';}
     document.querySelectorAll('.sidebar .nav-link').forEach(function(b){var active=b.dataset.view===view;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     var views={dashboard:dashboard,products:products,clients:clients,services:services,fiscal:fiscal,inventory:inventory,reports:reports,profile:profile,settings:settings};
-    content.innerHTML=(views[view]||dashboard)();
+    var requiredScope=scopeForView(view);
+    var waiting=(requiredScope&&cloud.status==='checking')||(requiredScope&&cloud.status==='ready'&&!loadedScopes[requiredScope]&&!scopeErrors[requiredScope])||(requiredScope&&loadingScope===requiredScope);
+    content.innerHTML=waiting?loadingPanel(requiredScope||'dashboard'):(requiredScope&&scopeErrors[requiredScope]?loadingPanel(requiredScope):(views[view]||dashboard)());
     var search=document.getElementById('globalSearch');search.value=query;
     if(view==='profile')loadProfile();
   }
-  function setView(next){if(!labels[next])return;view=next;query='';filter='all';if(window.location.hash!=='#'+next)history.pushState(null,'','#'+next);document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');render();document.querySelector('.main-column').scrollTop=0;}
+  function setView(next){if(!labels[next])return;view=next;query='';filter='all';if(window.location.hash!=='#'+next)history.pushState(null,'','#'+next);document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');render();loadViewData(next);document.querySelector('.main-column').scrollTop=0;}
   function field(name,label,value,extra,full,help){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+(extra||'')+'>'+(help?'<small>'+h(help)+'</small>':'')+'</div>';}
   function lookupField(name,label,value,extra,kind,full){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><div class="input-action"><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+extra+'><button class="btn ghost lookup-btn" type="button" data-action="lookup-'+kind+'">Consultar</button></div></div>';}
   function select(name,label,options,value,required){return '<div class="field"><label for="f-'+h(name)+'">'+h(label)+(required?' *':'')+'</label><select id="f-'+h(name)+'" name="'+h(name)+'" '+(required?'required':'')+'>'+options.map(function(o){return '<option value="'+h(o[0])+'" '+(String(value)===String(o[0])?'selected':'')+'>'+h(o[1])+'</option>';}).join('')+'</select>'+(name==='origin'?'<small class="field-help">Necessária para NF-e. Informe a origem real do item com a contabilidade.</small>':'')+'</div>';}
@@ -253,10 +265,24 @@
     }catch(error){if(form.isConnected)toast(error.message,'error');}
     finally{if(button.isConnected){button.disabled=false;button.textContent=label;}}
   }
-  async function refreshCloud(){
-    var data=await callApi('/api/records');
-    state={products:data.products||[],clients:data.clients||[],services:data.services||[],movements:data.movements||[],companyName:data.companyName||'Minha empresa'};
-    render();
+  async function refreshCloud(scope,invalidateDashboard){
+    scope=scope||scopeForView(view)||'dashboard';
+    loadingScope=scope;scopeErrors[scope]='';render();
+    try{
+      var endpoint='/api/records?scope='+encodeURIComponent(scope);
+      if(scope==='dashboard'&&dashboardRpcAvailable===false)endpoint+='&summary=skip';
+      var data=await callApi(endpoint);
+      if(scope==='dashboard'&&typeof data.dashboardAvailable==='boolean')dashboardRpcAvailable=data.dashboardAvailable;
+      state.companyName=data.companyName||state.companyName;
+      if(scope==='dashboard'){state.dashboard=data.dashboard||null;loadedScopes.dashboard=true;}
+      if(Object.prototype.hasOwnProperty.call(data,'products')){state.products=data.products||[];loadedScopes.products=true;}
+      if(Object.prototype.hasOwnProperty.call(data,'clients')){state.clients=data.clients||[];loadedScopes.clients=true;}
+      if(Object.prototype.hasOwnProperty.call(data,'services')){state.services=data.services||[];loadedScopes.services=true;}
+      if(Object.prototype.hasOwnProperty.call(data,'movements'))state.movements=data.movements||[];
+      if(scope==='reports'){loadedScopes.reports=true;loadedScopes.products=true;loadedScopes.clients=true;loadedScopes.services=true;}
+      if(invalidateDashboard){state.dashboard=null;loadedScopes.dashboard=false;loadedScopes.reports=false;scopeErrors.dashboard='';}
+      loadingScope='';render();
+    }catch(error){loadingScope='';scopeErrors[scope]=error.message;render();throw error;}
   }
   var checkingConnection=false;
   async function checkConnection(){
@@ -269,8 +295,14 @@
       if(!response.ok)throw new Error(status.error||'Erro de conexão.');
       if(status.status==='admin_ready'){window.location.replace('/admin');return;}
       cloud={status:status.status,displayName:status.displayName||'',company:status.company||null};
-      if(cloud.status==='ready')await refreshCloud();
-      else {state=emptyState();render();}
+      dashboardRpcAvailable=status.dashboardAvailable===true;
+      state.companyName=String((cloud.company&& (cloud.company.trade_name||cloud.company.legal_name))||state.companyName||'Minha empresa');
+      if(cloud.status==='ready'){
+        if(status.dashboard){state.dashboard=status.dashboard;loadedScopes.dashboard=true;dashboardRpcAvailable=true;}
+        var initialScope=scopeForView(view);
+        if(initialScope&&!loadedScopes[initialScope])await refreshCloud(initialScope);
+        else render();
+      }else {state=emptyState();state.companyName=String((cloud.company&& (cloud.company.trade_name||cloud.company.legal_name))||'Minha empresa');render();}
     }catch(error){cloud.status='error';state=emptyState();render();toast(error.name==='AbortError'?'O Supabase não respondeu em 12 segundos. Use Tentar novamente.':'Não foi possível verificar a conexão: '+error.message,'error');}
     finally{clearTimeout(timeout);checkingConnection=false;}
   }
@@ -393,7 +425,7 @@
         try{await callApi('/api/stock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:saved.id,delta:record.stock,reason:'Saldo inicial do cadastro'})});}
         catch(stockError){toast('Produto salvo, mas ajuste inicial pendente: '+stockError.message,'error');}
       }
-      closeModal();await refreshCloud();toast('Cadastro salvo no Supabase.');
+      closeModal();await refreshCloud(scopeForView(view),true);toast('Cadastro salvo no Supabase.');
     }catch(error){toast(error.message,'error');if(submit)submit.disabled=false;}
   }
   async function removeRecord(kind,recordId){
@@ -401,7 +433,7 @@
     var list=state[kind+'s'],p=list&&list.find(function(x){return x.id===recordId;});if(!p)return;
     var name=p.name||p.sku||p.code;
     if(!confirm('Inativar "'+name+'" no Supabase? O registro será preservado para auditoria.'))return;
-    try{await callApi('/api/records',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:kind,id:recordId})});await refreshCloud();toast('Cadastro inativado no banco.');}
+    try{await callApi('/api/records',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:kind,id:recordId})});await refreshCloud(scopeForView(view),true);toast('Cadastro inativado no banco.');}
     catch(error){toast(error.message,'error');}
   }
   function adjustStock(recordId){
@@ -416,7 +448,7 @@
     var data=Object.fromEntries(new FormData(form).entries()),delta=Number(data.delta);
     if(!Number.isFinite(delta)||delta===0){toast('Informe uma quantidade diferente de zero.','error');return;}
     if(Number(p.stock)+delta<0){toast('O saldo não pode ficar negativo.','error');return;}
-    try{await callApi('/api/stock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:p.id,delta:delta,reason:data.reason})});closeModal();await refreshCloud();toast('Estoque atualizado no Supabase.');}
+    try{await callApi('/api/stock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:p.id,delta:delta,reason:data.reason})});closeModal();await refreshCloud(scopeForView(view),true);toast('Estoque atualizado no Supabase.');}
     catch(error){toast(error.message,'error');}
   }
   function exportCsv(kind){
@@ -434,6 +466,7 @@
     if(a==='lookup-cep'||a==='lookup-cnpj'){lookupRegistration(b,a.substring(7));return;}
     if(a==='configure-company'){openCompanyEditor();return;}
     if(a==='check-connection'){checkConnection();return;}
+    if(a==='retry-data'){var retryScope=scopeForView(view);if(retryScope){scopeErrors[retryScope]='';refreshCloud(retryScope).catch(function(error){toast(error.message,'error');});}return;}
     if(a==='logout'){window.location.assign('/logout');return;}
     if(a.indexOf('new-')===0){openEditor(a.substring(4));return;}
     if(a.indexOf('edit-')===0){openEditor(a.substring(5),recordId);return;}
@@ -460,8 +493,8 @@
   document.querySelector('.main-column').scrollTop=0;
   var initialHash=decodeURIComponent(window.location.hash.slice(1));
   if(labels[initialHash])view=initialHash;
-  window.addEventListener('hashchange',function(){var next=decodeURIComponent(window.location.hash.slice(1))||'dashboard';if(labels[next]&&next!==view){view=next;query='';filter='all';closeSidebar();render();document.querySelector('.main-column').scrollTop=0;}});
-  window.addEventListener('popstate',function(){var next=decodeURIComponent(window.location.hash.slice(1))||'dashboard';if(labels[next]&&next!==view){view=next;query='';filter='all';closeSidebar();render();document.querySelector('.main-column').scrollTop=0;}});
+  window.addEventListener('hashchange',function(){var next=decodeURIComponent(window.location.hash.slice(1))||'dashboard';if(labels[next]&&next!==view){view=next;query='';filter='all';closeSidebar();render();loadViewData(next);document.querySelector('.main-column').scrollTop=0;}});
+  window.addEventListener('popstate',function(){var next=decodeURIComponent(window.location.hash.slice(1))||'dashboard';if(labels[next]&&next!==view){view=next;query='';filter='all';closeSidebar();render();loadViewData(next);document.querySelector('.main-column').scrollTop=0;}});
   render();
   checkConnection();
 })();
