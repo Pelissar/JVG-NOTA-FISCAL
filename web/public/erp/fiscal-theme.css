@@ -1,5 +1,5 @@
 /* Identidade JVG nas telas fiscais independentes; não interfere nos formulários fiscais. */
-:root{--jvg-fiscal-ink:#183044;--jvg-fiscal-accent:#0a8e78;--jvg-fiscal-border:#dfe9ed}
+:root{--jvg-fiscal-ink:#183044;--jvg-fiscal-accent:#075ec7;--jvg-fiscal-border:#dfe9ed}
 body{background:#f3f6f9;color:var(--jvg-fiscal-ink)}
 body>.topbar{background:linear-gradient(105deg,#102336,#183b4a);border-bottom:1px solid #30515b;box-shadow:0 5px 22px #152b3714}
 body>.topbar .brand,body>.topbar .brand strong{color:#fff}
@@ -8,5 +8,5 @@ body>.topbar .back-button{border-radius:9px}
 body>.layout{width:min(100%,1500px);max-width:1500px;min-width:0;padding-inline:clamp(12px,2.2vw,30px)}
 body>.layout .page-title h1{letter-spacing:-.8px}
 body>.layout .panel,body>.layout .card{border-radius:14px}
-:where(a,button,input,select,textarea):focus-visible{outline:3px solid #37c5a6;outline-offset:2px}
+:where(a,button,input,select,textarea):focus-visible{outline:3px solid var(--focus,#2d8bff);outline-offset:2px}
 @media(max-width:700px){body>.topbar{padding:12px 14px;flex-wrap:wrap}body>.layout{padding-inline:12px}}

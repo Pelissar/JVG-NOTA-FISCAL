@@ -6,7 +6,7 @@
   background: #f4f6f8;
   color: #182638;
   color-scheme: light;
-  --ring: #147b6d;
+  --ring: #2d8bff;
   font-family: Inter, "Segoe UI", Arial, sans-serif;
 }
 
@@ -36,40 +36,40 @@
 
 .intro { min-width: 0; }
 .brand { display: inline-flex; align-items: center; gap: 12px; margin-bottom: clamp(40px, 7vw, 82px); text-decoration: none; }
-.brand img { padding: 5px; border-radius: 14px; background: #e3f2ed; }
+.brand img { padding: 5px; border-radius: 14px; background: #eaf2ff; }
 .brand > span { display: flex; flex-direction: column; gap: 4px; }
 .brand strong { color: #183044; font-size: 24px; letter-spacing: -.05em; }
-.brand strong span { color: #087568; }
+.brand strong span { color: #075ec7; }
 .brand small { color: #66778c; font-size: 9px; font-weight: 800; letter-spacing: .18em; }
-.kicker { color: #087568; font-size: 11px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+.kicker { color: #075ec7; font-size: 11px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
 .intro h1 { max-width: 650px; margin: 16px 0 20px; color: #182638; font-size: clamp(38px, 5vw, 64px); line-height: 1.04; letter-spacing: -.055em; }
-.intro h1 em { color: #087568; font-style: normal; }
+.intro h1 em { color: #075ec7; font-style: normal; }
 .intro > p { max-width: 540px; color: #53657b; font-size: 16px; line-height: 1.75; }
 .features { display: flex; flex-wrap: wrap; gap: 9px; margin: 26px 0 44px; }
 .features span { padding: 9px 11px; border: 1px solid #d8e3e7; border-radius: 9px; background: #fff; color: #385268; font-size: 11px; font-weight: 750; }
 .intro .disclaimer { color: #66778c; font-size: 12px; }
 
 .card { min-width: 0; padding: clamp(24px, 3vw, 38px); border: 1px solid #dce3e9; border-radius: 18px; background: #fff; box-shadow: 0 20px 50px #18344b12; }
-.back { display: inline-flex; margin-bottom: 30px; color: #087568; font-size: 12px; font-weight: 750; text-decoration: none; }
+.back { display: inline-flex; margin-bottom: 30px; color: #075ec7; font-size: 12px; font-weight: 750; text-decoration: none; }
 .card h2 { margin: 0 0 8px; color: #182638; font-size: clamp(25px, 2.5vw, 32px); letter-spacing: -.035em; }
 .description { margin: 0 0 24px; color: #607087; font-size: 13px; line-height: 1.6; }
 .form { display: grid; gap: 17px; }
 .form label { display: grid; gap: 7px; color: #34465c; font-size: 12px; font-weight: 700; }
 .form input { width: 100%; min-height: 46px; padding: 11px 12px; border: 1px solid #cbd5df; border-radius: 9px; background: #fff; color: #182638; font-size: 14px; }
 .form input::placeholder { color: #7b8a9d; }
-.form input:focus-visible { border-color: #087568; outline: 3px solid #08756826; outline-offset: 1px; }
-.submit { min-height: 47px; margin-top: 3px; border: 1px solid #087568; border-radius: 9px; background: #087568; color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; }
-.submit:hover:not(:disabled) { background: #075c53; }
+.form input:focus-visible { border-color: #075ec7; outline: 3px solid #075ec726; outline-offset: 1px; }
+.submit { min-height: 47px; margin-top: 3px; border: 1px solid #075ec7; border-radius: 9px; background: #075ec7; color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; }
+.submit:hover:not(:disabled) { background: #084a9e; }
 .submit:disabled { opacity: .55; cursor: not-allowed; }
-.switch { margin-top: 21px; padding: 0; border: 0; background: transparent; color: #087568; font-size: 12px; font-weight: 750; cursor: pointer; }
+.switch { margin-top: 21px; padding: 0; border: 0; background: transparent; color: #075ec7; font-size: 12px; font-weight: 750; cursor: pointer; }
 .message, .warning { padding: 12px; border: 1px solid #bedfd3; border-radius: 9px; background: #e8f5ef; color: #245f4c; font-size: 12px; line-height: 1.55; }
 .warning { border-color: #ead5aa; background: #fff5df; color: #725211; }
 .fiscal { margin: 26px 0 0; color: #66778c; font-size: 11px; }
 .back:focus-visible, .switch:focus-visible, .submit:focus-visible, .theme:focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
 
-:global(html[data-theme="dark"]) .page { background: #121a23; color: #edf2f7; color-scheme: dark; --ring: #91e8cf; }
+:global(html[data-theme="dark"]) .page { background: #121a23; color: #edf2f7; color-scheme: dark; --ring: #75c1ff; }
 :global(html[data-theme="dark"]) .theme { border-color: #3b4b5b; background: #202c38; color: #d3dce5; }
-:global(html[data-theme="dark"]) .brand img { background: #1d3b36; }
+:global(html[data-theme="dark"]) .brand img { background: #173454; }
 :global(html[data-theme="dark"]) .brand strong,
 :global(html[data-theme="dark"]) .intro h1,
 :global(html[data-theme="dark"]) .card h2 { color: #edf2f7; }
@@ -77,7 +77,7 @@
 :global(html[data-theme="dark"]) .intro h1 em,
 :global(html[data-theme="dark"]) .kicker,
 :global(html[data-theme="dark"]) .back,
-:global(html[data-theme="dark"]) .switch { color: #64d4b4; }
+:global(html[data-theme="dark"]) .switch { color: #7fc1ff; }
 :global(html[data-theme="dark"]) .brand small,
 :global(html[data-theme="dark"]) .intro > p,
 :global(html[data-theme="dark"]) .intro .disclaimer,
@@ -89,9 +89,9 @@
 :global(html[data-theme="dark"]) .card { box-shadow: 0 20px 50px #00000030; }
 :global(html[data-theme="dark"]) .form label { color: #d3dce5; }
 :global(html[data-theme="dark"]) .form input { border-color: #4a5a6b; background: #121a23; color: #edf2f7; }
-:global(html[data-theme="dark"]) .form input:focus-visible { border-color: #91e8cf; outline-color: #64d4b480; }
+:global(html[data-theme="dark"]) .form input:focus-visible { border-color: #75c1ff; outline-color: #63b3ff80; }
 :global(html[data-theme="dark"]) .form input::placeholder { color: #9aa9b9; }
-:global(html[data-theme="dark"]) .submit { border-color: #64d4b4; background: #64d4b4; color: #102720; }
+:global(html[data-theme="dark"]) .submit { border-color: #63b3ff; background: #63b3ff; color: #08213a; }
 :global(html[data-theme="dark"]) .message { border-color: #315c48; background: #1d3a2c; color: #bfe9cd; }
 :global(html[data-theme="dark"]) .warning { border-color: #66532c; background: #40351f; color: #f0c36e; }
 

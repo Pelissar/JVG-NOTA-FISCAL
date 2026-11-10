@@ -1,17 +1,17 @@
 /* JVG Horizon — identidade própria, inspirada em navegação funcional de ERPs, sem reproduzir concorrentes. */
-:root{--jvg-ink:#162c3e;--jvg-muted:#708596;--jvg-accent:#087f72;--jvg-bg:#f3f6f9;--jvg-border:#e1e9ef}
+:root{--jvg-ink:#162c3e;--jvg-muted:#708596;--jvg-accent:#075ec7;--jvg-bg:#f3f6f9;--jvg-border:#e1e9ef}
 body{background:var(--jvg-bg);color:var(--jvg-ink)}
 .sidebar{width:258px;background:linear-gradient(180deg,#101e30 0%,#142b3b 65%,#112432 100%);border-right:1px solid #254053;box-shadow:10px 0 28px #1022340a}
-.brand-row{padding-bottom:19px;gap:12px}.brand-mark{border-radius:14px;background:linear-gradient(135deg,#3be1b7,#0da995);box-shadow:0 8px 22px #00b98e24}.brand-text strong{letter-spacing:-.9px}.brand-text small{letter-spacing:.2px}
+.brand-row{padding-bottom:19px;gap:12px}.brand-mark{border-radius:14px;background:linear-gradient(135deg,#13cfff,#0862fa);box-shadow:0 8px 22px #0862fa24}.brand-text strong{letter-spacing:-.9px}.brand-text small{letter-spacing:.2px}
 .workspace-switch{background:#ffffff0b;border:1px solid #ffffff19;margin-bottom:18px;border-radius:12px;padding:10px}
-.workspace-avatar{background:#d7f9ec;color:#086854}
+.workspace-avatar{background:#eaf2ff;color:#075ec7}
 .sidebar-scroll{padding:0 3px 14px;scrollbar-width:thin}
 .nav-label{font-size:9px;font-weight:800;letter-spacing:1.5px;color:#7393a6;padding:10px 12px 7px}
 .secondary-label{padding-top:19px}
 .side-nav{gap:3px}
 .nav-link{height:39px;min-height:39px;border-radius:10px;font-size:12px;gap:11px;padding:0 12px;color:#b1c4d0;text-decoration:none;transition:background .16s,color .16s}
 .nav-link:hover{background:#ffffff13;color:#fff}
-.nav-link.active,.nav-link[aria-current="page"]{background:linear-gradient(90deg,#147c71 0%,#145f61 100%);color:#f2fff9;box-shadow:inset 3px 0 #4ce4bd}
+.nav-link.active,.nav-link[aria-current="page"]{background:linear-gradient(90deg,#075ec7 0%,#084a9e 100%);color:#fff;box-shadow:inset 3px 0 #13cfff}
 .nav-link svg{width:17px;height:17px;flex:none}
 .nav-group{margin-top:2px}
 .nav-group summary{list-style:none;display:flex;align-items:center;gap:11px;padding:0 12px;height:39px;color:#b1c4d0;font-size:12px;font-weight:600;cursor:pointer;border-radius:10px}
@@ -30,10 +30,10 @@ body{background:var(--jvg-bg);color:var(--jvg-ink)}
 .page-heading p{font-size:12.5px}
 .eyebrow{color:var(--jvg-accent);letter-spacing:1.3px}
 .panel,.stat-card,.table-panel{border-color:var(--jvg-border);border-radius:15px;box-shadow:0 7px 25px #173c4a08}
-.btn.primary{background:#0b8c79;border-color:#0b8c79}
-.btn.primary:hover{background:#087765}
-.top-pill{background:#edf7f5;color:#197466;border-color:#d3eae3}
-:where(button,a,input,select,textarea,summary):focus-visible{outline:3px solid #35c8a7;outline-offset:3px}
+.btn.primary{background:#075ec7;border-color:#075ec7}
+.btn.primary:hover{background:#084a9e}
+.top-pill{background:#eaf2ff;color:#134f9b;border-color:#c8dcf7}
+:where(button,a,input,select,textarea,summary):focus-visible{outline:3px solid #2d8bff;outline-offset:3px}
 @media(min-width:1600px){.sidebar{width:276px}.content{padding:36px 44px}.topbar{padding:0 44px}}
 @media(max-width:1100px){.sidebar{width:min(286px,88vw)}.topbar{padding:0 20px}}
 @media(max-width:700px){.topbar{padding:0 12px}.content{padding:18px 12px}.page-heading{flex-wrap:wrap}.topbar-right .top-pill{display:none}.global-search{width:min(38vw,220px)}}

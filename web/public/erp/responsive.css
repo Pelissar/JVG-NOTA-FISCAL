@@ -20,7 +20,7 @@ body:not(:has(> .app-shell)) { height: auto; min-height: 100dvh; overflow-y: aut
 .release-status { margin: 0 10px 9px; }
 .support-box { padding: 10px 12px; gap: 4px; }
 .support-box small { font-size: 9px; }
-.site-back { color: #55e6bb; text-decoration: none; font-size: 10px; font-weight: 750; margin-top: 4px; }
+.site-back { color: var(--accent, #63b3ff); text-decoration: none; font-size: 10px; font-weight: 750; margin-top: 4px; }
 .site-back:hover { text-decoration: underline; }
 .sidebar-close { display: none; border: 0; background: #264455; color: white; font-size: 23px; border-radius: 8px; width: 32px; height: 32px; margin-left: auto; }
 .wide-info { max-width: none; }

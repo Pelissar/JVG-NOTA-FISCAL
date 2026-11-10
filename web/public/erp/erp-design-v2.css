@@ -5,18 +5,18 @@
   --surface: #ffffff;
   --surface-raised: #ffffff;
   --surface-soft: #f6f8fa;
-  --surface-hover: #edf4f2;
+  --surface-hover: #edf4ff;
   --ink: #182638;
   --ink-soft: #415269;
   --muted: #607087;
   --muted-soft: #718096;
   --line: #dce3e9;
   --line-strong: #c7d2dc;
-  --accent: #087568;
-  --accent-strong: #075c53;
+  --accent: #075ec7;
+  --accent-strong: #084a9e;
   --accent-contrast: #ffffff;
-  --accent-soft: #e6f4ef;
-  --blue: #285cb4;
+  --accent-soft: #eaf2ff;
+  --blue: #075ec7;
   --blue-soft: #eaf1fd;
   --success: #18734b;
   --success-soft: #e8f5ed;
@@ -27,7 +27,7 @@
   --shadow-sm: 0 2px 8px #1d2d3d0a;
   --shadow-md: 0 12px 32px #1d2d3d12;
   --shadow-pop: 0 18px 44px #1d2d3d1c;
-  --focus: #147b6d;
+  --focus: #2d8bff;
   font-family: Inter, "Segoe UI", Arial, sans-serif;
 }
 
@@ -37,18 +37,18 @@ html[data-theme="dark"] {
   --surface: #19232e;
   --surface-raised: #202c38;
   --surface-soft: #202b36;
-  --surface-hover: #263b3b;
+  --surface-hover: #24364a;
   --ink: #edf2f7;
   --ink-soft: #d3dce5;
   --muted: #b4c0cd;
   --muted-soft: #9aa9b9;
   --line: #344251;
   --line-strong: #4a5a6b;
-  --accent: #64d4b4;
-  --accent-strong: #91e8cf;
-  --accent-contrast: #102720;
-  --accent-soft: #1d3b36;
-  --blue: #9dbdff;
+  --accent: #63b3ff;
+  --accent-strong: #a7d5ff;
+  --accent-contrast: #08213a;
+  --accent-soft: #173454;
+  --blue: #9acaff;
   --blue-soft: #243653;
   --success: #83d6a8;
   --success-soft: #1d3a2c;
@@ -59,7 +59,7 @@ html[data-theme="dark"] {
   --shadow-sm: 0 2px 9px #00000018;
   --shadow-md: 0 12px 32px #00000022;
   --shadow-pop: 0 18px 44px #00000040;
-  --focus: #73dfc0;
+  --focus: #75c1ff;
 }
 
 html, body { width: 100%; min-width: 320px; min-height: 100%; max-width: 100%; }
@@ -147,6 +147,8 @@ img { max-width: 100%; }
 .quick-card small, .module-card small, .history-row small { color: var(--muted) !important; }
 .stat-value { color: var(--ink) !important; font-size: clamp(23px, 2vw, 30px); }
 .stat-icon { background: var(--accent-soft) !important; color: var(--accent-strong) !important; }
+.fiscal-icon { background: var(--accent-soft) !important; color: var(--accent-strong) !important; }
+.step-count { color: var(--accent) !important; }
 .stat-icon.blue { background: var(--blue-soft) !important; color: var(--blue) !important; }
 .stat-icon.purple { background: var(--blue-soft) !important; color: var(--blue) !important; }
 .stat-icon.amber { background: var(--warning-soft) !important; color: var(--warning) !important; }
