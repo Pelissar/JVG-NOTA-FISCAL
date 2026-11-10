@@ -228,7 +228,8 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
     const productCode = text(item.sku), description = text(item.description);
     const ncm = text(item.ncm), cfop = text(item.cfop), unit = text(item.unit);
     const quantity = Number(item.quantity), unitPrice = Number(item.unitPriceCents) / 100;
-    const gross = Number(item.subtotalCents) / 100, origin = Number(item.origin);
+    const gross = Number(item.subtotalCents) / 100;
+    const originText = text(item.origin), origin = Number(originText), originValid = /^[0-8]$/.test(originText);
     put("codigo_produto", productCode.length > 0, productCode);
     put("descricao", description.length > 0, description);
     put("codigo_ncm", /^\\d{8}$/.test(ncm), ncm);
@@ -237,7 +238,7 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
     put("quantidade_comercial", Number.isFinite(quantity) && quantity > 0, quantity);
     put("valor_unitario_comercial", Number.isFinite(unitPrice) && unitPrice >= 0, unitPrice);
     put("valor_bruto", Number.isFinite(gross) && gross >= 0, gross);
-    put("icms_origem", Number.isInteger(origin) && origin >= 0 && origin <= 8, origin);
+    put("icms_origem", originValid, origin);
     const rules = obj(obj(item.taxProfile).rules);
     const csosn = text(item.csosn), pis = text(rules.pisCst), cofins = text(rules.cofinsCst);
     if (/^\\d{3}$/.test(csosn)) row.icms_situacao_tributaria = csosn;
