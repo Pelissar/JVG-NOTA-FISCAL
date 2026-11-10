@@ -36,6 +36,7 @@ jobs:
         with:
           node-version: '22.14.0'
           cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
       - name: Instalar dependências do lockfile
         run: pnpm install --frozen-lockfile
       - name: Verificar sintaxe dos scripts do ERP
@@ -49,7 +50,7 @@ jobs:
         run: npm run test:erp
 
   next-build:
-    name: Build Next.js (sem banco de produção)
+    name: Build Next.js (sem deploy)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
