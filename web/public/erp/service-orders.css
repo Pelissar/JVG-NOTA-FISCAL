@@ -1,4 +1,8 @@
 .service-orders-page{max-width:1520px}
+.service-orders-page .page-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:18px;margin:clamp(12px,2vw,32px) 0 20px;min-height:0;height:auto}
+.service-orders-page .page-heading>div{min-width:0}
+.service-orders-page .heading-actions{width:auto;align-self:start;margin:0}
+.service-orders-page .heading-actions .btn{min-height:42px}
 .service-orders-page .summary-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 .service-orders-page .summary-tile{min-height:115px;align-content:center}
 .os-fiscal-note{margin:0 0 20px;padding:11px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft);color:var(--muted);font-size:11px;line-height:1.55}
@@ -30,6 +34,12 @@
 .service-orders-page .empty-state{padding:34px 16px;text-align:center;color:var(--muted)}
 .service-orders-page .empty-state strong{display:block;margin-bottom:7px;color:var(--ink);font-size:14px}
 .service-orders-page .empty-state p{margin:0 0 14px;font-size:11px}
+.service-orders-page .load-error{padding:22px 16px;text-align:left;color:var(--ink-soft)}
+.service-orders-page .load-error strong{display:block;margin-bottom:6px;color:var(--danger);font-size:14px}
+.service-orders-page .load-error p{margin:0 0 14px;color:var(--muted);font-size:12px;line-height:1.55;overflow-wrap:anywhere}
+.service-orders-page #serviceOrderNotice.is-error{border-color:var(--danger);background:var(--danger-soft);color:var(--danger)}
 @media(max-width:920px){.service-orders-page .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:640px){.service-orders-page .summary-grid,.os-form-grid{grid-template-columns:minmax(0,1fr)}.os-form-grid .os-wide{grid-column:auto}.service-orders-page .order-list-panel .commercial-table{padding:0 12px}.os-dialog .dialog-actions>*{flex:1 1 auto}.service-orders-page .heading-actions,.service-orders-page .heading-actions>*{width:100%}}
+@media(max-width:760px){.service-orders-page .page-heading{grid-template-columns:minmax(0,1fr);gap:12px;margin-top:14px}.service-orders-page .page-heading>div{width:100%;min-width:0}.service-orders-page .heading-actions,.service-orders-page .heading-actions>*{width:100%}.service-orders-page .heading-actions .btn{min-height:48px}}
+@media(max-width:640px){.service-orders-page .summary-grid,.os-form-grid{grid-template-columns:minmax(0,1fr)}.os-form-grid .os-wide{grid-column:auto}.service-orders-page .order-list-panel .commercial-table{padding:0 12px}.os-dialog .dialog-actions>*{flex:1 1 auto}}
 @media print{body:has(#serviceOrderDetails[open]) *{visibility:hidden!important}body:has(#serviceOrderDetails[open]) #serviceOrderDetails,body:has(#serviceOrderDetails[open]) #serviceOrderDetails *{visibility:visible!important}body:has(#serviceOrderDetails[open]) #serviceOrderDetails{position:absolute;inset:0;width:100%;max-width:none;max-height:none;overflow:visible;padding:0;border:0;border-radius:0;box-shadow:none;background:white;color:#111}body:has(#serviceOrderDetails[open]) #serviceOrderDetails .dialog-heading button,body:has(#serviceOrderDetails[open]) #serviceOrderDetails form{display:none!important}body:has(#serviceOrderDetails[open]) #serviceOrderDetails .dialog-heading{display:block;border-bottom:1px solid #aaa}body:has(#serviceOrderDetails[open]) #serviceOrderDetails .dialog-heading h2,body:has(#serviceOrderDetails[open]) #serviceOrderDetails dd,body:has(#serviceOrderDetails[open]) #serviceOrderDetails .os-reported-issue p{color:#111!important}body:has(#serviceOrderDetails[open]) #serviceOrderDetails dl div,body:has(#serviceOrderDetails[open]) #serviceOrderDetails .os-reported-issue{break-inside:avoid;background:white;border:1px solid #bbb}}
+
