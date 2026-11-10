@@ -39,8 +39,10 @@ export function reviewNfeDocument(value: unknown): NfeDocumentReview {
     checks.push({ key, label, ok, detail });
   const total = integerCents(payload.totalCents);
 
-  add("version", "Versão do rascunho", payload.schemaVersion === 4,
-      payload.schemaVersion === 3 ? "Estrutura interna atual" : "Rascunho legado: refaça a preparação");
+  const supportedSchema = payload.schemaVersion === 3 || payload.schemaVersion === 4;
+  add("version", "Versão do rascunho", supportedSchema,
+      payload.schemaVersion === 4 ? "Estrutura interna atual" :
+      payload.schemaVersion === 3 ? "Estrutura anterior compatível" : "Rascunho legado: refaça a preparação");
   add("issuer", "Dados do emitente",
       Boolean(text(issuer.cnpj) && text(issuer.stateRegistration) && issuer.taxRegime === "simples_nacional" && issuer.taxRegimeConfirmed === true),
       "CNPJ, inscrição estadual e regime Simples Nacional confirmado pela contabilidade devem estar informados");

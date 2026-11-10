@@ -139,7 +139,7 @@ export async function POST(request: Request) {
         throw new JvgBackendError("O total do rascunho não corresponde ao total do pedido.", 400);
     }
     const [recipientRows, products] = await Promise.all([
-      dbRequest<DbRow[]>(`/rest/v1/jvg_parties?${scoped}&id=${filterEq(draft.recipientId)}&is_customer=eq.true&active=eq.true&select=id,display_name,document_type,document_number,address&limit=1`),
+      dbRequest<DbRow[]>(`/rest/v1/jvg_parties?${scoped}&id=${filterEq(draft.recipientId)}&is_customer=eq.true&active=eq.true&select=id,display_name,legal_name,document_type,document_number,state_registration,municipal_registration,email,phone,address&limit=1`),
       dbRequest<DbRow[]>(`/rest/v1/jvg_products?${scoped}&id=in.(${draft.items.map(i => i.productId).join(",")})&active=eq.true&select=id,sku,name,unit,ncm,cest,gtin,origin,tax_profile_id,sale_price`),
     ]);
     const recipient = recipientRows[0];
@@ -194,13 +194,23 @@ export async function POST(request: Request) {
       };
     });
     const issuer = {
-      companyId: account.company_id, name: company.trade_name || company.legal_name,
+      companyId: account.company_id,
+      name: company.trade_name || company.legal_name,
+      legalName: company.legal_name, tradeName: company.trade_name,
       cnpj: company.cnpj, stateRegistration: company.state_registration,
-      taxRegime: company.tax_regime, taxRegimeConfirmed: company.tax_regime_confirmed === true, state: issuerUf,
+      municipalRegistration: company.municipal_registration, cnae: company.cnae,
+      fiscalEmail: company.fiscal_email, fiscalPhone: company.fiscal_phone,
+      address: company.address, state: issuerUf,
+      series: company.nfe_series_homologacao,
+      nextNumber: company.nfe_next_number_homologacao,
+      taxRegime: company.tax_regime, taxRegimeConfirmed: company.tax_regime_confirmed === true,
     };
     const recipientSnapshot = {
-      id: recipient.id, name: recipient.display_name,
+      id: recipient.id, name: recipient.display_name, legalName: recipient.legal_name,
       documentType: recipient.document_type, documentNumber: recipient.document_number,
+      stateRegistration: recipient.state_registration,
+      municipalRegistration: recipient.municipal_registration,
+      email: recipient.email, phone: recipient.phone,
       address: recipient.address, state: recipientUf,
     };
     const preflight = reviewNfePreparation(issuer, recipientSnapshot, items);
