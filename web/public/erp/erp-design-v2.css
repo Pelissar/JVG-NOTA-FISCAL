@@ -577,3 +577,56 @@ html[data-theme] body :is(.sales-section-title small, .sales-form-footer small, 
   .quick-card, .quick-card::before, .quick-arrow, .stat-card { transition: none !important; }
   .quick-card:hover, .stat-card:hover { transform: none !important; }
 }
+
+
+/* Company workspace menu shared by secondary pages and dashboard. */
+.erp-workspace-menu { position: relative; flex: 0 1 auto; min-width: 0; }
+.erp-workspace-switch { display: flex; align-items: center; gap: 8px; min-height: 42px; max-width: 235px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-soft); color: var(--ink); cursor: pointer; list-style: none; transition: border-color .16s ease, background-color .16s ease, box-shadow .16s ease; }
+.erp-workspace-switch::-webkit-details-marker { display: none; }
+.erp-workspace-switch::after { content: ""; width: 7px; height: 7px; margin: -4px 0 0 2px; flex: 0 0 auto; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); opacity: .62; }
+.erp-workspace-switch:hover, .erp-workspace-menu[open] > .erp-workspace-switch { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: var(--surface-hover); }
+.erp-workspace-switch:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.erp-workspace-avatar { display: grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; overflow: hidden; border-radius: 9px; background: var(--accent-soft); color: var(--accent-strong); font-size: 10px; font-weight: 800; }
+.erp-workspace-avatar img { display: none; width: 100%; height: 100%; object-fit: cover; }
+.erp-workspace-avatar.has-logo img { display: block; }
+.erp-workspace-avatar.has-logo span { display: none; }
+.erp-workspace-name { display: grid; min-width: 0; text-align: left; }
+.erp-workspace-name strong { overflow: hidden; max-width: 150px; color: var(--ink); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.erp-workspace-name small { margin-top: 2px; color: var(--muted); font-size: 9px; }
+.erp-workspace-menu:not([open]) > .erp-workspace-popover { display: none; }
+.erp-workspace-popover { position: absolute; z-index: 90; top: calc(100% + 8px); right: 0; display: grid; gap: 4px; width: min(260px, calc(100vw - 24px)); padding: 8px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); box-shadow: var(--shadow-pop); }
+.erp-workspace-popover a { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 0 10px; border-radius: 8px; color: var(--ink-soft); font-size: 12px; font-weight: 650; text-decoration: none; }
+.erp-workspace-popover a:hover, .erp-workspace-popover a:focus-visible { outline: none; background: var(--accent-soft); color: var(--accent-strong); }
+.erp-workspace-popover .erp-workspace-logout { margin-top: 3px; border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; color: var(--danger); }
+.erp-workspace-popover .erp-workspace-logout:hover { background: var(--danger-soft); color: var(--danger); }
+.erp-workspace-menu .erp-nav-icon { width: 17px; height: 17px; }
+
+.workspace-menu { position: relative; z-index: 5; margin: 0 6px 28px; }
+.workspace-menu > .workspace-switch { width: 100%; max-width: none; margin: 0 !important; list-style: none; }
+.workspace-menu > .workspace-switch::marker { content: ""; }
+.workspace-menu > .workspace-switch::-webkit-details-marker { display: none; }
+.workspace-menu > .workspace-switch::after { content: ""; width: 7px; height: 7px; margin: -4px 1px 0 auto; flex: 0 0 auto; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); opacity: .65; }
+.workspace-menu[open] > .workspace-switch { border-color: var(--accent); }
+.workspace-menu:not([open]) > .workspace-menu-popover { display: none; }
+.workspace-menu-popover { position: absolute; z-index: 130; top: calc(100% + 7px); right: 0; left: 0; display: grid; gap: 4px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-pop); }
+.workspace-menu-item { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 40px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink-soft); cursor: pointer; font: inherit; font-size: 12px; font-weight: 650; text-align: left; }
+.workspace-menu-item:hover, .workspace-menu-item:focus-visible { outline: none; background: var(--accent-soft); color: var(--accent-strong); }
+.workspace-menu-item svg { width: 17px; height: 17px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.workspace-menu-divider { height: 1px; margin: 3px 2px; background: var(--line); }
+.workspace-menu-logout { color: var(--danger); }
+.workspace-menu-logout:hover, .workspace-menu-logout:focus-visible { background: var(--danger-soft); color: var(--danger); }
+
+@media (max-width: 520px) {
+  .erp-workspace-switch { max-width: 132px; gap: 6px; padding: 5px 6px; }
+  .erp-workspace-avatar { width: 28px; height: 28px; flex-basis: 28px; }
+  .erp-workspace-name strong { max-width: 76px; font-size: 10px; }
+  .erp-workspace-name small { display: none; }
+}
+@media (max-width: 420px) {
+  .erp-global-nav { gap: 6px; padding-right: 9px; padding-left: 9px; }
+  .erp-global-brand { gap: 6px; }
+  .erp-global-brand img { width: 32px; height: 32px; }
+  .erp-global-brand strong { font-size: 13px; }
+  .erp-nav-toggle { width: 38px; padding: 0; overflow: hidden; font-size: 0; }
+  .erp-nav-toggle::before { content: "☰"; font-size: 17px; }
+}

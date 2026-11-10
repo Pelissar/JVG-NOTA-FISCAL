@@ -17,7 +17,8 @@
     receipt: ['M6 2h12v20l-3-2-3 2-3-2-3 2z', 'M9 8h6', 'M9 12h6', 'M9 16h4'],
     hash: ['M4 9h16', 'M4 15h16', 'M10 3 8 21', 'M16 3l-2 18'],
     sliders: ['M4 6h16', 'M4 12h16', 'M4 18h16', 'M8 4v4', 'M15 10v4', 'M10 16v4'],
-    settings: ['M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z', 'M12 2v2', 'M12 20v2', 'M4.93 4.93l1.42 1.42', 'M17.65 17.65l1.42 1.42', 'M2 12h2', 'M20 12h2', 'M4.93 19.07l1.42-1.42', 'M17.65 6.35l1.42-1.42']
+    settings: ['M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z', 'M12 2v2', 'M12 20v2', 'M4.93 4.93l1.42 1.42', 'M17.65 17.65l1.42 1.42', 'M2 12h2', 'M20 12h2', 'M4.93 19.07l1.42-1.42', 'M17.65 6.35l1.42-1.42'],
+    logout: ['M10 17l5-5-5-5', 'M15 12H3', 'M21 19V5']
   };
   function makeIcon(name) {
     var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -42,7 +43,6 @@
     { label: 'Cadastros', icon: 'users', links: [['Pessoas e clientes', '/erp/index.html#clients', 'users'], ['Produtos', '/erp/index.html#products', 'box'], ['Serviços', '/erp/index.html#services', 'wrench']] },
     { label: 'Operação', icon: 'warehouse', links: [['Estoque', '/erp/index.html#inventory', 'box'], ['Relatórios', '/erp/index.html#reports', 'chart']] },
     { label: 'Fiscal', icon: 'receipt', links: [['Central fiscal', '/erp/index.html#fiscal', 'receipt'], ['Rascunhos NF-e', '/erp/nfe-drafts.html', 'file'], ['Notas de entrada · XML', '/erp/inbound-nfe.html', 'file'], ['CFOP', '/erp/cfop.html', 'hash'], ['Perfis tributários', '/erp/tax-profiles.html', 'sliders']] },
-    { label: 'Conta', icon: 'settings', links: [['Meu perfil', '/erp/index.html#profile', 'user'], ['Empresa e sistema', '/erp/index.html#settings', 'building']] },
   ];
 
   var currentPath = window.location.pathname.replace(/\/$/, '/index.html');
@@ -58,6 +58,8 @@
       if (group !== except) group.open = false;
     });
   }
+  var workspaceMenu;
+  function closeWorkspaceMenu() { if (workspaceMenu) workspaceMenu.open = false; }
   function normalizePath(path) {
     var clean = path.replace(/\/$/, '');
     if (!clean || clean === '/erp') return '/erp/index';
@@ -85,7 +87,7 @@
       }
       menu.appendChild(link);
     });
-    details.addEventListener('toggle', function () { if (details.open) closeOpenGroups(details); });
+    details.addEventListener('toggle', function () { if (details.open) { closeOpenGroups(details); closeWorkspaceMenu(); } });
     details.append(summary, menu);
     linksRoot.appendChild(details);
   });
@@ -100,6 +102,26 @@
   });
 
   var actions = nav.querySelector('.erp-global-actions');
+  workspaceMenu = document.createElement('details');
+  workspaceMenu.className = 'erp-workspace-menu';
+  workspaceMenu.setAttribute('aria-label', 'Menu da empresa ativa');
+  workspaceMenu.innerHTML = '<summary class="erp-workspace-switch" aria-label="Abrir menu da empresa ativa"><span class="erp-workspace-avatar" id="erpWorkspaceAvatar"><img id="erpWorkspaceLogo" alt=""><span id="erpWorkspaceInitials">SF</span></span><span class="erp-workspace-name"><strong id="erpWorkspaceName">Minha empresa</strong><small>Empresa ativa</small></span></summary>';
+  var workspacePopover = document.createElement('div');
+  workspacePopover.className = 'erp-workspace-popover';
+  function workspaceLink(label, href, iconName, className) {
+    var link = document.createElement('a');
+    link.href = href;
+    if (className) link.className = className;
+    addIconLabel(link, label, iconName);
+    return link;
+  }
+  workspacePopover.appendChild(workspaceLink('Editar perfil', '/erp/index.html#profile', 'user'));
+  workspacePopover.appendChild(workspaceLink('Empresa e sistema', '/erp/index.html#settings', 'building'));
+  workspacePopover.appendChild(workspaceLink('Sair da conta', '/logout', 'logout', 'erp-workspace-logout'));
+  workspaceMenu.appendChild(workspacePopover);
+  workspaceMenu.addEventListener('toggle', function () { if (workspaceMenu.open) closeOpenGroups(); });
+  actions.appendChild(workspaceMenu);
+
   var theme = document.querySelector('[data-theme-toggle]');
   if (!theme) {
     theme = document.createElement('button');
@@ -109,6 +131,31 @@
   theme.removeAttribute('style'); theme.classList.add('theme-toggle'); actions.appendChild(theme);
   mount.replaceWith(nav);
 
+  fetch('/api/company', { credentials: 'same-origin', cache: 'no-store' }).then(function (response) {
+    if (!response.ok) return null;
+    return response.json();
+  }).then(function (data) {
+    var company = data && data.company ? data.company : {};
+    var companyName = String(company.tradeName || company.legalName || '').trim() || 'Minha empresa';
+    var name = nav.querySelector('#erpWorkspaceName');
+    var initials = nav.querySelector('#erpWorkspaceInitials');
+    var avatar = nav.querySelector('#erpWorkspaceAvatar');
+    var logo = nav.querySelector('#erpWorkspaceLogo');
+    if (name) name.textContent = companyName;
+    if (initials) {
+      var parts = companyName.split(/\s+/).filter(Boolean);
+      initials.textContent = (parts.length > 1 ? parts[0][0] + parts[1][0] : companyName.slice(0, 2)).toUpperCase();
+    }
+    if (logo && avatar && data && data.status === 'ready') {
+      logo.onload = function () { avatar.classList.add('has-logo'); };
+      logo.onerror = function () { avatar.classList.remove('has-logo'); };
+      logo.src = '/api/company/logo?v=' + Date.now();
+    }
+    var summary = workspaceMenu.querySelector('summary');
+    if (summary) { summary.setAttribute('aria-label', 'Abrir menu da empresa ativa: ' + companyName); summary.title = companyName + ' · Empresa ativa'; }
+  }).catch(function () {});
+
+
   var toggle = nav.querySelector('.erp-nav-toggle');
   toggle.addEventListener('click', function () {
     var expanded = nav.classList.toggle('menu-open');
@@ -117,21 +164,25 @@
   });
   nav.addEventListener('click', function (event) {
     var anchor = event.target.closest('a');
-    if (anchor) { closeOpenGroups(); nav.classList.remove('menu-open'); toggle.setAttribute('aria-expanded', 'false'); }
+    if (anchor) { closeOpenGroups(); closeWorkspaceMenu(); nav.classList.remove('menu-open'); toggle.setAttribute('aria-expanded', 'false'); }
   });
   document.addEventListener('click', function (event) {
     if (!event.target.closest('.erp-global-links details')) closeOpenGroups();
+    if (!event.target.closest('.erp-workspace-menu')) closeWorkspaceMenu();
     if (!nav.contains(event.target)) { nav.classList.remove('menu-open'); toggle.setAttribute('aria-expanded', 'false'); }
   });
   document.addEventListener('keydown', function (event) {
     if (event.key === 'Escape') {
       var opened = linksRoot.querySelector('details[open]');
+      var workspaceWasOpen = workspaceMenu.open;
       var mobileMenuWasOpen = nav.classList.contains('menu-open');
       closeOpenGroups();
+      closeWorkspaceMenu();
       nav.classList.remove('menu-open');
       toggle.setAttribute('aria-expanded', 'false');
       if (mobileMenuWasOpen) toggle.focus();
       else if (opened) opened.querySelector('summary')?.focus();
+      else if (workspaceWasOpen) workspaceMenu.querySelector('summary')?.focus();
     }
   });
 })();

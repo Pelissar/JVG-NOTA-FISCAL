@@ -169,7 +169,7 @@
     var companyTitle=document.getElementById('workspaceName');if(companyTitle)companyTitle.textContent=state.companyName;
     var initials=document.getElementById('workspaceInitials'),avatar=document.getElementById('workspaceAvatar'),logo=document.getElementById('workspaceLogo');
     if(initials){var parts=String(state.companyName||'Minha empresa').trim().split(/\s+/).filter(Boolean);initials.textContent=(parts.length>1?parts[0][0]+parts[1][0]:parts[0].slice(0,2)).toUpperCase();}
-    var profileWorkspace=document.getElementById('workspaceSwitch');if(profileWorkspace){profileWorkspace.setAttribute('aria-label','Abrir perfil da empresa ativa: '+state.companyName);profileWorkspace.title='Meu perfil · '+state.companyName;}
+    var profileWorkspace=document.getElementById('workspaceSwitch');if(profileWorkspace){profileWorkspace.setAttribute('aria-label','Abrir menu da empresa ativa: '+state.companyName);profileWorkspace.title='Empresa ativa · '+state.companyName;}
     var companyId=cloud.company&&cloud.company.id?String(cloud.company.id):'';
     if(logo&&companyId!==logoCompanyId){logoCompanyId=companyId;if(avatar)avatar.classList.remove('has-logo');logo.onload=function(){if(avatar)avatar.classList.add('has-logo');};logo.onerror=function(){if(avatar)avatar.classList.remove('has-logo');};logo.src=companyId?'/api/company/logo?v='+encodeURIComponent(companyId):'';}
     document.querySelectorAll('.sidebar .nav-link').forEach(function(b){var active=b.dataset.view===view;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
@@ -460,14 +460,14 @@
     a.href=url;a.download='JVG_'+kind+'_cadastros.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},300);toast('CSV exportado.');
   }
   document.addEventListener('click',function(e){
-    var v=e.target.closest('[data-view]');if(v){document.querySelectorAll('.sidebar-scroll .nav-group[open]').forEach(function(group){group.open=false;});setView(v.dataset.view);return;}
+    var v=e.target.closest('[data-view]');if(v){var workspaceMenu=document.getElementById('workspaceMenu');if(workspaceMenu&&workspaceMenu.contains(v))workspaceMenu.open=false;document.querySelectorAll('.sidebar-scroll .nav-group[open]').forEach(function(group){group.open=false;});setView(v.dataset.view);return;}
     var b=e.target.closest('[data-action]');if(!b)return;var a=b.dataset.action,recordId=b.dataset.id;
     if(a==='close-modal'){closeModal();return;}
     if(a==='lookup-cep'||a==='lookup-cnpj'){lookupRegistration(b,a.substring(7));return;}
     if(a==='configure-company'){openCompanyEditor();return;}
     if(a==='check-connection'){checkConnection();return;}
     if(a==='retry-data'){var retryScope=scopeForView(view);if(retryScope){scopeErrors[retryScope]='';refreshCloud(retryScope).catch(function(error){toast(error.message,'error');});}return;}
-    if(a==='logout'){window.location.assign('/logout');return;}
+    if(a==='logout'){var workspaceMenu=document.getElementById('workspaceMenu');if(workspaceMenu)workspaceMenu.open=false;window.location.assign('/logout');return;}
     if(a.indexOf('new-')===0){openEditor(a.substring(4));return;}
     if(a.indexOf('edit-')===0){openEditor(a.substring(5),recordId);return;}
     if(a.indexOf('remove-')===0){removeRecord(a.substring(7),recordId);return;}
@@ -487,7 +487,7 @@
   document.getElementById('menuBtn').addEventListener('click',function(){document.getElementById('sidebar').classList.add('open');document.getElementById('mobileBackdrop').classList.add('active');this.setAttribute('aria-expanded','true');document.getElementById('closeMenuBtn').focus();});
   document.getElementById('closeMenuBtn').addEventListener('click',function(){closeSidebar(true);});
   document.getElementById('mobileBackdrop').addEventListener('click',function(){closeSidebar(true);});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSidebar(true);if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();document.getElementById('globalSearch').focus();}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){var workspaceMenu=document.getElementById('workspaceMenu');if(workspaceMenu&&workspaceMenu.open){workspaceMenu.open=false;workspaceMenu.querySelector('summary')?.focus();return;}closeSidebar(true);}if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();document.getElementById('globalSearch').focus();}});
   if('scrollRestoration' in history)history.scrollRestoration='manual';
   window.scrollTo(0,0);
   document.querySelector('.main-column').scrollTop=0;

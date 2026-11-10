@@ -4,6 +4,21 @@ import { fiscalAddress, fiscalInteger, validCnpj } from "../../../lib/fiscal-com
 
 export const dynamic = "force-dynamic";
 
+export async function GET() {
+  try {
+    const user = await getJvgUser();
+    if (!user) return apiJson({ error: "Faça login para continuar." }, 401);
+    const account = await getSiteAccount(user);
+    if (!account) return apiJson({ status: "needs_company", company: null });
+    const stored = await getCompany(account);
+    const company = stored ? {
+      legalName: String(stored.legal_name || ""),
+      tradeName: String(stored.trade_name || ""),
+    } : null;
+    return apiJson({ status: company ? "ready" : "needs_company", company });
+  } catch (error) { return safeError(error); }
+}
+
 export async function POST(request: Request) {
   const user = await getJvgUser();
   if (!user) return apiJson({ error: "Faça login para continuar." }, 401);
