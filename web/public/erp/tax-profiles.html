@@ -1,32 +1,172 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0d2031"><title>Perfis fiscais | JVG Nota Fiscal</title>
-<style>
-:root{font-family:system-ui,-apple-system,sans-serif;color:#183044;background:#f3f7f9}*{box-sizing:border-box}
-body{margin:0}header{background:#102b3c;color:white;padding:18px max(20px,calc((100vw - 1160px)/2));display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap}header a{color:#8ceacb;text-decoration:none;font-weight:700}main{max-width:1160px;margin:36px auto;padding:0 20px}h1{font-size:clamp(27px,4vw,38px);margin:0 0 8px}p{line-height:1.65;color:#587280}.intro{margin-bottom:25px}.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px}.panel{background:white;border:1px solid #dbe6e8;border-radius:17px;padding:24px;min-width:0;box-shadow:0 10px 30px #15364a0a}.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}label{display:grid;gap:7px;font-size:13px;font-weight:700}label.full{grid-column:1/-1}input{font:inherit;width:100%;border:1px solid #c6d7dc;border-radius:9px;padding:12px;color:#163042}input:focus{outline:2px solid #1fba94}button{background:#008c75;color:white;border:0;border-radius:9px;padding:13px 20px;font:inherit;font-weight:700;cursor:pointer;margin-top:20px}button:disabled{opacity:.5;cursor:not-allowed}.notice{border-left:4px solid #d69b3b;background:#fff5e1;padding:13px;border-radius:8px;margin:16px 0;font-size:13px}.notice.error{border-color:#d35f5f;background:#fff1f1}.record{padding:16px 0;border-bottom:1px solid #e4edef}.record:last-child{border-bottom:none}.record strong{display:block}.record small{display:block;color:#607c8b;margin-top:7px;line-height:1.6}.tag{font-size:11px;color:#9a6b0e;background:#fff0ca;border-radius:20px;padding:4px 9px;display:inline-block;margin-top:6px}@media(max-width:800px){.grid{grid-template-columns:1fr}}@media(max-width:440px){.field-grid{grid-template-columns:1fr}label.full{grid-column:auto}.panel{padding:17px}}
-header{background:linear-gradient(105deg,#102336,#183b4a);box-shadow:0 5px 22px #152b3714}
-main{max-width:1500px;width:100%;margin:clamp(14px,2vw,32px) auto;padding:0 clamp(12px,2.2vw,30px)}
-.panel{border-color:#dfe9ed;box-shadow:0 7px 25px #173c4a08}
-:where(a,button,input):focus-visible{outline:3px solid var(--focus,#2d8bff);outline-offset:2px}
-@media(min-width:1600px){.grid{gap:28px}}
-</style><script defer src="./tax-profiles.js"></script><link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg"><link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css"><script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js"></script></head><body><div id="erpGlobalNav"></div><button type="button" class="theme-toggle" data-theme-toggle aria-label="Alternar tema">◐ Modo escuro</button>
-<header><strong>JVG Nota Fiscal · Perfis fiscais</strong><a href="/erp/index.html">← Voltar ao painel</a></header>
-<main><div class="intro"><h1>Perfis tributários</h1><p>Organize os códigos fiscais da sua empresa. O sistema não presume o regime: a criação de perfis de NF-e depende da confirmação contábil e, nesta versão, atende apenas ao Simples Nacional.</p></div>
-<div id="status" class="notice" role="status">Conectando ao servidor...</div><div class="grid">
-<section class="panel"><h2>Novo perfil</h2><p>Os códigos não representam cálculo automático nem aprovação fiscal.</p>
-<form id="profileForm"><div class="field-grid">
-<label class="full">Nome do perfil *<input name="name" maxlength="120" minlength="3" required placeholder="Ex.: Venda interna de mercadorias"></label>
-<label>CFOP sugerido<input name="cfop" pattern="[0-9]{4}" maxlength="4" list="cfopOptions" inputmode="numeric" placeholder="5102"></label>
-<label>CSOSN<input name="csosn" pattern="[0-9]{3}" maxlength="3" inputmode="numeric" placeholder="102"></label>
-<label>CST do PIS<input name="pisCst" pattern="[0-9]{2}" maxlength="2" inputmode="numeric"></label>
-<label>CST da Cofins<input name="cofinsCst" pattern="[0-9]{2}" maxlength="2" inputmode="numeric"></label>
-<label>CST IBS/CBS<input name="cstIbsCbs" pattern="[0-9]{3}" maxlength="3" inputmode="numeric"></label>
-<label>Classificação IBS/CBS<input name="classTrib" pattern="[0-9]{6}" maxlength="6" inputmode="numeric"></label>
-<label>PIS estimado (%)<input name="pisRate" inputmode="decimal" pattern="[0-9]{1,3}([.][0-9]{1,4})?" placeholder="Preencher com orientação fiscal"></label>
-<label>Cofins estimada (%)<input name="cofinsRate" inputmode="decimal" pattern="[0-9]{1,3}([.][0-9]{1,4})?" placeholder="Preencher com orientação fiscal"></label>
-<label>IBS estimado (%)<input name="ibsRate" inputmode="decimal" pattern="[0-9]{1,3}([.][0-9]{1,4})?" placeholder="Preencher com orientação fiscal"></label>
-<label>CBS estimada (%)<input name="cbsRate" inputmode="decimal" pattern="[0-9]{1,3}([.][0-9]{1,4})?" placeholder="Preencher com orientação fiscal"></label>
-</div><div class="notice">As alíquotas são opcionais e informadas manualmente. O sistema apenas multiplica a base comercial pelos percentuais; não considera reduções, créditos, diferimentos, exceções ou regras completas do Simples Nacional. <strong>Nunca use a estimativa para emitir notas.</strong></div><div class="notice">Confirme todas as classificações com o contador e as tabelas fiscais vigentes. O perfil será salvo como <strong>rascunho não revisado</strong>.</div>
-<button id="save" type="submit" disabled>Salvar perfil fiscal</button></form><datalist id="cfopOptions"></datalist></section>
-<section class="panel"><h2>Perfis da empresa</h2><p>Somente registros reais vinculados à empresa autenticada.</p><div id="records">Carregando...</div></section>
-</div></main></body></html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6f8">
+  <title>Perfis tributários | JVG Nota Fiscal</title>
+  <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
+  <link rel="stylesheet" href="/erp/unified-pages.css">
+  <link rel="stylesheet" href="/erp/erp-design-v2.css">
+  <link rel="stylesheet" href="/erp/tax-profiles.css?v=20261110-1">
+  <script src="/erp/theme-switch.js"></script>
+  <script defer src="/erp/erp-page-nav.js"></script>
+  <script defer src="./tax-profiles.js?v=20261110-1"></script>
+</head>
+<body class="tax-profiles-page">
+  <div id="erpGlobalNav"></div>
+  <button type="button" class="theme-toggle" data-theme-toggle aria-label="Alternar tema">◐ Modo escuro</button>
+
+  <main class="tax-page-frame">
+    <section class="page-intro" aria-labelledby="pageTitle">
+      <div>
+        <p class="eyebrow">FISCAL <span aria-hidden="true">/</span> CONFIGURAÇÃO</p>
+        <h1 id="pageTitle">Perfis tributários</h1>
+        <p class="intro-copy">Organize referências fiscais da empresa para revisar com a contabilidade. O cadastro nesta tela atende, por enquanto, empresas com Simples Nacional confirmado.</p>
+      </div>
+      <a class="back-link" href="/erp/index.html"><span aria-hidden="true">←</span> Voltar ao painel</a>
+    </section>
+
+    <div id="status" class="notice info status-banner" role="status" aria-live="polite">Conectando ao servidor...</div>
+
+    <section class="workflow" aria-label="Etapas para usar um perfil tributário">
+      <article class="workflow-step">
+        <span class="step-number">01</span>
+        <div><strong>Confirme o regime</strong><p>Verifique com a contabilidade e registre nos dados da empresa.</p></div>
+      </article>
+      <article class="workflow-step">
+        <span class="step-number">02</span>
+        <div><strong>Cadastre as referências</strong><p>Informe os códigos orientados para a operação.</p></div>
+      </article>
+      <article class="workflow-step">
+        <span class="step-number">03</span>
+        <div><strong>Peça revisão contábil</strong><p>O perfil começa como rascunho e não autoriza emissão.</p></div>
+      </article>
+    </section>
+
+    <div class="tax-content-grid">
+      <section class="panel form-panel" aria-labelledby="formTitle">
+        <header class="section-heading">
+          <div>
+            <p class="section-kicker">NOVO CADASTRO</p>
+            <h2 id="formTitle">Criar perfil</h2>
+            <p>Os campos com indicação de opcional podem ser preenchidos depois da orientação fiscal.</p>
+          </div>
+          <span class="draft-chip">Rascunho</span>
+        </header>
+
+        <form id="profileForm">
+          <fieldset class="form-group">
+            <legend><span>1</span> Operação e Simples Nacional</legend>
+            <div class="field-grid">
+              <label class="field full-field">
+                <span class="field-label">Nome do perfil <b aria-hidden="true">*</b></span>
+                <input class="field-control" name="name" maxlength="120" minlength="3" required autocomplete="off" placeholder="Ex.: Venda interna de mercadorias">
+                <small class="field-help">Um nome fácil de reconhecer; de 3 a 120 caracteres.</small>
+              </label>
+              <label class="field">
+                <span class="field-label">CFOP sugerido <span class="optional-tag">Opcional</span></span>
+                <input class="field-control" name="cfop" type="text" pattern="[0-9]{4}" maxlength="4" list="cfopOptions" inputmode="numeric" placeholder="Ex.: 5102">
+                <small class="field-help">Código de 4 dígitos; precisa existir no catálogo oficial.</small>
+              </label>
+              <label class="field">
+                <span class="field-label">CSOSN <span class="optional-tag">Opcional</span></span>
+                <input class="field-control" name="csosn" type="text" pattern="[0-9]{3}" maxlength="3" inputmode="numeric" placeholder="Ex.: 102">
+                <small class="field-help">Use o código indicado pelo contador para a operação.</small>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-group">
+            <legend><span>2</span> Classificações fiscais</legend>
+            <div class="field-grid">
+              <label class="field">
+                <span class="field-label">CST do PIS <span class="optional-tag">Opcional</span></span>
+                <input class="field-control" name="pisCst" type="text" pattern="[0-9]{2}" maxlength="2" inputmode="numeric" placeholder="2 dígitos">
+              </label>
+              <label class="field">
+                <span class="field-label">CST da Cofins <span class="optional-tag">Opcional</span></span>
+                <input class="field-control" name="cofinsCst" type="text" pattern="[0-9]{2}" maxlength="2" inputmode="numeric" placeholder="2 dígitos">
+              </label>
+              <label class="field">
+                <span class="field-label">CST IBS/CBS <span class="optional-tag">Opcional</span></span>
+                <input class="field-control" name="cstIbsCbs" type="text" pattern="[0-9]{3}" maxlength="3" inputmode="numeric" placeholder="3 dígitos">
+              </label>
+              <label class="field">
+                <span class="field-label">Classificação IBS/CBS <span class="optional-tag">Opcional</span></span>
+                <input class="field-control" name="classTrib" type="text" pattern="[0-9]{6}" maxlength="6" inputmode="numeric" placeholder="6 dígitos">
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-group rates-group">
+            <legend><span>3</span> Percentuais para estimativa <span class="optional-tag">Todos opcionais</span></legend>
+            <p class="group-description">Só informe percentuais recebidos da contabilidade. Digite ponto para separar casas decimais.</p>
+            <div class="field-grid">
+              <label class="field">
+                <span class="field-label">PIS (%)</span>
+                <input class="field-control" name="pisRate" type="text" inputmode="decimal" pattern="[0-9]{1,3}(\.[0-9]{1,4})?" placeholder="Ex.: 1.65">
+              </label>
+              <label class="field">
+                <span class="field-label">Cofins (%)</span>
+                <input class="field-control" name="cofinsRate" type="text" inputmode="decimal" pattern="[0-9]{1,3}(\.[0-9]{1,4})?" placeholder="Ex.: 7.60">
+              </label>
+              <label class="field">
+                <span class="field-label">IBS (%)</span>
+                <input class="field-control" name="ibsRate" type="text" inputmode="decimal" pattern="[0-9]{1,3}(\.[0-9]{1,4})?" placeholder="Ex.: 0.10">
+              </label>
+              <label class="field">
+                <span class="field-label">CBS (%)</span>
+                <input class="field-control" name="cbsRate" type="text" inputmode="decimal" pattern="[0-9]{1,3}(\.[0-9]{1,4})?" placeholder="Ex.: 0.90">
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="notice warning form-notice">
+            <strong>Estimativa simples, sem apuração fiscal.</strong>
+            <p>Se informados, os percentuais servem apenas para uma multiplicação matemática da base comercial. O cálculo não considera regras tributárias completas, reduções, créditos, diferimentos ou exceções. O resultado não preenche o XML e não pode ser usado para emitir a nota.</p>
+          </div>
+          <div class="notice info form-notice">
+            <strong>O contador precisa revisar.</strong>
+            <p>Ao salvar, o cadastro fica como rascunho não revisado. Confirme CFOP, CSOSN, CSTs, classificação e percentuais com a contabilidade e com as tabelas vigentes.</p>
+          </div>
+
+          <div class="form-actions">
+            <button id="save" class="primary-action" type="submit" disabled>Salvar perfil como rascunho</button>
+            <span id="saveHelp" class="action-help">Aguarde a confirmação do regime tributário para habilitar o cadastro.</span>
+          </div>
+        </form>
+        <datalist id="cfopOptions"></datalist>
+      </section>
+
+      <aside class="side-column">
+        <section class="panel records-panel" aria-labelledby="recordsTitle">
+          <header class="section-heading compact-heading">
+            <div>
+              <p class="section-kicker">EMPRESA ATIVA</p>
+              <h2 id="recordsTitle">Perfis cadastrados</h2>
+              <p>Registros vinculados à empresa autenticada.</p>
+            </div>
+            <span id="recordsCount" class="count-chip" aria-label="Quantidade de perfis">0</span>
+          </header>
+          <div id="records" class="records-list" aria-live="polite">Carregando perfis...</div>
+        </section>
+
+        <section class="panel explanation-panel" aria-labelledby="explanationTitle">
+          <div class="section-heading compact-heading">
+            <div>
+              <p class="section-kicker">O QUE ESTA TELA FAZ</p>
+              <h2 id="explanationTitle">Como funciona</h2>
+            </div>
+          </div>
+          <ul class="explanation-list">
+            <li><span class="explanation-mark">✓</span><span><strong>Guarda referências</strong><small>Os códigos ficam associados à empresa para organização e revisão.</small></span></li>
+            <li><span class="explanation-mark">i</span><span><strong>Não decide o imposto</strong><small>O sistema não presume nem confirma o tratamento tributário correto.</small></span></li>
+            <li><span class="explanation-mark">↗</span><span><strong>Não libera transmissão</strong><small>A emissão fiscal continua bloqueada nesta etapa.</small></span></li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

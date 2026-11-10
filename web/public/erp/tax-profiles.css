@@ -1,0 +1,304 @@
+.tax-profiles-page {
+  min-height: 100vh;
+  background: var(--canvas) !important;
+  color: var(--ink) !important;
+}
+
+.tax-profiles-page .tax-page-frame {
+  width: min(100% - 48px, 1480px);
+  margin: 0 auto;
+  padding: 30px 0 56px;
+}
+
+.tax-profiles-page .page-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0 0 22px;
+}
+
+.tax-profiles-page .eyebrow,
+.tax-profiles-page .section-kicker {
+  margin: 0 0 8px;
+  color: var(--accent-strong) !important;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .11em;
+  line-height: 1.4;
+}
+
+.tax-profiles-page .eyebrow span { padding: 0 3px; color: var(--muted) !important; }
+.tax-profiles-page h1,
+.tax-profiles-page h2 { margin: 0; color: var(--ink) !important; letter-spacing: -.035em; }
+.tax-profiles-page h1 { font-size: clamp(29px, 3.4vw, 42px); line-height: 1.12; }
+.tax-profiles-page h2 { font-size: 19px; line-height: 1.25; }
+.tax-profiles-page .intro-copy,
+.tax-profiles-page .section-heading p:not(.section-kicker) {
+  max-width: 760px;
+  margin: 9px 0 0;
+  color: var(--muted) !important;
+  line-height: 1.6;
+}
+
+.tax-profiles-page .back-link {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink-soft) !important;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background .16s ease, border-color .16s ease, transform .16s ease;
+}
+.tax-profiles-page .back-link:hover { border-color: var(--line-strong); background: var(--surface-hover); transform: translateY(-1px); }
+
+.tax-profiles-page .status-banner {
+  margin: 0 0 18px !important;
+  padding: 13px 16px !important;
+  border: 1px solid var(--line) !important;
+  border-left: 4px solid var(--blue) !important;
+  border-radius: 11px !important;
+  background: var(--blue-soft) !important;
+  color: var(--blue) !important;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tax-profiles-page .notice.info {
+  border-color: var(--line) !important;
+  border-left-color: var(--blue) !important;
+  background: var(--blue-soft) !important;
+  color: var(--blue) !important;
+}
+.tax-profiles-page .notice.warning {
+  border-color: var(--line) !important;
+  border-left-color: var(--warning) !important;
+  background: var(--warning-soft) !important;
+  color: var(--warning) !important;
+}
+.tax-profiles-page .notice.error {
+  border-color: var(--line) !important;
+  border-left-color: var(--danger) !important;
+  background: var(--danger-soft) !important;
+  color: var(--danger) !important;
+}
+.tax-profiles-page .notice.success {
+  border-color: var(--line) !important;
+  border-left-color: var(--success) !important;
+  background: var(--success-soft) !important;
+  color: var(--success) !important;
+}
+.tax-profiles-page .notice strong { color: var(--ink) !important; }
+.tax-profiles-page .notice p { margin: 5px 0 0; color: inherit !important; line-height: 1.6; }
+
+.tax-profiles-page .workflow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.tax-profiles-page .workflow-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 15px 16px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.tax-profiles-page .step-number {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  flex: 0 0 31px;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 800;
+}
+.tax-profiles-page .workflow-step strong { display: block; margin: 1px 0 4px; color: var(--ink); font-size: 13px; }
+.tax-profiles-page .workflow-step p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+.tax-profiles-page .tax-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(300px, .7fr);
+  align-items: start;
+  gap: 18px;
+}
+.tax-profiles-page .panel {
+  min-width: 0;
+  padding: clamp(18px, 2vw, 26px) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 16px !important;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+.tax-profiles-page .section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 20px;
+}
+.tax-profiles-page .section-heading .section-kicker { margin-bottom: 5px; }
+.tax-profiles-page .section-heading p:not(.section-kicker) { font-size: 12px; }
+.tax-profiles-page .draft-chip,
+.tax-profiles-page .count-chip,
+.tax-profiles-page .optional-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .035em;
+  white-space: nowrap;
+}
+.tax-profiles-page .draft-chip { padding: 7px 10px; background: var(--warning-soft); color: var(--warning); }
+.tax-profiles-page .count-chip { min-width: 34px; height: 34px; padding: 0 9px; background: var(--accent-soft); color: var(--accent-strong); }
+.tax-profiles-page .optional-tag { padding: 4px 7px; background: var(--surface-soft); color: var(--muted); font-size: 9px; }
+
+.tax-profiles-page .form-group {
+  min-width: 0;
+  margin: 0;
+  padding: 17px 0 18px;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.tax-profiles-page .form-group legend {
+  width: 100%;
+  padding: 0 0 13px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+.tax-profiles-page .form-group legend > span:first-child {
+  display: inline-grid;
+  width: 23px;
+  height: 23px;
+  margin-right: 7px;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 10px;
+}
+.tax-profiles-page .form-group legend .optional-tag { margin-left: 7px; vertical-align: 1px; }
+.tax-profiles-page .group-description { margin: -3px 0 13px; color: var(--muted); font-size: 12px; }
+.tax-profiles-page .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px 14px; }
+.tax-profiles-page .field {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 7px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+.tax-profiles-page .field.full-field { grid-column: 1 / -1; }
+.tax-profiles-page .field-label { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.tax-profiles-page .field-label b { color: var(--danger); }
+.tax-profiles-page .field-help { color: var(--muted); font-size: 11px; font-weight: 400; line-height: 1.45; }
+.tax-profiles-page .field-control {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: 9px !important;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  font: inherit;
+  font-weight: 500;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.tax-profiles-page .field-control::placeholder { color: var(--muted-soft); opacity: 1; }
+.tax-profiles-page .field-control:focus { border-color: var(--accent) !important; outline: 0; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+.tax-profiles-page .field-control:invalid:not(:placeholder-shown) { border-color: var(--danger) !important; }
+
+.tax-profiles-page .form-notice {
+  margin: 13px 0 !important;
+  padding: 13px 15px !important;
+  border-radius: 10px !important;
+  font-size: 12px;
+}
+.tax-profiles-page .form-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 18px; }
+.tax-profiles-page .primary-action {
+  min-height: 43px;
+  margin: 0 !important;
+  padding: 11px 17px !important;
+  border: 1px solid var(--accent) !important;
+  border-radius: 10px !important;
+  background: var(--accent) !important;
+  color: var(--accent-contrast) !important;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: filter .15s ease, transform .15s ease;
+}
+.tax-profiles-page .primary-action:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
+.tax-profiles-page .primary-action:disabled { border-color: var(--line) !important; background: var(--surface-soft) !important; color: var(--muted) !important; cursor: not-allowed; opacity: 1; }
+.tax-profiles-page .action-help { max-width: 300px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+.tax-profiles-page .side-column { display: grid; gap: 18px; min-width: 0; }
+.tax-profiles-page .compact-heading { align-items: center; margin-bottom: 16px; }
+.tax-profiles-page .records-list { min-width: 0; }
+.tax-profiles-page .record {
+  padding: 15px 0;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+}
+.tax-profiles-page .record:first-child { border-top: 0; padding-top: 0; }
+.tax-profiles-page .record:last-child { padding-bottom: 0; }
+.tax-profiles-page .record strong { display: block; color: var(--ink); font-size: 14px; }
+.tax-profiles-page .record small { display: block; margin-top: 7px; color: var(--muted); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.tax-profiles-page .record .tag { display: inline-flex; margin-top: 10px; padding: 5px 9px; border-radius: 999px; background: var(--warning-soft); color: var(--warning); font-size: 10px; font-weight: 800; }
+.tax-profiles-page .empty-state { display: grid; justify-items: start; padding: 21px 17px; border: 1px dashed var(--line-strong); border-radius: 12px; background: var(--surface-soft); }
+.tax-profiles-page .empty-symbol { display: grid; width: 35px; height: 35px; margin-bottom: 11px; place-items: center; border-radius: 10px; background: var(--accent-soft); color: var(--accent-strong); font-size: 21px; font-weight: 500; }
+.tax-profiles-page .empty-state strong { color: var(--ink); font-size: 13px; }
+.tax-profiles-page .empty-state p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.tax-profiles-page .loading-state,
+.tax-profiles-page .unavailable-state { padding: 13px 0; color: var(--muted); font-size: 12px; }
+
+.tax-profiles-page .explanation-list { display: grid; gap: 15px; margin: 0; padding: 0; list-style: none; }
+.tax-profiles-page .explanation-list li { display: flex; align-items: flex-start; gap: 11px; }
+.tax-profiles-page .explanation-mark { display: grid; width: 25px; height: 25px; flex: 0 0 25px; place-items: center; border-radius: 8px; background: var(--accent-soft); color: var(--accent-strong); font-size: 12px; font-weight: 800; }
+.tax-profiles-page .explanation-list strong { display: block; color: var(--ink); font-size: 12px; }
+.tax-profiles-page .explanation-list small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+
+@media (max-width: 1000px) {
+  .tax-profiles-page .tax-page-frame { width: min(100% - 32px, 760px); padding-top: 24px; }
+  .tax-profiles-page .tax-content-grid { grid-template-columns: minmax(0, 1fr); }
+  .tax-profiles-page .side-column { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+  .tax-profiles-page .tax-page-frame { width: min(100% - 24px, 540px); padding-top: 18px; }
+  .tax-profiles-page .page-intro { align-items: flex-start; flex-direction: column; gap: 14px; }
+  .tax-profiles-page h1 { font-size: 30px; }
+  .tax-profiles-page .workflow { grid-template-columns: minmax(0, 1fr); gap: 9px; }
+  .tax-profiles-page .workflow-step { padding: 12px 13px; }
+  .tax-profiles-page .side-column { grid-template-columns: minmax(0, 1fr); }
+  .tax-profiles-page .section-heading { gap: 10px; }
+}
+@media (max-width: 460px) {
+  .tax-profiles-page .field-grid { grid-template-columns: minmax(0, 1fr); }
+  .tax-profiles-page .field.full-field { grid-column: auto; }
+  .tax-profiles-page .panel { padding: 17px !important; }
+  .tax-profiles-page .form-group legend .optional-tag { margin: 6px 0 0 30px; }
+  .tax-profiles-page .form-actions { align-items: stretch; flex-direction: column; }
+  .tax-profiles-page .primary-action { width: 100%; }
+}
