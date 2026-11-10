@@ -257,7 +257,7 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
     mappedItems.push(row);
   });
   const itemsComplete = sourceItems.length > 0 && itemBasicMissing.length === 0;
-  if (itemsComplete) requestPreview.itens = mappedItems;
+  if (itemsComplete) requestPreview.items = mappedItems;
   add("itens", "Dados básicos dos itens", itemsComplete,
       itemBasicMissing.length ? itemBasicMissing.slice(0,8).join("; ") : "Código, descrição, NCM, CFOP, unidade, quantidade e valores mapeados.");
   add("codigos_tributarios", "CSOSN e CST de PIS/COFINS", itemCodeMissing.length === 0 && sourceItems.length > 0,
