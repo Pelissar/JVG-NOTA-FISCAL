@@ -9,7 +9,7 @@ create table if not exists public.jvg_quotes (
   notes text not null default '',
   valid_until date,
   total numeric(18,2) not null default 0 check (total >= 0),
-  items jsonb not null default '[]'::jsonb check (jsonb_typeof(items) = 'array'),
+  items jsonb not null check (jsonb_typeof(items) = 'array'),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint jvg_quotes_notes_length check (char_length(notes) <= 2000),
@@ -24,3 +24,4 @@ grant select, insert, update on public.jvg_quotes to service_role;
 -- Escrita e alteração de status ficam restritas ao backend, que valida membership.
 -- Cada item é armazenado com snapshot de descrição, unidade, quantidade e preço.
 -- Não gera venda, cobrança ou reserva de estoque automaticamente.
+
