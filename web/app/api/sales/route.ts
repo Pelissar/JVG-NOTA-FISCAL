@@ -52,9 +52,19 @@ export async function GET(request: Request) {
     const offset = (page - 1) * pageSize;
     const scope = `tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`;
     const rows = await dbRequest<Array<Record<string, unknown>>>(
-      `/rest/v1/jvg_sales?${scope}&select=id,customer_id,status,subtotal,discount_total,total,notes,created_at&order=created_at.desc,id.desc&limit=${pageSize + 1}&offset=${offset}`,
+      `/rest/v1/jvg_sales?${scope}&select=id,customer_id,status,subtotal,discount_total,total,notes,created_at,items:jvg_sale_items(description_snapshot,unit_snapshot,quantity,unit_price,line_total)&order=created_at.desc,id.desc&limit=${pageSize + 1}&offset=${offset}`,
     );
-    return apiJson({ sales: rows.slice(0, pageSize), page, pageSize, hasMore: rows.length > pageSize });
+    const sales = rows.slice(0, pageSize).map((sale) => ({
+      ...sale,
+      items: (Array.isArray(sale.items) ? sale.items : []).map((item) => ({
+        description: item.description_snapshot,
+        unit: item.unit_snapshot,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unit_price),
+        lineTotal: Number(item.line_total),
+      })),
+    }));
+    return apiJson({ sales, page, pageSize, hasMore: rows.length > pageSize });
   } catch (error) { return safeError(error); }
 }
 

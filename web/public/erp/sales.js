@@ -59,10 +59,17 @@
     $('salesPrevious').disabled = loadingSales || salesPage <= 1;
     $('salesNext').disabled = loadingSales || !salesHasMore;
     $('sales').innerHTML = sales.length
-      ? '<table><thead><tr><th>Data</th><th>Identificador</th><th>Situação</th><th>Total</th></tr></thead><tbody>'+
-        sales.map(x=>'<tr><td>'+safe(new Date(x.created_at).toLocaleString('pt-BR'))+'</td><td title="'+safe(x.id)+'">'+safe(String(x.id).slice(0,8))+'</td><td>'+safe(x.status)+'</td><td>'+safe(money(x.total))+'</td></tr>').join('')+'</tbody></table>'
+      ? '<table><thead><tr><th>Data</th><th>Identificador</th><th>Situação</th><th>Total</th><th>Ações</th></tr></thead><tbody>'+
+        sales.map(x=>'<tr><td>'+safe(new Date(x.created_at).toLocaleString('pt-BR'))+'</td><td title="'+safe(x.id)+'">'+safe(String(x.id).slice(0,8))+'</td><td>'+safe(x.status)+'</td><td>'+safe(money(x.total))+'</td><td><button class="btn sale-print" type="button" data-id="'+safe(x.id)+'" aria-label="Gerar PDF da venda '+safe(String(x.id).slice(0,8))+'">PDF / Imprimir</button></td></tr>').join('')+'</tbody></table>'
       : 'Nenhuma venda encontrada para os filtros selecionados.';
     $('exportSales').disabled = sales.length===0;
+  }
+  function printSale(sale) {
+    if (window.JvgCommercialDocuments) {
+      window.JvgCommercialDocuments.print('sale', Object.assign({}, sale, { customerId: sale.customer_id }));
+    } else {
+      notice('O módulo de impressão não foi carregado. Recarregue a página.');
+    }
   }
   function exportSales() {
     const sales = filteredSales();
@@ -113,6 +120,12 @@
   $('salesNext').addEventListener('click',()=>loadSales(salesPage+1).catch(error=>notice(error.message)));
   $('salesSearch').addEventListener('input',renderSales);
   $('salesStatus').addEventListener('change',renderSales);
+  $('sales').addEventListener('click',event=>{
+    const button=event.target.closest('button.sale-print');
+    if(!button)return;
+    const sale=salesHistory.find(row=>row.id===button.dataset.id);
+    if(sale)printSale(sale);
+  });
   $('exportSales').addEventListener('click',exportSales);
   $('addItem').addEventListener('click',addItem);
   $('saleForm').addEventListener('submit',async event=>{

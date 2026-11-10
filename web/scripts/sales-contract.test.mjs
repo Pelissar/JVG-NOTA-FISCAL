@@ -97,3 +97,28 @@ test('CSV de vendas neutraliza fórmulas e usa separadores reais', () => {
   assert.match(client, /join\('\\r\\n'\)/);
   assert.match(client, /new Blob\(\['\\uFEFF'/);
 });
+
+test('PDF de venda inclui os itens persistidos e usa os dados do emitente', () => {
+  const documents = read('../public/erp/commercial-documents.js');
+  assert.match(api, /items:jvg_sale_items\(description_snapshot,unit_snapshot,quantity,unit_price,line_total\)/);
+  assert.match(api, /unitPrice: Number\(item\.unit_price\)/);
+  assert.match(api, /lineTotal: Number\(item\.line_total\)/);
+  assert.match(page, /commercial-documents\.js/);
+  assert.match(client, /class="btn sale-print"/);
+  assert.match(client, /print\('sale'/);
+  assert.match(documents, /COMPROVANTE DE VENDA/);
+  assert.match(documents, /'VENDA-'\s*\+\s*idShort/);
+  assert.match(documents, /api\/company\/logo/);
+  assert.match(documents, /CNPJ\/CPF/);
+  assert.match(documents, /Documento comercial sem validade fiscal/);
+});
+
+test('PDF da OS preserva o formato de duas vias e sinaliza texto resumido', () => {
+  const documents = read('../public/erp/commercial-documents.js');
+  assert.match(documents, /compactDescription\(data\.reported_issue, 300\)/);
+  assert.match(documents, /compactDescription\(data\.diagnosis, 380\)/);
+  assert.match(documents, /continua na ficha digital/);
+  assert.match(documents, /height:134mm;min-height:134mm/);
+  assert.match(documents, /VIA DO CLIENTE/);
+  assert.match(documents, /VIA DA EMPRESA/);
+});
