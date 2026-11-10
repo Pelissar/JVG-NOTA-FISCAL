@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { parseAuthorizedInboundNfe } from "../lib/fiscal/inbound-nfe.ts";
 
 const accessKey = "35261112345678000195550010000000011000000010";
+const page = readFileSync(new URL("../public/erp/inbound-nfe.html", import.meta.url), "utf8");
 function xml(status = "100", model = "55", destination = "99887766000155") {
   return '<?xml version="1.0" encoding="UTF-8"?>' +
     '<nfeProc versao="4.00"><NFe><infNFe Id="NFe' + accessKey + '">' +
@@ -14,6 +15,11 @@ function xml(status = "100", model = "55", destination = "99887766000155") {
     '<total><ICMSTot><vNF>12.50</vNF></ICMSTot></total></infNFe></NFe>' +
     '<protNFe><infProt><chNFe>' + accessKey + '</chNFe><cStat>' + status + '</cStat><xMotivo>Autorizado o uso da NF-e</xMotivo></infProt></protNFe></nfeProc>';
 }
+
+test("compras interestaduais pedem conferência de ST sem copiar regra do fornecedor para saída", () => {
+  assert.match(page, /Compra de fora do estado: confira a classificação fiscal/);
+  assert.match(page, /CST\/CSOSN do fornecedor no XML não preenche automaticamente a regra de venda da JVG/);
+});
 
 test("lê NF-e processada autorizada e preserva valores do item", () => {
   const parsed = parseAuthorizedInboundNfe(xml(), "99.887.766/0001-55");
@@ -63,3 +69,4 @@ test("a API protege dados por empresa e a confirmação de estoque é atômica",
   assert.match(migration, /for update/);
   assert.match(migration, /begin[\s\S]*insert into public\.jvg_inventory_movements[\s\S]*update public\.jvg_inbound_nfe_documents[\s\S]*end;/i);
 });
+

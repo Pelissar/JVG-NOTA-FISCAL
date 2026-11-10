@@ -11,3 +11,9 @@ Registro de orientação fornecida pela usuária com base no XML da JVG citado p
 
 Pergunta pendente para a Walquíria: “Em quais situações das vendas da JVG o CSOSN deixa de ser 102 e o que muda nos impostos?”
 
+## Orientação recebida sobre o lançamento de compras
+
+Na conversa de 10/11/2026, a contabilidade confirmou que o lançamento da mercadoria comprada influencia o tratamento fiscal do item. Para uma compra de fora do estado, orientou verificar se a mercadoria, dentro da UF da JVG, está sujeita à substituição tributária ou à tributação comum.
+
+A mensagem usa a expressão “CST 102”. Como a JVG informou CRT 1, o sistema chama esse código de CSOSN 102 na NF-e de saída. A fala não define todos os produtos ou operações: manter 102 somente no cenário de venda já documentado e não inferir a regra da venda a partir do CST/CSOSN do fornecedor. O cadastro de entrada continua sem calcular tributos ou alterar perfis fiscais automaticamente.
+
