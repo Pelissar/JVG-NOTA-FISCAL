@@ -20,5 +20,6 @@
 .commercial-page .quote-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .commercial-page .sales-pagination{max-width:100%}
 @media(max-width:900px){.commercial-page .quote-row{grid-template-columns:minmax(0,2fr) minmax(95px,1fr) minmax(115px,1fr)}.commercial-page .quote-row>.remove{grid-column:1/-1;justify-self:end}}
+@media(max-width:760px){.commercial-page .page-heading{gap:12px}.commercial-page .page-heading>div{flex:0 1 auto}}
 @media(max-width:640px){.commercial-page{padding:0 12px 24px}.commercial-page .quote-grid,.commercial-page .quote-row{grid-template-columns:minmax(0,1fr)}.commercial-page .quote-row>.remove{grid-column:auto;justify-self:stretch}.commercial-page .page-heading>.btn{width:100%;text-align:center}.commercial-page .quote-actions>.btn{width:100%}.commercial-page .commercial-table table{min-width:620px}}
 @media(max-height:650px){.commercial-page{margin-top:10px}.commercial-page .panel{padding:12px}}
