@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="/erp/tax-profiles.css?v=20261110-1">
   <script src="/erp/theme-switch.js"></script>
   <script defer src="/erp/erp-page-nav.js"></script>
-  <script defer src="./tax-profiles.js?v=20261110-1"></script>
+  <script defer src="./tax-profiles.js?v=20261110-2"></script>
 </head>
 <body class="tax-profiles-page">
   <div id="erpGlobalNav"></div>
@@ -22,7 +22,7 @@
       <div>
         <p class="eyebrow">FISCAL <span aria-hidden="true">/</span> CONFIGURAÇÃO</p>
         <h1 id="pageTitle">Perfis tributários</h1>
-        <p class="intro-copy">Organize referências fiscais da empresa para revisar com a contabilidade. O cadastro nesta tela atende, por enquanto, empresas com Simples Nacional confirmado.</p>
+        <p class="intro-copy">Esta tela organiza referências para uma futura NF-e. Ela não é necessária para cadastrar produtos, fazer orçamentos, pedidos ou vendas comerciais. Preencha códigos fiscais somente com orientação da contabilidade.</p>
       </div>
       <a class="back-link" href="/erp/index.html"><span aria-hidden="true">←</span> Voltar ao painel</a>
     </section>
@@ -50,7 +50,7 @@
           <div>
             <p class="section-kicker">NOVO CADASTRO</p>
             <h2 id="formTitle">Criar perfil</h2>
-            <p>Os campos com indicação de opcional podem ser preenchidos depois da orientação fiscal.</p>
+            <p>Você não precisa disso para vender ou cadastrar produtos. Só o nome interno é obrigatório; deixe os códigos em branco até receber orientação do contador.</p>
           </div>
           <span class="draft-chip">Rascunho</span>
         </header>
@@ -60,18 +60,18 @@
             <legend><span>1</span> Operação e Simples Nacional</legend>
             <div class="field-grid">
               <label class="field full-field">
-                <span class="field-label">Nome do perfil <b aria-hidden="true">*</b></span>
-                <input class="field-control" name="name" maxlength="120" minlength="3" required autocomplete="off" placeholder="Ex.: Venda interna de mercadorias">
-                <small class="field-help">Um nome fácil de reconhecer; de 3 a 120 caracteres.</small>
+                <span class="field-label">Nome interno do perfil <b aria-hidden="true">*</b></span>
+                <input class="field-control" name="name" maxlength="120" minlength="3" required autocomplete="off" placeholder="Dê um nome para identificar a regra">
+                <small class="field-help">Serve para organizar o cadastro; não aparece na nota. De 3 a 120 caracteres.</small>
               </label>
               <label class="field">
                 <span class="field-label">CFOP sugerido <span class="optional-tag">Opcional</span></span>
-                <input class="field-control" name="cfop" type="text" pattern="[0-9]{4}" maxlength="4" list="cfopOptions" inputmode="numeric" placeholder="Ex.: 5102">
+                <input class="field-control" name="cfop" type="text" pattern="[0-9]{4}" maxlength="4" list="cfopOptions" inputmode="numeric" autocomplete="off" placeholder="Após orientação contábil">
                 <small class="field-help">Código de 4 dígitos; precisa existir no catálogo oficial.</small>
               </label>
               <label class="field">
                 <span class="field-label">CSOSN <span class="optional-tag">Opcional</span></span>
-                <input class="field-control" name="csosn" type="text" pattern="[0-9]{3}" maxlength="3" inputmode="numeric" placeholder="Ex.: 102">
+                <input class="field-control" name="csosn" type="text" pattern="[0-9]{3}" maxlength="3" inputmode="numeric" autocomplete="off" placeholder="Após orientação contábil">
                 <small class="field-help">Use o código indicado pelo contador para a operação.</small>
               </label>
             </div>
@@ -82,53 +82,34 @@
             <div class="field-grid">
               <label class="field">
                 <span class="field-label">CST do PIS <span class="optional-tag">Opcional</span></span>
-                <input class="field-control" name="pisCst" type="text" pattern="[0-9]{2}" maxlength="2" inputmode="numeric" placeholder="2 dígitos">
+                <input class="field-control" name="pisCst" type="text" pattern="[0-9]{2}" maxlength="2" inputmode="numeric" autocomplete="off" placeholder="Preencher após orientação contábil">
+                <small class="field-help">Formato de 2 dígitos; o formato não confirma se o código se aplica.</small>
               </label>
               <label class="field">
                 <span class="field-label">CST da Cofins <span class="optional-tag">Opcional</span></span>
-                <input class="field-control" name="cofinsCst" type="text" pattern="[0-9]{2}" maxlength="2" inputmode="numeric" placeholder="2 dígitos">
+                <input class="field-control" name="cofinsCst" type="text" pattern="[0-9]{2}" maxlength="2" inputmode="numeric" autocomplete="off" placeholder="Preencher após orientação contábil">
+                <small class="field-help">Formato de 2 dígitos; confirme o enquadramento com o contador.</small>
               </label>
               <label class="field">
                 <span class="field-label">CST IBS/CBS <span class="optional-tag">Opcional</span></span>
-                <input class="field-control" name="cstIbsCbs" type="text" pattern="[0-9]{3}" maxlength="3" inputmode="numeric" placeholder="3 dígitos">
+                <input class="field-control" name="cstIbsCbs" type="text" pattern="[0-9]{3}" maxlength="3" inputmode="numeric" autocomplete="off" placeholder="Preencher após orientação contábil">
+                <small class="field-help">Formato de 3 dígitos; depende da regra aplicável à operação.</small>
               </label>
               <label class="field">
                 <span class="field-label">Classificação IBS/CBS <span class="optional-tag">Opcional</span></span>
-                <input class="field-control" name="classTrib" type="text" pattern="[0-9]{6}" maxlength="6" inputmode="numeric" placeholder="6 dígitos">
-              </label>
-            </div>
-          </fieldset>
-
-          <fieldset class="form-group rates-group">
-            <legend><span>3</span> Percentuais para estimativa <span class="optional-tag">Todos opcionais</span></legend>
-            <p class="group-description">Só informe percentuais recebidos da contabilidade. Digite ponto para separar casas decimais.</p>
-            <div class="field-grid">
-              <label class="field">
-                <span class="field-label">PIS (%)</span>
-                <input class="field-control" name="pisRate" type="text" inputmode="decimal" pattern="[0-9]{1,3}(\.[0-9]{1,4})?" placeholder="Ex.: 1.65">
-              </label>
-              <label class="field">
-                <span class="field-label">Cofins (%)</span>
-                <input class="field-control" name="cofinsRate" type="text" inputmode="decimal" pattern="[0-9]{1,3}(\.[0-9]{1,4})?" placeholder="Ex.: 7.60">
-              </label>
-              <label class="field">
-                <span class="field-label">IBS (%)</span>
-                <input class="field-control" name="ibsRate" type="text" inputmode="decimal" pattern="[0-9]{1,3}(\.[0-9]{1,4})?" placeholder="Ex.: 0.10">
-              </label>
-              <label class="field">
-                <span class="field-label">CBS (%)</span>
-                <input class="field-control" name="cbsRate" type="text" inputmode="decimal" pattern="[0-9]{1,3}(\.[0-9]{1,4})?" placeholder="Ex.: 0.90">
+                <input class="field-control" name="classTrib" type="text" pattern="[0-9]{6}" maxlength="6" inputmode="numeric" autocomplete="off" placeholder="Preencher após orientação contábil">
+                <small class="field-help">Formato de 6 dígitos; valide na tabela vigente com a contabilidade.</small>
               </label>
             </div>
           </fieldset>
 
           <div class="notice warning form-notice">
-            <strong>Estimativa simples, sem apuração fiscal.</strong>
-            <p>Se informados, os percentuais servem apenas para uma multiplicação matemática da base comercial. O cálculo não considera regras tributárias completas, reduções, créditos, diferimentos ou exceções. O resultado não preenche o XML e não pode ser usado para emitir a nota.</p>
+            <strong>Não preencha códigos por tentativa.</strong>
+            <p>CFOP, CSOSN, CST e classificação dependem do produto, da operação, das UFs e do regime tributário. O sistema ainda não escolhe nem calcula essas regras automaticamente.</p>
           </div>
           <div class="notice info form-notice">
-            <strong>O contador precisa revisar.</strong>
-            <p>Ao salvar, o cadastro fica como rascunho não revisado. Confirme CFOP, CSOSN, CSTs, classificação e percentuais com a contabilidade e com as tabelas vigentes.</p>
+            <strong>O que acontece ao salvar?</strong>
+            <p>O sistema guarda estas referências como rascunho da empresa. Isso não altera uma venda, não calcula imposto e não transmite NF-e. O perfil só poderá ser usado no fluxo fiscal após revisão contábil e conclusão da integração.</p>
           </div>
 
           <div class="form-actions">

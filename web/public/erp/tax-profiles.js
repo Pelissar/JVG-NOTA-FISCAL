@@ -28,13 +28,13 @@
     } else if (!canEdit) {
       saveHelp.textContent = 'Seu acesso é somente leitura. Peça a um administrador ou gerente para cadastrar o perfil.';
     } else if (!regimeConfirmationAvailable) {
-      saveHelp.textContent = 'A confirmação de regime ainda não está disponível no banco; a etapa fiscal precisa ser preparada no Supabase.';
+      saveHelp.textContent = 'Este bloqueio é intencional: a etapa de confirmação do regime ainda não está disponível no Supabase.';
     } else if (!taxRegimeConfirmed) {
-      saveHelp.textContent = 'Confirme o regime tributário nos dados da empresa, com orientação da contabilidade.';
+      saveHelp.textContent = 'Bloqueado por segurança até o regime ser confirmado com a contabilidade nos dados da empresa.';
     } else if (taxRegime !== 'simples_nacional') {
       saveHelp.textContent = 'Esta versão só permite criar perfis para empresas com Simples Nacional confirmado.';
     } else {
-      saveHelp.textContent = 'O perfil será salvo como rascunho para revisão contábil. Nenhum campo libera a emissão.';
+      saveHelp.textContent = 'Este cadastro ainda fica como rascunho; preencher ou salvar aqui não libera a emissão.';
     }
   }
 
@@ -104,11 +104,6 @@
         `Cofins ${rules.cofinsCst || '—'}`,
         `IBS/CBS ${rules.cstIbsCbs || '—'}`
       ];
-      const rates = rules.previewRates && typeof rules.previewRates === 'object' ? rules.previewRates : {};
-      const rateSummary = Object.entries(rates)
-        .map(([tax, value]) => `${tax.toUpperCase()} ${value}%`)
-        .join(', ');
-      if (rateSummary) details.push(`Percentuais para estimativa: ${rateSummary}`);
       meta.textContent = details.join(' · ');
 
       const tag = document.createElement('span');
@@ -136,11 +131,11 @@
     } else if (!regimeConfirmationAvailable) {
       show('A confirmação do regime tributário ainda não está disponível. A estrutura fiscal do banco precisa ser aplicada no Supabase para liberar esta etapa.', 'warning');
     } else if (!taxRegimeConfirmed) {
-      show('Confirme o regime tributário nos dados da empresa com a contabilidade antes de criar perfis.', 'warning');
+      show('O perfil está bloqueado até o regime tributário ser confirmado com a contabilidade. Não é necessário preencher códigos ou alíquotas por tentativa.', 'warning');
     } else if (taxRegime !== 'simples_nacional') {
       show('A empresa não está confirmada no Simples Nacional. Esta versão permite perfis fiscais apenas para esse regime.', 'warning');
     } else {
-      show('Simples Nacional confirmado. Os perfis ficam como rascunho, aguardam revisão contábil e não habilitam transmissão de NF-e.', 'info');
+      show('Simples Nacional confirmado. Cadastre somente códigos orientados pelo contador; o perfil continua como rascunho e não habilita transmissão.', 'info');
     }
   }
 
