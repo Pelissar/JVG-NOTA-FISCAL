@@ -83,8 +83,10 @@ img { max-width: 100%; }
 .brand-text strong { color: var(--ink) !important; font-size: 16px; letter-spacing: -.5px; }
 .brand-text strong span { color: var(--accent) !important; }
 .brand-text small { color: var(--muted) !important; font-size: 10px; letter-spacing: .45px; }
-.workspace-switch { display: flex; align-items: center; gap: 9px; min-width: 0; max-width: 210px; margin: 0 !important; padding: 8px 10px !important; border: 1px solid var(--line) !important; border-radius: 11px !important; background: var(--surface-soft) !important; }
-.workspace-switch > div { min-width: 0; }
+.workspace-switch { display: flex; align-items: center; gap: 9px; min-width: 0; max-width: 210px; margin: 0 !important; padding: 8px 10px !important; border: 1px solid var(--line) !important; border-radius: 11px !important; background: var(--surface-soft) !important; color: var(--ink) !important; font: inherit; text-align: left; cursor: pointer; transition: border-color .16s ease, background-color .16s ease, box-shadow .16s ease; }
+.workspace-switch:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)) !important; background: var(--surface-hover) !important; box-shadow: var(--shadow-sm); }
+.workspace-switch:focus-visible { outline: 3px solid var(--focus) !important; outline-offset: 3px; }
+.workspace-switch > .workspace-name { display: grid; min-width: 0; }
 .workspace-switch strong { overflow: hidden; color: var(--ink) !important; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .workspace-switch small { overflow: hidden; color: var(--muted) !important; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .workspace-avatar { display: grid; width: 31px; height: 31px; flex: 0 0 31px; place-items: center; overflow: hidden; border-radius: 9px; background: var(--accent-soft) !important; color: var(--accent-strong) !important; font-size: 11px; font-weight: 800; }
@@ -121,10 +123,6 @@ img { max-width: 100%; }
 .global-search kbd { border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--muted); font-size: 10px; }
 .top-pill { padding: 7px 9px; border: 1px solid var(--line) !important; border-radius: 999px; background: var(--surface-soft) !important; color: var(--muted) !important; font-size: 9px; font-weight: 800; letter-spacing: .55px; }
 .top-avatar { display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid var(--line) !important; background: var(--accent-soft) !important; color: var(--accent-strong) !important; font-size: 11px; }
-.top-avatar.profile-shortcut { border-radius: 50%; cursor: pointer; }
-#profileShortcut { display: grid !important; flex: 0 0 36px; margin: 0 3px 0 0; box-shadow: 0 0 0 3px var(--accent-soft); }
-#profileShortcut:hover { background: var(--accent) !important; color: #fff !important; }
-#profileShortcut:focus-visible { outline: 3px solid var(--focus) !important; outline-offset: 3px; }
 .mobile-menu { display: none !important; }
 .content { width: min(100%, 1580px); min-width: 0; flex: 1 0 auto; margin: 0 auto; padding: clamp(20px, 2.5vw, 36px) clamp(14px, 2.4vw, 36px) 44px !important; }
 .footer { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; padding: 14px clamp(14px, 2.4vw, 36px) !important; border-top: 1px solid var(--line) !important; background: var(--surface) !important; color: var(--muted) !important; font-size: 11px; }
