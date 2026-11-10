@@ -122,6 +122,9 @@ img { max-width: 100%; }
 .top-pill { padding: 7px 9px; border: 1px solid var(--line) !important; border-radius: 999px; background: var(--surface-soft) !important; color: var(--muted) !important; font-size: 9px; font-weight: 800; letter-spacing: .55px; }
 .top-avatar { display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid var(--line) !important; background: var(--accent-soft) !important; color: var(--accent-strong) !important; font-size: 11px; }
 .top-avatar.profile-shortcut { border-radius: 50%; cursor: pointer; }
+#profileShortcut { display: grid !important; flex: 0 0 36px; margin: 0 3px 0 0; box-shadow: 0 0 0 3px var(--accent-soft); }
+#profileShortcut:hover { background: var(--accent) !important; color: #fff !important; }
+#profileShortcut:focus-visible { outline: 3px solid var(--focus) !important; outline-offset: 3px; }
 .mobile-menu { display: none !important; }
 .content { width: min(100%, 1580px); min-width: 0; flex: 1 0 auto; margin: 0 auto; padding: clamp(20px, 2.5vw, 36px) clamp(14px, 2.4vw, 36px) 44px !important; }
 .footer { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; padding: 14px clamp(14px, 2.4vw, 36px) !important; border-top: 1px solid var(--line) !important; background: var(--surface) !important; color: var(--muted) !important; font-size: 11px; }

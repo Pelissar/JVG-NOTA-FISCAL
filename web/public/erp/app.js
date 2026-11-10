@@ -159,10 +159,10 @@
     var companyTitle=document.getElementById('workspaceName');if(companyTitle)companyTitle.textContent=state.companyName;
     var initials=document.getElementById('workspaceInitials'),avatar=document.getElementById('workspaceAvatar'),logo=document.getElementById('workspaceLogo');
     if(initials){var parts=String(state.companyName||'Minha empresa').trim().split(/\s+/).filter(Boolean);initials.textContent=(parts.length>1?parts[0][0]+parts[1][0]:parts[0].slice(0,2)).toUpperCase();}
-    var accountBadge=document.querySelector('.top-avatar');if(accountBadge){var userParts=String(cloud.displayName||'SF').trim().split(/\s+/).filter(Boolean);accountBadge.textContent=(userParts.length>1?userParts[0][0]+userParts[1][0]:userParts[0].slice(0,2)).toUpperCase();}
+    var accountBadge=document.getElementById('profileShortcut');if(accountBadge){var displayName=String(cloud.displayName||'SF').trim(),userParts=displayName.split(/\s+/).filter(Boolean);accountBadge.textContent=(userParts.length>1?userParts[0][0]+userParts[1][0]:userParts[0].slice(0,2)).toUpperCase();accountBadge.setAttribute('aria-label','Abrir perfil de '+displayName);accountBadge.title='Meu perfil: '+displayName;}
     var companyId=cloud.company&&cloud.company.id?String(cloud.company.id):'';
     if(logo&&companyId!==logoCompanyId){logoCompanyId=companyId;if(avatar)avatar.classList.remove('has-logo');logo.onload=function(){if(avatar)avatar.classList.add('has-logo');};logo.onerror=function(){if(avatar)avatar.classList.remove('has-logo');};logo.src=companyId?'/api/company/logo?v='+encodeURIComponent(companyId):'';}
-    document.querySelectorAll('.sidebar .nav-link').forEach(function(b){var active=b.dataset.view===view;b.classList.toggle('active',active);if(active){b.setAttribute('aria-current','page');var group=b.closest('details.nav-group');if(group)group.open=true;}else b.removeAttribute('aria-current');});
+    document.querySelectorAll('.sidebar .nav-link').forEach(function(b){var active=b.dataset.view===view;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     var views={dashboard:dashboard,products:products,clients:clients,services:services,fiscal:fiscal,inventory:inventory,reports:reports,profile:profile,settings:settings};
     content.innerHTML=(views[view]||dashboard)();
     var search=document.getElementById('globalSearch');search.value=query;
@@ -428,7 +428,7 @@
     a.href=url;a.download='JVG_'+kind+'_cadastros.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},300);toast('CSV exportado.');
   }
   document.addEventListener('click',function(e){
-    var v=e.target.closest('[data-view]');if(v){var group=v.closest('.nav-group');if(group)group.open=false;setView(v.dataset.view);return;}
+    var v=e.target.closest('[data-view]');if(v){document.querySelectorAll('.sidebar-scroll .nav-group[open]').forEach(function(group){group.open=false;});setView(v.dataset.view);return;}
     var b=e.target.closest('[data-action]');if(!b)return;var a=b.dataset.action,recordId=b.dataset.id;
     if(a==='close-modal'){closeModal();return;}
     if(a==='lookup-cep'||a==='lookup-cnpj'){lookupRegistration(b,a.substring(7));return;}

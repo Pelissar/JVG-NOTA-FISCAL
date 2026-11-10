@@ -53,6 +53,11 @@
     '<nav class="erp-global-links" id="erpGlobalLinks" aria-label="Módulos do sistema"></nav>' +
     '<div class="erp-global-actions"></div>';
   var linksRoot = nav.querySelector('.erp-global-links');
+  function closeOpenGroups(except) {
+    linksRoot.querySelectorAll('details[open]').forEach(function (group) {
+      if (group !== except) group.open = false;
+    });
+  }
   function normalizePath(path) {
     var clean = path.replace(/\/$/, '');
     if (!clean || clean === '/erp') return '/erp/index';
@@ -80,9 +85,7 @@
       }
       menu.appendChild(link);
     });
-    details.addEventListener('toggle', function () {
-      if (details.open) linksRoot.querySelectorAll('details[open]').forEach(function (other) { if (other !== details) other.open = false; });
-    });
+    details.addEventListener('toggle', function () { if (details.open) closeOpenGroups(details); });
     details.append(summary, menu);
     linksRoot.appendChild(details);
   });
@@ -114,9 +117,21 @@
   });
   nav.addEventListener('click', function (event) {
     var anchor = event.target.closest('a');
-    if (anchor) { nav.classList.remove('menu-open'); toggle.setAttribute('aria-expanded', 'false'); }
+    if (anchor) { closeOpenGroups(); nav.classList.remove('menu-open'); toggle.setAttribute('aria-expanded', 'false'); }
+  });
+  document.addEventListener('click', function (event) {
+    if (!event.target.closest('.erp-global-links details')) closeOpenGroups();
+    if (!nav.contains(event.target)) { nav.classList.remove('menu-open'); toggle.setAttribute('aria-expanded', 'false'); }
   });
   document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') { nav.classList.remove('menu-open'); toggle.setAttribute('aria-expanded', 'false'); toggle.focus(); }
+    if (event.key === 'Escape') {
+      var opened = linksRoot.querySelector('details[open]');
+      var mobileMenuWasOpen = nav.classList.contains('menu-open');
+      closeOpenGroups();
+      nav.classList.remove('menu-open');
+      toggle.setAttribute('aria-expanded', 'false');
+      if (mobileMenuWasOpen) toggle.focus();
+      else if (opened) opened.querySelector('summary')?.focus();
+    }
   });
 })();
