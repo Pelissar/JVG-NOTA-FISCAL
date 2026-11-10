@@ -53,3 +53,15 @@ test('cadastro usa validação compartilhada de CPF', () => {
   assert.match(api, /import \{ isValidCpf \} from/);
   assert.match(api, /type === "PF" && document && !isValidCpf\(document\)/);
 });
+
+test("campos obrigatórios de cadastro aparecem na tela e também são validados pelo servidor", () => {
+  const products = readFileSync(new URL("../public/erp/app.js", import.meta.url), "utf8");
+  assert.ok(products.includes("Código interno (SKU) *"));
+  assert.ok(products.includes("Descrição do produto *"));
+  assert.ok(products.includes("Pacote (PCT)"));
+  assert.ok(products.includes("Preço de venda (R$) *"));
+  assert.ok(products.includes("Tipo de pessoa"));
+  assert.ok(api.includes("Preço de venda é obrigatório"));
+  assert.ok(api.includes("Unidade do produto é obrigatória"));
+  assert.ok(api.includes("CPF/CNPJ é obrigatório para vincular fornecedor"));
+});

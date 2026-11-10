@@ -37,16 +37,9 @@
 .record-dialog .detail-items article strong{color:var(--ink)}
 .record-dialog .dialog-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:18px}
 .record-dialog .dialog-note{margin:14px 0 0;padding:12px;border-radius:10px;background:var(--surface-soft);color:var(--muted);font-size:11px;line-height:1.6;white-space:pre-wrap}
-.quote-item-extra{grid-column:1/-1;align-self:stretch;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft);padding:10px 12px}
-.quote-item-extra summary{color:var(--accent-strong);font-size:11px;font-weight:750;cursor:pointer}
-.quote-item-extra>div{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
-.quote-item-extra label{display:grid;gap:5px;color:var(--ink-soft);font-size:11px;font-weight:650}
-.quote-item-extra input{width:100%;min-width:0;min-height:38px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
-.record-dialog .detail-items article small.line-detail{display:block;margin-top:4px;color:var(--muted);font-size:10px;line-height:1.5}
 .quote-list table td:last-child,.order-list-panel table td:last-child{min-width:205px}
 .quote-list table td,.order-list-panel table td{vertical-align:middle}
 .quote-list .btn,.order-list-panel .btn{min-height:32px;padding:0 9px;font-size:10px}
 .quote-list .status-pill,.order-list-panel .status-pill{margin-right:4px}
-@media(max-width:900px){.quote-item-extra>div{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:760px){.workflow-strip{justify-content:flex-start;overflow-x:auto}.workflow-strip article{min-width:175px}.summary-grid{grid-template-columns:1fr}.list-toolbar{align-items:stretch}.list-toolbar label{width:100%;min-width:0}.list-toolbar>span{margin:0}.record-dialog{padding:17px}.record-dialog dl{grid-template-columns:1fr}.commercial-switcher{width:calc(100% - 24px);margin-top:12px}.quote-item-extra>div{grid-template-columns:1fr}}
+@media(max-width:760px){.workflow-strip{justify-content:flex-start;overflow-x:auto}.workflow-strip article{min-width:175px}.summary-grid{grid-template-columns:1fr}.list-toolbar{align-items:stretch}.list-toolbar label{width:100%;min-width:0}.list-toolbar>span{margin:0}.record-dialog{padding:17px}.record-dialog dl{grid-template-columns:1fr}.commercial-switcher{width:calc(100% - 24px);margin-top:12px}}
 @media(prefers-reduced-motion:reduce){.commercial-switcher a{transition:none}}

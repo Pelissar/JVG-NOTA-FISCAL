@@ -11,7 +11,7 @@
     "build": "next build && node scripts/purge-turbopack-cache.mjs",
     "test:nfe": "node --experimental-strip-types --test scripts/nfe-draft.test.mjs",
     "test:cfop": "node --test scripts/cfop.test.mjs",
-    "test:erp": "node --experimental-strip-types --test scripts/erp-data.test.mjs scripts/sales-contract.test.mjs scripts/records-permissions.test.mjs scripts/party-registration.test.mjs scripts/cpf-validation.test.mjs scripts/quotes-contract.test.mjs scripts/orders-contract.test.mjs scripts/design-navigation.test.mjs scripts/fiscal-release-gate.test.mjs scripts/fiscal-company.test.mjs",
+    "test:erp": "node --experimental-strip-types --test scripts/erp-data.test.mjs scripts/sales-contract.test.mjs scripts/records-permissions.test.mjs scripts/party-registration.test.mjs scripts/cpf-validation.test.mjs scripts/quotes-contract.test.mjs scripts/orders-contract.test.mjs scripts/design-navigation.test.mjs scripts/fiscal-release-gate.test.mjs scripts/fiscal-company.test.mjs scripts/inbound-nfe.test.mjs",
     "start": "next start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
@@ -19,7 +19,8 @@
     "test:tax-preview": "node --experimental-strip-types --test scripts/tax-preview.test.mjs",
     "test:preflight": "node --experimental-strip-types --test scripts/nfe-preflight.test.mjs",
     "test:document-review": "node --experimental-strip-types --test scripts/nfe-document-review.test.mjs",
-    "test:parties": "node --test scripts/party-registration.test.mjs"
+    "test:parties": "node --test scripts/party-registration.test.mjs",
+    "test:inbound": "node --experimental-strip-types --test scripts/inbound-nfe.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -33,6 +34,7 @@
     "date-fns": "^4.4.0",
     "drizzle-orm": "0.45.2",
     "embla-carousel-react": "^8.6.0",
+    "fast-xml-parser": "5.11.2",
     "input-otp": "^1.4.2",
     "lucide-react": "^1.31.0",
     "next": "16.3.4",
@@ -80,4 +82,3 @@
   },
   "packageManager": "pnpm@11.25.0"
 }
-

@@ -1,0 +1,108 @@
+(function(){
+  'use strict';
+  var docs=[], products=[], suppliers=[], selectedDoc=null;
+  var $=function(id){return document.getElementById(id);};
+  function escapeHtml(value){return String(value==null?'':value).replace(/[&<>"']/g,function(char){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char];});}
+  function money(value){return Number(value||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+  function date(value){if(!value)return 'Data não informada';var parsed=new Date(value);return Number.isNaN(parsed.getTime())?'Data não informada':parsed.toLocaleDateString('pt-BR');}
+  async function api(url,options){var response=await fetch(url,Object.assign({credentials:'same-origin',cache:'no-store'},options||{}));var body;try{body=await response.json();}catch{body={};}if(!response.ok)throw new Error(body.error||'Não foi possível concluir a operação.');return body;}
+  function setStatus(message,error){$('pageStatus').textContent=message;$('pageStatus').classList.toggle('error',!!error);}
+  function render(){
+    var root=$('documents');
+    if(!docs.length){root.innerHTML='<p class="empty-documents">Nenhuma NF-e de entrada importada nesta empresa ainda.</p>';return;}
+    root.innerHTML=docs.map(function(doc){
+      var received=doc.status==='received';
+      var itemCount=Array.isArray(doc.items)?doc.items.length:0;
+      return '<article class="document-row"><div class="document-main"><strong>NF-e '+escapeHtml(doc.invoiceNumber||'—')+' · '+escapeHtml(doc.issuerName||'Fornecedor')+'</strong><small>Emitida em '+date(doc.issuedAt)+' · Série '+escapeHtml(doc.series||'—')+' · chave '+escapeHtml(doc.accessKey)+'</small></div><div class="document-meta"><b>'+money(doc.total)+'</b><small>'+itemCount+' item(ns) · cStat '+escapeHtml(doc.authorizationStatus)+'</small></div><div class="document-meta total"><span class="status-chip '+(received?'received':'')+'">'+(received?'Recebida':'Pendente de conferência')+'</span></div><div class="document-actions">'+(received?'<button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">Ver</button>':'<button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">Conferir</button>')+'<a class="secondary-button" href="/api/inbound-nfe?xml='+encodeURIComponent(doc.id)+'">XML</a></div></article>';
+    }).join('');
+  }
+  function supplierOptions(selected){
+    return '<option value="">Selecione fornecedor...</option>'+suppliers.map(function(supplier){return '<option value="'+escapeHtml(supplier.id)+'" '+(supplier.id===selected?'selected':'')+'>'+escapeHtml(supplier.name)+' · '+escapeHtml(supplier.document||'sem CPF/CNPJ')+'</option>';}).join('');
+  }
+  function productOptions(selected){
+    return '<option value="">Não vincular a produto...</option>'+products.map(function(product){return '<option value="'+escapeHtml(product.id)+'" '+(product.id===selected?'selected':'')+'>'+escapeHtml(product.sku)+' · '+escapeHtml(product.name)+' ('+escapeHtml(product.unit)+')</option>';}).join('');
+  }
+  function itemMarkup(item){
+    var canTrack=!!(item.productId&&products.some(function(product){return product.id===item.productId&&product.tracksStock;}));
+    var product=products.find(function(row){return row.id===item.productId;});
+    return '<article class="review-item" data-line="'+escapeHtml(item.lineNumber)+'"><div class="review-item-main"><strong>'+escapeHtml(item.description)+'</strong><small>Item '+escapeHtml(item.lineNumber)+' · código fornecedor '+escapeHtml(item.supplierCode||'—')+' · GTIN '+escapeHtml(item.gtin||'sem GTIN')+'</small></div><label class="review-field"><span>Produto cadastrado</span><select name="productId">'+productOptions(item.productId)+'</select></label><div class="review-item-meta">'+escapeHtml(item.quantity)+' '+escapeHtml(item.unit)+'<small>Qtd. recebida</small></div><div class="review-item-meta">'+money(item.total)+'<small>Total do item</small></div><label class="stock-choice"><input type="checkbox" name="trackStock" '+(item.trackStock&&canTrack?'checked':'')+' '+(canTrack?'':'disabled')+'><span>Lançar no estoque</span></label><small class="stock-hint">'+(product&&!product.tracksStock?'Produto sem controle de estoque':!item.productId?'Associe um produto':'')+'</small></article>';
+  }
+  function openReview(id){
+    selectedDoc=docs.find(function(doc){return doc.id===id;});
+    if(!selectedDoc)return;
+    var received=selectedDoc.status==='received';
+    $('reviewHeading').textContent='Conferir NF-e '+selectedDoc.invoiceNumber;
+    $('reviewSummary').textContent=selectedDoc.issuerName+' · '+date(selectedDoc.issuedAt)+' · '+money(selectedDoc.total);
+    $('supplierSelect').innerHTML=supplierOptions(selectedDoc.supplierId);
+    $('authorizationSummary').textContent='Protocolo informado no XML: cStat '+selectedDoc.authorizationStatus+' — '+(selectedDoc.authorizationReason||'Autorização de uso')+'. Assinatura ainda precisa ser conferida no portal oficial.';
+    $('reviewItems').innerHTML=(selectedDoc.items||[]).map(itemMarkup).join('');
+    $('officialStatus').checked=false;
+    $('officialStatus').disabled=received;
+    $('supplierSelect').disabled=received;
+    $('reviewItems').querySelectorAll('select,input').forEach(function(input){input.disabled=input.disabled||received;});
+    $('saveReviewButton').hidden=received;
+    $('receiveButton').hidden=received;
+    $('closeReview').textContent='Fechar';
+    $('reviewCard').hidden=false;
+    $('reviewCard').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  async function load(){
+    setStatus('Carregando lançamentos...');
+    try{
+      var result=await Promise.all([api('/api/inbound-nfe'),api('/api/records')]);
+      docs=Array.isArray(result[0].documents)?result[0].documents:[];
+      products=(result[1].products||[]).filter(function(product){return product.active;});
+      suppliers=(result[1].clients||[]).filter(function(person){return person.active&&person.isSupplier;});
+      setStatus(docs.length?docs.length+' NF-e(s) nesta empresa.':'Nenhum lançamento encontrado.');
+      render();
+    }catch(error){
+      setStatus(error.message+' Se a migração da entrada XML ainda não foi aplicada no Supabase, aplique o arquivo supabase/migrations/20261110_jvg_inbound_nfe.sql e atualize.',true);
+      $('documents').innerHTML='';
+    }
+  }
+  $('uploadForm').addEventListener('submit',async function(event){
+    event.preventDefault();
+    var file=$('xmlFile').files&&$('xmlFile').files[0];
+    if(!file){$('uploadStatus').textContent='Selecione o XML original.';$('uploadStatus').classList.add('error');return;}
+    var data=new FormData();data.append('xml',file);
+    $('uploadButton').disabled=true;$('uploadStatus').classList.remove('error');$('uploadStatus').textContent='Lendo XML e conferindo chave, protocolo e destinatário...';
+    try{
+      var result=await api('/api/inbound-nfe',{method:'POST',body:data});
+      $('uploadStatus').textContent='XML analisado. '+result.itemCount+' item(ns) importado(s). '+(result.supplierMatched?'Fornecedor identificado.':'Selecione o fornecedor na conferência.');
+      $('xmlFile').value='';
+      await load();
+      if(result.id)openReview(result.id);
+    }catch(error){$('uploadStatus').textContent=error.message;$('uploadStatus').classList.add('error');}
+    finally{$('uploadButton').disabled=false;}
+  });
+  $('documents').addEventListener('click',function(event){var button=event.target.closest('[data-open]');if(button)openReview(button.dataset.open);});
+  $('reviewItems').addEventListener('change',function(event){
+    if(event.target.name!=='productId')return;
+    var row=event.target.closest('[data-line]'),checkbox=row&&row.querySelector('[name="trackStock"]');
+    var product=products.find(function(item){return item.id===event.target.value;});
+    if(checkbox){checkbox.disabled=!product||!product.tracksStock;checkbox.checked=!!product&&product.tracksStock;}
+  });
+  $('closeReview').addEventListener('click',function(){$('reviewCard').hidden=true;selectedDoc=null;});
+  $('reloadButton').addEventListener('click',load);
+  $('reviewForm').addEventListener('submit',async function(event){
+    event.preventDefault();
+    if(!selectedDoc)return;
+    var receive=event.submitter&&event.submitter.dataset.receive==='true';
+    var supplierId=$('supplierSelect').value||null;
+    var items=Array.from($('reviewItems').querySelectorAll('[data-line]')).map(function(row){
+      return {lineNumber:Number(row.dataset.line),productId:row.querySelector('[name="productId"]').value||null,trackStock:row.querySelector('[name="trackStock"]').checked};
+    });
+    var buttons=[$('saveReviewButton'),$('receiveButton')];buttons.forEach(function(button){button.disabled=true;});
+    try{
+      await api('/api/inbound-nfe',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:selectedDoc.id,supplierId:supplierId,items:items})});
+      if(receive){
+        if(!$('officialStatus').checked)throw new Error('Marque que conferiu a autorização no portal oficial da NF-e.');
+        await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'confirm',id:selectedDoc.id,checkedOfficialStatus:true})});
+        $('uploadStatus').textContent='NF-e recebida. Os movimentos de estoque foram vinculados à chave do documento.';
+      }else $('uploadStatus').textContent='Conferência salva sem movimentar estoque.';
+      $('reviewCard').hidden=true;selectedDoc=null;await load();
+    }catch(error){$('pageStatus').textContent=error.message;$('pageStatus').classList.add('error');}
+    finally{buttons.forEach(function(button){button.disabled=false;});}
+  });
+  load();
+})();

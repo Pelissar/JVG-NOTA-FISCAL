@@ -27,17 +27,19 @@ function validUuid(input: unknown): string {
 function buildRow(kind: RecordKind, input: Record<string, unknown>, account: SiteAccount) {
   const base = { tenant_id: account.tenant_id, company_id: account.company_id };
   if (kind === "product") {
-    const sku = str(input.sku, 40), name = str(input.name, 160);
+    const sku = str(input.sku, 40), name = str(input.name, 160), unit = str(input.unit, 8);
     const ncm = str(input.ncm, 8), cest = str(input.cest, 7), origin = str(input.origin, 1);
     const defaultCfop = str(input.defaultCfop, 4);
     const taxProfileId = input.taxProfileId ? validUuid(input.taxProfileId) : null;
     if (!sku || !name) throw new JvgBackendError("SKU e descrição são obrigatórios.", 400);
+    if (!unit) throw new JvgBackendError("Unidade do produto é obrigatória.", 400);
+    if (input.price === undefined || input.price === null || String(input.price).trim() === "") throw new JvgBackendError("Preço de venda é obrigatório; informe 0,00 se o item não tiver preço.", 400);
     if (ncm && !/^\d{8}$/.test(ncm)) throw new JvgBackendError("NCM precisa ter 8 dígitos.", 400);
     if (cest && !/^\d{7}$/.test(cest)) throw new JvgBackendError("CEST precisa ter 7 dígitos.", 400);
     if (origin && !/^[0-8]$/.test(origin)) throw new JvgBackendError("Origem inválida.", 400);
     if (defaultCfop && !isOfficialCfopCode(defaultCfop)) throw new JvgBackendError("CFOP sugerido não existe na tabela oficial.", 400);
-    return { ...base, sku, name, category: str(input.category, 80), unit: str(input.unit, 8) || "UN",
-      ncm: ncm || null, cest: cest || null, gtin: str(input.gtin, 20) || "SEM GTIN", origin: origin || "0",
+    return { ...base, sku, name, category: str(input.category, 80), unit,
+      ncm: ncm || null, cest: cest || null, gtin: str(input.gtin, 20) || "SEM GTIN", origin: origin || null,
       default_cfop: defaultCfop || null, tax_profile_id: taxProfileId,
       cost_price: positiveMoney(input.cost ?? 0), sale_price: positiveMoney(input.price ?? 0), active: input.active !== false };
   }
@@ -45,6 +47,7 @@ function buildRow(kind: RecordKind, input: Record<string, unknown>, account: Sit
     const displayName = str(input.name, 160), type = input.type;
     const document = str(input.document, 22).toUpperCase().replace(/[^A-Z0-9]/g, "");
     if (!displayName) throw new JvgBackendError("Nome é obrigatório.", 400);
+    if (type !== "PJ" && type !== "PF" && type !== "EXT") throw new JvgBackendError("Selecione um tipo de pessoa válido.", 400);
     if (type === "PF" && document && !isValidCpf(document))
       throw new JvgBackendError("CPF inválido: confira os dígitos verificadores.", 400);
     if (type === "PJ" && document && !validCnpj(document))
@@ -52,6 +55,7 @@ function buildRow(kind: RecordKind, input: Record<string, unknown>, account: Sit
     const documentType = type === "PF" ? "cpf" : type === "EXT" ? "foreign" : "cnpj";
     const isCustomer = input.isCustomer === true, isSupplier = input.isSupplier === true, isCarrier = input.isCarrier === true;
     if (!isCustomer && !isSupplier && !isCarrier) throw new JvgBackendError("Selecione ao menos um tipo de cadastro: cliente, fornecedor ou transportadora.", 400);
+    if (isSupplier && type !== "EXT" && !document) throw new JvgBackendError("CPF/CNPJ é obrigatório para vincular fornecedor a NF-e de entrada.", 400);
     return { ...base, display_name: displayName, legal_name: str(input.legalName, 180) || null, document_type: documentType,
       document_number: document || null, state_registration: str(input.stateRegistration, 40) || null,
       municipal_registration: str(input.municipalRegistration, 40) || null, email: str(input.email, 160) || null,
@@ -61,6 +65,7 @@ function buildRow(kind: RecordKind, input: Record<string, unknown>, account: Sit
   }
   const code = str(input.code, 40), name = str(input.name, 160);
   if (!code || !name) throw new JvgBackendError("Código e descrição são obrigatórios.", 400);
+  if (input.price === undefined || input.price === null || String(input.price).trim() === "") throw new JvgBackendError("Preço do serviço é obrigatório; informe 0,00 se não houver cobrança.", 400);
   return { ...base, code, name, description: str(input.description, 255),
     national_service_code: str(input.lc116, 12) || null, nbs: str(input.nbs, 12) || null,
     sale_price: positiveMoney(input.price ?? 0), active: input.active !== false };
@@ -79,7 +84,7 @@ export async function GET() {
     const account = await authenticatedAccount();
     const scope = `tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`;
     const [products, parties, services, movements, company] = await Promise.all([
-      dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_products?${scope}&select=id,sku,name,category,unit,ncm,cest,gtin,origin,default_cfop,tax_profile_id,cost_price,sale_price,active&order=created_at.desc&limit=1000`),
+      dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_products?${scope}&select=id,sku,name,category,unit,ncm,cest,gtin,origin,default_cfop,tax_profile_id,cost_price,sale_price,tracks_stock,active&order=created_at.desc&limit=1000`),
       dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_parties?${scope}&select=id,registration_number,display_name,legal_name,document_type,document_number,state_registration,municipal_registration,email,phone,address,is_customer,is_supplier,is_carrier,active&order=registration_number.desc&limit=5000`),
       dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_services?${scope}&select=id,code,name,description,national_service_code,nbs,sale_price,active&order=created_at.desc&limit=1000`),
       dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_inventory_movements?${scope}&select=product_id,quantity_delta,reason,created_at&order=created_at.desc&limit=10000`),
@@ -99,8 +104,8 @@ export async function GET() {
         address: company.address || {},
       } : null,
       products: products.map(p => ({ id: p.id, sku: p.sku, name: p.name, category: p.category || "", unit: p.unit,
-        ncm: p.ncm || "", cest: p.cest || "", gtin: p.gtin || "SEM GTIN", origin: p.origin || "0", defaultCfop: p.default_cfop || "", taxProfileId: p.tax_profile_id || "",
-        cost: Number(p.cost_price), price: Number(p.sale_price), stock: balances.get(String(p.id)) || 0, active: p.active })),
+        ncm: p.ncm || "", cest: p.cest || "", gtin: p.gtin || "SEM GTIN", origin: p.origin || "", defaultCfop: p.default_cfop || "", taxProfileId: p.tax_profile_id || "",
+        cost: Number(p.cost_price), price: Number(p.sale_price), stock: balances.get(String(p.id)) || 0, tracksStock: p.tracks_stock !== false, active: p.active })),
       clients: parties.map(p => {
         const address = p.address && typeof p.address === "object" ? p.address as Record<string, unknown> : {};
         return { id: p.id, registrationNumber: p.registration_number, name: p.display_name, legalName: p.legal_name || "", stateRegistration: p.state_registration || "", municipalRegistration: p.municipal_registration || "", isCustomer: p.is_customer, isSupplier: p.is_supplier, isCarrier: p.is_carrier, type: p.document_type === "cpf" ? "PF" : p.document_type === "foreign" ? "EXT" : "PJ",
