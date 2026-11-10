@@ -1,5 +1,5 @@
 import { getJvgUser } from "../../jvg-auth";
-import { apiJson, dbRequest, filterEq, getCompany, getDashboardSummary, getSiteAccount, isSameOrigin, JvgBackendError, positiveMoney, safeError, str, type SiteAccount } from "../../../lib/jvg-backend";
+import { apiJson, dbCount, dbRequest, filterEq, getCompany, getDashboardSummary, getSiteAccount, isSameOrigin, JvgBackendError, positiveMoney, safeError, str, type SiteAccount } from "../../../lib/jvg-backend";
 import { fiscalAddress, validCnpj } from "../../../lib/fiscal-company";
 import { isValidCpf } from "../../../lib/fiscal/cpf";
 import { isOfficialCfopCode } from "../../../lib/fiscal/cfop";
@@ -106,14 +106,16 @@ export async function GET(request: Request) {
 
     const dashboardFallback = dataScope === "dashboard";
     const wantsProducts = ["full", "reports", "products", "inventory", "dashboard"].includes(dataScope);
-    const wantsParties = ["full", "reports", "clients", "dashboard"].includes(dataScope);
+    const wantsParties = ["full", "reports", "clients"].includes(dataScope);
+    const wantsPartyCount = dashboardFallback;
     const wantsServices = ["full", "reports", "services"].includes(dataScope);
     const wantsMovements = ["full", "reports", "products", "inventory", "dashboard"].includes(dataScope);
     const wantsCompany = ["full", "reports"].includes(dataScope);
     const emptyRows: Array<Record<string, unknown>> = [];
-    const [products, parties, services, movements, company] = await Promise.all([
+    const productFields = dashboardFallback ? "id,name,cost_price,active" : "id,sku,name,category,unit,ncm,cest,gtin,origin,default_cfop,tax_profile_id,cost_price,sale_price,tracks_stock,active";
+    const [products, parties, services, movements, company, partyCount] = await Promise.all([
       wantsProducts
-        ? dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_products?${scope}&select=id,sku,name,category,unit,ncm,cest,gtin,origin,default_cfop,tax_profile_id,cost_price,sale_price,tracks_stock,active&order=created_at.desc&limit=1000`)
+        ? dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_products?${scope}&select=${productFields}&order=created_at.desc&limit=1000`)
         : Promise.resolve(emptyRows),
       wantsParties
         ? dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_parties?${scope}&select=id,registration_number,display_name,legal_name,document_type,document_number,state_registration,municipal_registration,email,phone,address,is_customer,is_supplier,is_carrier,active&order=registration_number.desc&limit=5000`)
@@ -125,6 +127,7 @@ export async function GET(request: Request) {
         ? dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_inventory_movements?${scope}&select=product_id,quantity_delta,reason,created_at&order=created_at.desc&limit=10000`)
         : Promise.resolve(emptyRows),
       wantsCompany ? getCompany(account) : Promise.resolve(null),
+      wantsPartyCount ? dbCount(`/rest/v1/jvg_parties?${scope}&select=id`) : Promise.resolve(null),
     ]);
     const balances = new Map<string, number>();
     for (const m of movements) {
@@ -158,7 +161,7 @@ export async function GET(request: Request) {
       }));
       return apiJson({ status: "ready", dashboardAvailable: false, dashboard: {
         productsCount: products.length,
-        clientsCount: parties.length,
+        clientsCount: Number(partyCount || 0),
         unitsStock: productRecords.reduce((sum, p) => sum + Number(p.stock || 0), 0),
         lowStockCount: productRecords.filter(p => p.active && Number(p.stock) <= 10).length,
         stockValue: productRecords.reduce((sum, p) => sum + Number(p.stock || 0) * Number(p.cost || 0), 0),

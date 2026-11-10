@@ -39,6 +39,26 @@ export async function dbRequest<T = unknown>(path: string, init: RequestInit = {
   return parsed as T;
 }
 
+export async function dbCount(path: string): Promise<number> {
+  const runtime = jvgRuntime();
+  const secret = runtime.supabaseSecretKey;
+  if (!runtime.supabaseUrl) throw new JvgBackendError("URL do Supabase ainda não configurada.", 503);
+  if (!secret) throw new JvgBackendError("Chave privada do Supabase ainda não configurada.", 503);
+  if (!path.startsWith("/rest/v1/") || path.includes("..")) throw new JvgBackendError("Consulta inválida.", 400);
+  const headers = new Headers();
+  headers.set("apikey", secret);
+  if (secret.split(".").length === 3) headers.set("Authorization", `Bearer ${secret}`);
+  headers.set("Prefer", "count=exact");
+  headers.set("Range-Unit", "items");
+  headers.set("Range", "0-0");
+  const response = await fetch(`${runtime.supabaseUrl}${path}`, { method: "HEAD", headers, cache: "no-store" });
+  if (!response.ok) throw new JvgBackendError("Não foi possível consultar a contagem no Supabase.", 502);
+  const total = response.headers.get("content-range")?.split("/").pop();
+  const count = Number(total);
+  if (!total || !Number.isSafeInteger(count) || count < 0) throw new JvgBackendError("O Supabase não informou a contagem dos registros.", 502);
+  return count;
+}
+
 export function filterEq(value: string): string { return encodeURIComponent(`eq.${value}`); }
 
 export type JvgDashboardSummary = {
