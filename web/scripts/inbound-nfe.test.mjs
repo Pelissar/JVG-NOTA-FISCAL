@@ -7,7 +7,7 @@ const accessKey = "35261112345678000195550010000000011000000010";
 function xml(status = "100", model = "55", destination = "99887766000155") {
   return '<?xml version="1.0" encoding="UTF-8"?>' +
     '<nfeProc versao="4.00"><NFe><infNFe Id="NFe' + accessKey + '">' +
-    '<ide><mod>' + model + '</mod><nNF>42</nNF><serie>1</serie><dhEmi>2026-11-10T10:00:00-03:00</dhEmi></ide>' +
+    '<ide><mod>' + model + '</mod><tpAmb>1</tpAmb><nNF>42</nNF><serie>1</serie><dhEmi>2026-11-10T10:00:00-03:00</dhEmi></ide>' +
     '<emit><CNPJ>12345678000195</CNPJ><xNome>Fornecedor de teste</xNome></emit>' +
     '<dest><CNPJ>' + destination + '</CNPJ></dest>' +
     '<det nItem="1"><prod><cProd>FORN-1</cProd><cEAN>7891234567895</cEAN><xProd>Produto de teste</xProd><NCM>12345678</NCM><CFOP>5102</CFOP><uCom>UN</uCom><qCom>2.0000</qCom><vUnCom>6.250000</vUnCom><vProd>12.50</vProd></prod></det>' +
@@ -31,6 +31,18 @@ test("recusa XML sem protocolo, modelo diferente, nota não autorizada ou destin
   assert.throws(() => parseAuthorizedInboundNfe(xml("100", "65"), "99887766000155"), /modelo 55/i);
   assert.throws(() => parseAuthorizedInboundNfe(xml("110"), "99887766000155"), /não consta autorizada/i);
   assert.throws(() => parseAuthorizedInboundNfe(xml("100", "55", "11111111000111"), "99887766000155"), /não corresponde/i);
+});
+
+test("recusa ambiente de homologação e campos essenciais ausentes", () => {
+  assert.throws(() => parseAuthorizedInboundNfe(xml().replace("<tpAmb>1</tpAmb>", "<tpAmb>2</tpAmb>"), "99887766000155"), /produção/i);
+  assert.throws(() => parseAuthorizedInboundNfe(xml().replace("<nNF>42</nNF>", "<nNF></nNF>"), "99887766000155"), /número da NF-e/i);
+  assert.throws(() => parseAuthorizedInboundNfe(xml().replace(' nItem="1"', ""), "99887766000155"), /número de item/i);
+  const repeatedLine = xml().replace(
+    "</det><total>",
+    "</det><det nItem=\"1\"><prod><xProd>Outro item</xProd><uCom>UN</uCom><qCom>1</qCom><vUnCom>1</vUnCom><vProd>1</vProd></prod></det><total>",
+  );
+  assert.throws(() => parseAuthorizedInboundNfe(repeatedLine, "99887766000155"), /repetido/i);
+  assert.throws(() => parseAuthorizedInboundNfe(xml().replace("<vNF>12.50</vNF>", ""), "99887766000155"), /valor total/i);
 });
 
 test("recusa DTD e entidades externas antes de parsear", () => {

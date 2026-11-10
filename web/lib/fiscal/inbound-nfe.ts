@@ -47,6 +47,10 @@ function normalizeTaxId(value: string): string {
   return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
+function isTaxDocument(value: string): boolean {
+  return /^[A-Z0-9]{12}[0-9]{2}$/.test(value) || /^[0-9]{11}$/.test(value);
+}
+
 function numeric(value: string, label: string, allowZero = true): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0 || (!allowZero && parsed === 0) || parsed > 999999999999)
@@ -87,24 +91,33 @@ export function parseAuthorizedInboundNfe(xml: string, companyTaxId: string): Pa
 
   const ide = object(info.ide);
   if (value(ide, "mod") !== "55") throw new Error("Este lançamento aceita NF-e modelo 55; NFC-e e outros documentos não são suportados.");
+  if (value(ide, "tpAmb") !== "1") throw new Error("Somente NF-e autorizada em produção pode ser recebida no estoque.");
   const issuer = object(info.emit);
   const destination = object(info.dest);
   const issuerDocument = normalizeTaxId(value(issuer, "CNPJ") || value(issuer, "CPF"));
   const destinationDocument = normalizeTaxId(value(destination, "CNPJ") || value(destination, "CPF"));
   const expectedDocument = normalizeTaxId(companyTaxId);
-  if (!expectedDocument) throw new Error("Informe o CNPJ da empresa em Conta antes de importar NF-e de entrada.");
+  if (!isTaxDocument(expectedDocument)) throw new Error("Informe um CNPJ/CPF válido da empresa em Conta antes de importar NF-e de entrada.");
+  if (!isTaxDocument(issuerDocument)) throw new Error("O XML não informa CPF/CNPJ válido do emitente.");
+  if (!isTaxDocument(destinationDocument)) throw new Error("O XML não informa CPF/CNPJ válido do destinatário.");
   if (!destinationDocument || destinationDocument !== expectedDocument)
     throw new Error("O destinatário do XML não corresponde ao CNPJ/CPF da empresa ativa.");
-  if (!issuerDocument) throw new Error("O XML não informa CPF/CNPJ do emitente.");
 
   const rawDetails = Array.isArray(info.det) ? info.det : [info.det];
   if (!rawDetails.length || rawDetails.length > 500) throw new Error("A NF-e precisa conter de 1 a 500 itens.");
-  const items: InboundNfeItem[] = rawDetails.map((raw, index) => {
+  const lineNumbers = new Set<number>();
+  const items: InboundNfeItem[] = rawDetails.map(raw => {
     const line = object(raw);
     const product = object(line.prod);
+    const lineNumberText = value(line, "@_nItem");
+    const lineNumber = Number(lineNumberText);
+    if (!/^[1-9][0-9]*$/.test(lineNumberText) || !Number.isSafeInteger(lineNumber) || lineNumber > 500)
+      throw new Error("Número de item inválido no XML.");
+    if (lineNumbers.has(lineNumber)) throw new Error("O XML contém número de item repetido.");
+    lineNumbers.add(lineNumber);
     const quantity = numeric(value(product, "qCom"), "quantidade", false);
     return {
-      lineNumber: numeric(value(line, "@_nItem"), "número do item") || index + 1,
+      lineNumber,
       supplierCode: value(product, "cProd").slice(0, 60),
       gtin: normalizeTaxId(value(product, "cEAN") || value(product, "cEANTrib")),
       description: value(product, "xProd").slice(0, 255),
@@ -121,19 +134,25 @@ export function parseAuthorizedInboundNfe(xml: string, companyTaxId: string): Pa
   });
   if (items.some(item => !item.description || !item.unit)) throw new Error("Há item sem descrição ou unidade no XML.");
 
+  const invoiceNumber = value(ide, "nNF");
+  if (!/^[0-9]{1,30}$/.test(invoiceNumber)) throw new Error("Número da NF-e ausente ou inválido no XML.");
+  const issuerName = value(issuer, "xNome").slice(0, 180);
+  if (!issuerName) throw new Error("O XML não informa o nome do emitente.");
+  const rawTotal = value(object(info.total).ICMSTot, "vNF");
+  if (!rawTotal) throw new Error("O XML não informa o valor total da NF-e.");
   const issuedAt = value(ide, "dhEmi") || value(ide, "dEmi") || null;
   if (issuedAt && Number.isNaN(Date.parse(issuedAt))) throw new Error("Data de emissão inválida no XML.");
   return {
     accessKey,
-    invoiceNumber: value(ide, "nNF").slice(0, 30),
+    invoiceNumber,
     series: value(ide, "serie").slice(0, 10),
     issuedAt,
     issuerDocument,
-    issuerName: value(issuer, "xNome").slice(0, 180),
+    issuerName,
     destinationDocument,
     statusCode,
     statusReason: value(protocol, "xMotivo").slice(0, 255),
-    total: numeric(value(object(info.total).ICMSTot, "vNF"), "valor total"),
+    total: numeric(rawTotal, "valor total"),
     items,
   };
 }
