@@ -129,6 +129,9 @@
     theme.setAttribute('aria-label', 'Alternar tema'); theme.textContent = '◐ Modo escuro';
   }
   theme.removeAttribute('style'); theme.classList.add('theme-toggle'); actions.appendChild(theme);
+  var dashboardSearch = document.querySelector('.topbar-right .global-search');
+  if (dashboardSearch) actions.insertBefore(dashboardSearch, workspaceMenu);
+  if (document.querySelector('.app-shell')) document.body.classList.add('page-with-global-nav');
   mount.replaceWith(nav);
 
   fetch('/api/company', { credentials: 'same-origin', cache: 'no-store' }).then(function (response) {

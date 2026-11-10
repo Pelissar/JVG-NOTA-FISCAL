@@ -230,7 +230,9 @@ tbody tr:hover { background: var(--surface-soft); }
 .theme-toggle { min-height: 36px; padding: 0 11px; }
 body.page-with-global-nav .app-shell > .sidebar,
 body.page-with-global-nav .app-shell > .mobile-backdrop,
+body.page-with-global-nav .main-column > .topbar,
 body.page-with-global-nav .mobile-menu { display: none !important; }
+body.page-with-global-nav .main-column { min-height: calc(100dvh - 58px); }
 .commercial-page, .layout { width: min(100% - 32px, 1480px); margin: 0 auto; padding: clamp(22px, 3vw, 42px) 0 52px; }
 .sales-content { max-width: 1520px; }
 .page-title, .page-heading { color: var(--ink); }
@@ -629,4 +631,28 @@ html[data-theme] body :is(.sales-section-title small, .sales-form-footer small, 
   .erp-global-brand strong { font-size: 13px; }
   .erp-nav-toggle { width: 38px; padding: 0; overflow: hidden; font-size: 0; }
   .erp-nav-toggle::before { content: "☰"; font-size: 17px; }
+}
+
+/* Alinhamento compacto da barra comum, igual em todas as áreas do ERP. */
+.erp-global-nav { min-height: 58px; gap: clamp(8px, 1.35vw, 18px); padding: 6px clamp(12px, 2.2vw, 30px); }
+.erp-global-brand { gap: 8px; }
+.erp-global-brand img { width: 34px; height: 34px; }
+.erp-global-links { justify-content: center; gap: clamp(1px, .3vw, 4px); }
+.erp-global-links > a, .erp-global-links summary { min-height: 38px; padding-inline: clamp(7px, .8vw, 11px); font-size: 11.5px; }
+.erp-global-links summary::after { width: 6px; height: 6px; margin-left: 5px; }
+.erp-global-actions { gap: 7px; }
+.erp-global-actions .global-search { width: clamp(130px, 12vw, 170px); height: 36px; }
+@media (max-width: 900px) {
+  .erp-global-actions .global-search { position: relative; width: 38px; padding-inline: 10px; border-color: var(--line); background: var(--surface); }
+  .erp-global-actions .global-search input { width: 1px; min-width: 1px; opacity: 0; padding: 0; }
+  .erp-global-actions .global-search:focus-within { position: absolute; z-index: 65; right: 156px; width: min(52vw, 240px); background: var(--surface); }
+  .erp-global-actions .global-search:focus-within input { width: 100%; min-width: 0; opacity: 1; padding: 0; }
+}
+@media (max-width: 520px) {
+  .erp-global-nav { min-height: 56px; gap: 7px; padding-inline: 10px; }
+  .erp-global-brand { gap: 5px; }
+  .erp-global-brand img { width: 31px; height: 31px; }
+  .erp-global-brand strong { font-size: 13px; }
+  .erp-global-brand small { display: none; }
+  .erp-global-actions { gap: 5px; }
 }
