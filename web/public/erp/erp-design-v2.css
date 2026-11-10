@@ -213,14 +213,15 @@ tbody tr:hover { background: var(--surface-soft); }
 .erp-global-brand strong { color: var(--ink) !important; font-size: 15px; }
 .erp-global-brand small { margin-top: 3px; color: var(--muted) !important; font-size: 9px; letter-spacing: .7px; }
 .erp-global-links { display: flex; flex: 1 1 auto; align-items: center; gap: 4px; min-width: 0; }
-.erp-global-links > a, .erp-global-links summary { display: flex; align-items: center; min-height: 40px; padding: 0 11px; border-radius: 9px; color: var(--ink-soft) !important; cursor: pointer; font-size: 12px; font-weight: 650; text-decoration: none; white-space: nowrap; }
+.erp-global-links > a, .erp-global-links summary { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 11px; border-radius: 9px; color: var(--ink-soft) !important; cursor: pointer; font-size: 12px; font-weight: 650; text-decoration: none; white-space: nowrap; }
 .erp-global-links > a:hover, .erp-global-links summary:hover, .erp-global-links details[open] summary, .erp-global-links details.has-active summary { background: var(--surface-soft); color: var(--accent-strong) !important; }
 .erp-global-links summary::after { content: ""; width: 7px; height: 7px; margin: -4px 0 0 8px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); opacity: .62; }
 .erp-global-links details { position: relative; }
 .erp-global-links summary { list-style: none; }
+.erp-nav-icon { width: 16px; height: 16px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: .92; }
 .erp-global-links summary::-webkit-details-marker { display: none; }
 .erp-global-links details > div { position: absolute; z-index: 60; top: calc(100% + 8px); left: 0; display: grid; gap: 3px; min-width: 205px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-pop); }
-.erp-global-links details a { display: flex; align-items: center; min-height: 39px; padding: 0 10px; border-radius: 8px; color: var(--ink-soft) !important; font-size: 12px; text-decoration: none; }
+.erp-global-links details a { display: flex; align-items: center; gap: 8px; min-height: 39px; padding: 0 10px; border-radius: 8px; color: var(--ink-soft) !important; font-size: 12px; text-decoration: none; }
 .erp-global-links details a:hover, .erp-global-links a[aria-current="page"] { background: var(--accent-soft); color: var(--accent-strong) !important; }
 .erp-global-links details a[aria-current="page"] { font-weight: 750; box-shadow: inset 3px 0 var(--accent); }
 .erp-global-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
@@ -236,7 +237,7 @@ body.page-with-global-nav .mobile-menu { display: none !important; }
 .commercial-page > .panel { padding: clamp(16px, 2vw, 24px); }
 .commercial-page > .panel > h2 { margin-top: 0; color: var(--ink); }
 .commercial-switcher { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: min(100% - 32px, 1480px); margin: 18px auto -10px; padding: 5px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
-.commercial-switcher a { display: inline-flex; align-items: center; min-height: 37px; padding: 0 13px; border-radius: 8px; color: var(--ink-soft) !important; font-size: 12px; font-weight: 700; text-decoration: none; }
+.commercial-switcher a { display: inline-flex; align-items: center; gap: 8px; min-height: 37px; padding: 0 13px; border-radius: 8px; color: var(--ink-soft) !important; font-size: 12px; font-weight: 700; text-decoration: none; }
 .commercial-switcher a:hover { background: var(--surface-soft); color: var(--ink) !important; }
 .commercial-switcher a[aria-current="page"] { background: var(--accent-soft); color: var(--accent-strong) !important; }
 .commercial-table, .table-scroll { max-width: 100%; overflow-x: auto; }
