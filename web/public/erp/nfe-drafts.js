@@ -185,6 +185,30 @@
         target.append(checkList);
         appendLine(target, 'p', 'Checklist interno: não é XML, DANFE, validação da SEFAZ ou permissão de emissão.');
       }
+      var focusReview = draft.focusPayloadReview || {};
+      appendLine(target, 'h4', 'Prévia parcial do payload Focus');
+      appendLine(target, 'p', 'Campos mapeados sem transmissão. ' +
+        String(focusReview.missingCount || 0) + ' conferência(s) estrutural(is) pendente(s).');
+      var focusChecks = Array.isArray(focusReview.checks) ? focusReview.checks : [];
+      if (focusChecks.length) {
+        var focusList = document.createElement('ul');
+        focusChecks.forEach(function (check) {
+          appendLine(focusList, 'li', (check.ok ? '✓ ' : 'Pendente: ') +
+            check.label + ' — ' + check.detail);
+        });
+        target.append(focusList);
+      }
+      if (focusReview.requestPreview && typeof focusReview.requestPreview === 'object') {
+        var previewDetails = document.createElement('details');
+        var previewSummary = document.createElement('summary');
+        previewSummary.textContent = 'Ver JSON parcial (não enviável)';
+        var previewJson = document.createElement('pre');
+        previewJson.className = 'focus-json-preview';
+        previewJson.textContent = JSON.stringify(focusReview.requestPreview, null, 2);
+        previewDetails.append(previewSummary, previewJson);
+        target.append(previewDetails);
+      }
+      appendLine(target, 'p', 'A prévia é incompleta e não pode ser enviada. Homologação e transmissão continuam desativadas.');
       appendLine(target, 'h4', 'Itens');
       var itemList = document.createElement('ul');
       (Array.isArray(draft.items) ? draft.items : []).forEach(function (item, i) {
