@@ -5,6 +5,8 @@
   padding: clamp(18px, 4vw, 56px);
   background: #f4f6f8;
   color: #182638;
+  color-scheme: light;
+  --ring: #147b6d;
   font-family: Inter, "Segoe UI", Arial, sans-serif;
 }
 
@@ -63,9 +65,9 @@
 .message, .warning { padding: 12px; border: 1px solid #bedfd3; border-radius: 9px; background: #e8f5ef; color: #245f4c; font-size: 12px; line-height: 1.55; }
 .warning { border-color: #ead5aa; background: #fff5df; color: #725211; }
 .fiscal { margin: 26px 0 0; color: #66778c; font-size: 11px; }
-.back:focus-visible, .switch:focus-visible, .submit:focus-visible, .theme:focus-visible { outline: 3px solid #087568; outline-offset: 3px; }
+.back:focus-visible, .switch:focus-visible, .submit:focus-visible, .theme:focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
 
-:global(html[data-theme="dark"]) .page { background: #121a23; color: #edf2f7; }
+:global(html[data-theme="dark"]) .page { background: #121a23; color: #edf2f7; color-scheme: dark; --ring: #91e8cf; }
 :global(html[data-theme="dark"]) .theme { border-color: #3b4b5b; background: #202c38; color: #d3dce5; }
 :global(html[data-theme="dark"]) .brand img { background: #1d3b36; }
 :global(html[data-theme="dark"]) .brand strong,
@@ -87,6 +89,7 @@
 :global(html[data-theme="dark"]) .card { box-shadow: 0 20px 50px #00000030; }
 :global(html[data-theme="dark"]) .form label { color: #d3dce5; }
 :global(html[data-theme="dark"]) .form input { border-color: #4a5a6b; background: #121a23; color: #edf2f7; }
+:global(html[data-theme="dark"]) .form input:focus-visible { border-color: #91e8cf; outline-color: #64d4b480; }
 :global(html[data-theme="dark"]) .form input::placeholder { color: #9aa9b9; }
 :global(html[data-theme="dark"]) .submit { border-color: #64d4b4; background: #64d4b4; color: #102720; }
 :global(html[data-theme="dark"]) .message { border-color: #315c48; background: #1d3a2c; color: #bfe9cd; }
