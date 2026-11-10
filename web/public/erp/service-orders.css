@@ -1,5 +1,5 @@
 .service-orders-page{max-width:1520px}
-.service-orders-page .page-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:18px;margin:clamp(12px,2vw,32px) 0 20px;min-height:0;height:auto}
+.service-orders-page .page-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:18px;margin:0 0 20px;min-height:0;height:auto}
 .service-orders-page .page-heading>div{min-width:0}
 .service-orders-page .heading-actions{width:auto;align-self:start;margin:0}
 .service-orders-page .heading-actions .btn{min-height:42px}
@@ -37,7 +37,7 @@
 .service-orders-page .load-error{padding:22px 16px;text-align:left;color:var(--ink-soft)}
 .service-orders-page .load-error strong{display:block;margin-bottom:6px;color:var(--danger);font-size:14px}
 .service-orders-page .load-error p{margin:0 0 14px;color:var(--muted);font-size:12px;line-height:1.55;overflow-wrap:anywhere}
-.service-orders-page #serviceOrderNotice.is-error{border-color:var(--danger);background:var(--danger-soft);color:var(--danger)}
+.service-orders-page #serviceOrderNotice.is-error{border-color:var(--danger);background:var(--danger-soft);color:var(--danger)!important}
 @media(max-width:920px){.service-orders-page .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.service-orders-page .page-heading{grid-template-columns:minmax(0,1fr);gap:12px;margin-top:14px}.service-orders-page .page-heading>div{width:100%;min-width:0}.service-orders-page .heading-actions,.service-orders-page .heading-actions>*{width:100%}.service-orders-page .heading-actions .btn{min-height:48px}}
 @media(max-width:640px){.service-orders-page .summary-grid,.os-form-grid{grid-template-columns:minmax(0,1fr)}.os-form-grid .os-wide{grid-column:auto}.service-orders-page .order-list-panel .commercial-table{padding:0 12px}.os-dialog .dialog-actions>*{flex:1 1 auto}}
