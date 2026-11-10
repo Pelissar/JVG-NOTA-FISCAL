@@ -9,10 +9,10 @@ function xml(status = "100", model = "55", destination = "99887766000155") {
   return '<?xml version="1.0" encoding="UTF-8"?>' +
     '<nfeProc versao="4.00"><NFe><infNFe Id="NFe' + accessKey + '">' +
     '<ide><mod>' + model + '</mod><tpAmb>1</tpAmb><nNF>42</nNF><serie>1</serie><dhEmi>2026-11-10T10:00:00-03:00</dhEmi></ide>' +
-    '<emit><CNPJ>12345678000195</CNPJ><xNome>Fornecedor de teste</xNome></emit>' +
-    '<dest><CNPJ>' + destination + '</CNPJ></dest>' +
-    '<det nItem="1"><prod><cProd>FORN-1</cProd><cEAN>7891234567895</cEAN><xProd>Produto de teste</xProd><NCM>12345678</NCM><CFOP>5102</CFOP><uCom>UN</uCom><qCom>2.0000</qCom><vUnCom>6.250000</vUnCom><vProd>12.50</vProd></prod></det>' +
-    '<total><ICMSTot><vNF>12.50</vNF></ICMSTot></total></infNFe></NFe>' +
+    '<emit><CNPJ>12345678000195</CNPJ><xNome>Fornecedor de teste LTDA</xNome><xFant>Fornecedor teste</xFant><IE>123456789</IE><email>fiscal@fornecedor.test</email><enderEmit><xLgr>Rua Um</xLgr><nro>10</nro><xBairro>Centro</xBairro><cMun>3549904</cMun><xMun>São Paulo</xMun><UF>SP</UF><CEP>01001000</CEP></enderEmit></emit>' +
+    '<dest><CNPJ>' + destination + '</CNPJ><xNome>Empresa destinatária</xNome><enderDest><xLgr>Rua Dois</xLgr><nro>20</nro><xBairro>Centro</xBairro><cMun>3549904</cMun><xMun>São Paulo</xMun><UF>SP</UF></enderDest></dest>' +
+    '<det nItem="1"><prod><cProd>FORN-1</cProd><cEAN>7891234567895</cEAN><xProd>Produto de teste</xProd><NCM>12345678</NCM><CFOP>5102</CFOP><uCom>UN</uCom><qCom>2.0000</qCom><vUnCom>6.250000</vUnCom><vProd>12.50</vProd></prod><imposto><ICMS><ICMSSN102><orig>0</orig><CSOSN>102</CSOSN></ICMSSN102></ICMS><PIS><PISNT><CST>07</CST></PISNT></PIS></imposto></det>' +
+    '<total><ICMSTot><vProd>12.50</vProd><vICMS>0.00</vICMS><vNF>12.50</vNF></ICMSTot></total><transp><modFrete>0</modFrete><transporta><CNPJ>98765432000110</CNPJ><xNome>Transportadora teste</xNome><IE>987654321</IE><xEnder>Av. Transporte, 1</xEnder><xMun>São Paulo</xMun><UF>SP</UF></transporta></transp></infNFe></NFe>' +
     '<protNFe><infProt><chNFe>' + accessKey + '</chNFe><cStat>' + status + '</cStat><xMotivo>Autorizado o uso da NF-e</xMotivo></infProt></protNFe></nfeProc>';
 }
 
@@ -29,6 +29,13 @@ test("lê NF-e processada autorizada e preserva valores do item", () => {
   assert.equal(parsed.items.length, 1);
   assert.equal(parsed.items[0].quantity, 2);
   assert.equal(parsed.items[0].total, 12.5);
+  assert.equal(parsed.items[0].taxes.ICMS.ICMSSN102.CSOSN, "102");
+  assert.equal(parsed.fiscalData.infNFe.total.ICMSTot.vICMS, "0.00");
+  assert.equal(parsed.issuer.name, "Fornecedor teste");
+  assert.equal(parsed.issuer.stateRegistration, "123456789");
+  assert.equal(parsed.issuer.address.street, "Rua Um");
+  assert.equal(parsed.carrier.document, "98765432000110");
+  assert.equal(parsed.carrier.name, "Transportadora teste");
   assert.equal(parsed.total, 12.5);
 });
 
@@ -37,6 +44,7 @@ test("recusa XML sem protocolo, modelo diferente, nota não autorizada ou destin
   assert.throws(() => parseAuthorizedInboundNfe(xml("100", "65"), "99887766000155"), /modelo 55/i);
   assert.throws(() => parseAuthorizedInboundNfe(xml("110"), "99887766000155"), /não consta autorizada/i);
   assert.throws(() => parseAuthorizedInboundNfe(xml("100", "55", "11111111000111"), "99887766000155"), /não corresponde/i);
+  assert.throws(() => parseAuthorizedInboundNfe(xml().replace("<emit><CNPJ>12345678000195</CNPJ>", "<emit><CNPJ>11222333000181</CNPJ>"), "99887766000155"), /CNPJ do emitente difere/i);
 });
 
 test("recusa ambiente de homologação e campos essenciais ausentes", () => {
@@ -70,3 +78,33 @@ test("a API protege dados por empresa e a confirmação de estoque é atômica",
   assert.match(migration, /begin[\s\S]*insert into public\.jvg_inventory_movements[\s\S]*update public\.jvg_inbound_nfe_documents[\s\S]*end;/i);
 });
 
+test("importação localiza ou cria fornecedor por documento e guarda tributos e totais originais", () => {
+  const route = readFileSync(new URL("../app/api/inbound-nfe/route.ts", import.meta.url), "utf8");
+  const parser = readFileSync(new URL("../lib/fiscal/inbound-nfe.ts", import.meta.url), "utf8");
+  const migration = readFileSync(new URL("../../supabase/migrations/20261110_jvg_fiscal_document_history.sql", import.meta.url), "utf8");
+  assert.match(route, /findParty\(account, documentType, snapshot\.document\)/);
+  assert.match(route, /document_number=.*filterEq\(document\)/);
+  assert.match(route, /is_supplier: existing\.is_supplier === true \|\| role === "supplier"/);
+  assert.match(route, /supplier_party_id: supplier\.id/);
+  assert.match(route, /carrier_party_id: carrier\.id/);
+  assert.match(route, /fiscal_data: parsed\.fiscalData/);
+  assert.match(parser, /taxes: line\.imposto/);
+  assert.match(migration, /insert into public\.jvg_parties[\s\S]*on conflict \(company_id, document_type, document_number\)/i);
+  assert.match(migration, /set supplier_party_id = p\.id/i);
+  assert.match(migration, /references public\.jvg_parties\(tenant_id, company_id, id\)/i);
+});
+
+test("histórico filtra partes e datas dentro da empresa e inclui entrada e saída", () => {
+  const route = readFileSync(new URL("../app/api/fiscal/history/route.ts", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../public/erp/fiscal-history.html", import.meta.url), "utf8");
+  const script = readFileSync(new URL("../public/erp/fiscal-history.js", import.meta.url), "utf8");
+  assert.match(route, /tenant_id=.*company_id=/);
+  assert.match(route, /partyFilter\(partyId, \["supplier_party_id", "carrier_party_id"\]\)/);
+  assert.match(route, /partyFilter\(partyId, \["recipient_party_id", "carrier_party_id"\]\)/);
+  assert.match(route, /jvg_inbound_nfe_documents/);
+  assert.match(route, /jvg_fiscal_documents/);
+  assert.match(route, /direction: "incoming"/);
+  assert.match(route, /direction: "outgoing"/);
+  assert.match(page, /Cliente, fornecedor ou transportadora/);
+  assert.match(script, /Baixar XML original/);
+});

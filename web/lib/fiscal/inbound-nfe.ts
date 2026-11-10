@@ -12,8 +12,19 @@ export type InboundNfeItem = {
   quantity: number;
   unitPrice: number;
   total: number;
+  /** Grupo imposto como veio no XML. Não é recalculado pelo ERP. */
+  taxes: XmlObject | null;
   productId: string | null;
   trackStock: boolean;
+};
+
+export type InboundPartySnapshot = {
+  name: string;
+  document: string;
+  stateRegistration: string;
+  email: string;
+  phone: string;
+  address: Record<string, string>;
 };
 
 export type ParsedInboundNfe = {
@@ -27,6 +38,10 @@ export type ParsedInboundNfe = {
   statusCode: string;
   statusReason: string;
   total: number;
+  issuer: InboundPartySnapshot;
+  carrier: InboundPartySnapshot | null;
+  /** Complete parsed infNFe and authorization protocol, retaining XML field names and values. */
+  fiscalData: { schemaVersion: 1; infNFe: XmlObject; protocol: XmlObject };
   items: InboundNfeItem[];
 };
 
@@ -56,6 +71,29 @@ function numeric(value: string, label: string, allowZero = true): number {
   if (!Number.isFinite(parsed) || parsed < 0 || (!allowZero && parsed === 0) || parsed > 999999999999)
     throw new Error("Valor inválido em " + label + " no XML.");
   return parsed;
+}
+
+function partySnapshot(person: unknown, addressNode: unknown, nameField: string): InboundPartySnapshot {
+  const source = object(person);
+  const address = object(addressNode);
+  return {
+    name: value(source, nameField).slice(0, 180),
+    document: normalizeTaxId(value(source, "CNPJ") || value(source, "CPF")),
+    stateRegistration: value(source, "IE").slice(0, 40),
+    email: value(source, "email").slice(0, 160),
+    phone: value(address, "fone").slice(0, 25),
+    address: {
+      street: value(address, "xLgr").slice(0, 160),
+      number: value(address, "nro").slice(0, 20),
+      complement: value(address, "xCpl").slice(0, 100),
+      district: value(address, "xBairro").slice(0, 100),
+      cityCode: value(address, "cMun").slice(0, 7),
+      city: value(address, "xMun").slice(0, 100),
+      state: value(address, "UF").slice(0, 2).toUpperCase(),
+      postalCode: value(address, "CEP").replace(/\D/g, "").slice(0, 8),
+      country: value(address, "xPais").slice(0, 60),
+    },
+  };
 }
 
 export function parseAuthorizedInboundNfe(xml: string, companyTaxId: string): ParsedInboundNfe {
@@ -100,6 +138,8 @@ export function parseAuthorizedInboundNfe(xml: string, companyTaxId: string): Pa
   if (!isTaxDocument(expectedDocument)) throw new Error("Informe um CNPJ/CPF válido da empresa em Conta antes de importar NF-e de entrada.");
   if (!isTaxDocument(issuerDocument)) throw new Error("O XML não informa CPF/CNPJ válido do emitente.");
   if (!isTaxDocument(destinationDocument)) throw new Error("O XML não informa CPF/CNPJ válido do destinatário.");
+  if (issuerDocument.length === 14 && accessKey.slice(6, 20) !== issuerDocument)
+    throw new Error("O CNPJ do emitente difere do CNPJ registrado na chave de acesso.");
   if (!destinationDocument || destinationDocument !== expectedDocument)
     throw new Error("O destinatário do XML não corresponde ao CNPJ/CPF da empresa ativa.");
 
@@ -128,6 +168,7 @@ export function parseAuthorizedInboundNfe(xml: string, companyTaxId: string): Pa
       quantity,
       unitPrice: numeric(value(product, "vUnCom"), "valor unitário"),
       total: numeric(value(product, "vProd"), "total do item"),
+      taxes: line.imposto ? object(line.imposto) : null,
       productId: null,
       trackStock: false,
     };
@@ -142,6 +183,21 @@ export function parseAuthorizedInboundNfe(xml: string, companyTaxId: string): Pa
   if (!rawTotal) throw new Error("O XML não informa o valor total da NF-e.");
   const issuedAt = value(ide, "dhEmi") || value(ide, "dEmi") || null;
   if (issuedAt && Number.isNaN(Date.parse(issuedAt))) throw new Error("Data de emissão inválida no XML.");
+  const carrierNode = object(info.transp).transporta;
+  let carrier: InboundPartySnapshot | null = null;
+  if (Object.keys(object(carrierNode)).length) {
+    const carrierData = object(carrierNode);
+    carrier = partySnapshot(carrierNode, carrierNode, "xNome");
+    carrier.address = {
+      ...carrier.address,
+      street: value(carrierData, "xEnder").slice(0, 160),
+      city: value(carrierData, "xMun").slice(0, 100),
+      state: value(carrierData, "UF").slice(0, 2).toUpperCase(),
+    };
+  }
+  const issuerTradeName = partySnapshot(issuer, issuer.enderEmit, "xFant");
+  const issuerLegalName = partySnapshot(issuer, issuer.enderEmit, "xNome");
+  const issuerSnapshot = issuerTradeName.name ? { ...issuerTradeName, name: issuerTradeName.name } : issuerLegalName;
   return {
     accessKey,
     invoiceNumber,
@@ -153,6 +209,9 @@ export function parseAuthorizedInboundNfe(xml: string, companyTaxId: string): Pa
     statusCode,
     statusReason: value(protocol, "xMotivo").slice(0, 255),
     total: numeric(rawTotal, "valor total"),
+    issuer: issuerSnapshot,
+    carrier,
+    fiscalData: { schemaVersion: 1, infNFe: info, protocol },
     items,
   };
 }

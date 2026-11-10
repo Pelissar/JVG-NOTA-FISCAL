@@ -18,6 +18,7 @@ export type NfeDraftInput = {
   consumerFinal: boolean | null;
   buyerPresence: number | null;
   transportMode: number | null;
+  carrierId: string | null;
   items: NfeDraftItemInput[];
   totalCents: number;
   sourceOrderId: string | null;
@@ -80,6 +81,12 @@ export function parseNfeDraftInput(raw: unknown): NfeDraftInput {
   const consumerFinal = optionalBoolean(data.consumerFinal);
   const buyerPresence = optionalCode(data.buyerPresence, buyerPresenceCodes, "Presença do comprador");
   const transportMode = optionalCode(data.transportMode, freightModeCodes, "Modalidade do frete");
+  let carrierId: string | null = null;
+  if (data.carrierId != null && data.carrierId !== "") {
+    if (typeof data.carrierId !== "string" || !uuid.test(data.carrierId))
+      throw new Error("Selecione uma transportadora cadastrada válida.");
+    carrierId = data.carrierId;
+  }
   if (!Array.isArray(data.items) || data.items.length === 0 || data.items.length > MAX_NFE_DRAFT_ITEMS)
     throw new Error("Informe entre 1 e 20 produtos.");
 
@@ -106,5 +113,5 @@ export function parseNfeDraftInput(raw: unknown): NfeDraftInput {
     return { productId: p.productId, quantity, quantityMilli, unitPriceCents, subtotalCents, cfop, csosn };
   });
 
-  return { recipientId, nature, purpose, issueAt, consumerFinal, buyerPresence, transportMode, items, totalCents, sourceOrderId };
+  return { recipientId, nature, purpose, issueAt, consumerFinal, buyerPresence, transportMode, carrierId, items, totalCents, sourceOrderId };
 }

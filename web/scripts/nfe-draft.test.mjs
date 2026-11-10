@@ -4,6 +4,7 @@ import { parseNfeDraftInput } from '../lib/fiscal/nfe-draft.ts';
 
 const recipientId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const productId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+const carrierId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const draft = () => ({
   recipientId, nature: 'Venda de mercadoria',
   items: [{ productId, quantity: 2.5, unitPrice: 12.34, cfop: '5102', csosn: '102' }],
@@ -37,4 +38,10 @@ test('valida formatos fiscais sem escolher tributação automaticamente', () => 
 
 test('impede excesso de itens', () => {
   assert.throws(() => parseNfeDraftInput({ ...draft(), items: Array.from({ length: 21 }, () => draft().items[0]) }), /20 produtos/i);
+});
+
+test('transportadora é opcional e precisa apontar para um cadastro válido', () => {
+  assert.equal(parseNfeDraftInput(draft()).carrierId, null);
+  assert.equal(parseNfeDraftInput({ ...draft(), carrierId }).carrierId, carrierId);
+  assert.throws(() => parseNfeDraftInput({ ...draft(), carrierId: 'outra' }), /transportadora/i);
 });

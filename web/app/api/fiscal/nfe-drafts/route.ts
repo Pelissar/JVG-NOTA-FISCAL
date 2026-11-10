@@ -55,6 +55,7 @@ export async function GET(request: Request) {
           purpose: payload.purpose ?? null, issueAt: payload.issueAt ?? null,
           consumerFinal: payload.consumerFinal ?? null, buyerPresence: payload.buyerPresence ?? null,
           transportMode: (payload.transport as DbRow | undefined)?.mode ?? null,
+          carrier: (payload.transport as DbRow | undefined)?.carrier ?? null,
           sourceOrder: payload.sourceOrder ?? null,
           issuer: payload.issuer, recipient: payload.recipient,
           items: payload.items, totalCents: payload.totalCents,
@@ -140,12 +141,17 @@ export async function POST(request: Request) {
       if (!Number.isSafeInteger(orderTotalCents) || orderTotalCents !== draft.totalCents)
         throw new JvgBackendError("O total do rascunho não corresponde ao total do pedido.", 400);
     }
-    const [recipientRows, products] = await Promise.all([
+    const [recipientRows, products, carrierRows] = await Promise.all([
       dbRequest<DbRow[]>(`/rest/v1/jvg_parties?${scoped}&id=${filterEq(draft.recipientId)}&is_customer=eq.true&active=eq.true&select=id,display_name,legal_name,document_type,document_number,state_registration,municipal_registration,email,phone,address&limit=1`),
       dbRequest<DbRow[]>(`/rest/v1/jvg_products?${scoped}&id=in.(${draft.items.map(i => i.productId).join(",")})&active=eq.true&select=id,sku,name,unit,ncm,cest,gtin,origin,tax_profile_id,sale_price`),
+      draft.carrierId
+        ? dbRequest<DbRow[]>(`/rest/v1/jvg_parties?${scoped}&id=${filterEq(draft.carrierId)}&is_carrier=eq.true&active=eq.true&select=id,display_name,legal_name,document_type,document_number,state_registration,email,phone,address&limit=1`)
+        : Promise.resolve([]),
     ]);
     const recipient = recipientRows[0];
     if (!recipient) throw new JvgBackendError("Destinatário não pertence a esta empresa ou está inativo.", 400);
+    const carrier = carrierRows[0] ?? null;
+    if (draft.carrierId && !carrier) throw new JvgBackendError("Transportadora não pertence a esta empresa, está inativa ou não está marcada como transportadora.", 400);
     const byId = new Map(products.map(product => [String(product.id), product]));
     if (draft.items.some(item => !byId.has(item.productId)))
       throw new JvgBackendError("Um ou mais produtos não pertencem à empresa ou estão inativos.", 400);
@@ -216,6 +222,12 @@ export async function POST(request: Request) {
       email: recipient.email, phone: recipient.phone,
       address: recipient.address, state: recipientUf,
     };
+    const carrierSnapshot = carrier ? {
+      id: carrier.id, name: carrier.display_name, legalName: carrier.legal_name,
+      documentType: carrier.document_type, documentNumber: carrier.document_number,
+      stateRegistration: carrier.state_registration, email: carrier.email,
+      phone: carrier.phone, address: carrier.address,
+    } : null;
     const preflight = reviewNfePreparation(issuer, recipientSnapshot, items);
     pending.push(...preflight.issues);
     if (items.some(item => item.taxProfile?.reviewStatus !== "reviewed"))
@@ -234,7 +246,7 @@ export async function POST(request: Request) {
     const payload = {
       schemaVersion: 4, nature: draft.nature, purpose: draft.purpose, issueAt: draft.issueAt,
       consumerFinal: draft.consumerFinal, buyerPresence: draft.buyerPresence,
-      transport: { mode: draft.transportMode },
+      transport: { mode: draft.transportMode, carrier: carrierSnapshot },
       sourceOrder: sourceOrder ? {
         id: String(sourceOrder.id),
         number: "PED-" + String(sourceOrder.id).slice(0, 8).toUpperCase(),
@@ -258,6 +270,9 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         tenant_id: account.tenant_id, company_id: account.company_id,
         document_type: "nfe", environment: "homologacao", status: "draft",
+        recipient_party_id: recipient.id, recipient_document: recipient.document_number || null,
+        carrier_party_id: carrier?.id || null, carrier_document: carrier?.document_number || null,
+        carrier_name: carrier?.display_name || null,
         idempotency_key: idempotencyKey, fiscal_payload: payload,
       }),
     });

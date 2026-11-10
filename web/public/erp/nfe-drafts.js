@@ -69,6 +69,15 @@
     });
   }
 
+  function fillCarriers() {
+    var select = document.getElementById('carrierId');
+    if (!select) return;
+    select.replaceChildren(option('', 'Não informada'));
+    state.clients.filter(function (party) { return party.active && party.isCarrier === true; }).forEach(function (party) {
+      select.append(option(party.id, party.name + (party.document ? ' · ' + party.document : '')));
+    });
+  }
+
   function addItem() {
     if (items.children.length >= 20) {
       report('Limite de 20 produtos por rascunho.', 'error');
@@ -187,6 +196,8 @@
         draft.consumerFinal === false ? 'Não' : 'não informado') +
         ' · Presença: ' + (draft.buyerPresence == null ? 'não informada' : String(draft.buyerPresence)) +
         ' · Frete: ' + (draft.transportMode == null ? 'não informado' : String(draft.transportMode)));
+      if (draft.carrier) appendLine(target, 'p', 'Transportadora: ' + (draft.carrier.name || 'Não informada') +
+        (draft.carrier.documentNumber ? ' · ' + draft.carrier.documentNumber : ''));
       if (draft.sourceOrder && draft.sourceOrder.number)
         appendLine(target, 'p', 'Pedido de origem: ' + draft.sourceOrder.number + ' · situação ' + (draft.sourceOrder.status || ''));
       appendLine(target, 'p', 'Total comercial: ' + money.format(Number(draft.totalCents || 0) / 100));
@@ -351,6 +362,7 @@
       state.products = Array.isArray(data.products) ? data.products : [];
       state.clients = Array.isArray(data.clients) ? data.clients : [];
       fillRecipients();
+      fillCarriers();
       addItem();
       // Sugestões oficiais não podem impedir o uso de rascunhos se o catálogo falhar.
       try {
@@ -405,6 +417,7 @@
             form.elements.namedItem('consumerFinal').value === '1',
           buyerPresence: selectedNumber('buyerPresence'),
           transportMode: selectedNumber('transportMode'),
+          carrierId: form.elements.namedItem('carrierId').value || null,
           recipientId: form.elements.namedItem('recipientId').value,
           sourceOrderId: state.sourceOrderId,
           items: readItems(),

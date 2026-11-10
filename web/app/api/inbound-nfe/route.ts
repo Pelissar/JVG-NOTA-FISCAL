@@ -3,7 +3,7 @@ import {
   apiJson, dbRequest, filterEq, getCompany, getSiteAccount, isSameOrigin,
   JvgBackendError, safeError, type SiteAccount,
 } from "../../../lib/jvg-backend";
-import { parseAuthorizedInboundNfe, type InboundNfeItem } from "../../../lib/fiscal/inbound-nfe";
+import { parseAuthorizedInboundNfe, type InboundNfeItem, type InboundPartySnapshot } from "../../../lib/fiscal/inbound-nfe";
 
 export const dynamic = "force-dynamic";
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -46,16 +46,124 @@ function decodeXml(bytes: Uint8Array): string {
 async function readDocument(account: SiteAccount, id: string) {
   const rows = await dbRequest<Row[]>(
     "/rest/v1/jvg_inbound_nfe_documents?" + scope(account) + "&id=" + filterEq(id) +
-    "&select=id,status,access_key,invoice_number,series,issued_at,issuer_document,issuer_name,authorization_status,authorization_reason,total_amount,supplier_party_id,items,created_at,received_at&limit=1",
+    "&select=id,status,access_key,invoice_number,series,issued_at,issuer_document,issuer_name,authorization_status,authorization_reason,total_amount,supplier_party_id,carrier_party_id,carrier_document,carrier_name,fiscal_data,items,created_at,received_at&limit=1",
   );
   if (!rows[0]) throw new JvgBackendError("NF-e de entrada não encontrada nesta empresa.", 404);
   return rows[0];
+}
+
+function partyDocumentType(document: string): "cpf" | "cnpj" | null {
+  const normalized = document.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (/^[0-9]{11}$/.test(normalized)) return "cpf";
+  if (/^[A-Z0-9]{12}[0-9]{2}$/.test(normalized)) return "cnpj";
+  return null;
+}
+
+function mergeAddress(existing: unknown, incoming: Record<string, string>) {
+  const current = existing && typeof existing === "object" && !Array.isArray(existing) ? existing as Row : {};
+  return Object.fromEntries(Object.entries(incoming).map(([key, value]) => [key, current[key] || value]));
+}
+
+async function findParty(account: SiteAccount, documentType: "cpf" | "cnpj", document: string) {
+  return dbRequest<Row[]>(
+    "/rest/v1/jvg_parties?" + scope(account) + "&document_type=" + filterEq(documentType) +
+    "&document_number=" + filterEq(document) +
+    "&select=id,display_name,legal_name,document_type,document_number,state_registration,email,phone,address,is_customer,is_supplier,is_carrier,active&limit=2",
+  );
+}
+
+async function ensurePartyRole(
+  account: SiteAccount,
+  snapshot: InboundPartySnapshot,
+  role: "supplier" | "carrier",
+  legalName = "",
+) {
+  const documentType = partyDocumentType(snapshot.document);
+  if (!documentType) return { id: null as string | null, created: false, active: false };
+  const base = {
+    tenant_id: account.tenant_id,
+    company_id: account.company_id,
+    display_name: snapshot.name || legalName || "Cadastro importado de NF-e",
+    legal_name: legalName || snapshot.name || null,
+    document_type: documentType,
+    document_number: snapshot.document,
+    state_registration: snapshot.stateRegistration || null,
+    email: snapshot.email || null,
+    phone: snapshot.phone || null,
+    address: snapshot.address,
+    is_customer: false,
+    is_supplier: role === "supplier",
+    is_carrier: role === "carrier",
+    active: true,
+  };
+  let matches = await findParty(account, documentType, snapshot.document);
+  if (matches.length > 1) throw new JvgBackendError("Há cadastros duplicados com o documento do emitente. Corrija Pessoas antes de importar esta NF-e.", 409);
+  if (!matches.length) {
+    try {
+      const inserted = await dbRequest<Row[]>("/rest/v1/jvg_parties", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(base),
+      });
+      if (inserted[0]?.id) return { id: String(inserted[0].id), created: true, active: true };
+    } catch (error) {
+      // Uma importação paralela pode ter criado o mesmo documento; buscar novamente pela chave única.
+      matches = await findParty(account, documentType, snapshot.document);
+      if (!matches.length) throw error;
+    }
+  }
+  const existing = matches[0];
+  if (!existing) throw new JvgBackendError("Não foi possível localizar o cadastro fiscal do documento.", 502);
+  const patch: Row = {
+    is_supplier: existing.is_supplier === true || role === "supplier",
+    is_carrier: existing.is_carrier === true || role === "carrier",
+    updated_at: new Date().toISOString(),
+  };
+  if (!existing.display_name && base.display_name) patch.display_name = base.display_name;
+  if (!existing.legal_name && base.legal_name) patch.legal_name = base.legal_name;
+  if (!existing.state_registration && base.state_registration) patch.state_registration = base.state_registration;
+  if (!existing.email && base.email) patch.email = base.email;
+  if (!existing.phone && base.phone) patch.phone = base.phone;
+  patch.address = mergeAddress(existing.address, snapshot.address);
+  await dbRequest("/rest/v1/jvg_parties?" + scope(account) + "&id=" + filterEq(String(existing.id)), {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+  return { id: String(existing.id), created: false, active: existing.active === true };
 }
 
 export async function GET(request: Request) {
   try {
     const { account } = await context();
     const params = new URL(request.url).searchParams;
+    const requestedId = params.get("id");
+    if (requestedId) {
+      const id = validId(requestedId, "Identificador");
+      const rows = await dbRequest<Row[]>(
+        "/rest/v1/jvg_inbound_nfe_documents?" + scope(account) + "&id=" + filterEq(id) +
+        "&select=id,status,access_key,invoice_number,series,issued_at,issuer_document,issuer_name,destination_document,authorization_status,authorization_reason,total_amount,supplier_party_id,carrier_party_id,carrier_document,carrier_name,fiscal_data,items,xml_content,created_at,received_at&limit=1",
+      );
+      const row = rows[0];
+      if (!row) throw new JvgBackendError("NF-e de entrada não encontrada nesta empresa.", 404);
+      let fiscalData = row.fiscal_data && typeof row.fiscal_data === "object" ? row.fiscal_data : {};
+      let items = Array.isArray(row.items) ? row.items as InboundNfeItem[] : [];
+      if (!Object.keys(fiscalData as Row).length) {
+        const parsed = parseAuthorizedInboundNfe(String(row.xml_content || ""), String(row.destination_document || ""));
+        fiscalData = parsed.fiscalData;
+        const savedByLine = new Map(items.map(item => [Number(item.lineNumber), item]));
+        items = parsed.items.map(item => ({ ...item, ...(savedByLine.get(item.lineNumber) || {}) }));
+      }
+      return apiJson({ document: {
+        id: row.id, status: row.status, accessKey: row.access_key, invoiceNumber: row.invoice_number,
+        series: row.series || "", issuedAt: row.issued_at, issuerDocument: row.issuer_document,
+        issuerName: row.issuer_name, destinationDocument: row.destination_document,
+        authorizationStatus: row.authorization_status, authorizationReason: row.authorization_reason || "",
+        total: Number(row.total_amount), supplierId: row.supplier_party_id || "",
+        carrierId: row.carrier_party_id || "", carrierDocument: row.carrier_document || "",
+        carrierName: row.carrier_name || "", fiscalData, items,
+        createdAt: row.created_at, receivedAt: row.received_at,
+      } });
+    }
     const xmlId = params.get("xml");
     if (xmlId) {
       const id = validId(xmlId, "Identificador");
@@ -76,14 +184,15 @@ export async function GET(request: Request) {
     }
     const rows = await dbRequest<Row[]>(
       "/rest/v1/jvg_inbound_nfe_documents?" + scope(account) +
-      "&select=id,status,access_key,invoice_number,series,issued_at,issuer_document,issuer_name,authorization_status,authorization_reason,total_amount,supplier_party_id,items,created_at,received_at&order=created_at.desc&limit=100",
+      "&select=id,status,access_key,invoice_number,series,issued_at,issuer_document,issuer_name,authorization_status,authorization_reason,total_amount,supplier_party_id,carrier_party_id,carrier_document,carrier_name,items,created_at,received_at&order=created_at.desc&limit=100",
     );
     return apiJson({ documents: rows.map(row => ({
       id: row.id, status: row.status, accessKey: row.access_key, invoiceNumber: row.invoice_number,
       series: row.series || "", issuedAt: row.issued_at, issuerDocument: row.issuer_document,
       issuerName: row.issuer_name, authorizationStatus: row.authorization_status,
       authorizationReason: row.authorization_reason || "", total: Number(row.total_amount),
-      supplierId: row.supplier_party_id || "", items: row.items,
+      supplierId: row.supplier_party_id || "", carrierId: row.carrier_party_id || "",
+      carrierDocument: row.carrier_document || "", carrierName: row.carrier_name || "", items: row.items,
       createdAt: row.created_at, receivedAt: row.received_at,
     })) });
   } catch (error) { return safeError(error); }
@@ -109,10 +218,11 @@ async function importXml(request: Request, account: SiteAccount, userId: string)
   );
   if (duplicate.length) throw new JvgBackendError("Esta chave de acesso já foi importada nesta empresa.", 409);
 
-  const suppliers = await dbRequest<Row[]>(
-    "/rest/v1/jvg_parties?" + scope(account) + "&document_number=" + filterEq(parsed.issuerDocument) +
-    "&is_supplier=eq.true&active=eq.true&select=id&limit=2",
-  );
+  const supplier = await ensurePartyRole(account, parsed.issuer, "supplier", String((parsed.fiscalData.infNFe.emit as Row | undefined)?.xNome || ""));
+  if (!supplier.id) throw new JvgBackendError("Não foi possível associar ou cadastrar o fornecedor pelo CPF/CNPJ do XML.", 422);
+  const carrier = parsed.carrier && partyDocumentType(parsed.carrier.document)
+    ? await ensurePartyRole(account, parsed.carrier, "carrier")
+    : { id: null as string | null, created: false, active: false };
   const products = await dbRequest<Row[]>(
     "/rest/v1/jvg_products?" + scope(account) + "&active=eq.true&select=id,gtin,tracks_stock&limit=5000",
   );
@@ -133,16 +243,21 @@ async function importXml(request: Request, account: SiteAccount, userId: string)
     headers: { Prefer: "return=representation" },
     body: JSON.stringify({
       tenant_id: account.tenant_id, company_id: account.company_id,
-      supplier_party_id: suppliers.length === 1 ? suppliers[0].id : null,
+      supplier_party_id: supplier.id,
+      carrier_party_id: carrier.id,
+      carrier_document: parsed.carrier?.document || null,
+      carrier_name: parsed.carrier?.name || null,
       access_key: parsed.accessKey, invoice_number: parsed.invoiceNumber, series: parsed.series || null,
       issued_at: parsed.issuedAt, issuer_document: parsed.issuerDocument, issuer_name: parsed.issuerName,
       destination_document: parsed.destinationDocument, authorization_status: parsed.statusCode,
       authorization_reason: parsed.statusReason, total_amount: parsed.total, status: "draft",
+      fiscal_data: parsed.fiscalData,
       items, xml_content: xml, imported_by: userId,
     }),
   });
   if (!inserted[0]?.id) throw new JvgBackendError("A NF-e foi analisada, mas não retornou identificador para conferência.", 502);
-  return apiJson({ ok: true, id: inserted[0].id, itemCount: items.length, supplierMatched: suppliers.length === 1 });
+  return apiJson({ ok: true, id: inserted[0].id, itemCount: items.length, supplierMatched: true,
+    supplierCreated: supplier.created, supplierActive: supplier.active, carrierMatched: !!carrier.id });
 }
 
 export async function POST(request: Request) {
@@ -199,9 +314,10 @@ export async function PATCH(request: Request) {
     if (supplierId) {
       const suppliers = await dbRequest<Row[]>(
         "/rest/v1/jvg_parties?" + scope(account) + "&id=" + filterEq(supplierId) +
-        "&is_supplier=eq.true&active=eq.true&select=id,document_number&limit=1",
+        "&is_supplier=eq.true&select=id,document_number,active&limit=1",
       );
-      if (!suppliers[0]) throw new JvgBackendError("Fornecedor não encontrado ou inativo nesta empresa.", 400);
+      if (!suppliers[0] || (suppliers[0].active !== true && String(doc.supplier_party_id || "") !== supplierId))
+        throw new JvgBackendError("Fornecedor não encontrado ou inativo nesta empresa.", 400);
       if (String(suppliers[0].document_number || "").toUpperCase() !== String(doc.issuer_document || "").toUpperCase())
         throw new JvgBackendError("O documento do fornecedor precisa corresponder ao emitente do XML.", 400);
     }

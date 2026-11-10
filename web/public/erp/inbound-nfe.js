@@ -13,11 +13,13 @@
     root.innerHTML=docs.map(function(doc){
       var received=doc.status==='received';
       var itemCount=Array.isArray(doc.items)?doc.items.length:0;
-      return '<article class="document-row"><div class="document-main"><strong>NF-e '+escapeHtml(doc.invoiceNumber||'—')+' · '+escapeHtml(doc.issuerName||'Fornecedor')+'</strong><small>Emitida em '+date(doc.issuedAt)+' · Série '+escapeHtml(doc.series||'—')+' · chave '+escapeHtml(doc.accessKey)+'</small></div><div class="document-meta"><b>'+money(doc.total)+'</b><small>'+itemCount+' item(ns) · cStat '+escapeHtml(doc.authorizationStatus)+'</small></div><div class="document-meta total"><span class="status-chip '+(received?'received':'')+'">'+(received?'Recebida':'Pendente de conferência')+'</span></div><div class="document-actions">'+(received?'<button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">Ver</button>':'<button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">Conferir</button>')+'<a class="secondary-button" href="/api/inbound-nfe?xml='+encodeURIComponent(doc.id)+'">XML</a></div></article>';
+      return '<article class="document-row"><div class="document-main"><strong>NF-e '+escapeHtml(doc.invoiceNumber||'—')+' · '+escapeHtml(doc.issuerName||'Fornecedor')+'</strong><small>Emitida em '+date(doc.issuedAt)+' · Série '+escapeHtml(doc.series||'—')+' · chave '+escapeHtml(doc.accessKey)+(doc.carrierName?' · Transportadora: '+escapeHtml(doc.carrierName):'')+'</small></div><div class="document-meta"><b>'+money(doc.total)+'</b><small>'+itemCount+' item(ns) · cStat '+escapeHtml(doc.authorizationStatus)+'</small></div><div class="document-meta total"><span class="status-chip '+(received?'received':'')+'">'+(received?'Recebida':'Pendente de conferência')+'</span></div><div class="document-actions">'+(received?'<button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">Ver</button>':'<button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">Conferir</button>')+'<a class="secondary-button" href="/api/inbound-nfe?xml='+encodeURIComponent(doc.id)+'">XML</a></div></article>';
     }).join('');
   }
-  function supplierOptions(selected){
-    return '<option value="">Selecione fornecedor...</option>'+suppliers.map(function(supplier){return '<option value="'+escapeHtml(supplier.id)+'" '+(supplier.id===selected?'selected':'')+'>'+escapeHtml(supplier.name)+' · '+escapeHtml(supplier.document||'sem CPF/CNPJ')+'</option>';}).join('');
+  function supplierOptions(selected, doc){
+    var options=suppliers.map(function(supplier){return '<option value="'+escapeHtml(supplier.id)+'" '+(supplier.id===selected?'selected':'')+'>'+escapeHtml(supplier.name)+' · '+escapeHtml(supplier.document||'sem CPF/CNPJ')+'</option>';});
+    if(selected&&!suppliers.some(function(supplier){return supplier.id===selected;}))options.unshift('<option value="'+escapeHtml(selected)+'" selected>'+escapeHtml((doc&&doc.issuerName)||'Fornecedor vinculado')+' · '+escapeHtml((doc&&doc.issuerDocument)||'cadastro inativo')+'</option>');
+    return '<option value="">Selecione fornecedor...</option>'+options.join('');
   }
   function productOptions(selected){
     return '<option value="">Não vincular a produto...</option>'+products.map(function(product){return '<option value="'+escapeHtml(product.id)+'" '+(product.id===selected?'selected':'')+'>'+escapeHtml(product.sku)+' · '+escapeHtml(product.name)+' ('+escapeHtml(product.unit)+')</option>';}).join('');
@@ -25,16 +27,26 @@
   function itemMarkup(item){
     var canTrack=!!(item.productId&&products.some(function(product){return product.id===item.productId&&product.tracksStock;}));
     var product=products.find(function(row){return row.id===item.productId;});
-    return '<article class="review-item" data-line="'+escapeHtml(item.lineNumber)+'"><div class="review-item-main"><strong>'+escapeHtml(item.description)+'</strong><small>Item '+escapeHtml(item.lineNumber)+' · código fornecedor '+escapeHtml(item.supplierCode||'—')+' · GTIN '+escapeHtml(item.gtin||'sem GTIN')+'</small></div><label class="review-field"><span>Produto cadastrado</span><select name="productId">'+productOptions(item.productId)+'</select></label><div class="review-item-meta">'+escapeHtml(item.quantity)+' '+escapeHtml(item.unit)+'<small>Qtd. recebida</small></div><div class="review-item-meta">'+money(item.total)+'<small>Total do item</small></div><label class="stock-choice"><input type="checkbox" name="trackStock" '+(item.trackStock&&canTrack?'checked':'')+' '+(canTrack?'':'disabled')+'><span>Lançar no estoque</span></label><small class="stock-hint">'+(product&&!product.tracksStock?'Produto sem controle de estoque':!item.productId?'Associe um produto':'')+'</small></article>';
+    var taxDetails=item.taxes&&Object.keys(item.taxes).length?'<details class="item-tax-details"><summary>Impostos do XML</summary><pre>'+escapeHtml(JSON.stringify(item.taxes,null,2))+'</pre></details>':'<small class="stock-hint">XML sem grupo de impostos detalhado neste item.</small>';
+    return '<article class="review-item" data-line="'+escapeHtml(item.lineNumber)+'"><div class="review-item-main"><strong>'+escapeHtml(item.description)+'</strong><small>Item '+escapeHtml(item.lineNumber)+' · código fornecedor '+escapeHtml(item.supplierCode||'—')+' · GTIN '+escapeHtml(item.gtin||'sem GTIN')+'</small>'+taxDetails+'</div><label class="review-field"><span>Produto cadastrado</span><select name="productId">'+productOptions(item.productId)+'</select></label><div class="review-item-meta">'+escapeHtml(item.quantity)+' '+escapeHtml(item.unit)+'<small>Qtd. recebida</small></div><div class="review-item-meta">'+money(item.total)+'<small>Total do item</small></div><label class="stock-choice"><input type="checkbox" name="trackStock" '+(item.trackStock&&canTrack?'checked':'')+' '+(canTrack?'':'disabled')+'><span>Lançar no estoque</span></label><small class="stock-hint">'+(product&&!product.tracksStock?'Produto sem controle de estoque':!item.productId?'Associe um produto':'')+'</small></article>';
   }
-  function openReview(id){
+  function showFiscalData(doc){
+    var root=$('fiscalDataReview'), fiscal=doc.fiscalData||{}, info=fiscal.infNFe||{}, totals=info.total||{};
+    var taxes=(doc.items||[]).filter(function(item){return item.taxes&&Object.keys(item.taxes).length;});
+    root.innerHTML='<div class="fiscal-data-heading"><strong>Dados fiscais importados do XML</strong><span>Valores e tributos são exibidos como constam no documento; o ERP não recalcula.</span></div>'+
+      '<div class="fiscal-data-chips"><span>Emitente · '+escapeHtml(doc.issuerDocument)+'</span><span>Destinatário · '+escapeHtml(doc.destinationDocument||'—')+'</span><span>Itens com imposto detalhado · '+taxes.length+'</span><span>Transportadora · '+escapeHtml(doc.carrierName||'Não informada')+'</span></div>'+
+      '<details><summary>Tributos e totais declarados no XML</summary><pre>'+escapeHtml(JSON.stringify(totals,null,2))+'</pre></details>'+
+      '<details><summary>Todos os campos estruturados da NF-e e do protocolo</summary><pre>'+escapeHtml(JSON.stringify(fiscal,null,2))+'</pre></details>';
+  }
+  async function openReview(id){
     selectedDoc=docs.find(function(doc){return doc.id===id;});
     if(!selectedDoc)return;
     var received=selectedDoc.status==='received';
     $('reviewHeading').textContent='Conferir NF-e '+selectedDoc.invoiceNumber;
     $('reviewSummary').textContent=selectedDoc.issuerName+' · '+date(selectedDoc.issuedAt)+' · '+money(selectedDoc.total);
-    $('supplierSelect').innerHTML=supplierOptions(selectedDoc.supplierId);
+    $('supplierSelect').innerHTML=supplierOptions(selectedDoc.supplierId,selectedDoc);
     $('authorizationSummary').textContent='Protocolo informado no XML: cStat '+selectedDoc.authorizationStatus+' — '+(selectedDoc.authorizationReason||'Autorização de uso')+'. Assinatura ainda precisa ser conferida no portal oficial.';
+    $('fiscalDataReview').innerHTML='<p>Carregando dados fiscais do XML...</p>';
     $('reviewItems').innerHTML=(selectedDoc.items||[]).map(itemMarkup).join('');
     $('officialStatus').checked=false;
     $('officialStatus').disabled=received;
@@ -45,18 +57,28 @@
     $('closeReview').textContent='Fechar';
     $('reviewCard').hidden=false;
     $('reviewCard').scrollIntoView({behavior:'smooth',block:'start'});
+    try{
+      var response=await api('/api/inbound-nfe?id='+encodeURIComponent(id));
+      if(!selectedDoc||selectedDoc.id!==id)return;
+      selectedDoc=response.document;
+      $('supplierSelect').innerHTML=supplierOptions(selectedDoc.supplierId,selectedDoc);
+      $('reviewItems').innerHTML=(selectedDoc.items||[]).map(itemMarkup).join('');
+      showFiscalData(selectedDoc);
+      $('supplierSelect').disabled=received;
+      $('reviewItems').querySelectorAll('select,input').forEach(function(input){input.disabled=input.disabled||received;});
+    }catch(error){$('fiscalDataReview').innerHTML='<p class="error">Não foi possível abrir os dados completos do XML: '+escapeHtml(error.message)+'</p>';}
   }
   async function load(){
     setStatus('Carregando lançamentos...');
     try{
-      var result=await Promise.all([api('/api/inbound-nfe'),api('/api/records')]);
+      var result=await Promise.all([api('/api/inbound-nfe'),api('/api/records?scope=products'),api('/api/records?scope=clients')]);
       docs=Array.isArray(result[0].documents)?result[0].documents:[];
       products=(result[1].products||[]).filter(function(product){return product.active;});
-      suppliers=(result[1].clients||[]).filter(function(person){return person.active&&person.isSupplier;});
+      suppliers=(result[2].clients||[]).filter(function(person){return person.active&&person.isSupplier;});
       setStatus(docs.length?docs.length+' NF-e(s) nesta empresa.':'Nenhum lançamento encontrado.');
       render();
     }catch(error){
-      setStatus(error.message+' Se a migração da entrada XML ainda não foi aplicada no Supabase, aplique o arquivo supabase/migrations/20261110_jvg_inbound_nfe.sql e atualize.',true);
+      setStatus(error.message+' Se a migration fiscal/histórico ainda não foi aplicada, aplique supabase/migrations/20261110_jvg_fiscal_document_history.sql no Supabase e atualize.',true);
       $('documents').innerHTML='';
     }
   }
@@ -68,7 +90,7 @@
     $('uploadButton').disabled=true;$('uploadStatus').classList.remove('error');$('uploadStatus').textContent='Lendo XML e conferindo chave, protocolo e destinatário...';
     try{
       var result=await api('/api/inbound-nfe',{method:'POST',body:data});
-      $('uploadStatus').textContent='XML analisado. '+result.itemCount+' item(ns) importado(s). '+(result.supplierMatched?'Fornecedor identificado.':'Selecione o fornecedor na conferência.');
+      $('uploadStatus').textContent='XML analisado. '+result.itemCount+' item(ns) importado(s). '+(result.supplierCreated?'Fornecedor cadastrado e vinculado pelo CPF/CNPJ.':result.supplierMatched?'Fornecedor existente vinculado pelo CPF/CNPJ.':'Fornecedor precisa ser conferido.');
       $('xmlFile').value='';
       await load();
       if(result.id)openReview(result.id);

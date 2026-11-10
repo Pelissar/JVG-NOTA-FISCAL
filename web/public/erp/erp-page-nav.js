@@ -42,7 +42,7 @@
     { label: 'Assistência', icon: 'wrench', links: [['Ordens de serviço', '/erp/service-orders.html', 'wrench']] },
     { label: 'Cadastros', icon: 'users', links: [['Pessoas e clientes', '/erp/index.html#clients', 'users'], ['Produtos', '/erp/index.html#products', 'box'], ['Serviços', '/erp/index.html#services', 'wrench']] },
     { label: 'Operação', icon: 'warehouse', links: [['Estoque', '/erp/index.html#inventory', 'box'], ['Relatórios', '/erp/index.html#reports', 'chart']] },
-    { label: 'Fiscal', icon: 'receipt', links: [['Central fiscal', '/erp/index.html#fiscal', 'receipt'], ['Rascunhos NF-e', '/erp/nfe-drafts.html', 'file'], ['Notas de entrada · XML', '/erp/inbound-nfe.html', 'file'], ['CFOP', '/erp/cfop.html', 'hash'], ['Perfis tributários', '/erp/tax-profiles.html', 'sliders']] },
+    { label: 'Fiscal', icon: 'receipt', links: [['Central fiscal', '/erp/index.html#fiscal', 'receipt'], ['Rascunhos NF-e', '/erp/nfe-drafts.html', 'file'], ['Histórico fiscal', '/erp/fiscal-history.html', 'file'], ['Notas de entrada · XML', '/erp/inbound-nfe.html', 'file'], ['CFOP', '/erp/cfop.html', 'hash'], ['Perfis tributários', '/erp/tax-profiles.html', 'sliders']] },
   ];
 
   var currentPath = window.location.pathname.replace(/\/$/, '/index.html');

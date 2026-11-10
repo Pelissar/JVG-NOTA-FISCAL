@@ -43,6 +43,7 @@
     <div class="card-heading review-heading"><div><div class="step-number">04</div><div><h2 id="reviewHeading">Conferir NF-e</h2><p id="reviewSummary"></p></div></div><button class="secondary-button" id="closeReview" type="button">Fechar</button></div>
     <form id="reviewForm"><div class="review-body">
       <div class="review-fields"><label class="review-field"><span>Fornecedor emitente *</span><select id="supplierSelect" name="supplierId" required></select></label><div id="authorizationSummary" class="authorization-summary"></div></div>
+      <div id="fiscalDataReview" class="fiscal-data-review"><p>Carregando dados fiscais do XML...</p></div>
       <div class="items-heading"><div><h3>Itens do XML</h3><p>GTIN só associa automaticamente quando encontra um único produto cadastrado.</p></div></div>
       <div id="reviewItems" class="review-items"></div>
       <label class="confirmation-check"><input id="officialStatus" type="checkbox"><span>Conferi a chave e a autorização desta NF-e no portal oficial da SEFAZ. Entendo que esta tela não verifica a assinatura digital.</span></label>
@@ -54,4 +55,3 @@
 <footer class="inbound-footer">SigmaFiscal · Recebimento de NF-e · Não substitui validação e orientação contábil.</footer>
 </body>
 </html>
-
