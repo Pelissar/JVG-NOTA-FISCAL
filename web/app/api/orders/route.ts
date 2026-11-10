@@ -20,9 +20,21 @@ export async function GET(request:Request){
   const orders=await dbRequest<Array<Record<string,unknown>>>(
    `/rest/v1/jvg_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}${status?`&status=${filterEq(status)}`:""}&select=id,quote_id,customer_id,status,total,items,notes,created_at&order=created_at.desc,id.desc&limit=${size+1}&offset=${(page-1)*size}`
   );
-  return apiJson({orders:orders.slice(0,size),page,hasMore:orders.length>size});
+  const pageOrders=orders.slice(0,size);
+  const quoteIds=[...new Set(pageOrders.map(order=>String(order.quote_id)).filter(id=>uuidPattern.test(id)))];
+  let quoteNumberById=new Map<string,unknown>();
+  if(quoteIds.length){
+   try{
+    const quotes=await dbRequest<Array<{id:string;quote_number:number|string}>>(
+     `/rest/v1/jvg_quotes?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=in.(${quoteIds.join(",")})&select=id,quote_number`
+    );
+    quoteNumberById=new Map(quotes.map(quote=>[quote.id,quote.quote_number]));
+   }catch{/* Numeração estará disponível depois da migração. */}
+  }
+  return apiJson({orders:pageOrders.map(order=>({...order,quote_number:quoteNumberById.get(String(order.quote_id))??null})),page,hasMore:orders.length>size});
  }catch(error){return safeError(error);}
 }
+
 export async function POST(request:Request){
  if(!isSameOrigin(request))return apiJson({error:"Origem não autorizada."},403);
  try{
@@ -42,6 +54,7 @@ export async function POST(request:Request){
 }
 
 /** Cancelamento condicionado ao estado aberto; pedido cancelado não gera movimentação de estoque. */
+/** Cancela o pedido e sua proposta de origem na mesma transação. */
 export async function PATCH(request:Request){
  if(!isSameOrigin(request))return apiJson({error:"Origem não autorizada."},403);
  try{
@@ -52,11 +65,11 @@ export async function PATCH(request:Request){
   const data=input as Record<string,unknown>;
   if(typeof data.id!=="string"||!uuidPattern.test(data.id))throw new JvgBackendError("Pedido inválido.",400);
   if(data.status!=="cancelled")throw new JvgBackendError("Alteração não permitida.",400);
-  const updated=await dbRequest<Array<{id:string;status:string}>>(
-   `/rest/v1/jvg_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=${filterEq(data.id)}&status=eq.open&select=id,status`,
-   {method:"PATCH",body:JSON.stringify({status:"cancelled",updated_at:new Date().toISOString()})}
-  );
-  if(!updated.length)throw new JvgBackendError("Pedido não encontrado ou já alterado. Atualize a lista.",409);
-  return apiJson({ok:true,order:updated[0]});
+  const cancelled=await dbRequest<boolean>("/rest/v1/rpc/jvg_cancel_order",{
+   method:"POST",
+   body:JSON.stringify({p_tenant_id:scope.tenant_id,p_company_id:scope.company_id,p_order_id:data.id})
+  });
+  if(cancelled!==true)throw new JvgBackendError("Pedido não encontrado ou já alterado. Atualize a lista.",409);
+  return apiJson({ok:true,order:{id:data.id,status:"cancelled"},quote:{status:"cancelled"}});
  }catch(error){return safeError(error);}
 }

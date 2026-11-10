@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const money = n => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n);
   const notice = message => { $('notice').textContent = message; };
-  let products = [], services = [], busy = false, loaded = false, writable = false, pendingRequestId = null, pendingPayload = null, salesHistory = [], salesPage = 1, salesHasMore = false, loadingSales = false;
+  let products = [], services = [], busy = false, loaded = false, writable = false, pendingRequestId = null, pendingPayload = null, salesHistory = [], salesPage = 1, salesHasMore = false, loadingSales = false, lastConfirmedSaleId = null;
   const safe = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   async function request(url, init) {
     const response = await fetch(url,{credentials:'same-origin',cache:'no-store',...init});
@@ -60,13 +60,13 @@
     $('salesNext').disabled = loadingSales || !salesHasMore;
     $('sales').innerHTML = sales.length
       ? '<table><thead><tr><th>Data</th><th>Identificador</th><th>Situação</th><th>Total</th><th>Ações</th></tr></thead><tbody>'+
-        sales.map(x=>'<tr><td>'+safe(new Date(x.created_at).toLocaleString('pt-BR'))+'</td><td title="'+safe(x.id)+'">'+safe(String(x.id).slice(0,8))+'</td><td>'+safe(x.status)+'</td><td>'+safe(money(x.total))+'</td><td><button class="btn sale-print" type="button" data-id="'+safe(x.id)+'" aria-label="Gerar PDF da venda '+safe(String(x.id).slice(0,8))+'">PDF / Imprimir</button></td></tr>').join('')+'</tbody></table>'
+        sales.map(x=>'<tr><td>'+safe(new Date(x.created_at).toLocaleString('pt-BR'))+'</td><td title="'+safe(x.id)+'">'+safe(String(x.id).slice(0,8))+'</td><td>'+safe(x.status)+'</td><td>'+safe(money(x.total))+'</td><td><button class="btn sale-print" type="button" data-id="'+safe(x.id)+'" aria-label="Gerar PDF da venda '+safe(String(x.id).slice(0,8))+'">Gerar PDF</button></td></tr>').join('')+'</tbody></table>'
       : 'Nenhuma venda encontrada para os filtros selecionados.';
     $('exportSales').disabled = sales.length===0;
   }
   function printSale(sale) {
     if (window.JvgCommercialDocuments) {
-      window.JvgCommercialDocuments.print('sale', Object.assign({}, sale, { customerId: sale.customer_id }));
+      window.JvgCommercialDocuments.print('sale', Object.assign({}, sale, { customerId: sale.customer_id, number: 'VENDA-'+String(sale.id||'').slice(0,8).toUpperCase() }));
     } else {
       notice('O módulo de impressão não foi carregado. Recarregue a página.');
     }
@@ -107,7 +107,7 @@
   }
   async function start() {
     try {
-      const data=await request('/api/records');
+      const data=await request('/api/records?scope=sales');
       products=Array.isArray(data.products)?data.products:[];
       services=Array.isArray(data.services)?data.services:[];
       const clients=Array.isArray(data.clients)?data.clients:[];
@@ -120,6 +120,10 @@
   $('salesNext').addEventListener('click',()=>loadSales(salesPage+1).catch(error=>notice(error.message)));
   $('salesSearch').addEventListener('input',renderSales);
   $('salesStatus').addEventListener('change',renderSales);
+  $('lastSalePdf').addEventListener('click',()=>{
+    const sale=salesHistory.find(row=>row.id===lastConfirmedSaleId);
+    if(sale)printSale(sale);else notice('A venda foi confirmada, mas não foi possível carregar seus dados para o PDF. Atualize o histórico.');
+  });
   $('sales').addEventListener('click',event=>{
     const button=event.target.closest('button.sale-print');
     if(!button)return;
@@ -149,8 +153,15 @@
       pendingRequestId=null;
       pendingPayload=null;
       $('items').replaceChildren();$('notes').value='';
-      notice('Venda confirmada: '+confirmed.saleId+'. Atualize a página antes de registrar outra venda.');
-      try { await loadSales(); } catch(error) { notice('Venda confirmada: '+confirmed.saleId+'. Não foi possível atualizar o histórico: '+error.message); }
+      lastConfirmedSaleId=confirmed.saleId;
+      notice('Venda confirmada. Você já pode gerar o PDF do comprovante.');
+      try {
+        await loadSales(1);
+        const lastSale=$('lastSalePdf');
+        lastSale.dataset.id=lastConfirmedSaleId;
+        lastSale.hidden=false;
+        lastSale.style.display='inline-flex';
+      } catch(error) { notice('Venda confirmada: '+confirmed.saleId+'. Não foi possível atualizar o histórico: '+error.message); }
     }catch(error){
       // Reenvios usam exatamente o mesmo payload, mesmo que o usuário altere campos.
       // Os campos ficam bloqueados até a resposta definitiva ou recarga da página.

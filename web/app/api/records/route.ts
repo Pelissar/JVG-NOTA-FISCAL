@@ -84,7 +84,7 @@ export async function GET(request: Request) {
     const account = await authenticatedAccount();
     const scope = `tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`;
     const requestedScope = new URL(request.url).searchParams.get("scope") || "full";
-    const supportedScopes = ["dashboard", "products", "clients", "services", "inventory", "reports", "full"];
+    const supportedScopes = ["dashboard", "products", "clients", "services", "inventory", "reports", "quotes", "sales", "orders", "documents", "full"];
     const dataScope = supportedScopes.includes(requestedScope) ? requestedScope : "full";
 
     const shouldTryDashboardRpc = dataScope === "dashboard" && new URL(request.url).searchParams.get("summary") !== "skip";
@@ -105,12 +105,12 @@ export async function GET(request: Request) {
     }
 
     const dashboardFallback = dataScope === "dashboard";
-    const wantsProducts = ["full", "reports", "products", "inventory", "dashboard"].includes(dataScope);
-    const wantsParties = ["full", "reports", "clients"].includes(dataScope);
+    const wantsProducts = ["full", "reports", "products", "inventory", "dashboard", "quotes", "sales"].includes(dataScope);
+    const wantsParties = ["full", "reports", "clients", "quotes", "sales", "orders", "documents"].includes(dataScope);
     const wantsPartyCount = dashboardFallback;
-    const wantsServices = ["full", "reports", "services"].includes(dataScope);
+    const wantsServices = ["full", "reports", "services", "quotes", "sales"].includes(dataScope);
     const wantsMovements = ["full", "reports", "products", "inventory", "dashboard"].includes(dataScope);
-    const wantsCompany = ["full", "reports"].includes(dataScope);
+    const wantsCompany = ["full", "reports", "documents"].includes(dataScope);
     const emptyRows: Array<Record<string, unknown>> = [];
     const productFields = dashboardFallback ? "id,name,cost_price,active" : "id,sku,name,category,unit,ncm,cest,gtin,origin,default_cfop,tax_profile_id,cost_price,sale_price,tracks_stock,active";
     const [products, parties, services, movements, company, partyCount] = await Promise.all([
@@ -171,6 +171,13 @@ export async function GET(request: Request) {
     if (dataScope === "products" || dataScope === "inventory") return apiJson({ status: "ready", products: productRecords });
     if (dataScope === "clients") return apiJson({ status: "ready", clients: clientRecords });
     if (dataScope === "services") return apiJson({ status: "ready", services: serviceRecords });
+    if (dataScope === "quotes" || dataScope === "sales") return apiJson({ status: "ready", products: productRecords, clients: clientRecords, services: serviceRecords });
+    if (dataScope === "orders") return apiJson({ status: "ready", clients: clientRecords });
+    if (dataScope === "documents") return apiJson({ status: "ready", company: company ? {
+      legalName: company.legal_name || "", tradeName: company.trade_name || "", cnpj: company.cnpj || "",
+      stateRegistration: company.state_registration || "", municipalRegistration: company.municipal_registration || "",
+      email: company.fiscal_email || "", phone: company.fiscal_phone || "", address: company.address || {},
+    } : null, clients: clientRecords });
 
     return apiJson({ status: "ready", companyName: String(company?.trade_name || company?.legal_name || "Empresa piloto"),
       company: company ? {

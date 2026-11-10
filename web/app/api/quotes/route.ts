@@ -20,12 +20,28 @@ export async function GET(request: Request) {
     const raw = new URL(request.url).searchParams.get("page") ?? "1";
     if (!/^[1-9]\d{0,4}$/.test(raw)) throw new JvgBackendError("Página inválida.", 400);
     const page = Number(raw), size = 30;
-    const rows = await dbRequest<Array<Record<string, unknown>>>(
-      `/rest/v1/jvg_quotes?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&select=id,customer_id,status,notes,valid_until,total,items,created_at,updated_at&order=created_at.desc,id.desc&limit=${size+1}&offset=${(page-1)*size}`
-    );
-    return apiJson({ quotes: rows.slice(0,size), page, hasMore: rows.length > size });
+    const base = `/rest/v1/jvg_quotes?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}`;
+    let rows: Array<Record<string, unknown>>;
+    try {
+      rows = await dbRequest<Array<Record<string, unknown>>>(`${base}&select=id,quote_number,customer_id,status,notes,valid_until,total,items,created_at,updated_at&order=created_at.desc,id.desc&limit=${size + 1}&offset=${(page - 1) * size}`);
+    } catch {
+      // A tela continua compatível enquanto a migração de numeração aguarda aplicação.
+      rows = await dbRequest<Array<Record<string, unknown>>>(`${base}&select=id,customer_id,status,notes,valid_until,total,items,created_at,updated_at&order=created_at.desc,id.desc&limit=${size + 1}&offset=${(page - 1) * size}`);
+    }
+    const pageRows = rows.slice(0, size);
+    const ids = pageRows.map(row => String(row.id)).filter(id => uuidPattern.test(id));
+    const linkedOrders = ids.length
+      ? await dbRequest<Array<{ id: string; quote_id: string; status: string }>>(`/rest/v1/jvg_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&quote_id=in.(${ids.join(",")})&select=id,quote_id,status`)
+      : [];
+    const orderByQuote = new Map<string, { id: string; quote_id: string; status: string }>();
+    for (const order of linkedOrders) orderByQuote.set(order.quote_id, order);
+    return apiJson({ quotes: pageRows.map(row => {
+      const order = orderByQuote.get(String(row.id));
+      return { ...row, orderId: order?.id ?? null, orderStatus: order?.status ?? null };
+    }), page, hasMore: rows.length > size });
   } catch (error) { return safeError(error); }
 }
+
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {
@@ -74,12 +90,12 @@ export async function POST(request: Request) {
       if (!Number.isSafeInteger(totalCents) || totalCents > 99999999999) throw new JvgBackendError("Total excede o limite.", 400);
       return { productId, serviceId, description: product?.name ?? service?.name, unit: product?.unit ?? "UN", quantity, unitPrice, lineTotal: lineCents/100 };
     });
-    const created = await dbRequest<Array<{id:string}>>("/rest/v1/jvg_quotes", {
+    const created = await dbRequest<Array<{id:string;quote_number?:number|string}>>("/rest/v1/jvg_quotes", {
       method: "POST",
       body: JSON.stringify({ tenant_id:scope.tenant_id, company_id:scope.company_id, customer_id:customerId,
         notes, valid_until:validUntil, status:"draft", items, total:totalCents/100 }),
     });
-    return apiJson({ ok:true, id:created[0]?.id }, 201);
+    return apiJson({ ok:true, id:created[0]?.id, quoteNumber:created[0]?.quote_number ?? null }, 201);
   } catch (error) { return safeError(error); }
 }
 

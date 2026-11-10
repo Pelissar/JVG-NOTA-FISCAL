@@ -71,7 +71,7 @@
 
   function load() {
     if (cache.ready) return cache.ready;
-    cache.ready = fetch('/api/records', { credentials: 'same-origin', cache: 'no-store' })
+    cache.ready = fetch('/api/records?scope=documents', { credentials: 'same-origin', cache: 'no-store' })
       .then(function (response) {
         return response.json().then(function (data) {
           if (!response.ok) throw new Error(data.error || 'Não foi possível carregar os dados da empresa.');
@@ -124,15 +124,16 @@
     var company = cache.company || {};
     var title = kind === 'quote' ? 'ORÇAMENTO' : kind === 'order' ? 'PEDIDO' : kind === 'sale' ? 'COMPROVANTE DE VENDA' : 'ORDEM DE SERVIÇO';
     var idShort = String(data.id || '').slice(0, 8).toUpperCase();
-    var number = data.number || (kind === 'serviceOrder' ? 'OS-' + String(data.os_number || '').padStart(6, '0') :
-      kind === 'sale' ? 'VENDA-' + idShort : idShort);
+    var number = data.number || (kind === 'quote' && data.quote_number ? 'ORC-' + String(data.quote_number).padStart(6, '0') :
+      kind === 'serviceOrder' ? 'OS-' + String(data.os_number || '').padStart(6, '0') :
+      kind === 'order' ? 'PED-' + idShort : kind === 'sale' ? 'VENDA-' + idShort : idShort);
     var date = data.created_at ? new Date(data.created_at).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
     if (kind === 'serviceOrder') return serviceOrderCopy(data, number, date, copyLabel);
     var items = Array.isArray(data.items) ? data.items : [];
     var status = statusLabels[data.status] || text(data.status, 'Não informado');
     var extra = kind === 'quote'
       ? '<span><b>Validade:</b> ' + escapeHtml(data.valid_until ? new Date(data.valid_until + 'T12:00:00').toLocaleDateString('pt-BR') : 'Não definida') + '</span>'
-      : kind === 'order' ? '<span><b>Orçamento de origem:</b> ' + escapeHtml(String(data.quote_id || '').slice(0, 8).toUpperCase() || 'Não informado') + '</span>' : '';
+      : kind === 'order' ? '<span><b>Orçamento de origem:</b> ' + escapeHtml(data.quote_number ? 'ORC-' + String(data.quote_number).padStart(6, '0') : String(data.quote_id || '').slice(0, 8).toUpperCase() || 'Não informado') + '</span>' : '';
     return '<article class="document">' + issuerBlock(company) +
       '<div class="doc-title"><div><span class="eyebrow">DOCUMENTO COMERCIAL</span><h1>' + title + '</h1></div>' +
       '<div class="doc-number"><strong>' + escapeHtml(number) + '</strong><span>' + escapeHtml(copyLabel || '') + '</span></div></div>' +
@@ -184,7 +185,7 @@
   function documentHtml(kind, data) {
     var title = kind === 'quote' ? 'Orcamento' : kind === 'order' ? 'Pedido' : kind === 'sale' ? 'Venda' : 'Ordem de Servico';
     var companyName = (cache.company && (cache.company.tradeName || cache.company.legalName)) || 'Empresa';
-    var safeTitle = (companyName + ' - ' + title + ' ' + String(data.id || data.os_number || '').slice(0, 8))
+    var safeTitle = (companyName + ' - ' + title + ' ' + String(data.number || data.quote_number || data.os_number || data.id || '').slice(0, 24))
       .replace(/[\\/:*?"<>|]+/g, '-');
     var first = documentBody(kind, data, kind === 'serviceOrder' ? 'VIA DO CLIENTE' : '');
     var content = kind === 'serviceOrder' ? first + documentBody(kind, data, 'VIA DA EMPRESA') : first;
