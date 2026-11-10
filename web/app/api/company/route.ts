@@ -46,7 +46,6 @@ export async function PATCH(request: Request) {
       cnae: cnae || null,
       fiscal_email: fiscalEmail || null,
       fiscal_phone: fiscalPhone || null,
-      tax_regime: "simples_nacional",
       updated_at: new Date().toISOString(),
     };
     if ('street' in data) allowed.address = fiscalAddress(data);

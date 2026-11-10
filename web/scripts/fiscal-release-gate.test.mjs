@@ -79,3 +79,10 @@ test('diagnóstico Focus tem contraste nos dois temas e informa que não emite',
  assert.match(css,/@media\(max-width:560px\)/);
 });
 
+
+test('dados fiscais não assumem Simples Nacional ao salvar e aceitam schema de CNPJ alfanumérico',()=> {
+ const companyApi = read('../app/api/company/route.ts');
+ const cnpjMigration = read('../../supabase/migrations/20261110_jvg_cnpj_alphanumeric.sql');
+ assert.doesNotMatch(companyApi,/tax_regime:\\s*\"simples_nacional\"/);
+ assert.ok(cnpjMigration.includes("^[A-Z0-9]{12}[0-9]{2}$"));
+});
