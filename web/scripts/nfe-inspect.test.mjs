@@ -36,4 +36,6 @@ test('checklist explica bloqueios de homologação sem expor credenciais', () =>
   assert.match(ui, /function renderHomologationReadiness\(\)/);
   assert.match(ui, /draft\.homologationSetup\.accessIssues/);
   assert.match(ui, /NCM pendente/);
+  assert.match(ui, /Token da API Focus no servidor/);
+  assert.match(page, /certificado digital anexado no painel Focus é separado do token de API/);
 });

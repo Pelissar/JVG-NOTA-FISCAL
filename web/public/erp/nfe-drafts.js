@@ -67,9 +67,9 @@
       [environmentAccessReady, 'Acesso ao piloto JVG', setup.pilotCompanyMatches
         ? (setup.platformAdmin ? 'A empresa piloto está vinculada. O envio de teste é feito por administrador da plataforma.' : 'A empresa piloto está vinculada, mas o envio é restrito a um administrador da plataforma.')
         : 'O envio de teste está restrito à empresa piloto JVG e depende da configuração do ambiente.'],
-      [setup.focusTokenConfigured, 'Credencial Focus de homologação', setup.focusTokenConfigured
-        ? 'A credencial está configurada no servidor. Use “Verificar conexão Focus NFe” para conferir a resposta real da Focus.'
-        : 'A credencial de testes ainda não está configurada no ambiente da aplicação.'],
+      [setup.focusTokenConfigured, 'Token da API Focus no servidor', setup.focusTokenConfigured
+        ? 'O token está configurado. Ele é diferente do certificado digital anexado no painel Focus; use “Verificar conexão Focus NFe” para validar o acesso à API.'
+        : 'O token de API de homologação não está configurado no servidor do ERP. Ele é separado do certificado digital anexado na Focus.'],
       [issuerReady, 'Dados fiscais do emitente', issuerReady
         ? 'Os campos obrigatórios do emitente estão completos.'
         : (setup.issuerMissing || []).length
