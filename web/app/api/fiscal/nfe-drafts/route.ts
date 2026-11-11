@@ -56,6 +56,8 @@ export async function GET(request: Request) {
           consumerFinal: payload.consumerFinal ?? null, buyerPresence: payload.buyerPresence ?? null,
           transportMode: (payload.transport as DbRow | undefined)?.mode ?? null,
           carrier: (payload.transport as DbRow | undefined)?.carrier ?? null,
+          vehicle: (payload.transport as DbRow | undefined)?.vehicle ?? null,
+          volumes: (payload.transport as DbRow | undefined)?.volumes ?? [],
           sourceOrder: payload.sourceOrder ?? null,
           issuer: payload.issuer, recipient: payload.recipient,
           items: payload.items, totalCents: payload.totalCents,
@@ -244,9 +246,9 @@ export async function POST(request: Request) {
     };
 
     const payload = {
-      schemaVersion: 4, nature: draft.nature, purpose: draft.purpose, issueAt: draft.issueAt,
+      schemaVersion: 5, nature: draft.nature, purpose: draft.purpose, issueAt: draft.issueAt,
       consumerFinal: draft.consumerFinal, buyerPresence: draft.buyerPresence,
-      transport: { mode: draft.transportMode, carrier: carrierSnapshot },
+      transport: { mode: draft.transportMode, carrier: carrierSnapshot, vehicle: draft.vehicle, volumes: draft.volumes },
       sourceOrder: sourceOrder ? {
         id: String(sourceOrder.id),
         number: "PED-" + String(sourceOrder.id).slice(0, 8).toUpperCase(),

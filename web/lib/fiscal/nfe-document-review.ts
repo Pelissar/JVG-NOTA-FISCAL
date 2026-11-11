@@ -39,9 +39,10 @@ export function reviewNfeDocument(value: unknown): NfeDocumentReview {
     checks.push({ key, label, ok, detail });
   const total = integerCents(payload.totalCents);
 
-  const supportedSchema = payload.schemaVersion === 3 || payload.schemaVersion === 4;
+  const supportedSchema = payload.schemaVersion === 3 || payload.schemaVersion === 4 || payload.schemaVersion === 5;
   add("version", "Versão do rascunho", supportedSchema,
-      payload.schemaVersion === 4 ? "Estrutura interna atual" :
+      payload.schemaVersion === 5 ? "Estrutura interna atual" :
+      payload.schemaVersion === 4 ? "Estrutura anterior compatível" :
       payload.schemaVersion === 3 ? "Estrutura anterior compatível" : "Rascunho legado: refaça a preparação");
   add("issuer", "Dados do emitente",
       Boolean(text(issuer.cnpj) && text(issuer.stateRegistration) && issuer.taxRegime === "simples_nacional" && issuer.taxRegimeConfirmed === true),
@@ -430,6 +431,73 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
       !carrierSelected ? "Nenhuma transportadora vinculada; informe uma se a operação exigir." :
       carrierProblems.length ? carrierProblems.join("; ") :
       "Identificação e dados disponíveis mapeados para os campos Focus; confirme os dados cadastrais.");
+  const vehicle = obj(transport.vehicle);
+  const vehicleSelected = [vehicle.plate, vehicle.state, vehicle.rntc].some(value => text(value) !== "");
+  const vehicleProblems: string[] = [];
+  const mappedVehicle: Json = {};
+  if (vehicleSelected) {
+    const plate = text(vehicle.plate).toUpperCase();
+    if (/^[A-Z0-9]{7}$/.test(plate)) mappedVehicle.veiculo_placa = plate;
+    else vehicleProblems.push("placa de 7 letras ou números");
+    const vehicleUf = text(vehicle.state).toUpperCase();
+    if (vehicleUf) {
+      if (/^[A-Z]{2}$/.test(vehicleUf)) mappedVehicle.veiculo_uf = vehicleUf;
+      else vehicleProblems.push("UF do veículo com duas letras");
+    }
+    const rntc = text(vehicle.rntc);
+    if (rntc) {
+      if (rntc.length <= 20) mappedVehicle.veiculo_rntc = rntc;
+      else vehicleProblems.push("RNTC/ANTT com até 20 caracteres");
+    }
+  }
+  if (vehicleSelected && vehicleProblems.length === 0) Object.assign(requestPreview, mappedVehicle);
+  add("veiculo_transporte", "Veículo de transporte", !vehicleSelected || vehicleProblems.length === 0,
+      !vehicleSelected ? "Não informado; preencha quando a operação usar veículo identificado." :
+      vehicleProblems.length ? vehicleProblems.join("; ") :
+      "Placa e dados informados mapeados. A placa é exigida pelo leiaute quando o grupo de veículo é usado.");
+
+  const rawVolumes = transport.volumes;
+  const sourceVolumes = Array.isArray(rawVolumes) ? rawVolumes : [];
+  const volumeProblems: string[] = [];
+  const mappedVolumes: Json[] = [];
+  if (rawVolumes != null && !Array.isArray(rawVolumes)) volumeProblems.push("A lista de volumes precisa ser válida.");
+  if (sourceVolumes.length > 5000) volumeProblems.push("A lista de volumes excede 5000 itens.");
+  sourceVolumes.forEach((rawVolume, index) => {
+    const volume = obj(rawVolume), mapped: Json = {};
+    const quantity = Number(volume.quantity);
+    if (Number.isSafeInteger(quantity) && quantity > 0 && quantity <= 999_999_999_999_999)
+      mapped.quantidade = quantity;
+    else volumeProblems.push(\`Volume \${index + 1}: quantidade inteira positiva\`);
+    for (const [source, target] of [["species", "especie"], ["brand", "marca"], ["number", "numero"]]) {
+      const fieldValue = text(volume[source]);
+      if (fieldValue) {
+        if (fieldValue.length <= 60) mapped[target] = fieldValue;
+        else volumeProblems.push(\`Volume \${index + 1}: \${target} excede 60 caracteres\`);
+      }
+    }
+    const netWeightMilli = volume.netWeightMilli;
+    const grossWeightMilli = volume.grossWeightMilli;
+    const validWeight = (value: unknown) => Number.isSafeInteger(value) && Number(value) > 0 && Number(value) <= 999_999_999_999_999;
+    if (netWeightMilli != null) {
+      if (validWeight(netWeightMilli)) mapped.peso_liquido = Number(netWeightMilli) / 1000;
+      else volumeProblems.push(\`Volume \${index + 1}: peso líquido positivo com até 3 casas decimais\`);
+    }
+    if (grossWeightMilli != null) {
+      if (validWeight(grossWeightMilli)) mapped.peso_bruto = Number(grossWeightMilli) / 1000;
+      else volumeProblems.push(\`Volume \${index + 1}: peso bruto positivo com até 3 casas decimais\`);
+    }
+    if (validWeight(netWeightMilli) && validWeight(grossWeightMilli) && Number(netWeightMilli) > Number(grossWeightMilli))
+      volumeProblems.push(\`Volume \${index + 1}: peso líquido maior que o peso bruto\`);
+    mappedVolumes.push(mapped);
+  });
+  const volumesValid = volumeProblems.length === 0;
+  if (volumesValid && mappedVolumes.length) requestPreview.volumes = mappedVolumes;
+  add("volumes", "Volumes e pesos", volumesValid,
+      !sourceVolumes.length && rawVolumes == null ? "Não informados; inclua-os quando fizerem parte da operação." :
+      !sourceVolumes.length && !volumeProblems.length ? "Nenhum volume informado." :
+      volumeProblems.length ? volumeProblems.slice(0, 8).join("; ") :
+      "Quantidades, identificação e pesos informados convertidos para o formato Focus.");
+
   const payments = Array.isArray(payload.payments) ? payload.payments : [];
   const paymentMethods = new Set(["01", "02", "03", "04", "05", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "90", "91", "99"]);
   const mappedPayments: Json[] = [];

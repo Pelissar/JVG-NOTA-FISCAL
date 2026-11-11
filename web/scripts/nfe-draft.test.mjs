@@ -40,6 +40,27 @@ test('impede excesso de itens', () => {
   assert.throws(() => parseNfeDraftInput({ ...draft(), items: Array.from({ length: 21 }, () => draft().items[0]) }), /20 produtos/i);
 });
 
+
+test('veículo e volumes são opcionais e preservam apenas valores informados', () => {
+  const empty = parseNfeDraftInput(draft());
+  assert.equal(empty.vehicle, null);
+  assert.deepEqual(empty.volumes, []);
+  const result = parseNfeDraftInput({ ...draft(), vehicle: { plate: 'abc1d23', state: 'sp', rntc: 'ANTT-123' }, volumes: [{
+    quantity: '2', species: 'Caixas', brand: 'JVG', number: '001-002', netWeight: '1.250', grossWeight: '1.500'
+  }] });
+  assert.deepEqual(result.vehicle, { plate: 'ABC1D23', state: 'SP', rntc: 'ANTT-123' });
+  assert.deepEqual(result.volumes, [{ quantity: 2, species: 'Caixas', brand: 'JVG', number: '001-002', netWeightMilli: 1250, grossWeightMilli: 1500 }]);
+});
+
+test('veículo e volumes rejeitam grupos incompletos ou medidas inconsistentes', () => {
+  assert.throws(() => parseNfeDraftInput({ ...draft(), vehicle: { state: 'SP' } }), /placa/i);
+  assert.throws(() => parseNfeDraftInput({ ...draft(), vehicle: { plate: 'ABC123', state: 'SP' } }), /placa/i);
+  assert.throws(() => parseNfeDraftInput({ ...draft(), vehicle: { plate: 'ABC1D23', state: 'São' } }), /UF/i);
+  assert.throws(() => parseNfeDraftInput({ ...draft(), volumes: [{ quantity: '', species: 'Caixas' }] }), /quantidade inteira/i);
+  assert.throws(() => parseNfeDraftInput({ ...draft(), volumes: [{ quantity: '1', netWeight: '1.0001' }] }), /3 casas/i);
+  assert.throws(() => parseNfeDraftInput({ ...draft(), volumes: [{ quantity: '1', netWeight: '2', grossWeight: '1' }] }), /peso líquido/i);
+});
+
 test('transportadora é opcional e precisa apontar para um cadastro válido', () => {
   assert.equal(parseNfeDraftInput(draft()).carrierId, null);
   assert.equal(parseNfeDraftInput({ ...draft(), carrierId }).carrierId, carrierId);

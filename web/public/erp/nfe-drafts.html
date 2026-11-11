@@ -53,7 +53,29 @@
             <datalist id="cfopOptions"></datalist>
             <p class="hint"><a href="/erp/tax-profiles.html" class="fiscal-inline-link">Cadastrar perfis tributários da empresa</a>. A classificação vinculada ao produto é registrada no rascunho e comparada aos códigos informados; divergências e falta de revisão geram pendências. Não há cálculo automático de tributos.</p>
             <p class="hint">O CFOP sugerido pelo produto é preenchido apenas para facilitar o rascunho e pode ser alterado. Confira a operação, a UF e o regime com seu contador. <a href="/erp/cfop.html" class="fiscal-inline-link">Consultar tabela oficial CFOP</a>.</p>
-            </div><div data-fiscal-section="transport" hidden class="fiscal-pending"><h3>Transporte e volumes</h3><div class="field-grid"><label class="field"><span>Modalidade do frete</span><select name="transportMode"><option value="">Selecione conforme a operação</option><option value="0">0 · Por conta do remetente</option><option value="1">1 · Por conta do destinatário</option><option value="2">2 · Por conta de terceiros</option><option value="3">3 · Transporte próprio do remetente</option><option value="4">4 · Transporte próprio do destinatário</option><option value="9">9 · Sem ocorrência de transporte</option></select></label><label class="field"><span>Transportadora (opcional)</span><select name="carrierId" id="carrierId"><option value="">Não informada</option></select><small>O vínculo é guardado no documento para consulta e histórico; veículo, volumes e pesos continuam pendentes.</small></label></div></div><div data-fiscal-section="payment" hidden class="fiscal-pending"><h3>Pagamentos e duplicatas</h3><p>Meios de pagamento, parcelas, vencimentos e troco ainda precisam ser integrados ao documento fiscal.</p></div><div data-fiscal-section="review" hidden><div class="fiscal-pending"><h3>Conferência da NF-e</h3><p>Confira o total comercial, os campos fiscais mapeados e as pendências. O ERP ainda não apura impostos e a transmissão permanece desativada.</p></div><div class="summary"><span>Total comercial</span><strong id="total">R$ 0,00</strong></div>
+            </div><div data-fiscal-section="transport" hidden class="fiscal-pending">
+              <h3>Transporte e volumes</h3>
+              <div class="field-grid">
+                <label class="field"><span>Modalidade do frete</span><select name="transportMode"><option value="">Selecione conforme a operação</option><option value="0">0 · Por conta do remetente</option><option value="1">1 · Por conta do destinatário</option><option value="2">2 · Por conta de terceiros</option><option value="3">3 · Transporte próprio do remetente</option><option value="4">4 · Transporte próprio do destinatário</option><option value="9">9 · Sem ocorrência de transporte</option></select></label>
+                <label class="field"><span>Transportadora (opcional)</span><select name="carrierId" id="carrierId"><option value="">Não informada</option></select><small>Vinculada ao documento e ao histórico fiscal.</small></label>
+              </div>
+              <h4>Veículo da carga (opcional)</h4>
+              <div class="field-grid">
+                <label class="field"><span>Placa</span><input name="vehiclePlate" maxlength="7" pattern="[A-Za-z0-9]{7}" autocomplete="off" placeholder="ABC1D23"><small>Se informar dados do veículo, a placa é necessária.</small></label>
+                <label class="field"><span>UF do veículo</span><input name="vehicleState" maxlength="2" pattern="[A-Za-z]{2}" autocomplete="address-level1" placeholder="SP"></label>
+                <label class="field"><span>Registro RNTC/ANTT (opcional)</span><input name="vehicleRntc" maxlength="20" autocomplete="off"></label>
+              </div>
+              <h4>Volumes transportados (opcional)</h4>
+              <div class="field-grid">
+                <label class="field"><span>Quantidade de volumes</span><input name="volumeQuantity" type="number" min="1" max="999999999999999" step="1"></label>
+                <label class="field"><span>Espécie</span><input name="volumeSpecies" maxlength="60" placeholder="Caixas"></label>
+                <label class="field"><span>Marca</span><input name="volumeBrand" maxlength="60"></label>
+                <label class="field"><span>Identificação</span><input name="volumeNumber" maxlength="60"></label>
+                <label class="field"><span>Peso líquido</span><input name="volumeNetWeight" type="number" min="0.001" step="0.001" inputmode="decimal"></label>
+                <label class="field"><span>Peso bruto</span><input name="volumeGrossWeight" type="number" min="0.001" step="0.001" inputmode="decimal"></label>
+              </div>
+              <p class="hint">Informe apenas dados reais da operação. Se preencher qualquer dado de volume, informe também a quantidade; pesos aceitam até três casas decimais.</p>
+            </div><div data-fiscal-section="payment" hidden class="fiscal-pending"><h3>Pagamentos e duplicatas</h3><p>Meios de pagamento, parcelas, vencimentos e troco ainda precisam ser integrados ao documento fiscal.</p></div><div data-fiscal-section="review" hidden><div class="fiscal-pending"><h3>Conferência da NF-e</h3><p>Confira o total comercial, os campos fiscais mapeados e as pendências. O ERP ainda não apura impostos e a transmissão permanece desativada.</p></div><div class="summary"><span>Total comercial</span><strong id="total">R$ 0,00</strong></div>
           </div></div>
           <div class="form-footer"><p>O rascunho oferece um checklist interno de preparação. <b>Não</b> gera XML, DANFE ou nota autorizada.</p><button class="save-button" id="saveButton" disabled type="submit">Salvar rascunho NF-e</button></div>
         </form>

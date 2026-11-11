@@ -207,6 +207,46 @@ test('parser salva campos opcionais sem presumir valores e rejeita codigos ou da
   assert.throws(()=>parseNfeDraftInput({...base,nature:'x'.repeat(61)}),/3 a 60/);
 });
 
+
+test('schema 5 do rascunho fiscal é reconhecido sem liberar emissão', () => {
+  const payload = valid();
+  payload.schemaVersion = 5;
+  const result = reviewNfeDocument(payload);
+  assert.equal(check(result, 'version').ok, true);
+  assert.equal(result.transmissionEnabled, false);
+  assert.equal(result.fiscalApproved, false);
+});
+
+test('prévia mapeia veículo e volumes informados para os campos Focus sem inventar dados', () => {
+  const payload = focusPayload();
+  payload.transport.vehicle = { plate: 'abc1d23', state: 'sp', rntc: 'ANTT-123' };
+  payload.transport.volumes = [{
+    quantity: 2, species: 'Caixas', brand: 'JVG', number: '001-002',
+    netWeightMilli: 1250, grossWeightMilli: 1500,
+  }];
+  const result = reviewFocusNfePayload(payload);
+  assert.equal(result.requestPreview.veiculo_placa, 'ABC1D23');
+  assert.equal(result.requestPreview.veiculo_uf, 'SP');
+  assert.equal(result.requestPreview.veiculo_rntc, 'ANTT-123');
+  assert.deepEqual(result.requestPreview.volumes, [{
+    quantidade: 2, especie: 'Caixas', marca: 'JVG', numero: '001-002', peso_liquido: 1.25, peso_bruto: 1.5,
+  }]);
+  assert.equal(check(result, 'veiculo_transporte').ok, true);
+  assert.equal(check(result, 'volumes').ok, true);
+  assert.equal(result.canSend, false);
+});
+
+test('prévia bloqueia o grupo de veículo incompleto e omite campos parciais', () => {
+  const payload = focusPayload();
+  payload.transport.vehicle = { state: 'SP', rntc: 'ANTT-123' };
+  const result = reviewFocusNfePayload(payload);
+  assert.equal(check(result, 'veiculo_transporte').ok, false);
+  assert.equal('veiculo_placa' in result.requestPreview, false);
+  assert.equal('veiculo_uf' in result.requestPreview, false);
+  assert.equal('veiculo_rntc' in result.requestPreview, false);
+  assert.equal(result.canSend, false);
+});
+
 test('pagamento usa o contrato Focus e nao repassa objetos internos sem validacao', () => {
   const payload=focusPayload();
   payload.payments=[{indicator:0,method:'01',amountCents:1000}];

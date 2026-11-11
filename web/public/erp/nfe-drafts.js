@@ -198,6 +198,16 @@
         ' · Frete: ' + (draft.transportMode == null ? 'não informado' : String(draft.transportMode)));
       if (draft.carrier) appendLine(target, 'p', 'Transportadora: ' + (draft.carrier.name || 'Não informada') +
         (draft.carrier.documentNumber ? ' · ' + draft.carrier.documentNumber : ''));
+      if (draft.vehicle && draft.vehicle.plate)
+        appendLine(target, 'p', 'Veículo: ' + draft.vehicle.plate.toUpperCase() +
+          (draft.vehicle.state ? ' · ' + draft.vehicle.state.toUpperCase() : '') +
+          (draft.vehicle.rntc ? ' · RNTC ' + draft.vehicle.rntc : ''));
+      (Array.isArray(draft.volumes) ? draft.volumes : []).forEach(function (volume) {
+        var weight = volume.netWeightMilli != null || volume.grossWeightMilli != null ?
+          ' · peso líquido/bruto: ' + (volume.netWeightMilli == null ? '—' : (Number(volume.netWeightMilli) / 1000).toFixed(3)) +
+          '/' + (volume.grossWeightMilli == null ? '—' : (Number(volume.grossWeightMilli) / 1000).toFixed(3)) : '';
+        appendLine(target, 'p', 'Volumes: ' + volume.quantity + (volume.species ? ' · ' + volume.species : '') + weight);
+      });
       if (draft.sourceOrder && draft.sourceOrder.number)
         appendLine(target, 'p', 'Pedido de origem: ' + draft.sourceOrder.number + ' · situação ' + (draft.sourceOrder.status || ''));
       appendLine(target, 'p', 'Total comercial: ' + money.format(Number(draft.totalCents || 0) / 100));
@@ -418,6 +428,19 @@
           buyerPresence: selectedNumber('buyerPresence'),
           transportMode: selectedNumber('transportMode'),
           carrierId: form.elements.namedItem('carrierId').value || null,
+          vehicle: {
+            plate: form.elements.namedItem('vehiclePlate').value.trim(),
+            state: form.elements.namedItem('vehicleState').value.trim(),
+            rntc: form.elements.namedItem('vehicleRntc').value.trim(),
+          },
+          volumes: [{
+            quantity: form.elements.namedItem('volumeQuantity').value,
+            species: form.elements.namedItem('volumeSpecies').value.trim(),
+            brand: form.elements.namedItem('volumeBrand').value.trim(),
+            number: form.elements.namedItem('volumeNumber').value.trim(),
+            netWeight: form.elements.namedItem('volumeNetWeight').value,
+            grossWeight: form.elements.namedItem('volumeGrossWeight').value,
+          }],
           recipientId: form.elements.namedItem('recipientId').value,
           sourceOrderId: state.sourceOrderId,
           items: readItems(),
