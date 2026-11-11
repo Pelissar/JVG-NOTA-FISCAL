@@ -1,8 +1,11 @@
 import { getJvgUser } from "../../jvg-auth";
 import { apiJson, JvgBackendError, safeError } from "../../../lib/jvg-backend";
 import { validCnpj } from "../../../lib/fiscal-company";
+import { focusRuntimeEnv } from "../../../lib/focus/runtime-env";
+import { brasilApiCnpjFields, cnpjWsFields, focusCnpjFields, mergeCnpjFields } from "../../../lib/cnpj-lookup";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 type ProviderData = Record<string, unknown>;
 const digits = (value: string) => value.replace(/\D/g, "");
@@ -51,46 +54,87 @@ async function lookupCep(cep: string) {
   throw new JvgBackendError("Consulta de CEP indisponível no ViaCEP e na BrasilAPI. Preencha o endereço manualmente ou tente mais tarde.", 503);
 }
 
+async function requestFocusCnpj(cnpj: string, token: string): Promise<ProviderResult> {
+  try {
+    const authorization = Buffer.from(token + ":", "utf8").toString("base64");
+    const response = await fetch("https://api.focusnfe.com.br/v2/cnpjs/" + cnpj, {
+      headers: { Accept: "application/json", Authorization: "Basic " + authorization },
+      cache: "no-store",
+      signal: AbortSignal.timeout(6500),
+    });
+    if (!response.ok) return { status: response.status, data: {} };
+    const data: unknown = await response.json().catch(() => null);
+    if (!data || Array.isArray(data) || typeof data !== "object") return { status: 502, data: {} };
+    return { status: 200, data: data as ProviderData };
+  } catch {
+    return { status: 503, data: {} };
+  }
+}
+
 async function lookupCnpj(cnpj: string) {
-  const first = await requestProvider(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
-  if (first.status === 200 && first.data.razao_social) {
-    const data = first.data;
-    return { source: "BrasilAPI", cnpj, legalName: valueText(data.razao_social),
-      tradeName: valueText(data.nome_fantasia), email: valueText(data.email, 160),
-      phone: valueText(data.ddd_telefone_1, 25), cnae: digits(String(data.cnae_fiscal ?? "")),
-      street: valueText(data.logradouro), number: valueText(data.numero, 20),
-      complement: valueText(data.complemento, 100), district: valueText(data.bairro, 100),
-      city: valueText(data.municipio, 100), state: valueText(data.uf, 2),
-      cityCode: digits(String(data.codigo_municipio_ibge ?? "")),
-      postalCode: digits(valueText(data.cep, 10)) };
+  const isNumericCnpj = /^\d{14}$/.test(cnpj);
+  const masterToken = focusRuntimeEnv("JVG_FOCUS_MASTER_TOKEN");
+  const [focus, brasil] = await Promise.all([
+    isNumericCnpj && masterToken ? requestFocusCnpj(cnpj, masterToken) : Promise.resolve({ status: masterToken ? 501 : 0, data: {} as ProviderData }),
+    requestProvider("https://brasilapi.com.br/api/cnpj/v1/" + encodeURIComponent(cnpj)),
+  ]);
+
+  const sources: string[] = [];
+  const mapped: ReturnType<typeof focusCnpjFields>[] = [];
+  if (focus.status === 200 && focus.data.razao_social) {
+    sources.push("Focus NFe");
+    mapped.push(focusCnpjFields(focus.data, cnpj));
   }
-  // O endpoint publico alternativo tem limite de 3 consultas/minuto.
-  // So e usado se o principal falhar, e apenas para CNPJ numerico.
-  const second: ProviderResult = /^\d{14}$/.test(cnpj)
-    ? await requestProvider(`https://publica.cnpj.ws/cnpj/${cnpj}`)
-    : { status: 501, data: {} };
-  const establishment = objectValue(second.data.estabelecimento);
-  if (second.status === 200 && second.data.razao_social && establishment.cnpj) {
-    const city = objectValue(establishment.cidade);
-    const state = objectValue(establishment.estado);
-    const activity = objectValue(establishment.atividade_principal);
-    return { source: "CNPJ.ws", cnpj, legalName: valueText(second.data.razao_social),
-      tradeName: valueText(establishment.nome_fantasia), email: valueText(establishment.email, 160),
-      phone: digits(valueText(establishment.ddd1, 3) + valueText(establishment.telefone1, 20)),
-      cnae: digits(String(activity.id ?? "")),
-      street: valueText(establishment.logradouro), number: valueText(establishment.numero, 20),
-      complement: valueText(establishment.complemento, 100), district: valueText(establishment.bairro, 100),
-      city: valueText(city.nome, 100), state: valueText(state.sigla, 2),
-      cityCode: digits(String(city.ibge_id ?? "")),
-      postalCode: digits(valueText(establishment.cep, 10)) };
+  if (brasil.status === 200 && brasil.data.razao_social) {
+    sources.push("BrasilAPI");
+    mapped.push(brasilApiCnpjFields(brasil.data, cnpj));
   }
-  if (first.status === 404 && (second.status === 404 || second.status === 501)) {
-    throw new JvgBackendError("CNPJ não encontrado nas fontes públicas. Confira os 14 caracteres.", 404);
+
+  // CNPJ.ws public API has a strict 3 requests/minute limit; use it only when both main sources fail.
+  let cnpjWsStatus = 501;
+  if (!mapped.length && isNumericCnpj) {
+    const fallback = await requestProvider("https://publica.cnpj.ws/cnpj/" + cnpj);
+    cnpjWsStatus = fallback.status;
+    const establishment = objectValue(fallback.data.estabelecimento);
+    if (fallback.status === 200 && fallback.data.razao_social && establishment.cnpj) {
+      sources.push("CNPJ.ws");
+      mapped.push(cnpjWsFields(fallback.data, cnpj));
+    }
   }
-  if (first.status === 429 || second.status === 429) {
-    throw new JvgBackendError("Limite de consultas de CNPJ atingido. Aguarde alguns minutos ou preencha manualmente.", 429);
+
+  if (!mapped.length) {
+    if (focus.status === 429 || brasil.status === 429 || cnpjWsStatus === 429)
+      throw new JvgBackendError("Limite de consultas de CNPJ atingido. Aguarde alguns minutos ou preencha manualmente.", 429);
+    const notFound = focus.status === 404 || brasil.status === 404 || cnpjWsStatus === 404;
+    if (notFound && (focus.status === 404 || brasil.status === 404))
+      throw new JvgBackendError("CNPJ n\u00e3o encontrado nas fontes consultadas. Confira os 14 caracteres.", 404);
+    throw new JvgBackendError("Consulta de CNPJ indispon\u00edvel. Tente novamente ou preencha os dados manualmente.", 503);
   }
-  throw new JvgBackendError("Consulta de CNPJ indisponível nas fontes públicas. Preencha manualmente e tente novamente depois.", 503);
+
+  const data = mergeCnpjFields(cnpj, ...mapped);
+  const focusConfigured = Boolean(masterToken);
+  const focusConsulted = isNumericCnpj && focusConfigured;
+  const focusNote = !isNumericCnpj
+    ? "A consulta de CNPJ da Focus aceita somente 14 dígitos; para este CNPJ alfanumérico foram usadas fontes complementares."
+    : !focusConfigured
+    ? "A consulta Focus ainda n\u00e3o est\u00e1 configurada neste servidor. Os dados dispon\u00edveis vieram das fontes complementares."
+    : focus.status === 200 && focus.data.razao_social
+      ? ""
+      : focus.status === 401 || focus.status === 403
+        ? "A Focus recusou o Token Master configurado; confira o segredo do servidor. Foram usadas fontes complementares."
+        : "A Focus n\u00e3o retornou dados; foram usadas fontes complementares.";
+  return {
+    source: sources.join(" + "),
+    ...data,
+    focusConfigured,
+    focusConsulted,
+    focusNote,
+    notices: [
+      "Confira os dados com a empresa antes de salvar; as bases cadastrais s\u00e3o atualizadas periodicamente.",
+      "A consulta Focus n\u00e3o fornece Inscri\u00e7\u00e3o Estadual nem Inscri\u00e7\u00e3o Municipal; confirme esses campos separadamente.",
+      data.simplesNational !== null ? "A informa\u00e7\u00e3o de op\u00e7\u00e3o pelo Simples \u00e9 apenas cadastral e n\u00e3o confirma o regime fiscal para emiss\u00e3o." : "",
+    ].filter(Boolean),
+  };
 }
 
 export async function GET(request: Request) {

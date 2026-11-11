@@ -189,7 +189,7 @@
     field('name','Nome / nome fantasia *',p.name,'required maxlength="160"',true)+
     field('legalName','Razão social',p.legalName,'maxlength="180"',true)+
     select('type','Tipo de pessoa',[['PJ','Pessoa jurídica'],['PF','Pessoa física'],['EXT','Estrangeiro']],p.type||'PJ',true)+
-    lookupField('document','CPF / CNPJ (consulta para PJ)',p.document,'maxlength="18"','cnpj',false)+
+    lookupField('document','CPF / CNPJ (consulta para PJ)',p.document,'maxlength="18"','cnpj',false)+'<p class="lookup-note field full" data-cnpj-lookup-status role="status" aria-live="polite" hidden></p>'+
     field('stateRegistration','Inscrição Estadual (IE)',p.stateRegistration,'maxlength="40"',false)+
     field('municipalRegistration','Inscrição Municipal (IM)',p.municipalRegistration,'maxlength="40"',false)+
     field('email','E-mail',p.email,'type="email" maxlength="160"',false)+
@@ -204,7 +204,7 @@
     field('state','UF',p.state,'maxlength="2"',false)+
     field('cityCode','Código IBGE do município',p.cityCode,'inputmode="numeric" maxlength="7"',false)+
     select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false')+
-    '<p class="lookup-note field full">Dados públicos sugeridos por ViaCEP/BrasilAPI. Confira antes de salvar. Nome e classificação são obrigatórios; CPF/CNPJ passa a ser obrigatório para fornecedor nacional. Complete endereço e código IBGE antes de usar o cadastro em documento fiscal.</p>';}
+    '<p class="lookup-note field full">A consulta de CNPJ combina a Focus com fontes cadastrais complementares. Confira os dados antes de salvar; IE e IM podem exigir confirmação direta com a empresa.</p>';}
   function updatePartyRequirements(form){if(!form||form.dataset.kind!=='client')return;var supplier=form.querySelector('[name="isSupplier"]'),type=form.querySelector('[name="type"]'),doc=form.querySelector('[name="document"]'),label=form.querySelector('label[for="f-document"]');var required=!!(supplier&&supplier.checked&&type&&type.value!=='EXT');if(doc)doc.required=required;if(label)label.textContent='CPF / CNPJ'+(required?' *':'');}
   function serviceForm(p){return field('code','Código do serviço *',p.code,'required maxlength="40"',false)+field('name','Descrição do serviço *',p.name,'required maxlength="160"',false)+field('description','Detalhamento',p.description,'maxlength="255"',true)+field('lc116','Subitem da LC 116',p.lc116,'maxlength="12"',false)+field('nbs','Código NBS',p.nbs,'maxlength="12"',false)+field('price','Valor (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
   async function callApi(endpoint,options){
@@ -223,8 +223,26 @@
     var target=form.querySelector('[name="'+name+'"]');
     if(target&&value!==undefined&&value!==null&&String(value).trim())target.value=String(value);
   }
+  function setLookupField(form,name,value){
+    var target=form.querySelector('[name="'+name+'"]');
+    if(target&&value!==undefined&&value!==null&&String(value).trim()&&!String(target.value||'').trim())target.value=String(value);
+  }
   function fillAddress(form,data){
     ['postalCode','street','number','complement','district','city','state','cityCode'].forEach(function(name){setFormField(form,name,data[name]);});
+  }
+  function fillLookupAddress(form,data){
+    ['postalCode','street','number','complement','district','city','state','cityCode'].forEach(function(name){setLookupField(form,name,data[name]);});
+  }
+  function showCnpjLookupStatus(form,data){
+    var status=form.querySelector('[data-cnpj-lookup-status]');if(!status)return;
+    var parts=['Fonte: '+(data.source||'consulta cadastral')+'.'];
+    if(data.registrationStatus)parts.push('Situação cadastral: '+data.registrationStatus+'.');
+    if(typeof data.simplesNational==='boolean')parts.push('Opção pelo Simples: '+(data.simplesNational?'sim':'não')+'; confirme com a contabilidade antes de usar na emissão.');
+    if(typeof data.mei==='boolean')parts.push('MEI: '+(data.mei?'sim':'não')+'.');
+    if(data.cnaeDescription)parts.push('CNAE principal: '+data.cnaeDescription+'.');
+    if(data.focusNote)parts.push(data.focusNote);
+    (data.notices||[]).forEach(function(notice){parts.push(notice);});
+    status.textContent=parts.join(' ');status.hidden=false;
   }
   async function lookupRegistration(button,kind){
     var form=button.closest('form');if(!form)return;
@@ -243,21 +261,24 @@
       if(!form.isConnected)return;
       if(kind==='cep'){fillAddress(form,data);}
       else {
-        setFormField(form,form.id==='companyForm'?'legalName':'name',data.legalName);
         if(form.id==='companyForm'){
-          setFormField(form,'tradeName',data.tradeName);
-          setFormField(form,'cnae',data.cnae);
-          setFormField(form,'fiscalEmail',data.email);
-          setFormField(form,'fiscalPhone',data.phone);
+          setLookupField(form,'legalName',data.legalName);
+          setLookupField(form,'tradeName',data.tradeName);
+          setLookupField(form,'cnae',data.cnae);
+          setLookupField(form,'fiscalEmail',data.email);
+          setLookupField(form,'fiscalPhone',data.phone);
         } else {
-          setFormField(form,'email',data.email);
-          setFormField(form,'phone',data.phone);
+          setLookupField(form,'name',data.tradeName||data.legalName);
+          setLookupField(form,'legalName',data.legalName);
+          setLookupField(form,'email',data.email);
+          setLookupField(form,'phone',data.phone);
         }
-        fillAddress(form,data);
+        fillLookupAddress(form,data);
+        showCnpjLookupStatus(form,data);
         if(data.postalCode&&/^\d{8}$/.test(data.postalCode)){
           try{
             var address=await callApi('/api/lookup?type=cep&value='+data.postalCode);
-            if(form.isConnected)fillAddress(form,address);
+            if(form.isConnected)fillLookupAddress(form,address);
           }catch(e){/* CNPJ valido mesmo que a consulta complementar do CEP falhe. */}
         }
       }
@@ -318,7 +339,7 @@
     return '<div class="field full"><strong>Identificação e contato fiscal</strong></div>'+
       '<div class="field full"><strong>Enquadramento tributário</strong></div>'+regimeBlock+
       field('tradeName','Nome fantasia',company.trade_name||'','maxlength="160"',false)+
-      lookupField('cnpj','CNPJ (numérico ou alfanumérico)',company.cnpj||'','maxlength="18" placeholder="00.000.000/0000-00"','cnpj',false)+
+      lookupField('cnpj','CNPJ (numérico ou alfanumérico)',company.cnpj||'','maxlength="18" placeholder="00.000.000/0000-00"','cnpj',false)+'<p class="lookup-note field full" data-cnpj-lookup-status role="status" aria-live="polite" hidden></p>'+
       field('stateRegistration','Inscrição Estadual (IE)',company.state_registration||'','maxlength="40"',false)+
       field('municipalRegistration','Inscrição Municipal',company.municipal_registration||'','maxlength="40"',false,'Se informar, preencha também o CNAE fiscal.')+
       field('cnae','CNAE fiscal (7 dígitos)',company.cnae||'','inputmode="numeric" maxlength="10"',false,'A Focus exige o par CNAE e Inscrição Municipal quando esses dados forem enviados.')+
