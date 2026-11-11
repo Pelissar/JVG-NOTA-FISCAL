@@ -102,7 +102,6 @@ test("confirmação vazia é bloqueada e uma NF-e recebida sem movimentos pode s
   assert.match(script, /CFOP e perfil fiscal não serão presumidos/);
   assert.ok(script.includes("Preencher NCM/CEST disponíveis no XML"));
   assert.ok(script.includes("NCM/CEST ausentes preenchidos com os valores do XML"));
-  assert.match(script, /Preencher NCM\\/CEST disponíveis no XML/);
   assert.match(script, /data-fill-classification/);
   assert.match(script, /Marque “Lançar no estoque” em pelo menos um item/);
   assert.match(page, /Confirmar entrada grava os movimentos de compra de forma única/);
