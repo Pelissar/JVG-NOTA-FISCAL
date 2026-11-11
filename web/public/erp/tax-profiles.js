@@ -21,6 +21,15 @@
   const operationLabels = { interna: 'Venda interna', interestadual: 'Venda interestadual' };
   const operationNames = ['interna', 'interestadual'];
 
+  function updateCsosnHelp() {
+    const control = form.elements.namedItem('csosn');
+    const help = document.getElementById('csosnHelp');
+    if (!control || !help) return;
+    help.textContent = control.value.trim() === '102'
+      ? '102 = tributada pelo Simples Nacional sem permissão de crédito de ICMS ao destinatário. Use somente na operação confirmada pela contabilidade; mercadoria sujeita à ST precisa de classificação própria.'
+      : 'Use o código indicado pelo contador para a operação.';
+  }
+
   function show(message, tone) {
     status.textContent = message;
     status.className = `notice status-banner ${tone || 'info'}`;
@@ -97,6 +106,7 @@
     setValue('name', record.name);
     setValue('operation', operation);
     for (const field of ['cfop', 'csosn', 'pisCst', 'cofinsCst', 'cstIbsCbs', 'classTrib']) setValue(field, variant[field]);
+    updateCsosnHelp();
     document.getElementById('formTitle').textContent = variants[operation]
       ? `Editar regra · ${operationLabels[operation]}`
       : `Adicionar regra · ${operationLabels[operation]}`;
@@ -109,6 +119,7 @@
 
   function resetForm() {
     form.reset();
+    updateCsosnHelp();
     setValue('profileId', '');
     document.getElementById('formTitle').textContent = 'Criar perfil';
     save.textContent = 'Salvar regra da operação';
@@ -245,6 +256,9 @@
       show(error.message, 'error');
     }
   });
+
+  form.elements.namedItem('csosn').addEventListener('input', updateCsosnHelp);
+  updateCsosnHelp();
 
   const loading = document.createElement('p');
   loading.className = 'loading-state';
