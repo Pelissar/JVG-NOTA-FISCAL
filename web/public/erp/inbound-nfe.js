@@ -29,7 +29,8 @@
     var canTrack=!!(item.productId&&products.some(function(product){return product.id===item.productId&&product.tracksStock;}));
     var product=products.find(function(row){return row.id===item.productId;});
     var taxDetails=item.taxes&&Object.keys(item.taxes).length?'<details class="item-tax-details"><summary>Impostos do XML</summary><pre>'+escapeHtml(JSON.stringify(item.taxes,null,2))+'</pre></details>':'<small class="stock-hint">XML sem grupo de impostos detalhado neste item.</small>';
-    return '<article class="review-item" data-line="'+escapeHtml(item.lineNumber)+'"><div class="review-item-main"><strong>'+escapeHtml(item.description)+'</strong><small>Item '+escapeHtml(item.lineNumber)+' · código fornecedor '+escapeHtml(item.supplierCode||'—')+' · GTIN '+escapeHtml(item.gtin||'sem GTIN')+'</small>'+taxDetails+'</div><label class="review-field"><span>Produto cadastrado</span><select name="productId">'+productOptions(item.productId)+'</select></label><div class="review-item-meta">'+escapeHtml(item.quantity)+' '+escapeHtml(item.unit)+'<small>Qtd. recebida</small></div><div class="review-item-meta">'+money(item.total)+'<small>Total do item</small></div><label class="stock-choice"><input type="checkbox" name="trackStock" '+(item.trackStock&&canTrack?'checked':'')+' '+(canTrack?'':'disabled')+'><span>Lançar no estoque</span></label><small class="stock-hint">'+(product&&!product.tracksStock?'Produto sem controle de estoque':!item.productId?'Associe um produto':'')+'</small></article>';
+    var createProduct='<button class="secondary-button product-create-trigger" type="button" data-create-product'+(item.productId?' hidden':'')+'>Cadastrar produto deste XML</button><div class="product-create-panel" hidden><p class="product-create-note">Descrição, unidade, GTIN, NCM/CEST e custo unitário serão trazidos do XML. O código do fornecedor é apenas uma sugestão de SKU interno. A nota não informa preço de venda, então o cadastro começa em R$ 0,00. CFOP e perfil fiscal não serão presumidos.</p><div class="product-create-grid"><label class="review-field"><span>SKU interno *</span><input name="newProductSku" maxlength="40" value="'+escapeHtml(String(item.supplierCode||'').slice(0,40))+'" required></label><label class="review-field"><span>Preço de venda (R$) *</span><input name="newProductSalePrice" type="number" min="0" step="0.01" value="0.00" required></label></div><div class="product-create-actions"><button class="primary-button" type="button" data-save-product>Salvar produto e vincular</button><button class="secondary-button" type="button" data-cancel-product>Cancelar</button></div></div>';
+    return '<article class="review-item" data-line="'+escapeHtml(item.lineNumber)+'"><div class="review-item-main"><strong>'+escapeHtml(item.description)+'</strong><small>Item '+escapeHtml(item.lineNumber)+' · código fornecedor '+escapeHtml(item.supplierCode||'—')+' · GTIN '+escapeHtml(item.gtin||'sem GTIN')+'</small>'+taxDetails+'</div><label class="review-field"><span>Produto cadastrado</span><select name="productId">'+productOptions(item.productId)+'</select></label><div class="review-item-meta">'+escapeHtml(item.quantity)+' '+escapeHtml(item.unit)+'<small>Qtd. recebida</small></div><div class="review-item-meta">'+money(item.total)+'<small>Total do item</small></div><label class="stock-choice"><input type="checkbox" name="trackStock" '+(item.trackStock&&canTrack?'checked':'')+' '+(canTrack?'':'disabled')+'><span>Lançar no estoque</span></label><small class="stock-hint">'+(product&&!product.tracksStock?'Produto sem controle de estoque':!item.productId?'Associe um produto':'')+'</small>'+createProduct+'</article>';
   }
   function showFiscalData(doc){
     var root=$('fiscalDataReview'), fiscal=doc.fiscalData||{}, info=fiscal.infNFe||{}, totals=info.total||{};
@@ -58,6 +59,7 @@
     $('reviewItems').querySelectorAll('select,input').forEach(function(input){input.disabled=input.disabled||locked;});
     $('saveReviewButton').hidden=locked;
     $('receiveButton').hidden=locked;
+    $('saveReviewButton').textContent=recoverable?'Reabrir e salvar conferência':'Salvar conferência';
     $('receiveButton').textContent=recoverable?'Reabrir e lançar no estoque':'Confirmar entrada no estoque';
     $('closeReview').textContent='Fechar';
     $('reviewCard').hidden=false;
@@ -79,6 +81,7 @@
       $('officialStatus').disabled=updatedLocked;
       $('saveReviewButton').hidden=updatedLocked;
       $('receiveButton').hidden=updatedLocked;
+      $('saveReviewButton').textContent=updatedRecoverable?'Reabrir e salvar conferência':'Salvar conferência';
       $('receiveButton').textContent=updatedRecoverable?'Reabrir e lançar no estoque':'Confirmar entrada no estoque';
     }catch(error){$('fiscalDataReview').innerHTML='<p class="error">Não foi possível abrir os dados completos do XML: '+escapeHtml(error.message)+'</p>';}
   }
@@ -117,6 +120,43 @@
     var row=event.target.closest('[data-line]'),checkbox=row&&row.querySelector('[name="trackStock"]');
     var product=products.find(function(item){return item.id===event.target.value;});
     if(checkbox){checkbox.disabled=!product||!product.tracksStock;checkbox.checked=!!product&&product.tracksStock;}
+    var createButton=row&&row.querySelector('[data-create-product]');
+    if(createButton)createButton.hidden=!!event.target.value;
+  });
+  $('reviewItems').addEventListener('click',async function(event){
+    var button=event.target.closest('[data-create-product],[data-cancel-product],[data-save-product]');
+    if(!button)return;
+    var row=button.closest('[data-line]'),panel=row&&row.querySelector('.product-create-panel');
+    if(!row||!panel)return;
+    if(button.hasAttribute('data-create-product')){panel.hidden=false;var skuInput=panel.querySelector('[name="newProductSku"]');if(skuInput)skuInput.focus();return;}
+    if(button.hasAttribute('data-cancel-product')){panel.hidden=true;return;}
+    if(button.disabled||!selectedDoc)return;
+    var lineNumber=Number(row.dataset.line);
+    var item=(selectedDoc.items||[]).find(function(entry){return Number(entry.lineNumber)===lineNumber;});
+    var sku=panel.querySelector('[name="newProductSku"]');
+    var salePrice=panel.querySelector('[name="newProductSalePrice"]');
+    if(!item||!sku||!salePrice)return;
+    if(!sku.value.trim()){setStatus('Informe o SKU interno do novo produto.',true);sku.focus();return;}
+    if(salePrice.value.trim()===''||!Number.isFinite(Number(salePrice.value))||Number(salePrice.value)<0){setStatus('Informe um preço de venda válido; use 0,00 se ainda não definiu o preço.',true);salePrice.focus();return;}
+    button.disabled=true;
+    try{
+      var gtin=String(item.gtin||'').toUpperCase();
+      if(gtin==='SEMGTIN')gtin='';
+      var ncm=/^\\d{8}$/.test(String(item.ncm||''))?String(item.ncm):'';
+      var cest=/^\\d{7}$/.test(String(item.cest||''))?String(item.cest):'';
+      var name=String(item.description||'').slice(0,160);
+      var unit=String(item.unit||'').slice(0,8);
+      var result=await api('/api/records',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'product',record:{sku:sku.value.trim(),name:name,unit:unit,gtin:gtin,ncm:ncm,cest:cest,cost:Number(item.unitPrice||0),price:Number(salePrice.value),active:true}})});
+      if(!result.id)throw new Error('O produto foi enviado, mas não retornou identificador para vínculo. Atualize o catálogo antes de tentar de novo.');
+      var created={id:String(result.id),sku:sku.value.trim(),name:name,unit:unit,gtin:gtin||'SEM GTIN',ncm:ncm,cest:cest,cost:Number(item.unitPrice||0),price:Number(salePrice.value),stock:0,tracksStock:true,active:true};
+      products.push(created);
+      item.productId=created.id;
+      item.trackStock=true;
+      row.outerHTML=itemMarkup(item);
+      $('uploadStatus').classList.remove('error');
+      $('uploadStatus').textContent='Produto criado a partir do XML e vinculado à conferência. Salve a conferência ou confirme a entrada para gravar o vínculo.';
+      setStatus('Produto criado e selecionado. A quantidade ainda só entra no estoque após a confirmação da NF-e.');
+    }catch(error){setStatus(error.message,true);button.disabled=false;}
   });
   $('closeReview').addEventListener('click',function(){$('reviewCard').hidden=true;selectedDoc=null;});
   $('reloadButton').addEventListener('click',load);
@@ -133,7 +173,7 @@
     if(receive&&items.some(function(item){return item.trackStock&&!item.productId;})){setStatus('Associe um produto a cada item marcado para movimentar o estoque.',true);return;}
     var buttons=[$('saveReviewButton'),$('receiveButton')];buttons.forEach(function(button){button.disabled=true;});
     try{
-      if(receive&&selectedDoc.receivedWithoutStock===true){
+      if(selectedDoc.receivedWithoutStock===true){
         await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'reopen-empty',id:selectedDoc.id})});
       }
       await api('/api/inbound-nfe',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:selectedDoc.id,supplierId:supplierId,items:items})});
@@ -141,7 +181,7 @@
         var confirmation=await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'confirm',id:selectedDoc.id,checkedOfficialStatus:true})});
         var stockLines=confirmation.result&&Number(confirmation.result.stockLines||0);
         $('uploadStatus').textContent='NF-e recebida. '+stockLines+' item(ns) geraram movimentos de estoque vinculados à chave.';
-      }else $('uploadStatus').textContent='Conferência salva sem movimentar estoque.';
+      }else $('uploadStatus').textContent=selectedDoc.receivedWithoutStock===true?'NF-e reaberta; conferência salva sem movimentar estoque.':'Conferência salva sem movimentar estoque.';
       $('reviewCard').hidden=true;selectedDoc=null;await load();
     }catch(error){setStatus(error.message,true);}
     finally{buttons.forEach(function(button){button.disabled=false;});}

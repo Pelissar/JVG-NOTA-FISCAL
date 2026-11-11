@@ -93,6 +93,11 @@ test("confirmação vazia é bloqueada e uma NF-e recebida sem movimentos pode s
   assert.match(route, /!hasStockItems\(items\)/);
   assert.match(script, /receivedWithoutStock/);
   assert.match(script, /Reabrir e lançar no estoque/);
+  assert.match(script, /Cadastrar produto deste XML/);
+  assert.match(script, /kind:'product'/);
+  assert.match(script, /cost:Number\(item\.unitPrice\|\|0\)/);
+  assert.match(script, /price:Number\(salePrice\.value\)/);
+  assert.match(script, /CFOP e perfil fiscal não serão presumidos/);
   assert.match(script, /Marque “Lançar no estoque” em pelo menos um item/);
   assert.match(page, /Confirmar entrada grava os movimentos de compra de forma única/);
 });
