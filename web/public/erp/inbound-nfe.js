@@ -9,17 +9,16 @@
   function setStatus(message,error){$('pageStatus').textContent=message;$('pageStatus').classList.toggle('error',!!error);}
   function render(){
     var root=$('documents');
-    if(!docs.length){root.innerHTML='<p class="empty-documents">Nenhuma NF-e de entrada importada nesta empresa ainda.</p>';return;}
-    root.innerHTML=docs.map(function(doc){
+    var activeDocs=docs.filter(function(doc){return doc.status!=='cancelled';});
+    if(!activeDocs.length){root.innerHTML='<p class="empty-documents">Nenhuma NF-e pendente ou recebida nesta empresa. Para lançar novamente uma nota cancelada, importe o XML outra vez.</p>';return;}
+    root.innerHTML=activeDocs.map(function(doc){
       var received=doc.status==='received';
-      var cancelled=doc.status==='cancelled';
       var receivedWithoutStock=received&&doc.receivedWithoutStock===true;
       var itemCount=Array.isArray(doc.items)?doc.items.length:0;
-      var statusLabel=cancelled?'Cancelada no ERP':received?(receivedWithoutStock?'Recebida sem estoque':'Recebida'):'Pendente de conferência';
-      var statusClass=cancelled?'cancelled':received?(receivedWithoutStock?'recovery':'received'):'';
-      var openLabel=cancelled?'Ver cancelamento':received?(receivedWithoutStock?'Corrigir estoque':'Ver'):'Conferir';
-      var cancellationNote=cancelled&&doc.cancellationReason?'<small>Motivo no ERP: '+escapeHtml(doc.cancellationReason)+'</small>':'';
-      return '<article class="document-row"><div class="document-main"><strong>NF-e '+escapeHtml(doc.invoiceNumber||'—')+' · '+escapeHtml(doc.issuerName||'Fornecedor')+'</strong><small>Emitida em '+date(doc.issuedAt)+' · Série '+escapeHtml(doc.series||'—')+' · chave '+escapeHtml(doc.accessKey)+(doc.carrierName?' · Transportadora: '+escapeHtml(doc.carrierName):'')+'</small>'+cancellationNote+'</div><div class="document-meta"><b>'+money(doc.total)+'</b><small>'+itemCount+' item(ns) · cStat '+escapeHtml(doc.authorizationStatus)+'</small></div><div class="document-meta total"><span class="status-chip '+statusClass+'">'+statusLabel+'</span></div><div class="document-actions"><button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">'+openLabel+'</button><a class="secondary-button" href="/api/inbound-nfe?xml='+encodeURIComponent(doc.id)+'">XML</a></div></article>';
+      var statusLabel=received?(receivedWithoutStock?'Recebida sem estoque':'Recebida'):'Pendente de conferência';
+      var statusClass=received?(receivedWithoutStock?'recovery':'received'):'';
+      var openLabel=received?(receivedWithoutStock?'Corrigir estoque':'Ver'):'Conferir';
+      return '<article class="document-row"><div class="document-main"><strong>NF-e '+escapeHtml(doc.invoiceNumber||'—')+' · '+escapeHtml(doc.issuerName||'Fornecedor')+'</strong><small>Emitida em '+date(doc.issuedAt)+' · Série '+escapeHtml(doc.series||'—')+' · chave '+escapeHtml(doc.accessKey)+(doc.carrierName?' · Transportadora: '+escapeHtml(doc.carrierName):'')+'</small></div><div class="document-meta"><b>'+money(doc.total)+'</b><small>'+itemCount+' item(ns) · cStat '+escapeHtml(doc.authorizationStatus)+'</small></div><div class="document-meta total"><span class="status-chip '+statusClass+'">'+statusLabel+'</span></div><div class="document-actions"><button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">'+openLabel+'</button><a class="secondary-button" href="/api/inbound-nfe?xml='+encodeURIComponent(doc.id)+'">XML</a></div></article>';
     }).join('');
   }
   function supplierOptions(selected, doc){
@@ -81,17 +80,18 @@
   }
   function applyReviewState(doc){
     var received=doc.status==='received';
-    var cancelled=doc.status==='cancelled';
+    if(doc.status==='cancelled'){
+      $('reviewCard').hidden=true;
+      setStatus('Este lançamento está cancelado e bloqueado. Importe o XML novamente para iniciar outro lançamento.',true);
+      return;
+    }
     var recoverable=received&&doc.receivedWithoutStock===true;
-    var locked=cancelled||(received&&!recoverable);
-    $('reviewHeading').textContent=cancelled?'Lançamento cancelado · NF-e '+doc.invoiceNumber:recoverable?'Corrigir entrada da NF-e '+doc.invoiceNumber:'Conferir NF-e '+doc.invoiceNumber;
-    $('authorizationSummary').textContent=cancelled
-      ?'Este lançamento foi cancelado no ERP em '+date(doc.cancelledAt)+'. A NF-e do fornecedor continua autorizada; esta ação não cancela o documento fiscal. Motivo: '+(doc.cancellationReason||'não informado')+'.'
-      :recoverable
+    var locked=received&&!recoverable;
+    $('reviewHeading').textContent=recoverable?'Corrigir entrada da NF-e '+doc.invoiceNumber:'Conferir NF-e '+doc.invoiceNumber;
+    $('authorizationSummary').textContent=recoverable
         ?'Esta NF-e foi marcada como recebida, mas não gerou movimentos de estoque. Associe o produto, marque o lançamento e confirme novamente.'
         :'Protocolo informado no XML: cStat '+doc.authorizationStatus+' — '+(doc.authorizationReason||'Autorização de uso')+'. Assinatura ainda precisa ser conferida no portal oficial.';
     $('authorizationSummary').classList.toggle('recovery',recoverable);
-    $('authorizationSummary').classList.toggle('cancelled',cancelled);
     $('officialStatus').disabled=locked;
     $('supplierSelect').disabled=locked;
     $('reviewItems').querySelectorAll('select,input').forEach(function(input){input.disabled=input.disabled||locked;});
@@ -99,16 +99,14 @@
     $('receiveButton').hidden=locked;
     $('saveReviewButton').textContent=recoverable?'Reabrir e salvar conferência':'Salvar conferência';
     $('receiveButton').textContent=recoverable?'Reabrir e lançar no estoque':'Confirmar entrada no estoque';
-    $('cancelEntryButton').hidden=cancelled;
     $('cancelEntryButton').textContent=received?'Estornar entrada no estoque':'Cancelar lançamento no ERP';
-    $('restoreEntryButton').hidden=!(cancelled&&doc.canReopenCancelled===true);
     $('cancelEntryDescription').textContent=received
       ?'Será criado um movimento inverso, mantendo os movimentos originais e o XML. O estorno só é permitido se o saldo atual comportar a devolução; isso não cancela a NF-e do fornecedor.'
       :'O lançamento será cancelado no ERP e o XML continuará no histórico. Nenhum movimento de estoque será criado.';
   }
   async function openReview(id){
     selectedDoc=docs.find(function(doc){return doc.id===id;});
-    if(!selectedDoc)return;
+    if(!selectedDoc||selectedDoc.status==='cancelled')return;
     $('reviewSummary').textContent=selectedDoc.issuerName+' · '+date(selectedDoc.issuedAt)+' · '+money(selectedDoc.total);
     $('supplierSelect').innerHTML=supplierOptions(selectedDoc.supplierId,selectedDoc);
     $('fiscalDataReview').innerHTML='<p>Carregando dados fiscais do XML...</p>';
@@ -164,6 +162,7 @@
   });
   $('documents').addEventListener('click',function(event){var button=event.target.closest('[data-open]');if(button)openReview(button.dataset.open);});
   $('reviewItems').addEventListener('change',function(event){
+    if(!selectedDoc||selectedDoc.status==='cancelled')return;
     if(event.target.name!=='productId'&&event.target.name!=='trackStock')return;
     var row=event.target.closest('[data-line]');
     var lineNumber=Number(row&&row.dataset.line);
@@ -188,7 +187,7 @@
     var button=event.target.closest('[data-create-product],[data-cancel-product],[data-save-product]');
     if(!button)return;
     var row=button.closest('[data-line]'),panel=row&&row.querySelector('.product-create-panel');
-    if(!row||!panel)return;
+    if(!row||!panel||!selectedDoc||selectedDoc.status==='cancelled')return;
     if(button.hasAttribute('data-create-product')){panel.hidden=false;var skuInput=panel.querySelector('[name="newProductSku"]');if(skuInput)skuInput.focus();return;}
     if(button.hasAttribute('data-cancel-product')){panel.hidden=true;return;}
     if(button.hasAttribute('data-fill-classification')){
@@ -249,7 +248,7 @@
     $('cancelEntryReason').value='';
   });
   $('confirmCancelEntry').addEventListener('click',async function(){
-    if(!selectedDoc)return;
+    if(!selectedDoc||selectedDoc.status==='cancelled')return;
     var reason=$('cancelEntryReason').value.trim();
     if(reason.length<5||reason.length>500){
       setStatus('Informe um motivo entre 5 e 500 caracteres.',true);
@@ -265,27 +264,14 @@
       $('reviewCard').hidden=true;
       selectedDoc=null;
       await load();
-      setStatus(reversed?'Entrada cancelada no ERP; '+reversed+' movimento(s) de estorno foram registrados.':'Lançamento cancelado no ERP sem movimentar o estoque. A NF-e original foi preservada.',false);
-    }catch(error){setStatus(error.message,true);}
-    finally{button.disabled=false;}
-  });
-  $('restoreEntryButton').addEventListener('click',async function(){
-    if(!selectedDoc||selectedDoc.canReopenCancelled!==true)return;
-    var button=$('restoreEntryButton');
-    button.disabled=true;
-    try{
-      await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'reopen-cancelled',id:selectedDoc.id})});
-      $('reviewCard').hidden=true;
-      selectedDoc=null;
-      await load();
-      setStatus('Rascunho restaurado. Confira os vínculos antes de lançar no estoque.',false);
+      setStatus(reversed?'Lançamento encerrado no ERP; '+reversed+' movimento(s) de estorno foram registrados. Para lançar novamente, importe o XML outra vez.':'Lançamento encerrado no ERP sem movimentar o estoque. Para lançar novamente, importe o XML outra vez.',false);
     }catch(error){setStatus(error.message,true);}
     finally{button.disabled=false;}
   });
   $('closeReview').addEventListener('click',function(){ $('reviewCard').hidden=true; });
   $('reviewForm').addEventListener('submit',async function(event){
     event.preventDefault();
-    if(!selectedDoc)return;
+    if(!selectedDoc||selectedDoc.status==='cancelled')return;
     var receive=event.submitter&&event.submitter.dataset.receive==='true';
     var items=collectReviewItems();
     if(receive&&!items.some(function(item){return item.trackStock;})){

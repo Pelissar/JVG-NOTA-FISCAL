@@ -168,7 +168,6 @@ export async function GET(request: Request) {
         receivedWithoutStock: row.status === "received" && !hasStockItems(items),
         createdAt: row.created_at, receivedAt: row.received_at,
         cancelledAt: row.cancelled_at || null, cancellationReason: row.cancellation_reason || "",
-        canReopenCancelled: row.status === "cancelled" && row.cancelled_from_status === "draft",
       } });
     }
     const xmlId = params.get("xml");
@@ -190,7 +189,7 @@ export async function GET(request: Request) {
       });
     }
     const rows = await dbRequest<Row[]>(
-      "/rest/v1/jvg_inbound_nfe_documents?" + scope(account) +
+      "/rest/v1/jvg_inbound_nfe_documents?" + scope(account) + "&status=neq.cancelled" +
       "&select=id,status,access_key,invoice_number,series,issued_at,issuer_document,issuer_name,authorization_status,authorization_reason,total_amount,supplier_party_id,carrier_party_id,carrier_document,carrier_name,items,created_at,received_at,cancelled_at,cancellation_reason,cancelled_from_status&order=created_at.desc&limit=100",
     );
     return apiJson({ documents: rows.map(row => ({
@@ -203,7 +202,6 @@ export async function GET(request: Request) {
       receivedWithoutStock: row.status === "received" && !hasStockItems(row.items),
       createdAt: row.created_at, receivedAt: row.received_at,
       cancelledAt: row.cancelled_at || null, cancellationReason: row.cancellation_reason || "",
-      canReopenCancelled: row.status === "cancelled" && row.cancelled_from_status === "draft",
     })) });
   } catch (error) { return safeError(error); }
 }
@@ -224,7 +222,7 @@ async function importXml(request: Request, account: SiteAccount, userId: string)
   catch (error) { throw new JvgBackendError(error instanceof Error ? error.message : "XML inválido.", 400); }
 
   const duplicate = await dbRequest<Row[]>(
-    "/rest/v1/jvg_inbound_nfe_documents?" + scope(account) + "&access_key=" + filterEq(parsed.accessKey) + "&select=id&limit=1",
+    "/rest/v1/jvg_inbound_nfe_documents?" + scope(account) + "&access_key=" + filterEq(parsed.accessKey) + "&status=neq.cancelled&select=id,status&limit=1",
   );
   if (duplicate.length) throw new JvgBackendError("Esta chave de acesso já foi importada nesta empresa.", 409);
 
@@ -301,20 +299,8 @@ export async function POST(request: Request) {
       });
       return apiJson({ ok: true, result });
     }
-    if (data.action === "reopen-cancelled") {
-      const id = validId(data.id, "Identificador");
-      const doc = await readDocument(account, id);
-      if (doc.status !== "cancelled" || doc.cancelled_from_status !== "draft")
-        throw new JvgBackendError("Só é possível reabrir um lançamento cancelado antes de movimentar o estoque.", 409);
-      const result = await dbRequest<Row>("/rest/v1/rpc/jvg_reopen_cancelled_inbound_nfe", {
-        method: "POST",
-        body: JSON.stringify({
-          p_tenant_id: account.tenant_id, p_company_id: account.company_id,
-          p_document_id: id, p_actor_user_id: user.userId,
-        }),
-      });
-      return apiJson({ ok: true, result });
-    }
+    if (data.action === "reopen-cancelled")
+      throw new JvgBackendError("Este lançamento foi cancelado definitivamente no ERP. Importe o XML novamente para iniciar outro lançamento.", 409);
     if (data.action === "reopen-empty") {
       const id = validId(data.id, "Identificador");
       const doc = await readDocument(account, id);
@@ -335,7 +321,7 @@ export async function POST(request: Request) {
     const id = validId(data.id, "Identificador");
     const doc = await readDocument(account, id);
     if (doc.status === "received") return apiJson({ ok: true, alreadyReceived: true });
-    if (doc.status === "cancelled") throw new JvgBackendError("Este lançamento foi cancelado no ERP. Reabra-o antes de receber.", 409);
+    if (doc.status === "cancelled") throw new JvgBackendError("Este lançamento foi cancelado definitivamente no ERP. Importe o XML novamente para iniciar outro lançamento.", 409);
     if (!doc.supplier_party_id) throw new JvgBackendError("Selecione o fornecedor antes de receber a NF-e.", 400);
     const items = Array.isArray(doc.items) ? doc.items as InboundNfeItem[] : [];
     if (!hasStockItems(items))

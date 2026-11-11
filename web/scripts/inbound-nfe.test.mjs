@@ -115,17 +115,28 @@ test("vínculo de produto criado é salvo antes da confirmação de estoque", ()
   assert.match(script, /Vínculos salvos no rascunho/);
 });
 
-test("cancelamento preserva a NF-e e estorna movimentos sem duplicidade", () => {
+test("cancelamento encerra o lancamento, preserva auditoria e permite reimportar a chave", () => {
   const route = readFileSync(new URL("../app/api/inbound-nfe/route.ts", import.meta.url), "utf8");
   const script = readFileSync(new URL("../public/erp/inbound-nfe.js", import.meta.url), "utf8");
   const page = readFileSync(new URL("../public/erp/inbound-nfe.html", import.meta.url), "utf8");
   const migration = readFileSync(new URL("../../supabase/migrations/20261111_jvg_inbound_nfe_cancel_reversal.sql", import.meta.url), "utf8");
+  const lockMigration = readFileSync(new URL("../../supabase/migrations/20261111_jvg_inbound_nfe_cancel_lock_reimport.sql", import.meta.url), "utf8");
   assert.match(route, /data\.action === "cancel"/);
   assert.match(route, /jvg_cancel_inbound_nfe/);
-  assert.match(route, /reopen-cancelled/);
+  assert.match(route, /data\.action === "reopen-cancelled"[\s\S]*?cancelado definitivamente[\s\S]*?409/);
+  assert.doesNotMatch(route, /rpc\/jvg_reopen_cancelled_inbound_nfe/);
+  assert.match(route, /\+ "&status=neq\.cancelled"/);
+  assert.match(route, /access_key=.*status=neq\.cancelled/);
+  assert.match(script, /status!=='cancelled'/);
+  assert.match(script, /Importe o XML novamente/);
+  assert.doesNotMatch(script, /restoreEntryButton/);
+  assert.doesNotMatch(page, /restoreEntryButton|Restaurar rascunho/);
+  assert.match(lockMigration, /UNIQUE \(company_id, access_key\)/);
+  assert.match(lockMigration, /where status <> 'cancelled'/);
+  assert.match(lockMigration, /drop function if exists public\.jvg_reopen_cancelled_inbound_nfe/);
   assert.match(script, /Cancelar lançamento no ERP/);
   assert.match(script, /Estornar entrada no estoque/);
-  assert.match(page, /nota do fornecedor não é cancelada na SEFAZ/);
+  assert.match(page, /NF-e do fornecedor não é cancelada na SEFAZ/);
   assert.match(migration, /status in \('draft', 'received', 'cancelled'\)/);
   assert.match(migration, /reversal_of_movement_id/);
   assert.match(migration, /-v_move\.quantity_delta/);
