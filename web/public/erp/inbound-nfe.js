@@ -41,6 +41,12 @@
   }
   async function persistReviewDraft(items){
     if(!selectedDoc)throw new Error('Abra uma NF-e antes de salvar a conferência.');
+    if(selectedDoc.status==='cancelled')throw new Error('Este lançamento está cancelado no ERP.');
+    if(selectedDoc.receivedWithoutStock===true){
+      await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'reopen-empty',id:selectedDoc.id})});
+      selectedDoc.status='draft';
+      selectedDoc.receivedWithoutStock=false;
+    }
     var nextItems=Array.isArray(items)?items:collectReviewItems();
     var supplierId=$('supplierSelect').value||null;
     await api('/api/inbound-nfe',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:selectedDoc.id,supplierId:supplierId,items:nextItems})});
