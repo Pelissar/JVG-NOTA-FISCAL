@@ -72,6 +72,21 @@ test('mantem consulta Focus e Token Master no servidor e mapeia nome fantasia pa
   assert.match(app, /!String\(target\.value\|\|'\'\)\.trim\(\)/);
 });
 
+test('onboarding da empresa permite consultar e salvar os dados cadastrais do CNPJ', () => {
+  const route = readFileSync(new URL('../app/api/company/route.ts', import.meta.url), 'utf8');
+  const app = readFileSync(new URL('../public/erp/app.js', import.meta.url), 'utf8');
+
+  assert.match(app, /companyFiscalFields\(company,existing\)/);
+  assert.match(app, /lookupField\('cnpj','CNPJ \(numérico ou alfanumérico\)'/);
+  assert.match(app, /includeTaxSetup\?'<div class="field full"><strong>Enquadramento tributário/);
+  assert.match(route, /export async function POST\(request: Request\)[\s\S]*?fiscalCompanyPatch\(data, null\)[\s\S]*?ensureSiteAccount\(user, legalName\)[\s\S]*?persistCompanyPatch\(account, allowed\)/);
+  assert.match(route, /allowed\.address = fiscalAddress\(data\)/);
+  assert.match(route, /cnpj:\s*cnpj \|\| null/);
+  assert.match(route, /const company = stored \? \{\s*\.\.\.stored,[\s\S]*?legalName: String\(stored\.legal_name/);
+  assert.match(app, /company\.legal_name\|\|''/);
+  assert.match(app, /company\.cnpj\|\|''/);
+});
+
 test('nao transforma valores vazios em classificacoes fiscais ou inscricoes', () => {
   const focus = focusCnpjFields({ razao_social: 'EMPRESA DE TESTE', endereco: { codigo_municipio: '7107' } }, '12345678000195');
   assert.equal(focus.cityCode, '');

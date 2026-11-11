@@ -327,7 +327,7 @@
     }catch(error){cloud.status='error';state=emptyState();render();toast(error.name==='AbortError'?'O Supabase não respondeu em 12 segundos. Use Tentar novamente.':'Não foi possível verificar a conexão: '+error.message,'error');}
     finally{clearTimeout(timeout);checkingConnection=false;}
   }
-  function companyFiscalFields(company){
+  function companyFiscalFields(company,includeTaxSetup){
     var a=company.address||{};
     var regimes=[['mei','MEI'],['simples_nacional','Simples Nacional'],['lucro_presumido','Lucro Presumido'],['lucro_real','Lucro Real'],['outro','Outro']];
     var selectedRegime=company.tax_regime_confirmed===true?company.tax_regime:'';
@@ -337,9 +337,10 @@
       '<label class="field full" style="display:flex;align-items:flex-start;gap:9px"><input type="checkbox" name="taxRegimeConfirmed" value="true" '+(company.tax_regime_confirmed===true?'checked ':'')+(!confirmationAvailable?'disabled ':'')+'style="width:auto;margin-top:3px"><span>Confirmo que este regime foi conferido com a contabilidade.</span></label>'+
       (!confirmationAvailable?'<p class="small-note field full">A confirmação será habilitada após aplicar a migration fiscal pendente no Supabase.</p>':'');
     return '<div class="field full"><strong>Identificação e contato fiscal</strong></div>'+
-      '<div class="field full"><strong>Enquadramento tributário</strong></div>'+regimeBlock+
+      (includeTaxSetup?'<div class="field full"><strong>Enquadramento tributário</strong></div>'+regimeBlock:'')+
       field('tradeName','Nome fantasia',company.trade_name||'','maxlength="160"',false)+
       lookupField('cnpj','CNPJ (numérico ou alfanumérico)',company.cnpj||'','maxlength="18" placeholder="00.000.000/0000-00"','cnpj',false)+'<p class="lookup-note field full" data-cnpj-lookup-status role="status" aria-live="polite" hidden></p>'+
+      '<p class="lookup-note field full">A consulta preenche os dados cadastrais disponíveis. Confira tudo antes de salvar; IE e IM podem precisar de confirmação manual.</p>'+
       field('stateRegistration','Inscrição Estadual (IE)',company.state_registration||'','maxlength="40"',false)+
       field('municipalRegistration','Inscrição Municipal',company.municipal_registration||'','maxlength="40"',false,'Se informar, preencha também o CNAE fiscal.')+
       field('cnae','CNAE fiscal (7 dígitos)',company.cnae||'','inputmode="numeric" maxlength="10"',false,'A Focus exige o par CNAE e Inscrição Municipal quando esses dados forem enviados.')+
@@ -354,16 +355,16 @@
       field('state','UF',a.state||'','maxlength="2" placeholder="SP"',false)+
       lookupField('postalCode','CEP (8 dígitos)',a.postalCode||'','inputmode="numeric" maxlength="9"','cep',false)+
       field('cityCode','Código IBGE do município (7 dígitos)',a.cityCode||'','inputmode="numeric" maxlength="7"',false)+
-      '<div class="field full"><strong>Numeração da NF-e de homologação</strong><small>A Focus pode atribuir série e número automaticamente; o JVG não enviará esses campos por padrão.</small></div>'+
+      (includeTaxSetup?'<div class="field full"><strong>Numeração da NF-e de homologação</strong><small>A Focus pode atribuir série e número automaticamente; o JVG não enviará esses campos por padrão.</small></div>'+
       field('nfeSeries','Série de controle local',company.nfe_series_homologacao==null?1:company.nfe_series_homologacao,'type="number" min="1" max="999"',false)+
-      field('nfeNextNumber','Próximo número de controle local',company.nfe_next_number_homologacao==null?1:company.nfe_next_number_homologacao,'type="number" min="1" max="999999999"',false);
+      field('nfeNextNumber','Próximo número de controle local',company.nfe_next_number_homologacao==null?1:company.nfe_next_number_homologacao,'type="number" min="1" max="999999999"',false):'');
   }
   function openCompanyEditor(){
     if(!['needs_company','ready'].includes(cloud.status)){toast('Aguarde a configuração segura do servidor.','error');return;}
     var company=cloud.company||{},existing=cloud.status==='ready';
     modalRoot.innerHTML='<div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><h2 id="modalTitle">'+(existing?'Editar empresa piloto':'Cadastrar minha empresa piloto')+'</h2><p>Seus dados serão vinculados somente à sua conta.</p></div><button class="icon-btn" type="button" data-action="close-modal">'+ico('x')+'</button></div><form id="companyForm"><div class="modal-body"><div class="form-grid">'+
       field('legalName','Razão social ou nome da empresa *',company.legal_name||'','required maxlength="160"',true)+
-      (existing?companyFiscalFields(company):'')+
+      companyFiscalFields(company,existing)+
       '</div><p class="small-note" style="margin-top:16px">O sistema não considera o regime padrão como confirmação fiscal. Perfis e rascunhos de NF-e exigem a confirmação da contabilidade. Salvar este cadastro não transmite nota.</p></div><div class="modal-footer"><small>* Obrigatório</small><div class="modal-footer-actions"><button class="btn" type="button" data-action="close-modal">Cancelar</button><button class="btn primary" type="submit">Salvar empresa</button></div></div></form></div></div>';
     // O formulario permanece aberto ao clicar no fundo: somente os botoes
     // Fechar/Cancelar ou a conclusao do cadastro podem dispensa-lo.
