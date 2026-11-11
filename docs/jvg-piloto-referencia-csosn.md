@@ -1,19 +1,18 @@
 # Referência fiscal da JVG piloto
 
-Registro de orientação fornecida pela usuária com base no XML da JVG citado por ela. É uma referência da empresa piloto e da operação representada pelo documento; não é uma regra padrão do SaaS.
+Este registro reúne as orientações informadas pela usuária com base no XML da JVG e nas mensagens da contabilidade. É específico da empresa piloto e não constitui um padrão automático para as empresas SaaS.
 
-- Regime informado: Simples Nacional, CRT 1.
-- O XML citado contém dois itens com CSOSN 102.
-- Para aquela operação, CSOSN 102 significa tributação do Simples Nacional sem permissão de crédito de ICMS ao destinatário. O código não permite informar na NF-e a alíquota do ICMS do Simples nem o valor desse crédito. [SEFAZ-SP, Resposta à Consulta 30.793/2024](https://legislacao.fazenda.sp.gov.br/Paginas/RC30793_2024.aspx).
-- Essa conclusão sobre crédito ao destinatário não determina os créditos de ICMS que a JVG pode ou não aproveitar nas compras.
-- Vincular CSOSN 102 somente à regra da operação representada pelo XML, depois que a operação for identificada. Não preencher a outra operação e não usar 102 como padrão global de produtos ou vendas.
-- A informação disponível não identifica com segurança a chave interna da operação nem aprova CFOP, CST de PIS/Cofins, IBS/CBS, bases ou valores. Esses campos continuam dependendo da orientação contábil específica.
-
-Pergunta pendente para a Walquíria: “Em quais situações das vendas da JVG o CSOSN deixa de ser 102 e o que muda nos impostos?”
+- Regime informado pela empresa: Simples Nacional, CRT 1.
+- Para venda de mercadoria classificada como tributada pelo Simples Nacional, a contabilidade orientou usar CSOSN 102, sem permissão de crédito de ICMS ao destinatário.
+- O CSOSN 102 descreve uma operação tributada pelo Simples sem permissão para indicar alíquota e valor de crédito de ICMS na NF-e. [SEFAZ-SP, Resposta à Consulta 30.793/2024](https://legislacao.fazenda.sp.gov.br/Paginas/RC30793_2024.aspx).
+- Esse código não determina, por si só, se a JVG pode aproveitar créditos relativos às mercadorias que compra.
+- A contabilidade também orientou verificar se uma mercadoria comprada de fora do estado está sujeita à substituição tributária na UF da JVG ou se é tributada normalmente. Uma mercadoria classificada como ST exige regra própria; não aplicar 102 automaticamente nesse caso.
+- A regra CSOSN 102 deve ser vinculada a operações e produtos identificados como tributados, não usada como padrão global do SaaS nem inferida do CFOP ou do tratamento fiscal do fornecedor.
+- Para o item DEP-450, o XML de entrada fornece NCM 85255019, CEST 0106000 e CFOP 5949. O CFOP 5949 é da operação do fornecedor e não define o CFOP da venda da JVG. A classificação da mercadoria como tributada ou sujeita à ST ainda deve ser confirmada antes de vincular um perfil de saída.
+- A orientação recebida não define CFOP, CST de PIS/Cofins, IBS/CBS, bases ou valores de impostos. Esses campos continuam sem inferência e a emissão permanece bloqueada enquanto obrigatórios ou pendentes de aprovação.
 
 ## Orientação recebida sobre o lançamento de compras
 
-Na conversa de 10/11/2026, a contabilidade confirmou que o lançamento da mercadoria comprada influencia o tratamento fiscal do item. Para uma compra de fora do estado, orientou verificar se a mercadoria, dentro da UF da JVG, está sujeita à substituição tributária ou à tributação comum.
+Na conversa de 10/11/2026, a contabilidade confirmou que o lançamento da mercadoria comprada influencia o tratamento fiscal do item. Para compras de fora do estado, orientou verificar se a mercadoria, dentro do estado da JVG, está sujeita à substituição tributária ou à tributação comum. A orientação foi: mercadoria tributada usa CSOSN 102.
 
-A mensagem usa a expressão “CST 102”. Como a JVG informou CRT 1, o sistema chama esse código de CSOSN 102 na NF-e de saída. A fala não define todos os produtos ou operações: manter 102 somente no cenário de venda já documentado e não inferir a regra da venda a partir do CST/CSOSN do fornecedor. O cadastro de entrada continua sem calcular tributos ou alterar perfis fiscais automaticamente.
-
+A classificação da compra ajuda a identificar o tratamento do produto, mas não faz o ERP calcular automaticamente todos os impostos da venda. A saída ainda depende da operação, das UFs e dos demais códigos fiscais confirmados pela contabilidade.
