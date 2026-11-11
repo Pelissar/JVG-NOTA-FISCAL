@@ -22,7 +22,7 @@
       return '<article class="document-row"><div class="document-main"><strong>NF-e '+escapeHtml(doc.invoiceNumber||'—')+' · '+escapeHtml(doc.issuerName||'Fornecedor')+'</strong><small>Emitida em '+date(doc.issuedAt)+' · Série '+escapeHtml(doc.series||'—')+' · chave '+escapeHtml(doc.accessKey)+(doc.carrierName?' · Transportadora: '+escapeHtml(doc.carrierName):'')+'</small>'+cancellationNote+'</div><div class="document-meta"><b>'+money(doc.total)+'</b><small>'+itemCount+' item(ns) · cStat '+escapeHtml(doc.authorizationStatus)+'</small></div><div class="document-meta total"><span class="status-chip '+statusClass+'">'+statusLabel+'</span></div><div class="document-actions"><button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">'+openLabel+'</button><a class="secondary-button" href="/api/inbound-nfe?xml='+encodeURIComponent(doc.id)+'">XML</a></div></article>';
     }).join('');
   }
-  function supplierOptions(selected, doc){  function supplierOptions(selected, doc){
+  function supplierOptions(selected, doc){
     var options=suppliers.map(function(supplier){return '<option value="'+escapeHtml(supplier.id)+'" '+(supplier.id===selected?'selected':'')+'>'+escapeHtml(supplier.name)+' · '+escapeHtml(supplier.document||'sem CPF/CNPJ')+'</option>';});
     if(selected&&!suppliers.some(function(supplier){return supplier.id===selected;}))options.unshift('<option value="'+escapeHtml(selected)+'" selected>'+escapeHtml((doc&&doc.issuerName)||'Fornecedor vinculado')+' · '+escapeHtml((doc&&doc.issuerDocument)||'cadastro inativo')+'</option>');
     return '<option value="">Selecione fornecedor...</option>'+options.join('');
@@ -133,7 +133,7 @@
       $('fiscalDataReview').innerHTML='<p class="error">Não foi possível abrir os dados completos do XML: '+escapeHtml(error.message)+'</p>';
     }
   }
-  async function load(){  async function load(){
+  async function load(){
     setStatus('Carregando lançamentos...');
     try{
       var result=await Promise.all([api('/api/inbound-nfe'),api('/api/records?scope=products'),api('/api/records?scope=clients')]);
@@ -282,7 +282,8 @@
     }catch(error){setStatus(error.message,true);}
     finally{button.disabled=false;}
   });
-  $('closeReview').addEventListener('click',function()  $('reviewForm').addEventListener('submit',async function(event){
+  $('closeReview').addEventListener('click',function(){ $('reviewCard').hidden=true; });
+  $('reviewForm').addEventListener('submit',async function(event){
     event.preventDefault();
     if(!selectedDoc)return;
     var receive=event.submitter&&event.submitter.dataset.receive==='true';

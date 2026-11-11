@@ -44,7 +44,8 @@
         window.location.replace('/login');
         throw new Error('Faça login novamente.');
       }
-      if (!response.ok) throw new Error(data.error || 'Não foi possível concluir a operação.');
+      if (!response.ok) throw new Error(data.error || data.message ||
+        (Array.isArray(data.issues) ? data.issues.join(' · ') : '') || 'Não foi possível concluir a operação.');
       return data;
     } catch (error) {
       if (error.name === 'AbortError') throw new Error('O servidor não respondeu em 15 segundos. Tente novamente.');
@@ -156,7 +157,11 @@
       var price = document.createElement('b');
       price.textContent = money.format(draft.totalCents / 100);
       var badge = document.createElement('span');
-      badge.textContent = draft.status === 'draft' ? 'Rascunho · ' + draft.pendingCount + ' pendência(s)' : draft.status;
+      var statusNames = { draft: 'Rascunho', processing: 'Em processamento na Focus', queued: 'Na fila da Focus',
+        authorized: 'Autorizada', rejected: 'Rejeitada', denied: 'Denegada', cancelled: 'Cancelada', contingency: 'Contingência',
+        waiting_certificate: 'Aguardando certificado' };
+      badge.textContent = draft.status === 'draft' ? 'Rascunho · ' + draft.pendingCount + ' pendência(s)' :
+        (statusNames[draft.status] || draft.status);
       foot.append(price, badge);
       const preview = document.createElement('small');
       preview.textContent = 'Impostos não calculados';
@@ -176,6 +181,85 @@
     parent.append(node);
   }
 
+  async function runFocusAction(id, action, button) {
+    button.disabled = true;
+    var previousLabel = button.textContent;
+    button.textContent = action === 'emit' ? 'Enviando para homologação...' : 'Consultando Focus...';
+    try {
+      var result = await api('/api/fiscal/nfe-drafts/transmit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, action: action, confirmFiscalReview: action === 'emit' }),
+      });
+      if (result.needsReconciliation) {
+        report('A solicitação foi enviada à Focus para homologação e continua em processamento. Não reenvie; consulte o status.', 'info');
+      } else if (result.status === 'authorized') {
+        report('A Focus retornou status autorizado em homologação. Confira a chave e o protocolo nos detalhes; isso não é autorização de produção.', 'success');
+      } else if (result.status === 'rejected' || result.status === 'denied') {
+        report('A Focus retornou ' + result.status + '. Consulte a mensagem detalhada antes de qualquer nova preparação.', 'error');
+      } else {
+        report('Status atualizado a partir da consulta à Focus: ' + (result.status || 'retorno recebido') + '.', 'info');
+      }
+      await refreshHistory();
+      await inspectDraft(id);
+    } catch (error) {
+      report('Não foi possível concluir a ação na Focus: ' + error.message, 'error');
+      try { await inspectDraft(id); } catch { /* A mensagem principal já foi mostrada. */ }
+    } finally {
+      button.disabled = false;
+      button.textContent = previousLabel;
+    }
+  }
+
+  function renderHomologationActions(target, draft) {
+    var panel = document.createElement('section');
+    panel.className = 'homologation-actions';
+    appendLine(panel, 'h4', 'Focus NFe · ambiente de homologação');
+    if (draft.status === 'draft') {
+      if (draft.canSubmitHomologation === true) {
+        appendLine(panel, 'p', 'O envio só ficará disponível após sua confirmação explícita. Ele usa exclusivamente o ambiente de testes da Focus; não altera série ou numeração de produção.');
+        var label = document.createElement('label');
+        label.className = 'homologation-confirm';
+        var check = document.createElement('input');
+        check.type = 'checkbox';
+        var copy = document.createElement('span');
+        copy.textContent = 'Revisei os dados desta operação com a contabilidade e confirmo que este envio é apenas para homologação.';
+        label.append(check, copy);
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'add-button';
+        button.disabled = true;
+        button.textContent = 'Enviar NF-e de teste à Focus';
+        check.addEventListener('change', function () { button.disabled = !check.checked; });
+        button.addEventListener('click', function () {
+          if (!check.checked) return;
+          runFocusAction(draft.id, 'emit', button);
+        });
+        panel.append(label, button);
+      } else {
+        appendLine(panel, 'p', draft.homologationAccessIssue ||
+          'Envio bloqueado: conclua e revise os dados fiscais exigidos antes de transmitir.');
+        var issues = draft.homologationGate && Array.isArray(draft.homologationGate.issues)
+          ? draft.homologationGate.issues : [];
+        if (issues.length) {
+          var list = document.createElement('ul');
+          issues.forEach(function (issue) { appendLine(list, 'li', String(issue)); });
+          panel.append(list);
+        }
+      }
+    } else if (draft.focusReference && ['processing', 'queued', 'authorized', 'rejected', 'denied', 'cancelled'].includes(draft.status)) {
+      appendLine(panel, 'p', 'A consulta atualiza o status desta referência. Ela não cria uma nova emissão.');
+      var query = document.createElement('button');
+      query.type = 'button';
+      query.className = 'add-button';
+      query.textContent = 'Consultar status na Focus';
+      query.addEventListener('click', function () { runFocusAction(draft.id, 'reconcile', query); });
+      panel.append(query);
+    } else {
+      appendLine(panel, 'p', 'Este documento não tem uma solicitação Focus consultável. Nenhuma transmissão será repetida automaticamente.');
+    }
+    target.append(panel);
+  }
+
   async function inspectDraft(id) {
     var target = document.getElementById('draftDetails');
     target.replaceChildren();
@@ -187,7 +271,19 @@
         throw new Error('Resposta fiscal inesperada. Consulte o suporte.');
       target.replaceChildren();
       var recipient = draft.recipient || {};
-      appendLine(target, 'h3', 'Rascunho · ' + (recipient.name || 'Destinatário'));
+      var statusNames = { draft: 'Rascunho', processing: 'Em processamento na Focus', queued: 'Na fila da Focus',
+        authorized: 'NF-e autorizada', rejected: 'NF-e rejeitada', denied: 'NF-e denegada', cancelled: 'NF-e cancelada', contingency: 'Contingência' };
+      appendLine(target, 'h3', (statusNames[draft.status] || 'Documento NF-e') + ' · ' + (recipient.name || 'Destinatário'));
+      if (draft.focusReference) appendLine(target, 'p', 'Referência Focus: ' + draft.focusReference);
+      if (draft.documentNumber) appendLine(target, 'p', 'Número/Série: ' + draft.documentNumber + ' / ' + (draft.series || '—'));
+      if (draft.accessKey) appendLine(target, 'p', 'Chave de acesso: ' + draft.accessKey);
+      var providerResponse = draft.providerResponse || {};
+      var providerBody = providerResponse.response || {};
+      if (providerResponse.phase) appendLine(target, 'p', 'Etapa registrada: ' + providerResponse.phase);
+      var providerStatus = providerBody.status_sefaz || providerBody.status || providerBody.codigo_status;
+      var providerMessage = providerBody.mensagem_sefaz || providerBody.mensagem || providerBody.erro;
+      if (providerStatus || providerMessage)
+        appendLine(target, 'p', 'Retorno Focus/SEFAZ: ' + [providerStatus, providerMessage].filter(Boolean).join(' · '));
       appendLine(target, 'p', 'Natureza: ' + (draft.nature || 'não informada'));
       var purposeNames = { 1: 'Normal', 2: 'Complementar', 3: 'Ajuste', 4: 'Devolução' };
       appendLine(target, 'p', 'Finalidade: ' + (purposeNames[draft.purpose] || 'não informada') +
@@ -216,7 +312,7 @@
         appendLine(target, 'p', draft.preflight.dataComplete ?
           'Dados básicos presentes. Revisão fiscal e homologação ainda obrigatórias.' :
           'Dados cadastrais incompletos: veja as pendências abaixo.');
-        appendLine(target, 'p', 'Transmissão bloqueada. Pré-conferência não substitui validação fiscal.');
+        appendLine(target, 'p', 'A pré-conferência verifica dados cadastrais; ela não substitui revisão fiscal. A emissão em produção continua bloqueada.');
       } else {
         appendLine(target, 'p', 'Rascunho antigo: pré-conferência cadastral indisponível.');
       }
@@ -224,7 +320,7 @@
       if (Array.isArray(documentReview.checks)) {
         appendLine(target, 'h4', 'Checklist de preparação da NF-e');
         var checkList = document.createElement('ul');
-        documentReview.checks.forEach(function (check) {
+        documentReview.checks.filter(function (check) { return check.key !== 'taxPreview' && check.key !== 'transmission'; }).forEach(function (check) {
           appendLine(checkList, 'li', (check.ok ? '✓ ' : 'Pendente: ') +
             check.label + ' — ' + check.detail);
         });
@@ -232,8 +328,8 @@
         appendLine(target, 'p', 'Checklist interno: não é XML, DANFE, validação da SEFAZ ou permissão de emissão.');
       }
       var focusReview = draft.focusPayloadReview || {};
-      appendLine(target, 'h4', 'Prévia parcial do payload Focus');
-      appendLine(target, 'p', 'Campos mapeados sem transmissão. ' +
+      appendLine(target, 'h4', 'Conferência do payload Focus');
+      appendLine(target, 'p', 'Campos fiscais mapeados para análise. ' +
         String(focusReview.missingCount || 0) + ' conferência(s) estrutural(is) pendente(s).');
       var focusChecks = Array.isArray(focusReview.checks) ? focusReview.checks : [];
       if (focusChecks.length) {
@@ -247,14 +343,14 @@
       if (focusReview.requestPreview && typeof focusReview.requestPreview === 'object') {
         var previewDetails = document.createElement('details');
         var previewSummary = document.createElement('summary');
-        previewSummary.textContent = 'Ver JSON parcial (não enviável)';
+        previewSummary.textContent = 'Ver dados mapeados para a Focus';
         var previewJson = document.createElement('pre');
         previewJson.className = 'focus-json-preview';
         previewJson.textContent = JSON.stringify(focusReview.requestPreview, null, 2);
         previewDetails.append(previewSummary, previewJson);
         target.append(previewDetails);
       }
-      appendLine(target, 'p', 'A prévia é incompleta e não pode ser enviada. Homologação e transmissão continuam desativadas.');
+      renderHomologationActions(target, draft);
       appendLine(target, 'h4', 'Itens');
       var itemList = document.createElement('ul');
       (Array.isArray(draft.items) ? draft.items : []).forEach(function (item, i) {
@@ -274,7 +370,7 @@
       }
       appendLine(target, 'h4', 'Apuração tributária');
       appendLine(target, 'p', 'Não realizada. O ERP ainda não calcula bases, alíquotas ou valores de impostos. A prévia mostra os campos da Focus já mapeados e os dados que dependem da contabilidade.');
-      appendLine(target, 'p', 'Emissão e transmissão indisponíveis nesta fase.');
+      appendLine(target, 'p', 'A integração não calcula nem presume tributos. O envio de homologação depende da regra aprovada por operação e da conferência de todos os campos exigidos pela Focus.');
       target.hidden = false;
       target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } catch (error) {

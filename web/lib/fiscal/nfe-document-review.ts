@@ -540,10 +540,13 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
       paymentMissing.length ? paymentMissing.slice(0, 8).join("; ") : "Campos comerciais convertidos para os nomes Focus.",
       payments.length > 0 && paymentsValid ? mappedPayments : undefined);
   const productCents = sourceItems.reduce((sum, raw) => sum + (Number(obj(raw).subtotalCents) || 0), 0);
-  add("valor_produtos", "Totalização de produtos", Number.isSafeInteger(productCents) && productCents >= 0,
-      "A soma comercial foi conferida; a Focus totaliza os itens. O total não é enviado duas vezes.");
-  add("valor_total", "Total fiscal", false,
-      "A Focus calcula os totais a partir dos itens e dos valores fiscais informados; esses grupos ainda estão incompletos.");
+  const headerTotalCents = integerCents(payload.totalCents);
+  const totalsMatch = sourceItems.length > 0 && Number.isSafeInteger(productCents) && productCents >= 0 &&
+    headerTotalCents !== null && productCents === headerTotalCents;
+  add("valor_produtos", "Totalização de produtos", totalsMatch,
+      "A soma comercial precisa corresponder ao rascunho; a Focus totaliza os itens e o ERP não duplica o cabeçalho.");
+  add("valor_total", "Total fiscal da NF-e", totalsMatch,
+      "A Focus calcula o total do cabeçalho a partir dos itens e dos valores fiscais informados; nenhum imposto estimado pelo ERP é enviado.");
   return {
     environment: "homologacao",
     endpoint: "POST /v2/nfe?ref",

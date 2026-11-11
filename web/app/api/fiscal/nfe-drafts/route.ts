@@ -1,18 +1,41 @@
 import { getJvgUser } from "../../../jvg-auth";
 import {
-  apiJson, dbRequest, filterEq, getCompany, getSiteAccount, isSameOrigin,
+  apiJson, dbRequest, filterEq, getCompany, getPlatformRole, getSiteAccount, isSameOrigin,
   JvgBackendError, safeError, type SiteAccount,
 } from "../../../../lib/jvg-backend";
+import { focusRuntimeEnv } from "../../../../lib/focus/runtime-env";
 import { parseNfeDraftInput } from "../../../../lib/fiscal/nfe-draft";
 import { isOfficialCfopCode } from "../../../../lib/fiscal/cfop";
 import { reviewNfeOperation, reviewProfileConsistency } from "../../../../lib/fiscal/operation-review";
 import { reviewNfePreparation } from "../../../../lib/fiscal/nfe-preflight";
 import { reviewNfeDocument, reviewFocusNfePayload } from "../../../../lib/fiscal/nfe-document-review";
+import { reviewApprovedTaxProfile, reviewNfeHomologationGate } from "../../../../lib/fiscal/nfe-homologation-gate";
 
 export const dynamic = "force-dynamic";
 
 type DbRow = Record<string, unknown>;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function publicProviderResponse(value: unknown): DbRow | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const stored = value as DbRow;
+  const response = stored.response && typeof stored.response === "object" && !Array.isArray(stored.response)
+    ? stored.response as DbRow : {};
+  const allowed = ["status", "status_sefaz", "mensagem_sefaz", "ref", "numero", "serie", "chave_nfe", "protocolo", "codigo_status", "erro", "mensagem"];
+  const safeResponse: DbRow = {};
+  for (const key of allowed) {
+    const item = response[key];
+    if ((typeof item === "string" && item.length <= 1000) || (typeof item === "number" && Number.isFinite(item)))
+      safeResponse[key] = item;
+  }
+  const result: DbRow = {};
+  if (stored.operation === "focus_nfe") result.operation = stored.operation;
+  if (typeof stored.phase === "string" && stored.phase.length <= 40) result.phase = stored.phase;
+  if (typeof stored.observedAt === "string" && stored.observedAt.length <= 40) result.observedAt = stored.observedAt;
+  if (typeof stored.reference === "string" && stored.reference.length <= 50) result.reference = stored.reference;
+  if (Object.keys(safeResponse).length) result.response = safeResponse;
+  return result;
+}
 
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
@@ -44,13 +67,27 @@ export async function GET(request: Request) {
         throw new JvgBackendError("Identificador do rascunho inválido.", 400);
       // Filtro por empresa, tipo e ambiente aplicado também na consulta individual.
       const selected = await dbRequest<DbRow[]>(
-        `/rest/v1/jvg_fiscal_documents?${scope(account)}&id=${filterEq(requestedId)}&document_type=eq.nfe&environment=eq.homologacao&status=eq.draft&select=id,status,fiscal_payload,created_at&limit=1`,
+        `/rest/v1/jvg_fiscal_documents?${scope(account)}&id=${filterEq(requestedId)}&document_type=eq.nfe&environment=eq.homologacao&select=id,status,focus_reference,access_key,series,document_number,provider_response,fiscal_payload,created_at,updated_at,authorized_at&limit=1`,
       );
-      if (!selected[0]) throw new JvgBackendError("Rascunho não encontrado nesta empresa.", 404);
+      if (!selected[0]) throw new JvgBackendError("Documento fiscal não encontrado nesta empresa.", 404);
       const payload = selected[0].fiscal_payload && typeof selected[0].fiscal_payload === "object" ? selected[0].fiscal_payload as DbRow : {};
+      const homologationGate = selected[0].status === "draft" ? reviewNfeHomologationGate(payload) : { ready: false, issues: [], reviewCount: 0 };
+      const user = await getJvgUser();
+      const platformAdmin = Boolean(user && await getPlatformRole(user) === "platform_admin");
+      const pilotAccess = Boolean(platformAdmin && account.role !== "viewer" &&
+        focusRuntimeEnv("JVG_FOCUS_PILOT_COMPANY_ID") === account.company_id &&
+        (focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN") || focusRuntimeEnv("FOCUS_NFE_HOMOLOGACAO_TOKEN")));
+      const currentCompany = pilotAccess ? await getCompany(account) : null;
+      const canUseHomologation = Boolean(pilotAccess && currentCompany && currentCompany.fiscal_missing.length === 0 &&
+        currentCompany.tax_regime_confirmation_available === true && currentCompany.tax_regime_confirmed === true &&
+        currentCompany.tax_regime === "simples_nacional");
       return apiJson({
         draft: {
           id: selected[0].id, status: selected[0].status, createdAt: selected[0].created_at,
+          updatedAt: selected[0].updated_at, authorizedAt: selected[0].authorized_at,
+          focusReference: selected[0].focus_reference, accessKey: selected[0].access_key,
+          series: selected[0].series, documentNumber: selected[0].document_number,
+          providerResponse: publicProviderResponse(selected[0].provider_response),
           nature: payload.nature,
           purpose: payload.purpose ?? null, issueAt: payload.issueAt ?? null,
           consumerFinal: payload.consumerFinal ?? null, buyerPresence: payload.buyerPresence ?? null,
@@ -65,12 +102,15 @@ export async function GET(request: Request) {
           preflight: payload.preflight ?? null,
           documentReview: reviewNfeDocument(payload),
           focusPayloadReview: reviewFocusNfePayload(payload),
+          homologationGate: { ready: homologationGate.ready, issues: homologationGate.issues, reviewCount: homologationGate.reviewCount },
+          canSubmitHomologation: selected[0].status === "draft" && homologationGate.ready && canUseHomologation,
+          homologationAccessIssue: canUseHomologation ? null : "Envio em homologação exige acesso administrador, empresa piloto, credencial de testes e dados fiscais atuais completos.",
           readyToTransmit: false, transmissionEnabled: false,
         },
       });
     }
     const rows = await dbRequest<DbRow[]>(
-      `/rest/v1/jvg_fiscal_documents?${scope(account)}&document_type=eq.nfe&environment=eq.homologacao&select=id,status,fiscal_payload,created_at,updated_at&order=created_at.desc&limit=50`,
+      `/rest/v1/jvg_fiscal_documents?${scope(account)}&document_type=eq.nfe&environment=eq.homologacao&select=id,status,focus_reference,access_key,fiscal_payload,created_at,updated_at&order=created_at.desc&limit=50`,
     );
     return apiJson({ drafts: rows.map(row => {
       const payload = row.fiscal_payload && typeof row.fiscal_payload === "object" ? row.fiscal_payload as DbRow : {};
@@ -79,6 +119,7 @@ export async function GET(request: Request) {
       const warnings = Array.isArray(payload.pending) ? payload.pending : [];
       return {
         id: row.id, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at,
+        focusReference: row.focus_reference, accessKey: row.access_key,
         recipientName: String(recipient.name || "Destinatário"), itemsCount: items.length,
         sourceOrderId: String((payload.sourceOrder as DbRow | undefined)?.id || ""),
         sourceOrderNumber: String((payload.sourceOrder as DbRow | undefined)?.number || ""),
@@ -159,7 +200,7 @@ export async function POST(request: Request) {
       throw new JvgBackendError("Um ou mais produtos não pertencem à empresa ou estão inativos.", 400);
 
     const profileIds = [...new Set(products.map(product => String(product.tax_profile_id || '')).filter(Boolean))];
-    const profiles = profileIds.length ? await dbRequest<DbRow[]>(`/rest/v1/jvg_tax_profiles?${scoped}&id=in.(${profileIds.join(',')})&document_type=eq.nfe&select=id,name,rules,review_status`) : [];
+    const profiles = profileIds.length ? await dbRequest<DbRow[]>(`/rest/v1/jvg_tax_profiles?${scoped}&id=in.(${profileIds.join(',')})&document_type=eq.nfe&select=id,name,rules,review_status,reviewed_by`) : [];
     const byProfile = new Map(profiles.map(profile => [String(profile.id), profile]));
     const pending: string[] = [];
     if (company.fiscal_missing.length) pending.push("Conferir dados fiscais do emitente");
@@ -201,7 +242,7 @@ export async function POST(request: Request) {
         operation: review.operation, taxPreview,
         taxRules: hasOperationRule ? selectedRules : null,
         taxProfile: profile ? { id: profile.id, name: profile.name, reviewStatus: profile.review_status,
-          operationRuleConfigured: hasOperationRule } : null,
+          operationRuleConfigured: hasOperationRule, accountantReviewDeclared: reviewApprovedTaxProfile(profile).ready } : null,
       };
     });
     const issuer = {
