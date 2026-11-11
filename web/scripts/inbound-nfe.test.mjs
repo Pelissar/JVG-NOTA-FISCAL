@@ -80,7 +80,7 @@ test("a API protege dados por empresa e a confirmação de estoque é atômica",
   assert.match(migration, /for update/);
   assert.match(migration, /begin[\s\S]*insert into public\.jvg_inventory_movements[\s\S]*update public\.jvg_inbound_nfe_documents[\s\S]*end;/i);
   const recoveryMigration = readFileSync(new URL("../../supabase/migrations/20261111_jvg_inbound_nfe_stock_guard_recovery.sql", import.meta.url), "utf8");
-  assert.match(recoveryMigration, /if v_count = 0 then raise exception/i);
+  assert.match(recoveryMigration, /if v_count = 0 then\s+raise exception/i);
   assert.match(recoveryMigration, /function public\.jvg_reopen_empty_inbound_nfe/i);
   assert.match(recoveryMigration, /inbound_nfe_id = p_document_id/i);
 });
