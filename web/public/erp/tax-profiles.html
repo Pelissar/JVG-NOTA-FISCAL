@@ -8,7 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
   <link rel="stylesheet" href="/erp/unified-pages.css">
   <link rel="stylesheet" href="/erp/erp-design-v2.css">
-  <link rel="stylesheet" href="/erp/tax-profiles.css?v=20261110-1">
+  <link rel="stylesheet" href="/erp/tax-profiles.css?v=20261111-2">
   <script src="/erp/theme-switch.js"></script>
   <script defer src="/erp/erp-page-nav.js"></script>
   <script defer src="./tax-profiles.js?v=20261111-1"></script>
@@ -28,6 +28,18 @@
     </section>
 
     <div id="status" class="notice info status-banner" role="status" aria-live="polite">Conectando ao servidor...</div>
+
+    <section class="transition-panel" aria-labelledby="transitionTitle">
+      <div class="transition-icon" aria-hidden="true">i</div>
+      <div class="transition-copy">
+        <p class="section-kicker">REFORMA TRIBUTÁRIA · TRANSIÇÃO</p>
+        <h2 id="transitionTitle">PIS/Cofins e IBS/CBS são classificações diferentes</h2>
+        <p>O CST de PIS/Cofins tem 2 dígitos. Para IBS/CBS, a NF-e usa CST de 3 dígitos combinado com cClassTrib de 6 dígitos. Não existe conversão automática geral entre essas tabelas: use a classificação vigente para a operação, confirmada pela contabilidade.</p>
+        <p>Para optantes do Simples Nacional, não há obrigação de destacar CBS em 2026. Em 2027, o tratamento depende da opção separada pelo regime regular do IBS/CBS. A Receita Federal informa que o prazo para o primeiro semestre terminou em 30/10/2026, com efeitos a partir de 01/01/2027.</p>
+        <p class="transition-links"><a href="https://dfe-portal.svrs.rs.gov.br/DFE/ClassificacaoTributaria" target="_blank" rel="noopener noreferrer">Consultar a tabela oficial CST/cClassTrib</a><a href="https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/setembro/simples-nacional-2027-entenda-os-novos-prazos-e-faca-sua-escolha-com-consciencia-e-tranquilidade/" target="_blank" rel="noopener noreferrer">Ver prazos e opções do Simples na Receita Federal</a></p>
+        <p class="transition-footnote">Confirme com a Walquíria se a JVG optou pelo regime regular de IBS/CBS para 2027. Os exemplos e percentuais de materiais gerais não são aplicados automaticamente a esta empresa.</p>
+      </div>
+    </section>
 
     <section class="workflow" aria-label="Etapas para usar um perfil tributário">
       <article class="workflow-step">

@@ -316,6 +316,42 @@
 .tax-profiles-page .explanation-list strong { display: block; color: var(--ink); font-size: 12px; }
 .tax-profiles-page .explanation-list small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 
+.tax-profiles-page .transition-panel {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 15px;
+  margin: 18px 0 22px;
+  padding: 20px 22px;
+  border: 1px solid color-mix(in srgb, var(--accent) 27%, var(--line));
+  border-radius: 16px;
+  background: linear-gradient(115deg, var(--accent-soft), var(--surface) 72%);
+  color: var(--ink);
+  box-shadow: 0 8px 24px rgb(26 46 74 / 5%);
+}
+.tax-profiles-page .transition-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--accent-strong);
+  font-size: 17px;
+  font-weight: 800;
+}
+.tax-profiles-page .transition-copy { min-width: 0; }
+.tax-profiles-page .transition-copy .section-kicker { margin: 1px 0 6px; color: var(--accent-strong); }
+.tax-profiles-page .transition-copy h2 { margin: 0 0 8px; color: var(--ink); font-size: 16px; letter-spacing: -.02em; }
+.tax-profiles-page .transition-copy p:not(.section-kicker) { max-width: 1000px; margin: 6px 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.tax-profiles-page .transition-links { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px !important; }
+.tax-profiles-page .transition-links a { color: var(--accent-strong); font-size: 11px; font-weight: 750; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.tax-profiles-page .transition-copy .transition-footnote { margin-top: 12px !important; padding-top: 10px; border-top: 1px solid var(--line); color: var(--ink); font-weight: 650; }
+
+@media (max-width: 560px) {
+  .tax-profiles-page .transition-panel { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 16px; }
+}
+
 @media (max-width: 1000px) {
   .tax-profiles-page .tax-page-frame { width: min(100% - 32px, 760px); padding-top: 24px; }
   .tax-profiles-page .tax-content-grid { grid-template-columns: minmax(0, 1fr); }
