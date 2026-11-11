@@ -28,9 +28,13 @@
   function itemMarkup(item){
     var canTrack=!!(item.productId&&products.some(function(product){return product.id===item.productId&&product.tracksStock;}));
     var product=products.find(function(row){return row.id===item.productId;});
+    var xmlNcm=/^\d{8}$/.test(String(item.ncm||''))?String(item.ncm):'';
+    var xmlCest=/^\d{7}$/.test(String(item.cest||''))?String(item.cest):'';
+    var canImportClassification=!!product&&((!product.ncm&&xmlNcm)||(!product.cest&&xmlCest));
+    var classificationImport=canImportClassification?'<button class="secondary-button product-classification-import" type="button" data-fill-classification>Preencher NCM/CEST disponíveis no XML</button><small class="classification-source-note">Fonte: XML do fornecedor. Revise com a contabilidade antes de usar em NF-e.</small>':'';
     var taxDetails=item.taxes&&Object.keys(item.taxes).length?'<details class="item-tax-details"><summary>Impostos do XML</summary><pre>'+escapeHtml(JSON.stringify(item.taxes,null,2))+'</pre></details>':'<small class="stock-hint">XML sem grupo de impostos detalhado neste item.</small>';
     var createProduct='<button class="secondary-button product-create-trigger" type="button" data-create-product'+(item.productId?' hidden':'')+'>Cadastrar produto deste XML</button><div class="product-create-panel" hidden><p class="product-create-note">Descrição, unidade, GTIN, NCM/CEST e custo unitário serão trazidos do XML. O código do fornecedor é apenas uma sugestão de SKU interno. A nota não informa preço de venda, então o cadastro começa em R$ 0,00. CFOP e perfil fiscal não serão presumidos.</p><div class="product-create-grid"><label class="review-field"><span>SKU interno *</span><input name="newProductSku" maxlength="40" value="'+escapeHtml(String(item.supplierCode||'').slice(0,40))+'"></label><label class="review-field"><span>Preço de venda (R$) *</span><input name="newProductSalePrice" type="number" min="0" step="0.01" value="0.00"></label></div><div class="product-create-actions"><button class="primary-button" type="button" data-save-product>Salvar produto e vincular</button><button class="secondary-button" type="button" data-cancel-product>Cancelar</button></div></div>';
-    return '<article class="review-item" data-line="'+escapeHtml(item.lineNumber)+'"><div class="review-item-main"><strong>'+escapeHtml(item.description)+'</strong><small>Item '+escapeHtml(item.lineNumber)+' · código fornecedor '+escapeHtml(item.supplierCode||'—')+' · GTIN '+escapeHtml(item.gtin||'sem GTIN')+'</small>'+taxDetails+'</div><label class="review-field"><span>Produto cadastrado</span><select name="productId">'+productOptions(item.productId)+'</select></label><div class="review-item-meta">'+escapeHtml(item.quantity)+' '+escapeHtml(item.unit)+'<small>Qtd. recebida</small></div><div class="review-item-meta">'+money(item.total)+'<small>Total do item</small></div><label class="stock-choice"><input type="checkbox" name="trackStock" '+(item.trackStock&&canTrack?'checked':'')+' '+(canTrack?'':'disabled')+'><span>Lançar no estoque</span></label><small class="stock-hint">'+(product&&!product.tracksStock?'Produto sem controle de estoque':!item.productId?'Associe um produto':'')+'</small>'+createProduct+'</article>';
+    return '<article class="review-item" data-line="'+escapeHtml(item.lineNumber)+'"><div class="review-item-main"><strong>'+escapeHtml(item.description)+'</strong><small>Item '+escapeHtml(item.lineNumber)+' · código fornecedor '+escapeHtml(item.supplierCode||'—')+' · GTIN '+escapeHtml(item.gtin||'sem GTIN')+'</small>'+taxDetails+'</div><label class="review-field"><span>Produto cadastrado</span><select name="productId">'+productOptions(item.productId)+'</select></label><div class="review-item-meta">'+escapeHtml(item.quantity)+' '+escapeHtml(item.unit)+'<small>Qtd. recebida</small></div><div class="review-item-meta">'+money(item.total)+'<small>Total do item</small></div><label class="stock-choice"><input type="checkbox" name="trackStock" '+(item.trackStock&&canTrack?'checked':'')+' '+(canTrack?'':'disabled')+'><span>Lançar no estoque</span></label><small class="stock-hint">'+(product&&!product.tracksStock?'Produto sem controle de estoque':!item.productId?'Associe um produto':'')+'</small>'+createProduct+classificationImport+'</article>';
   }
   function showFiscalData(doc){
     var root=$('fiscalDataReview'), fiscal=doc.fiscalData||{}, info=fiscal.infNFe||{}, totals=info.total||{};
@@ -119,6 +123,9 @@
     if(event.target.name!=='productId')return;
     var row=event.target.closest('[data-line]'),checkbox=row&&row.querySelector('[name="trackStock"]');
     var product=products.find(function(item){return item.id===event.target.value;});
+    var lineNumber=Number(row&&row.dataset.line);
+    var sourceItem=(selectedDoc&&selectedDoc.items||[]).find(function(item){return Number(item.lineNumber)===lineNumber;});
+    if(sourceItem){sourceItem.productId=product?String(product.id):null;sourceItem.trackStock=!!product&&product.tracksStock;row.outerHTML=itemMarkup(sourceItem);return;}
     if(checkbox){checkbox.disabled=!product||!product.tracksStock;checkbox.checked=!!product&&product.tracksStock;}
     var createButton=row&&row.querySelector('[data-create-product]');
     if(createButton)createButton.hidden=!!event.target.value;
@@ -130,6 +137,25 @@
     if(!row||!panel)return;
     if(button.hasAttribute('data-create-product')){panel.hidden=false;var skuInput=panel.querySelector('[name="newProductSku"]');if(skuInput)skuInput.focus();return;}
     if(button.hasAttribute('data-cancel-product')){panel.hidden=true;return;}
+    if(button.hasAttribute('data-fill-classification')){
+      if(button.disabled||!selectedDoc)return;
+      var lineNumber=Number(row.dataset.line);
+      var item=(selectedDoc.items||[]).find(function(entry){return Number(entry.lineNumber)===lineNumber;});
+      var productSelect=row.querySelector('[name="productId"]');
+      var product=products.find(function(entry){return entry.id===(productSelect&&productSelect.value);});
+      if(!item||!product){setStatus('Selecione o produto correspondente antes de importar a classificação.',true);return;}
+      var ncm=product.ncm||(/^\d{8}$/.test(String(item.ncm||''))?String(item.ncm):'');
+      var cest=product.cest||(/^\d{7}$/.test(String(item.cest||''))?String(item.cest):'');
+      if(ncm===product.ncm&&cest===product.cest){setStatus('O produto já possui NCM e CEST ou o XML não contém códigos válidos.',true);return;}
+      button.disabled=true;
+      try{
+        await api('/api/records',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'product',id:product.id,record:{sku:product.sku,name:product.name,category:product.category||'',unit:product.unit,ncm:ncm,cest:cest,gtin:product.gtin==='SEM GTIN'?'':product.gtin,origin:product.origin||'',defaultCfop:product.defaultCfop||'',taxProfileId:product.taxProfileId||'',cost:product.cost,price:product.price,active:product.active}})});
+        product.ncm=ncm;product.cest=cest;
+        row.outerHTML=itemMarkup(item);
+        setStatus('NCM/CEST ausentes preenchidos com os valores do XML. Confirme a classificação com a contabilidade.');
+      }catch(error){setStatus(error.message,true);button.disabled=false;}
+      return;
+    }
     if(button.disabled||!selectedDoc)return;
     var lineNumber=Number(row.dataset.line);
     var item=(selectedDoc.items||[]).find(function(entry){return Number(entry.lineNumber)===lineNumber;});

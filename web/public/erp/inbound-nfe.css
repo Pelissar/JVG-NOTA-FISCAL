@@ -69,6 +69,8 @@ body{background:var(--canvas);color:var(--ink)}
 .product-create-grid input{width:100%;min-width:0;min-height:40px;padding:9px 10px;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface);color:var(--ink);font-size:12px}
 .product-create-actions{display:flex;flex-wrap:wrap;gap:8px}
 .product-create-actions .primary-button,.product-create-actions .secondary-button{min-height:36px;padding:8px 11px;font-size:11px}
+.product-classification-import{grid-column:1/-1;justify-self:start;min-height:34px;padding:7px 10px;color:var(--accent-strong)}
+.classification-source-note{grid-column:1/-1;color:var(--muted);font-size:10px;line-height:1.5}
 .review-item{display:grid;grid-template-columns:minmax(160px,1.3fr) minmax(190px,1.2fr) minmax(82px,.55fr) minmax(90px,.6fr) 150px;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft)}
 .review-item-main{min-width:0}.review-item-main strong{display:block;color:var(--ink);font-size:12px;line-height:1.5;overflow-wrap:anywhere}.review-item-main small{display:block;color:var(--muted);font-size:10px;line-height:1.5}
 .review-item-meta{color:var(--muted);font-size:11px;line-height:1.5}
