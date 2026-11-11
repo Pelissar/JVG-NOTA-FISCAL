@@ -6,8 +6,8 @@
 <title>Notas de entrada · SigmaFiscal</title>
 <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
 <link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css">
-<link rel="stylesheet" href="/erp/inbound-nfe.css">
-<script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js"></script><script defer src="/erp/inbound-nfe.js"></script>
+<link rel="stylesheet" href="/erp/inbound-nfe.css?v=20261111-2">
+<script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js"></script><script defer src="/erp/inbound-nfe.js?v=20261111-2"></script>
 </head>
 <body>
 <div id="erpGlobalNav"></div><button type="button" class="theme-toggle" data-theme-toggle aria-label="Alternar tema">◐ Modo escuro</button>
@@ -48,7 +48,21 @@
       <div id="reviewItems" class="review-items"></div>
       <label class="confirmation-check"><input id="officialStatus" type="checkbox"><span>Conferi a chave e a autorização desta NF-e no portal oficial da SEFAZ. Entendo que esta tela não verifica a assinatura digital.</span></label>
     </div>
-      <div class="review-footer"><p>Salvar conferência guarda as associações sem movimentar estoque. Confirmar entrada grava os movimentos de compra de forma única.</p><div><button class="secondary-button" id="saveReviewButton" type="submit">Salvar conferência</button><button class="primary-button" id="receiveButton" type="submit" data-receive="true">Confirmar entrada no estoque</button></div></div>
+      <section id="cancelEntryPanel" class="cancel-entry-panel" aria-live="polite" hidden>
+        <div class="cancel-entry-notice">
+          <strong>Cancelamento somente no ERP</strong>
+          <p id="cancelEntryDescription"></p>
+        </div>
+        <label class="review-field" for="cancelEntryReason">
+          <span>Motivo do cancelamento <b aria-hidden="true">*</b></span>
+          <textarea id="cancelEntryReason" minlength="5" maxlength="500" rows="3" required placeholder="Descreva por que esta entrada está sendo cancelada"></textarea>
+        </label>
+        <div class="cancel-entry-actions">
+          <button class="danger-button" id="confirmCancelEntry" type="button">Confirmar cancelamento</button>
+          <button class="secondary-button" id="cancelEntryBack" type="button">Voltar</button>
+        </div>
+      </section>
+      <div class="review-footer"><p>Salvar conferência guarda os vínculos. Confirmar entrada grava movimentos. Cancelar mantém o XML e registra o histórico; a nota do fornecedor não é cancelada na SEFAZ.</p><div class="review-footer-actions"><button class="secondary-button" id="cancelEntryButton" type="button">Cancelar lançamento no ERP</button><button class="secondary-button" id="restoreEntryButton" type="button" hidden>Restaurar rascunho</button><button class="secondary-button" id="saveReviewButton" type="submit">Salvar conferência</button><button class="primary-button" id="receiveButton" type="submit" data-receive="true">Confirmar entrada no estoque</button></div></div>
     </form>
   </section>
 </main>
