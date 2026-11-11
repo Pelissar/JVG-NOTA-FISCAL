@@ -23,3 +23,17 @@ test('tela rende dados de API usando textContent sem HTML não confiável', () =
   assert.doesNotMatch(ui, /innerHTML\s*=\s*.*draft\./);
   assert.match(page, /id="draftDetails"/);
 });
+
+test('checklist explica bloqueios de homologação sem expor credenciais', () => {
+  assert.match(api, /async function homologationSetup\(account: SiteAccount\)/);
+  assert.match(api, /focusTokenConfigured = Boolean\(/);
+  assert.match(api, /pilotCompanyMatches/);
+  assert.match(api, /issuerMissing/);
+  assert.match(api, /return \{[\s\S]*?focusTokenConfigured,[\s\S]*?accessIssues/);
+  const setup = api.slice(api.indexOf('async function homologationSetup'), api.indexOf('export async function GET'));
+  assert.doesNotMatch(setup, /return \{[^}]*\btoken\s*:/i);
+  assert.match(page, /id="homologationReadiness"/);
+  assert.match(ui, /function renderHomologationReadiness\(\)/);
+  assert.match(ui, /draft\.homologationSetup\.accessIssues/);
+  assert.match(ui, /NCM pendente/);
+});

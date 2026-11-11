@@ -58,10 +58,51 @@ function scope(account: SiteAccount): string {
   return `tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`;
 }
 
+async function homologationSetup(account: SiteAccount) {
+  const user = await getJvgUser();
+  const pilotCompanyId = focusRuntimeEnv("JVG_FOCUS_PILOT_COMPANY_ID");
+  const focusTokenConfigured = Boolean(focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN") || focusRuntimeEnv("FOCUS_NFE_HOMOLOGACAO_TOKEN"));
+  const [platformAdmin, company] = await Promise.all([
+    user ? getPlatformRole(user).then(role => role === "platform_admin") : Promise.resolve(false),
+    getCompany(account),
+  ]);
+  const pilotCompanyMatches = Boolean(pilotCompanyId && pilotCompanyId === account.company_id);
+  const accountCanSubmit = account.role !== "viewer";
+  const taxRegimeConfirmed = company?.tax_regime_confirmation_available === true && company.tax_regime_confirmed === true;
+  const supportedTaxRegime = company?.tax_regime === "simples_nacional";
+  const issuerMissing = company ? company.fiscal_missing.slice(0, 30) : ["Cadastro fiscal do emitente não encontrado"];
+  const accessIssues: string[] = [];
+  if (!platformAdmin) accessIssues.push("O envio de teste é restrito a um administrador da plataforma durante o piloto.");
+  if (!accountCanSubmit) accessIssues.push("Seu perfil nesta empresa não tem permissão para transmitir documentos fiscais.");
+  if (!pilotCompanyId) accessIssues.push("A empresa piloto ainda não está vinculada à configuração do ambiente de homologação.");
+  else if (!pilotCompanyMatches) accessIssues.push("Este ambiente está vinculado a outra empresa piloto; o envio de teste é exclusivo da JVG.");
+  if (!focusTokenConfigured) accessIssues.push("A credencial de homologação da Focus não está configurada no servidor.");
+  if (!company) accessIssues.push("Não foi possível localizar o cadastro fiscal do emitente.");
+  if (!taxRegimeConfirmed) accessIssues.push("O regime tributário precisa estar disponível e confirmado com a contabilidade nos dados da empresa.");
+  if (company && !supportedTaxRegime) accessIssues.push("O fluxo atual de NF-e em homologação atende somente empresas confirmadas no Simples Nacional.");
+  if (issuerMissing.length) accessIssues.push("Complete os dados fiscais obrigatórios do emitente: " + issuerMissing.join(", ") + ".");
+  return {
+    environment: "homologacao",
+    platformAdmin,
+    accountCanSubmit,
+    pilotCompanyConfigured: Boolean(pilotCompanyId),
+    pilotCompanyMatches,
+    focusTokenConfigured,
+    issuerFound: Boolean(company),
+    issuerMissing,
+    taxRegimeConfirmationAvailable: company?.tax_regime_confirmation_available === true,
+    taxRegimeConfirmed,
+    supportedTaxRegime,
+    accessReady: accessIssues.length === 0,
+    accessIssues,
+  };
+}
+
 export async function GET(request: Request) {
   try {
     const account = await currentAccount();
     const requestedId = new URL(request.url).searchParams.get("id");
+    const setup = await homologationSetup(account);
     if (requestedId !== null) {
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedId))
         throw new JvgBackendError("Identificador do rascunho inválido.", 400);
@@ -72,15 +113,7 @@ export async function GET(request: Request) {
       if (!selected[0]) throw new JvgBackendError("Documento fiscal não encontrado nesta empresa.", 404);
       const payload = selected[0].fiscal_payload && typeof selected[0].fiscal_payload === "object" ? selected[0].fiscal_payload as DbRow : {};
       const homologationGate = selected[0].status === "draft" ? reviewNfeHomologationGate(payload) : { ready: false, issues: [], reviewCount: 0 };
-      const user = await getJvgUser();
-      const platformAdmin = Boolean(user && await getPlatformRole(user) === "platform_admin");
-      const pilotAccess = Boolean(platformAdmin && account.role !== "viewer" &&
-        focusRuntimeEnv("JVG_FOCUS_PILOT_COMPANY_ID") === account.company_id &&
-        (focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN") || focusRuntimeEnv("FOCUS_NFE_HOMOLOGACAO_TOKEN")));
-      const currentCompany = pilotAccess ? await getCompany(account) : null;
-      const canUseHomologation = Boolean(pilotAccess && currentCompany && currentCompany.fiscal_missing.length === 0 &&
-        currentCompany.tax_regime_confirmation_available === true && currentCompany.tax_regime_confirmed === true &&
-        currentCompany.tax_regime === "simples_nacional");
+      const canUseHomologation = setup.accessReady;
       return apiJson({
         draft: {
           id: selected[0].id, status: selected[0].status, createdAt: selected[0].created_at,
@@ -103,8 +136,9 @@ export async function GET(request: Request) {
           documentReview: reviewNfeDocument(payload),
           focusPayloadReview: reviewFocusNfePayload(payload),
           homologationGate: { ready: homologationGate.ready, issues: homologationGate.issues, reviewCount: homologationGate.reviewCount },
+          homologationSetup: setup,
           canSubmitHomologation: selected[0].status === "draft" && homologationGate.ready && canUseHomologation,
-          homologationAccessIssue: canUseHomologation ? null : "Envio em homologação exige acesso administrador, empresa piloto, credencial de testes e dados fiscais atuais completos.",
+          homologationAccessIssue: canUseHomologation ? null : setup.accessIssues.join(" "),
           readyToTransmit: false, transmissionEnabled: false,
         },
       });
@@ -112,7 +146,7 @@ export async function GET(request: Request) {
     const rows = await dbRequest<DbRow[]>(
       `/rest/v1/jvg_fiscal_documents?${scope(account)}&document_type=eq.nfe&environment=eq.homologacao&select=id,status,focus_reference,access_key,fiscal_payload,created_at,updated_at&order=created_at.desc&limit=50`,
     );
-    return apiJson({ drafts: rows.map(row => {
+    return apiJson({ homologationSetup: setup, drafts: rows.map(row => {
       const payload = row.fiscal_payload && typeof row.fiscal_payload === "object" ? row.fiscal_payload as DbRow : {};
       const recipient = payload.recipient && typeof payload.recipient === "object" ? payload.recipient as DbRow : {};
       const items = Array.isArray(payload.items) ? payload.items : [];

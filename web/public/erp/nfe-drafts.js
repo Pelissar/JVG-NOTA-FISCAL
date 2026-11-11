@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var state = { products: [], clients: [], taxProfiles: [], issuerState: '', drafts: [], ready: false, sourceOrderId: null, sourceOrderNumber: '' };
+  var state = { products: [], clients: [], taxProfiles: [], issuerState: '', drafts: [], homologationSetup: null, ready: false, sourceOrderId: null, sourceOrderNumber: '' };
   var idempotencyKey = null;
   var status = document.getElementById('status');
   var form = document.getElementById('draftForm');
@@ -12,6 +12,92 @@
   function report(message, kind) {
     status.textContent = message;
     status.className = 'notice' + (kind ? ' ' + kind : '');
+  }
+
+  function readinessItem(target, title, ready, detail) {
+    var item = document.createElement('article');
+    item.className = 'readiness-item ' + (ready ? 'is-ready' : 'is-pending');
+    var heading = document.createElement('div');
+    heading.className = 'readiness-item-heading';
+    var name = document.createElement('strong');
+    name.textContent = title;
+    var badge = document.createElement('span');
+    badge.className = 'readiness-state';
+    badge.textContent = ready ? 'Concluído' : 'Pendente';
+    heading.append(name, badge);
+    var copy = document.createElement('p');
+    copy.textContent = detail;
+    item.append(heading, copy);
+    target.append(item);
+  }
+
+  function renderHomologationReadiness() {
+    var target = document.getElementById('homologationReadiness');
+    var summary = document.getElementById('readinessSummary');
+    if (!target || !summary) return;
+    target.replaceChildren();
+    var setup = state.homologationSetup;
+    if (!setup) {
+      summary.textContent = 'Aguardando dados';
+      var waiting = document.createElement('p');
+      waiting.textContent = 'Não foi possível carregar o checklist agora. Recarregue a página para tentar novamente.';
+      target.append(waiting);
+      return;
+    }
+
+    var activeProducts = state.products.filter(function (product) { return product.active === true; });
+    var readyProducts = activeProducts.filter(function (product) {
+      return /^\d{8}$/.test(String(product.ncm || '')) && /^[0-8]$/.test(String(product.origin || '')) && Boolean(product.taxProfileId);
+    }).length;
+    var incompleteProducts = activeProducts.length - readyProducts;
+    var missingNcm = activeProducts.filter(function (product) { return !/^\d{8}$/.test(String(product.ncm || '')); }).length;
+    var missingOrigin = activeProducts.filter(function (product) { return !/^[0-8]$/.test(String(product.origin || '')); }).length;
+    var missingProfile = activeProducts.filter(function (product) { return !product.taxProfileId; }).length;
+    var productReady = readyProducts > 0;
+    var approvedProfiles = state.taxProfiles.filter(function (profile) {
+      var rules = profile && profile.rules && typeof profile.rules === 'object' ? profile.rules : {};
+      var operations = rules.operations && typeof rules.operations === 'object' ? rules.operations : {};
+      return profile.review_status === 'reviewed' && Object.keys(operations).length > 0;
+    }).length;
+    var reviewPending = state.taxProfiles.filter(function (profile) { return profile.review_status !== 'reviewed'; }).length;
+    var environmentAccessReady = setup.platformAdmin && setup.accountCanSubmit && setup.pilotCompanyConfigured && setup.pilotCompanyMatches;
+    var regimeReady = setup.taxRegimeConfirmationAvailable && setup.taxRegimeConfirmed && setup.supportedTaxRegime;
+    var issuerReady = setup.issuerFound && Array.isArray(setup.issuerMissing) && setup.issuerMissing.length === 0;
+    var checks = [
+      [environmentAccessReady, 'Acesso ao piloto JVG', setup.pilotCompanyMatches
+        ? (setup.platformAdmin ? 'A empresa piloto está vinculada. O envio de teste é feito por administrador da plataforma.' : 'A empresa piloto está vinculada, mas o envio é restrito a um administrador da plataforma.')
+        : 'O envio de teste está restrito à empresa piloto JVG e depende da configuração do ambiente.'],
+      [setup.focusTokenConfigured, 'Credencial Focus de homologação', setup.focusTokenConfigured
+        ? 'A credencial está configurada no servidor. Use “Verificar conexão Focus NFe” para conferir a resposta real da Focus.'
+        : 'A credencial de testes ainda não está configurada no ambiente da aplicação.'],
+      [issuerReady, 'Dados fiscais do emitente', issuerReady
+        ? 'Os campos obrigatórios do emitente estão completos.'
+        : (setup.issuerMissing || []).length
+          ? 'Faltam: ' + setup.issuerMissing.join('; ') + '.'
+          : 'O cadastro fiscal da empresa não foi encontrado.'],
+      [regimeReady, 'Regime tributário', regimeReady
+        ? 'Simples Nacional confirmado nos dados da empresa.'
+        : !setup.taxRegimeConfirmationAvailable
+          ? 'A confirmação ainda não está disponível no banco. A migração fiscal correspondente precisa ser aplicada no Supabase.'
+          : !setup.taxRegimeConfirmed
+            ? 'O regime precisa ser confirmado com a contabilidade e salvo nos dados da empresa.'
+            : 'O fluxo de homologação atual atende somente ao Simples Nacional confirmado.'],
+      [productReady, 'Catálogo de produtos', activeProducts.length
+        ? activeProducts.length + ' produto(s) ativo(s); ' + readyProducts + ' completo(s), ' + incompleteProducts + ' incompleto(s). NCM pendente: ' + missingNcm + ', origem: ' + missingOrigin + ', perfil fiscal: ' + missingProfile + '. Só os itens escolhidos no rascunho precisam passar por esta conferência.'
+        : 'Cadastre ao menos um produto ativo para preparar uma NF-e.'],
+      [approvedProfiles > 0, 'Regra fiscal revisada', approvedProfiles > 0
+        ? approvedProfiles + ' perfil(is) com operação registrada e revisão declarada' + (reviewPending ? '; ' + reviewPending + ' perfil(is) ainda aguardam revisão.' : '. Confirme se o perfil corresponde à venda.')
+        : state.taxProfiles.length
+          ? state.taxProfiles.length + ' perfil(is) cadastrado(s), ainda sem revisão contábil registrada.'
+          : 'Nenhum perfil fiscal cadastrado. As regras precisam ser fornecidas e conferidas com a contabilidade para cada operação.'],
+    ];
+    var pending = 0;
+    checks.forEach(function (check) {
+      if (!check[0]) pending += 1;
+      readinessItem(target, check[1], check[0], check[2]);
+    });
+    summary.textContent = pending ? pending + ' etapa(s) de cadastro pendente(s)' : 'Cadastros base conferidos';
+    summary.className = 'readiness-badge ' + (pending ? 'is-pending' : 'is-ready');
   }
 
   function selectedNumber(name) {
@@ -292,8 +378,16 @@
         });
         panel.append(label, button);
       } else {
-        appendLine(panel, 'p', draft.homologationAccessIssue ||
-          'Envio bloqueado: conclua e revise os dados fiscais exigidos antes de transmitir.');
+        var setupIssues = draft.homologationSetup && Array.isArray(draft.homologationSetup.accessIssues)
+          ? draft.homologationSetup.accessIssues : [];
+        if (setupIssues.length) {
+          appendLine(panel, 'p', 'Acesso ao ambiente de teste ou cadastro do emitente:');
+          var setupList = document.createElement('ul');
+          setupIssues.forEach(function (issue) { appendLine(setupList, 'li', String(issue)); });
+          panel.append(setupList);
+        } else {
+          appendLine(panel, 'p', 'Envio bloqueado: conclua e revise os dados fiscais exigidos antes de transmitir.');
+        }
         var issues = draft.homologationGate && Array.isArray(draft.homologationGate.issues)
           ? draft.homologationGate.issues : [];
         if (issues.length) {
@@ -439,7 +533,9 @@
   async function refreshHistory() {
     var response = await api('/api/fiscal/nfe-drafts');
     state.drafts = Array.isArray(response.drafts) ? response.drafts : [];
+    state.homologationSetup = response.homologationSetup || null;
     renderHistory();
+    renderHomologationReadiness();
   }
 
   function clearOrderQuery() {
@@ -531,6 +627,7 @@
       state.clients = Array.isArray(data.clients) ? data.clients : [];
       state.issuerState = String(companyData.company && companyData.company.state || '').trim().toUpperCase();
       state.taxProfiles = Array.isArray(profileData.records) ? profileData.records : [];
+      renderHomologationReadiness();
       fillRecipients();
       fillCarriers();
       addItem();
