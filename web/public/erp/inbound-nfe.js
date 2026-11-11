@@ -12,18 +12,47 @@
     if(!docs.length){root.innerHTML='<p class="empty-documents">Nenhuma NF-e de entrada importada nesta empresa ainda.</p>';return;}
     root.innerHTML=docs.map(function(doc){
       var received=doc.status==='received';
+      var cancelled=doc.status==='cancelled';
       var receivedWithoutStock=received&&doc.receivedWithoutStock===true;
       var itemCount=Array.isArray(doc.items)?doc.items.length:0;
-      return '<article class="document-row"><div class="document-main"><strong>NF-e '+escapeHtml(doc.invoiceNumber||'—')+' · '+escapeHtml(doc.issuerName||'Fornecedor')+'</strong><small>Emitida em '+date(doc.issuedAt)+' · Série '+escapeHtml(doc.series||'—')+' · chave '+escapeHtml(doc.accessKey)+(doc.carrierName?' · Transportadora: '+escapeHtml(doc.carrierName):'')+'</small></div><div class="document-meta"><b>'+money(doc.total)+'</b><small>'+itemCount+' item(ns) · cStat '+escapeHtml(doc.authorizationStatus)+'</small></div><div class="document-meta total"><span class="status-chip '+(received?(receivedWithoutStock?'recovery':'received'):'')+'">'+(received?(receivedWithoutStock?'Recebida sem estoque':'Recebida'):'Pendente de conferência')+'</span></div><div class="document-actions">'+(received?'<button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">'+(receivedWithoutStock?'Corrigir estoque':'Ver')+'</button>':'<button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">Conferir</button>')+'<a class="secondary-button" href="/api/inbound-nfe?xml='+encodeURIComponent(doc.id)+'">XML</a></div></article>';
+      var statusLabel=cancelled?'Cancelada no ERP':received?(receivedWithoutStock?'Recebida sem estoque':'Recebida'):'Pendente de conferência';
+      var statusClass=cancelled?'cancelled':received?(receivedWithoutStock?'recovery':'received'):'';
+      var openLabel=cancelled?'Ver cancelamento':received?(receivedWithoutStock?'Corrigir estoque':'Ver'):'Conferir';
+      var cancellationNote=cancelled&&doc.cancellationReason?'<small>Motivo no ERP: '+escapeHtml(doc.cancellationReason)+'</small>':'';
+      return '<article class="document-row"><div class="document-main"><strong>NF-e '+escapeHtml(doc.invoiceNumber||'—')+' · '+escapeHtml(doc.issuerName||'Fornecedor')+'</strong><small>Emitida em '+date(doc.issuedAt)+' · Série '+escapeHtml(doc.series||'—')+' · chave '+escapeHtml(doc.accessKey)+(doc.carrierName?' · Transportadora: '+escapeHtml(doc.carrierName):'')+'</small>'+cancellationNote+'</div><div class="document-meta"><b>'+money(doc.total)+'</b><small>'+itemCount+' item(ns) · cStat '+escapeHtml(doc.authorizationStatus)+'</small></div><div class="document-meta total"><span class="status-chip '+statusClass+'">'+statusLabel+'</span></div><div class="document-actions"><button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">'+openLabel+'</button><a class="secondary-button" href="/api/inbound-nfe?xml='+encodeURIComponent(doc.id)+'">XML</a></div></article>';
     }).join('');
   }
-  function supplierOptions(selected, doc){
+  function supplierOptions(selected, doc){  function supplierOptions(selected, doc){
     var options=suppliers.map(function(supplier){return '<option value="'+escapeHtml(supplier.id)+'" '+(supplier.id===selected?'selected':'')+'>'+escapeHtml(supplier.name)+' · '+escapeHtml(supplier.document||'sem CPF/CNPJ')+'</option>';});
     if(selected&&!suppliers.some(function(supplier){return supplier.id===selected;}))options.unshift('<option value="'+escapeHtml(selected)+'" selected>'+escapeHtml((doc&&doc.issuerName)||'Fornecedor vinculado')+' · '+escapeHtml((doc&&doc.issuerDocument)||'cadastro inativo')+'</option>');
     return '<option value="">Selecione fornecedor...</option>'+options.join('');
   }
   function productOptions(selected){
     return '<option value="">Não vincular a produto...</option>'+products.map(function(product){return '<option value="'+escapeHtml(product.id)+'" '+(product.id===selected?'selected':'')+'>'+escapeHtml(product.sku)+' · '+escapeHtml(product.name)+' ('+escapeHtml(product.unit)+')</option>';}).join('');
+  }
+  function collectReviewItems(){
+    return Array.from($('reviewItems').querySelectorAll('[data-line]')).map(function(row){
+      return {
+        lineNumber:Number(row.dataset.line),
+        productId:row.querySelector('[name="productId"]').value||null,
+        trackStock:row.querySelector('[name="trackStock"]').checked
+      };
+    });
+  }
+  async function persistReviewDraft(items){
+    if(!selectedDoc)throw new Error('Abra uma NF-e antes de salvar a conferência.');
+    var nextItems=Array.isArray(items)?items:collectReviewItems();
+    var supplierId=$('supplierSelect').value||null;
+    await api('/api/inbound-nfe',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:selectedDoc.id,supplierId:supplierId,items:nextItems})});
+    var byLine=new Map(nextItems.map(function(item){return [Number(item.lineNumber),item];}));
+    selectedDoc.items=(selectedDoc.items||[]).map(function(item){
+      var change=byLine.get(Number(item.lineNumber));
+      return change?Object.assign({},item,change):item;
+    });
+    selectedDoc.supplierId=supplierId||'';
+    selectedDoc.status='draft';
+    selectedDoc.receivedWithoutStock=false;
+    return nextItems;
   }
   function itemMarkup(item){
     var canTrack=!!(item.productId&&products.some(function(product){return product.id===item.productId&&product.tracksStock;}));
@@ -44,20 +73,19 @@
       '<details><summary>Tributos e totais declarados no XML</summary><pre>'+escapeHtml(JSON.stringify(totals,null,2))+'</pre></details>'+
       '<details><summary>Todos os campos estruturados da NF-e e do protocolo</summary><pre>'+escapeHtml(JSON.stringify(fiscal,null,2))+'</pre></details>';
   }
-  async function openReview(id){
-    selectedDoc=docs.find(function(doc){return doc.id===id;});
-    if(!selectedDoc)return;
-    var received=selectedDoc.status==='received';
-    var recoverable=received&&selectedDoc.receivedWithoutStock===true;
-    var locked=received&&!recoverable;
-    $('reviewHeading').textContent=recoverable?'Corrigir entrada da NF-e '+selectedDoc.invoiceNumber:'Conferir NF-e '+selectedDoc.invoiceNumber;
-    $('reviewSummary').textContent=selectedDoc.issuerName+' · '+date(selectedDoc.issuedAt)+' · '+money(selectedDoc.total);
-    $('supplierSelect').innerHTML=supplierOptions(selectedDoc.supplierId,selectedDoc);
-    $('authorizationSummary').textContent=recoverable?'Esta NF-e foi marcada como recebida, mas não gerou movimentos de estoque. Associe o produto, marque o lançamento e confirme novamente.':'Protocolo informado no XML: cStat '+selectedDoc.authorizationStatus+' — '+(selectedDoc.authorizationReason||'Autorização de uso')+'. Assinatura ainda precisa ser conferida no portal oficial.';
+  function applyReviewState(doc){
+    var received=doc.status==='received';
+    var cancelled=doc.status==='cancelled';
+    var recoverable=received&&doc.receivedWithoutStock===true;
+    var locked=cancelled||(received&&!recoverable);
+    $('reviewHeading').textContent=cancelled?'Lançamento cancelado · NF-e '+doc.invoiceNumber:recoverable?'Corrigir entrada da NF-e '+doc.invoiceNumber:'Conferir NF-e '+doc.invoiceNumber;
+    $('authorizationSummary').textContent=cancelled
+      ?'Este lançamento foi cancelado no ERP em '+date(doc.cancelledAt)+'. A NF-e do fornecedor continua autorizada; esta ação não cancela o documento fiscal. Motivo: '+(doc.cancellationReason||'não informado')+'.'
+      :recoverable
+        ?'Esta NF-e foi marcada como recebida, mas não gerou movimentos de estoque. Associe o produto, marque o lançamento e confirme novamente.'
+        :'Protocolo informado no XML: cStat '+doc.authorizationStatus+' — '+(doc.authorizationReason||'Autorização de uso')+'. Assinatura ainda precisa ser conferida no portal oficial.';
     $('authorizationSummary').classList.toggle('recovery',recoverable);
-    $('fiscalDataReview').innerHTML='<p>Carregando dados fiscais do XML...</p>';
-    $('reviewItems').innerHTML=(selectedDoc.items||[]).map(itemMarkup).join('');
-    $('officialStatus').checked=false;
+    $('authorizationSummary').classList.toggle('cancelled',cancelled);
     $('officialStatus').disabled=locked;
     $('supplierSelect').disabled=locked;
     $('reviewItems').querySelectorAll('select,input').forEach(function(input){input.disabled=input.disabled||locked;});
@@ -65,6 +93,25 @@
     $('receiveButton').hidden=locked;
     $('saveReviewButton').textContent=recoverable?'Reabrir e salvar conferência':'Salvar conferência';
     $('receiveButton').textContent=recoverable?'Reabrir e lançar no estoque':'Confirmar entrada no estoque';
+    $('cancelEntryButton').hidden=cancelled;
+    $('cancelEntryButton').textContent=received?'Estornar entrada no estoque':'Cancelar lançamento no ERP';
+    $('restoreEntryButton').hidden=!(cancelled&&doc.canReopenCancelled===true);
+    $('cancelEntryDescription').textContent=received
+      ?'Será criado um movimento inverso, mantendo os movimentos originais e o XML. O estorno só é permitido se o saldo atual comportar a devolução; isso não cancela a NF-e do fornecedor.'
+      :'O lançamento será cancelado no ERP e o XML continuará no histórico. Nenhum movimento de estoque será criado.';
+  }
+  async function openReview(id){
+    selectedDoc=docs.find(function(doc){return doc.id===id;});
+    if(!selectedDoc)return;
+    $('reviewSummary').textContent=selectedDoc.issuerName+' · '+date(selectedDoc.issuedAt)+' · '+money(selectedDoc.total);
+    $('supplierSelect').innerHTML=supplierOptions(selectedDoc.supplierId,selectedDoc);
+    $('fiscalDataReview').innerHTML='<p>Carregando dados fiscais do XML...</p>';
+    $('reviewItems').innerHTML=(selectedDoc.items||[]).map(itemMarkup).join('');
+    $('officialStatus').checked=false;
+    $('cancelEntryPanel').hidden=true;
+    $('cancelEntryReason').value='';
+    $('supplierSelect').disabled=false;
+    applyReviewState(selectedDoc);
     $('closeReview').textContent='Fechar';
     $('reviewCard').hidden=false;
     $('reviewCard').scrollIntoView({behavior:'smooth',block:'start'});
@@ -75,21 +122,12 @@
       $('supplierSelect').innerHTML=supplierOptions(selectedDoc.supplierId,selectedDoc);
       $('reviewItems').innerHTML=(selectedDoc.items||[]).map(itemMarkup).join('');
       showFiscalData(selectedDoc);
-      var updatedReceived=selectedDoc.status==='received';
-      var updatedRecoverable=updatedReceived&&selectedDoc.receivedWithoutStock===true;
-      var updatedLocked=updatedReceived&&!updatedRecoverable;
-      $('authorizationSummary').textContent=updatedRecoverable?'Esta NF-e foi marcada como recebida, mas não gerou movimentos de estoque. Associe o produto, marque o lançamento e confirme novamente.':'Protocolo informado no XML: cStat '+selectedDoc.authorizationStatus+' — '+(selectedDoc.authorizationReason||'Autorização de uso')+'. Assinatura ainda precisa ser conferida no portal oficial.';
-      $('authorizationSummary').classList.toggle('recovery',updatedRecoverable);
-      $('supplierSelect').disabled=updatedLocked;
-      $('reviewItems').querySelectorAll('select,input').forEach(function(input){input.disabled=input.disabled||updatedLocked;});
-      $('officialStatus').disabled=updatedLocked;
-      $('saveReviewButton').hidden=updatedLocked;
-      $('receiveButton').hidden=updatedLocked;
-      $('saveReviewButton').textContent=updatedRecoverable?'Reabrir e salvar conferência':'Salvar conferência';
-      $('receiveButton').textContent=updatedRecoverable?'Reabrir e lançar no estoque':'Confirmar entrada no estoque';
-    }catch(error){$('fiscalDataReview').innerHTML='<p class="error">Não foi possível abrir os dados completos do XML: '+escapeHtml(error.message)+'</p>';}
+      applyReviewState(selectedDoc);
+    }catch(error){
+      $('fiscalDataReview').innerHTML='<p class="error">Não foi possível abrir os dados completos do XML: '+escapeHtml(error.message)+'</p>';
+    }
   }
-  async function load(){
+  async function load(){  async function load(){
     setStatus('Carregando lançamentos...');
     try{
       var result=await Promise.all([api('/api/inbound-nfe'),api('/api/records?scope=products'),api('/api/records?scope=clients')]);
@@ -120,17 +158,27 @@
   });
   $('documents').addEventListener('click',function(event){var button=event.target.closest('[data-open]');if(button)openReview(button.dataset.open);});
   $('reviewItems').addEventListener('change',function(event){
-    if(event.target.name!=='productId')return;
-    var row=event.target.closest('[data-line]'),checkbox=row&&row.querySelector('[name="trackStock"]');
-    var product=products.find(function(item){return item.id===event.target.value;});
+    if(event.target.name!=='productId'&&event.target.name!=='trackStock')return;
+    var row=event.target.closest('[data-line]');
     var lineNumber=Number(row&&row.dataset.line);
-    var sourceItem=(selectedDoc&&selectedDoc.items||[]).find(function(item){return Number(item.lineNumber)===lineNumber;});
-    if(sourceItem){sourceItem.productId=product?String(product.id):null;sourceItem.trackStock=!!product&&product.tracksStock;row.outerHTML=itemMarkup(sourceItem);return;}
-    if(checkbox){checkbox.disabled=!product||!product.tracksStock;checkbox.checked=!!product&&product.tracksStock;}
-    var createButton=row&&row.querySelector('[data-create-product]');
-    if(createButton)createButton.hidden=!!event.target.value;
+    var item=(selectedDoc&&selectedDoc.items||[]).find(function(entry){return Number(entry.lineNumber)===lineNumber;});
+    if(!row||!item)return;
+    if(event.target.name==='productId'){
+      var product=products.find(function(entry){return entry.id===event.target.value;});
+      item.productId=product?String(product.id):null;
+      item.trackStock=!!product&&product.tracksStock;
+      row.outerHTML=itemMarkup(item);
+    }else item.trackStock=event.target.checked;
+    persistReviewDraft().then(function(){
+      setStatus('Vínculo do produto e seleção de estoque salvos no rascunho. A quantidade só entra após confirmar a entrada.',false);
+    }).catch(function(error){setStatus(error.message,true);});
   });
-  $('reviewItems').addEventListener('click',async function(event){
+  $('supplierSelect').addEventListener('change',function(){
+    if(!selectedDoc||selectedDoc.status==='cancelled')return;
+    persistReviewDraft().then(function(){setStatus('Fornecedor vinculado ao rascunho.',false);})
+      .catch(function(error){setStatus(error.message,true);});
+  });
+    $('reviewItems').addEventListener('click',async function(event){
     var button=event.target.closest('[data-create-product],[data-cancel-product],[data-save-product]');
     if(!button)return;
     var row=button.closest('[data-line]'),panel=row&&row.querySelector('.product-create-panel');
@@ -179,38 +227,91 @@
       item.productId=created.id;
       item.trackStock=true;
       row.outerHTML=itemMarkup(item);
+      await persistReviewDraft();
       $('uploadStatus').classList.remove('error');
-      $('uploadStatus').textContent='Produto criado a partir do XML e vinculado à conferência. Salve a conferência ou confirme a entrada para gravar o vínculo.';
-      setStatus('Produto criado e selecionado. A quantidade ainda só entra no estoque após a confirmação da NF-e.');
+      $('uploadStatus').textContent='Produto criado e vínculo salvo no rascunho. A entrada no estoque só ocorre após a confirmação da NF-e.';
+      setStatus('Produto criado, vínculo salvo e item marcado para estoque. Confirme a autorização no portal da SEFAZ para concluir.');
     }catch(error){setStatus(error.message,true);button.disabled=false;}
   });
-  $('closeReview').addEventListener('click',function(){$('reviewCard').hidden=true;selectedDoc=null;});
-  $('reloadButton').addEventListener('click',load);
-  $('reviewForm').addEventListener('submit',async function(event){
+  $('cancelEntryButton').addEventListener('click',function(){
+    if(!selectedDoc||selectedDoc.status==='cancelled')return;
+    $('cancelEntryPanel').hidden=false;
+    $('cancelEntryReason').focus();
+  });
+  $('cancelEntryBack').addEventListener('click',function(){
+    $('cancelEntryPanel').hidden=true;
+    $('cancelEntryReason').value='';
+  });
+  $('confirmCancelEntry').addEventListener('click',async function(){
+    if(!selectedDoc)return;
+    var reason=$('cancelEntryReason').value.trim();
+    if(reason.length<5||reason.length>500){
+      setStatus('Informe um motivo entre 5 e 500 caracteres.',true);
+      $('cancelEntryReason').focus();
+      return;
+    }
+    var button=$('confirmCancelEntry');
+    button.disabled=true;
+    try{
+      var result=await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'cancel',id:selectedDoc.id,reason:reason})});
+      var reversed=Number(result.result&&result.result.reversedLines||0);
+      $('cancelEntryPanel').hidden=true;
+      $('reviewCard').hidden=true;
+      selectedDoc=null;
+      await load();
+      setStatus(reversed?'Entrada cancelada no ERP; '+reversed+' movimento(s) de estorno foram registrados.':'Lançamento cancelado no ERP sem movimentar o estoque. A NF-e original foi preservada.',false);
+    }catch(error){setStatus(error.message,true);}
+    finally{button.disabled=false;}
+  });
+  $('restoreEntryButton').addEventListener('click',async function(){
+    if(!selectedDoc||selectedDoc.canReopenCancelled!==true)return;
+    var button=$('restoreEntryButton');
+    button.disabled=true;
+    try{
+      await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'reopen-cancelled',id:selectedDoc.id})});
+      $('reviewCard').hidden=true;
+      selectedDoc=null;
+      await load();
+      setStatus('Rascunho restaurado. Confira os vínculos antes de lançar no estoque.',false);
+    }catch(error){setStatus(error.message,true);}
+    finally{button.disabled=false;}
+  });
+  $('closeReview').addEventListener('click',function()  $('reviewForm').addEventListener('submit',async function(event){
     event.preventDefault();
     if(!selectedDoc)return;
     var receive=event.submitter&&event.submitter.dataset.receive==='true';
-    var supplierId=$('supplierSelect').value||null;
-    var items=Array.from($('reviewItems').querySelectorAll('[data-line]')).map(function(row){
-      return {lineNumber:Number(row.dataset.line),productId:row.querySelector('[name="productId"]').value||null,trackStock:row.querySelector('[name="trackStock"]').checked};
-    });
-    if(receive&&!$('officialStatus').checked){setStatus('Marque que conferiu a autorização no portal oficial da NF-e.',true);return;}
-    if(receive&&!items.some(function(item){return item.trackStock;})){setStatus('Marque “Lançar no estoque” em pelo menos um item. Se quiser apenas guardar os vínculos, use “Salvar conferência”.',true);return;}
-    if(receive&&items.some(function(item){return item.trackStock&&!item.productId;})){setStatus('Associe um produto a cada item marcado para movimentar o estoque.',true);return;}
-    var buttons=[$('saveReviewButton'),$('receiveButton')];buttons.forEach(function(button){button.disabled=true;});
+    var items=collectReviewItems();
+    if(receive&&!items.some(function(item){return item.trackStock;})){
+      setStatus('Para confirmar a entrada, selecione o produto e marque “Lançar no estoque” em pelo menos um item.',true);
+      return;
+    }
+    if(receive&&items.some(function(item){return item.trackStock&&!item.productId;})){
+      setStatus('Associe um produto cadastrado a cada item marcado para movimentar o estoque.',true);
+      return;
+    }
+    var buttons=[$('saveReviewButton'),$('receiveButton')];
+    buttons.forEach(function(button){button.disabled=true;});
     try{
       if(selectedDoc.receivedWithoutStock===true){
         await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'reopen-empty',id:selectedDoc.id})});
+        selectedDoc.status='draft';
+        selectedDoc.receivedWithoutStock=false;
       }
-      await api('/api/inbound-nfe',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:selectedDoc.id,supplierId:supplierId,items:items})});
+      await persistReviewDraft(items);
+      if(receive&&!$('officialStatus').checked){
+        setStatus('Vínculos salvos no rascunho. Marque a confirmação da consulta oficial da SEFAZ para lançar a quantidade no estoque.',true);
+        return;
+      }
       if(receive){
         var confirmation=await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'confirm',id:selectedDoc.id,checkedOfficialStatus:true})});
         var stockLines=confirmation.result&&Number(confirmation.result.stockLines||0);
         $('uploadStatus').textContent='NF-e recebida. '+stockLines+' item(ns) geraram movimentos de estoque vinculados à chave.';
-      }else $('uploadStatus').textContent=selectedDoc.receivedWithoutStock===true?'NF-e reaberta; conferência salva sem movimentar estoque.':'Conferência salva sem movimentar estoque.';
-      $('reviewCard').hidden=true;selectedDoc=null;await load();
+      }else $('uploadStatus').textContent='Conferência salva sem movimentar estoque.';
+      $('reviewCard').hidden=true;
+      selectedDoc=null;
+      await load();
     }catch(error){setStatus(error.message,true);}
     finally{buttons.forEach(function(button){button.disabled=false;});}
   });
-  load();
+    load();
 })();
