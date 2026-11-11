@@ -366,6 +366,48 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
   const freightValid = Number.isInteger(freightMode) && [0,1,2,3,4,9].includes(freightMode);
   add("modalidade_frete", "Modalidade do frete", freightValid,
       "Selecione a modalidade efetivamente contratada; não há valor padrão.", freightValid ? freightMode : undefined);
+  const carrier = obj(transport.carrier);
+  const carrierSelected = Object.keys(carrier).length > 0;
+  const carrierProblems: string[] = [];
+  if (carrierSelected) {
+    const carrierName = text(carrier.legalName || carrier.name);
+    const carrierNameValid = carrierName.length >= 2 && carrierName.length <= 60;
+    if (carrierNameValid) requestPreview.nome_transportador = carrierName;
+    else carrierProblems.push("nome/razão social do transportador (2 a 60 caracteres)");
+
+    const carrierDocumentType = text(carrier.documentType).toLowerCase();
+    const carrierDocument = textDigits(carrier.documentNumber);
+    if (carrierDocumentType === "cnpj" && /^\d{14}$/.test(carrierDocument))
+      requestPreview.cnpj_transportador = carrierDocument;
+    else if (carrierDocumentType === "cpf" && /^\d{11}$/.test(carrierDocument))
+      requestPreview.cpf_transportador = carrierDocument;
+    else carrierProblems.push("CPF/CNPJ válido e compatível com o tipo do cadastro");
+
+    const carrierIe = text(carrier.stateRegistration);
+    if (carrierIe && /^.{2,14}$/.test(carrierIe)) requestPreview.inscricao_estadual_transportador = carrierIe;
+    else if (carrierIe) carrierProblems.push("inscrição estadual do transportador (2 a 14 caracteres)");
+
+    const carrierAddress = obj(carrier.address);
+    const carrierAddressText = [carrierAddress.street, carrierAddress.number, carrierAddress.complement, carrierAddress.district]
+      .map(text).filter(Boolean).join(", ");
+    if (carrierAddressText.length >= 1 && carrierAddressText.length <= 60)
+      requestPreview.endereco_transportador = carrierAddressText;
+    else if (carrierAddressText.length > 60)
+      carrierProblems.push("endereço do transportador excede 60 caracteres aceitos pela Focus");
+
+    const carrierCity = text(carrierAddress.city);
+    if (carrierCity.length >= 1 && carrierCity.length <= 60) requestPreview.municipio_transportador = carrierCity;
+    else if (carrierCity) carrierProblems.push("município do transportador (1 a 60 caracteres)");
+
+    const carrierUf = text(carrierAddress.state).toUpperCase();
+    if (/^[A-Z]{2}$/.test(carrierUf)) requestPreview.uf_transportador = carrierUf;
+    else if (carrierUf) carrierProblems.push("UF do transportador com duas letras");
+  }
+  const carrierValid = !carrierSelected || carrierProblems.length === 0;
+  add("transportador", "Transportadora selecionada", carrierValid,
+      !carrierSelected ? "Nenhuma transportadora vinculada; informe uma se a operação exigir." :
+      carrierProblems.length ? carrierProblems.join("; ") :
+      "Identificação e dados disponíveis mapeados para os campos Focus; confirme os dados cadastrais.");
   const payments = Array.isArray(payload.payments) ? payload.payments : [];
   const paymentMethods = new Set(["01", "02", "03", "04", "05", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "90", "91", "99"]);
   const mappedPayments: Json[] = [];

@@ -23,7 +23,8 @@ O ERP não escolhe CFOP, CSOSN/CST, alíquotas, bases, créditos ou valores. Nã
 | UFs do emitente/destinatário | `local_destino` | Interna/interestadual derivada das UFs; exterior não está habilitado. |
 | Indicação manual da operação | `consumidor_final` | Sem inferência pelo CPF/CNPJ; converte para `0` ou `1` apenas quando escolhido. |
 | Presença informada no rascunho | `presenca_comprador` | Sem valor implícito; aceita os códigos Focus `0`, `1`, `2`, `3`, `4`, `5`, `9`. |
-| Modalidade de frete informada | `modalidade_frete` | Sem padrão; aceita `0`, `1`, `2`, `3`, `4`, `9`. Transportadora, veículo e volumes seguem pendentes. |
+| Modalidade de frete informada | `modalidade_frete` | Sem padrão; aceita `0`, `1`, `2`, `3`, `4`, `9` conforme o leiaute de homologação. Não reutilizar `3`/`4` em produção sem conferir o leiaute de produção. |
+| Transportadora selecionada no rascunho | `cnpj_transportador` ou `cpf_transportador`, `nome_transportador`, `inscricao_estadual_transportador`, `endereco_transportador`, `municipio_transportador`, `uf_transportador` | Mapeia somente dados presentes no cadastro da transportadora. Documento deve ser compatível com CPF/CNPJ e endereço respeita o limite Focus de 60 caracteres. Veículo e volumes ainda não são coletados. |
 | Empresa da sessão | campos do emitente | CNPJ, nome, IE, regime confirmado e endereço fiscal da empresa autenticada. |
 | Cadastro do cliente | campos do destinatário | CPF/CNPJ, nome, endereço, contato e IE quando cadastrados. |
 | Produto + item do rascunho | `codigo_produto`, `descricao`, `codigo_ncm`, `cfop`, unidade, quantidade, preço, `valor_bruto` | Valores comerciais em centavos convertidos para número no preview. |
@@ -34,6 +35,8 @@ O ERP não escolhe CFOP, CSOSN/CST, alíquotas, bases, créditos ou valores. Nã
 | Pagamentos quando informados | `formas_pagamento` | Converte indicador, forma e valor para o contrato Focus; a coleção pode ficar vazia. Cartão e forma 99 exigem campos adicionais. |
 
 O perfil fiscal atual pode conter regras de venda interna e interestadual separadas. O rascunho escolhe o ramo pela UF. Perfil legado sem esse recorte fica pendente; não se aplica automaticamente a outra operação. A associação continua sendo `jvg_products.tax_profile_id`; não foi criada tabela ou migration nova.
+
+Há uma diferença entre os contratos publicados pela Focus: o leiaute completo de homologação documenta presença `5` e frete `3`/`4`, enquanto a referência resumida do endpoint lista presença `0`, `1`, `2`, `3`, `4`, `9` e frete `0`, `1`, `2`, `9`. Esta tela é somente prévia de homologação e a emissão continua desativada. Antes de qualquer uso em produção, validar os códigos aceitos no leiaute de produção e restringir o payload a esse contrato.
 
 ## Campos condicionais exibidos como pendência
 

@@ -116,6 +116,34 @@ test('modalidades de frete oficiais 3 e 4 sao aceitas e CSOSN 900 nao exige grup
   assert.equal(result.checks.find(row=>row.key==='icms_campos_condicionais').ok,true);
 });
 
+test('prévia envia os dados cadastrados da transportadora usando os campos oficiais Focus', () => {
+  const payload=focusPayload();
+  payload.transport.carrier={
+    name:'Transportadora Exemplo',legalName:'Transportadora Exemplo Ltda',
+    documentType:'cnpj',documentNumber:'12345678000195',stateRegistration:'123456789',
+    address:{street:'Rua do Transporte',number:'45',complement:'Sala 2',district:'Centro',city:'São Paulo',state:'sp'}
+  };
+  const result=reviewFocusNfePayload(payload);
+  assert.equal(result.requestPreview.cnpj_transportador,'12345678000195');
+  assert.equal(result.requestPreview.nome_transportador,'Transportadora Exemplo Ltda');
+  assert.equal(result.requestPreview.inscricao_estadual_transportador,'123456789');
+  assert.equal(result.requestPreview.endereco_transportador,'Rua do Transporte, 45, Sala 2, Centro');
+  assert.equal(result.requestPreview.municipio_transportador,'São Paulo');
+  assert.equal(result.requestPreview.uf_transportador,'SP');
+  assert.equal(result.checks.find(row=>row.key==='transportador').ok,true);
+  assert.equal(result.canSend,false);
+});
+
+test('prévia bloqueia transportadora selecionada com documento incompatível sem montar identidade incorreta', () => {
+  const payload=focusPayload();
+  payload.transport.carrier={name:'Transportadora Exemplo',documentType:'cpf',documentNumber:'12345678000195'};
+  const result=reviewFocusNfePayload(payload);
+  assert.equal(result.checks.find(row=>row.key==='transportador').ok,false);
+  assert.equal('cpf_transportador' in result.requestPreview,false);
+  assert.equal('cnpj_transportador' in result.requestPreview,false);
+  assert.equal(result.canSend,false);
+});
+
 test('cabecalho incompleto permanece pendente sem converter campos vazios em zero', () => {
   const payload=focusPayload();
   payload.purpose=null;
