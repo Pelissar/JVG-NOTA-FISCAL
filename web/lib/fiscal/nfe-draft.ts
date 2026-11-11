@@ -64,10 +64,10 @@ function optionalBoolean(value: unknown): boolean | null {
 
 function optionalText(value: unknown, maxLength: number, label: string): string | null {
   if (value == null || value === "") return null;
-  if (typeof value !== "string") throw new Error(\`\${label} inválido.\`);
+  if (typeof value !== "string") throw new Error(`${label} inválido.`);
   const normalized = value.trim();
   if (!normalized) return null;
-  if (normalized.length > maxLength) throw new Error(\`\${label} deve ter no máximo \${maxLength} caracteres.\`);
+  if (normalized.length > maxLength) throw new Error(`${label} deve ter no máximo ${maxLength} caracteres.`);
   return normalized;
 }
 
@@ -88,10 +88,10 @@ function optionalWeightMilli(value: unknown, label: string): number | null {
   if (value == null || value === "") return null;
   const raw = typeof value === "number" ? String(value) : typeof value === "string" ? value.trim() : "";
   if (!/^\d{1,12}(?:\.\d{1,3})?$/.test(raw))
-    throw new Error(\`\${label} deve ser positivo e ter no máximo 3 casas decimais.\`);
+    throw new Error(`${label} deve ser positivo e ter no máximo 3 casas decimais.`);
   const milli = Math.round(Number(raw) * 1000);
   if (!Number.isSafeInteger(milli) || milli <= 0)
-    throw new Error(\`\${label} deve ser positivo e ter no máximo 3 casas decimais.\`);
+    throw new Error(`${label} deve ser positivo e ter no máximo 3 casas decimais.`);
   return milli;
 }
 
@@ -100,20 +100,20 @@ function parseVolumes(raw: unknown): NfeDraftVolumeInput[] {
   if (!Array.isArray(raw) || raw.length > 5000) throw new Error("Informe uma lista válida de volumes.");
   const volumes: NfeDraftVolumeInput[] = [];
   raw.forEach((entry: unknown, index: number) => {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new Error(\`Volume \${index + 1} inválido.\`);
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new Error(`Volume ${index + 1} inválido.`);
     const data = entry as Record<string, unknown>;
     const quantityRaw = data.quantity == null ? "" : String(data.quantity).trim();
-    const species = optionalText(data.species, 60, \`Espécie do volume \${index + 1}\`);
-    const brand = optionalText(data.brand, 60, \`Marca do volume \${index + 1}\`);
-    const number = optionalText(data.number, 60, \`Identificação do volume \${index + 1}\`);
-    const netWeightMilli = optionalWeightMilli(data.netWeight, \`Peso líquido do volume \${index + 1}\`);
-    const grossWeightMilli = optionalWeightMilli(data.grossWeight, \`Peso bruto do volume \${index + 1}\`);
+    const species = optionalText(data.species, 60, `Espécie do volume ${index + 1}`);
+    const brand = optionalText(data.brand, 60, `Marca do volume ${index + 1}`);
+    const number = optionalText(data.number, 60, `Identificação do volume ${index + 1}`);
+    const netWeightMilli = optionalWeightMilli(data.netWeight, `Peso líquido do volume ${index + 1}`);
+    const grossWeightMilli = optionalWeightMilli(data.grossWeight, `Peso bruto do volume ${index + 1}`);
     if (!quantityRaw && !species && !brand && !number && netWeightMilli === null && grossWeightMilli === null) return;
     const quantity = /^\d{1,15}$/.test(quantityRaw) ? Number(quantityRaw) : NaN;
     if (!Number.isSafeInteger(quantity) || quantity <= 0)
-      throw new Error(\`Informe a quantidade inteira de volumes no item \${index + 1}.\`);
+      throw new Error(`Informe a quantidade inteira de volumes no item ${index + 1}.`);
     if (netWeightMilli !== null && grossWeightMilli !== null && netWeightMilli > grossWeightMilli)
-      throw new Error(\`O peso líquido do volume \${index + 1} não pode superar o peso bruto.\`);
+      throw new Error(`O peso líquido do volume ${index + 1} não pode superar o peso bruto.`);
     volumes.push({ quantity, species, brand, number, netWeightMilli, grossWeightMilli });
   });
   return volumes;

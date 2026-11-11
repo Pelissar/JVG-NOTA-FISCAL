@@ -467,12 +467,12 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
     const quantity = Number(volume.quantity);
     if (Number.isSafeInteger(quantity) && quantity > 0 && quantity <= 999_999_999_999_999)
       mapped.quantidade = quantity;
-    else volumeProblems.push(\`Volume \${index + 1}: quantidade inteira positiva\`);
+    else volumeProblems.push(`Volume ${index + 1}: quantidade inteira positiva`);
     for (const [source, target] of [["species", "especie"], ["brand", "marca"], ["number", "numero"]]) {
       const fieldValue = text(volume[source]);
       if (fieldValue) {
         if (fieldValue.length <= 60) mapped[target] = fieldValue;
-        else volumeProblems.push(\`Volume \${index + 1}: \${target} excede 60 caracteres\`);
+        else volumeProblems.push(`Volume ${index + 1}: ${target} excede 60 caracteres`);
       }
     }
     const netWeightMilli = volume.netWeightMilli;
@@ -480,14 +480,14 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
     const validWeight = (value: unknown) => Number.isSafeInteger(value) && Number(value) > 0 && Number(value) <= 999_999_999_999_999;
     if (netWeightMilli != null) {
       if (validWeight(netWeightMilli)) mapped.peso_liquido = Number(netWeightMilli) / 1000;
-      else volumeProblems.push(\`Volume \${index + 1}: peso líquido positivo com até 3 casas decimais\`);
+      else volumeProblems.push(`Volume ${index + 1}: peso líquido positivo com até 3 casas decimais`);
     }
     if (grossWeightMilli != null) {
       if (validWeight(grossWeightMilli)) mapped.peso_bruto = Number(grossWeightMilli) / 1000;
-      else volumeProblems.push(\`Volume \${index + 1}: peso bruto positivo com até 3 casas decimais\`);
+      else volumeProblems.push(`Volume ${index + 1}: peso bruto positivo com até 3 casas decimais`);
     }
     if (validWeight(netWeightMilli) && validWeight(grossWeightMilli) && Number(netWeightMilli) > Number(grossWeightMilli))
-      volumeProblems.push(\`Volume \${index + 1}: peso líquido maior que o peso bruto\`);
+      volumeProblems.push(`Volume ${index + 1}: peso líquido maior que o peso bruto`);
     mappedVolumes.push(mapped);
   });
   const volumesValid = volumeProblems.length === 0;
