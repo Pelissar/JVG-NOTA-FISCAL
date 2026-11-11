@@ -120,7 +120,7 @@ test('prévia envia os dados cadastrados da transportadora usando os campos ofic
   const payload=focusPayload();
   payload.transport.carrier={
     name:'Transportadora Exemplo',legalName:'Transportadora Exemplo Ltda',
-    documentType:'cnpj',documentNumber:'12345678000195',stateRegistration:'123456789',
+    documentType:'cnpj',documentNumber:'12.345.678/0001-95',stateRegistration:'123456789',
     address:{street:'Rua do Transporte',number:'45',complement:'Sala 2',district:'Centro',city:'São Paulo',state:'sp'}
   };
   const result=reviewFocusNfePayload(payload);
@@ -134,7 +134,7 @@ test('prévia envia os dados cadastrados da transportadora usando os campos ofic
   assert.equal(result.canSend,false);
 });
 
-test('prévia bloqueia transportadora selecionada com documento incompatível sem montar identidade incorreta', () => {
+test('prévia bloqueia transportadora com tipo incompatível ou dígitos verificadores inválidos', () => {
   const payload=focusPayload();
   payload.transport.carrier={name:'Transportadora Exemplo',documentType:'cpf',documentNumber:'12345678000195'};
   const result=reviewFocusNfePayload(payload);
@@ -142,6 +142,15 @@ test('prévia bloqueia transportadora selecionada com documento incompatível se
   assert.equal('cpf_transportador' in result.requestPreview,false);
   assert.equal('cnpj_transportador' in result.requestPreview,false);
   assert.equal(result.canSend,false);
+
+  for (const [documentType,documentNumber] of [['cnpj','12345678000196'],['cpf','52998224724']]) {
+    const invalid=focusPayload();
+    invalid.transport.carrier={name:'Transportadora Exemplo',documentType,documentNumber};
+    const invalidReview=reviewFocusNfePayload(invalid);
+    assert.equal(invalidReview.checks.find(row=>row.key==='transportador').ok,false);
+    assert.equal('cpf_transportador' in invalidReview.requestPreview,false);
+    assert.equal('cnpj_transportador' in invalidReview.requestPreview,false);
+  }
 });
 
 test('cabecalho incompleto permanece pendente sem converter campos vazios em zero', () => {

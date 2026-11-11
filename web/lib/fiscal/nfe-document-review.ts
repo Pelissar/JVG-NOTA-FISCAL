@@ -169,6 +169,27 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
     if (ok && mappedValue !== undefined) requestPreview[key] = mappedValue;
   };
   const textDigits = (raw: unknown) => text(raw).replace(/\D/g, "");
+const cpfDocumentIsValid = (digits: string): boolean => {
+  if (!/^\d{11}$/.test(digits) || /^(\d)\1{10}$/.test(digits)) return false;
+  for (let length = 9; length <= 10; length++) {
+    let sum = 0;
+    for (let index = 0; index < length; index++) sum += Number(digits[index]) * (length + 1 - index);
+    const remainder = (sum * 10) % 11;
+    if (Number(digits[length]) !== (remainder === 10 ? 0 : remainder)) return false;
+  }
+  return true;
+};
+const cnpjDocumentIsValid = (digits: string): boolean => {
+  if (!/^\d{14}$/.test(digits) || /^(\d)\1{13}$/.test(digits)) return false;
+  const checkDigit = (base: string, weights: number[]) => {
+    const remainder = base.split("").reduce((sum, digit, index) => sum + Number(digit) * weights[index], 0) % 11;
+    return remainder < 2 ? 0 : 11 - remainder;
+  };
+  const firstWeights = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const secondWeights = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  return Number(digits[12]) === checkDigit(digits.slice(0, 12), firstWeights) &&
+    Number(digits[13]) === checkDigit(digits.slice(0, 13), secondWeights);
+};
   const nature = text(payload.nature);
   add("natureza_operacao", "Natureza da operação", nature.length >= 1 && nature.length <= 60,
       "A Focus aceita até 60 caracteres.", nature.length >= 1 && nature.length <= 60 ? nature : undefined);
@@ -376,12 +397,13 @@ export function reviewFocusNfePayload(value: unknown): FocusNfePayloadReview {
     else carrierProblems.push("nome/razão social do transportador (2 a 60 caracteres)");
 
     const carrierDocumentType = text(carrier.documentType).toLowerCase();
-    const carrierDocument = textDigits(carrier.documentNumber);
-    if (carrierDocumentType === "cnpj" && /^\d{14}$/.test(carrierDocument))
+    const rawCarrierDocument = text(carrier.documentNumber);
+    const carrierDocument = rawCarrierDocument.replace(/[.\-/\s]/g, "");
+    if (carrierDocumentType === "cnpj" && cnpjDocumentIsValid(carrierDocument))
       requestPreview.cnpj_transportador = carrierDocument;
-    else if (carrierDocumentType === "cpf" && /^\d{11}$/.test(carrierDocument))
+    else if (carrierDocumentType === "cpf" && cpfDocumentIsValid(carrierDocument))
       requestPreview.cpf_transportador = carrierDocument;
-    else carrierProblems.push("CPF/CNPJ válido e compatível com o tipo do cadastro");
+    else carrierProblems.push("CPF/CNPJ válido, com dígitos verificadores corretos e tipo compatível");
 
     const carrierIe = text(carrier.stateRegistration);
     if (carrierIe && /^.{2,14}$/.test(carrierIe)) requestPreview.inscricao_estadual_transportador = carrierIe;
