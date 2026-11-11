@@ -95,6 +95,8 @@ test("confirmação vazia é bloqueada e uma NF-e recebida sem movimentos pode s
   assert.match(script, /Reabrir e lançar no estoque/);
   assert.match(script, /Cadastrar produto deste XML/);
   assert.match(script, /kind:'product'/);
+  assert.ok(script.includes(String.raw`var ncm=/^\d{8}$/`));
+  assert.ok(script.includes(String.raw`var cest=/^\d{7}$/`));
   assert.match(script, /cost:Number\(item\.unitPrice\|\|0\)/);
   assert.match(script, /price:Number\(salePrice\.value\)/);
   assert.match(script, /CFOP e perfil fiscal não serão presumidos/);
