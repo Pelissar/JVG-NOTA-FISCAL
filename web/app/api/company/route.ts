@@ -11,9 +11,12 @@ export async function GET() {
     const account = await getSiteAccount(user);
     if (!account) return apiJson({ status: "needs_company", company: null });
     const stored = await getCompany(account);
+    const address = stored?.address && typeof stored.address === "object" && !Array.isArray(stored.address)
+      ? stored.address as Record<string, unknown> : {};
     const company = stored ? {
       legalName: String(stored.legal_name || ""),
       tradeName: String(stored.trade_name || ""),
+      state: String(address.state || "").trim().toUpperCase(),
     } : null;
     return apiJson({ status: company ? "ready" : "needs_company", company });
   } catch (error) { return safeError(error); }

@@ -33,6 +33,13 @@ test('dados fiscais da empresa exigem owner ou admin', () => {
   assert.match(backend, /user_id=\$\{filterEq\(user\.userId\)\}/);
 });
 
+test('prévia NF-e consulta a UF do emitente sem carregar novamente a lista de pessoas', () => {
+  assert.match(company, /state: String\(address\.state \|\| ""\)\.trim\(\)\.toUpperCase\(\)/);
+  assert.match(nfeDraftUi, /api\('\/api\/company'\)/);
+  assert.match(nfeDraftUi, /api\('\/api\/fiscal\/tax-profiles'\)/);
+  assert.doesNotMatch(nfeDraftUi, /api\('\/api\/records\?scope=documents'\)/);
+});
+
 test('viewer não pode ajustar estoque nem criar rascunho fiscal', () => {
   const stockPost = stock.split('export async function POST(request: Request) {')[1];
   const nfePost = nfeDrafts.split('export async function POST(request: Request) {')[1];

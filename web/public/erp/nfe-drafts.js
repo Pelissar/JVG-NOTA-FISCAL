@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var state = { products: [], clients: [], drafts: [], ready: false, sourceOrderId: null, sourceOrderNumber: '' };
+  var state = { products: [], clients: [], taxProfiles: [], issuerState: '', drafts: [], ready: false, sourceOrderId: null, sourceOrderNumber: '' };
   var idempotencyKey = null;
   var status = document.getElementById('status');
   var form = document.getElementById('draftForm');
@@ -79,6 +79,59 @@
     });
   }
 
+  function taxRuleFor(product, recipientId) {
+    var recipient = state.clients.find(function (client) { return client.id === recipientId; });
+    return window.JvgNfeTaxSuggestion.resolve(product, recipient, state.issuerState, state.taxProfiles);
+  }
+
+  function updateTaxSuggestion(row, product, resetTouched) {
+    var cfop = row.querySelector('.cfop');
+    var csosn = row.querySelector('.csosn');
+    var note = row.querySelector('.tax-suggestion');
+    if (resetTouched) {
+      row.dataset.cfopTouched = 'false';
+      row.dataset.csosnTouched = 'false';
+    }
+    if (!product) {
+      if (row.dataset.cfopTouched !== 'true') cfop.value = '';
+      if (row.dataset.csosnTouched !== 'true') csosn.value = '';
+      note.textContent = 'Selecione produto e destinatário para consultar a regra fiscal vinculada.';
+      return;
+    }
+
+    var selected = taxRuleFor(product, document.getElementById('recipientId').value);
+    var rule = selected.rule;
+    var suggestedCfop = rule && rule.cfop ? String(rule.cfop) :
+      selected.operation ? '' : String(product.defaultCfop || '');
+    var suggestedCsosn = rule && rule.csosn ? String(rule.csosn) : '';
+    if (row.dataset.cfopTouched !== 'true') cfop.value = suggestedCfop;
+    if (row.dataset.csosnTouched !== 'true') csosn.value = suggestedCsosn;
+
+    if (rule && selected.profile) {
+      var reviewLabel = selected.profile.review_status === 'reviewed'
+        ? 'declaração de revisão registrada; confira a orientação contábil'
+        : 'rascunho ainda sem revisão contábil';
+      note.textContent = (selected.profile.name || 'Perfil fiscal') + ' · ' +
+        (selected.operation === 'interna' ? 'venda interna' : 'venda interestadual') +
+        ' · ' + reviewLabel + '. A emissão continua sujeita à conferência dos demais campos.';
+    } else if (selected.operation) {
+      note.textContent = (product.taxProfileId ? 'O perfil deste produto não tem regra' : 'Este produto não tem perfil fiscal vinculado') +
+        ' para ' + (selected.operation === 'interna' ? 'venda interna' : 'venda interestadual') +
+        '. Configure a operação no perfil fiscal; nenhum código foi presumido.';
+    } else if (product.defaultCfop) {
+      note.textContent = 'CFOP cadastrado como sugestão geral do produto. Selecione o destinatário e confirme a operação com a contabilidade.';
+    } else {
+      note.textContent = 'Informe a UF do emitente e selecione um destinatário com UF para identificar a regra da operação.';
+    }
+  }
+
+  function updateItemTaxSuggestions() {
+    Array.from(items.querySelectorAll('.item-row')).forEach(function (row) {
+      var product = state.products.find(function (entry) { return entry.id === row.querySelector('.product').value; });
+      if (product) updateTaxSuggestion(row, product, false);
+    });
+  }
+
   function addItem() {
     if (items.children.length >= 20) {
       report('Limite de 20 produtos por rascunho.', 'error');
@@ -90,9 +143,10 @@
       '<label class="field product-field"><span>Produto *</span><select class="product" required></select></label>' +
       '<label class="field"><span>Qtd. *</span><input class="quantity" type="number" min="0.001" max="100000" step="0.001" value="1" required></label>' +
       '<label class="field"><span>Preço (R$) *</span><input class="price" type="number" min="0" max="999999.99" step="0.01" required></label>' +
-      '<label class="field"><span>CFOP</span><input class="cfop" maxlength="4" inputmode="numeric" list="cfopOptions" placeholder="Ex.: 5102"></label>' +
-      '<label class="field"><span>CSOSN</span><input class="csosn" maxlength="3" inputmode="numeric" placeholder="Ex.: 102"></label>' +
-      '<button type="button" class="remove-item" aria-label="Remover este produto" title="Remover produto">×</button>';
+      '<label class="field"><span>CFOP da operação</span><input class="cfop" maxlength="4" inputmode="numeric" list="cfopOptions" placeholder="Sugestão do perfil"></label>' +
+      '<label class="field"><span>CSOSN da operação</span><input class="csosn" maxlength="3" inputmode="numeric" placeholder="Sugestão do perfil"></label>' +
+      '<button type="button" class="remove-item" aria-label="Remover este produto" title="Remover produto">×</button>' +
+      '<p class="tax-suggestion" role="status" aria-live="polite">Selecione produto e destinatário para consultar a regra fiscal vinculada.</p>';
     var select = row.querySelector('.product');
     select.append(option('', 'Selecione'));
     state.products.filter(function (p) { return p.active; }).forEach(function (p) {
@@ -101,9 +155,11 @@
     select.addEventListener('change', function () {
       var product = state.products.find(function (p) { return p.id === select.value; });
       row.querySelector('.price').value = product ? Number(product.price || 0).toFixed(2) : '';
-      row.querySelector('.cfop').value = product ? product.defaultCfop || '' : '';
+      updateTaxSuggestion(row, product, true);
       updateTotal();
     });
+    row.querySelector('.cfop').addEventListener('input', function () { row.dataset.cfopTouched = 'true'; });
+    row.querySelector('.csosn').addEventListener('input', function () { row.dataset.csosnTouched = 'true'; });
     row.querySelector('.remove-item').addEventListener('click', function () {
       if (items.children.length > 1) row.remove();
       else report('Mantenha pelo menos um produto no rascunho.', 'error');
@@ -445,7 +501,6 @@
       productSelect.dispatchEvent(new Event('change'));
       row.querySelector('.quantity').value = String(entry.quantity);
       row.querySelector('.price').value = Number(entry.unitPrice).toFixed(2);
-      row.querySelector('.cfop').value = entry.product.defaultCfop || '';
       productSelect.disabled = true;
       row.querySelector('.quantity').disabled = true;
       row.querySelector('.price').disabled = true;
@@ -464,21 +519,34 @@
 
   async function load() {
     try {
-      var data = await api('/api/records?scope=quotes');
+      var results = await Promise.all([
+        api('/api/records?scope=quotes'),
+        api('/api/company').catch(function () { return {}; }),
+        api('/api/fiscal/tax-profiles').catch(function () { return { records: [] }; }),
+      ]);
+      var data = results[0];
+      var companyData = results[1];
+      var profileData = results[2];
       state.products = Array.isArray(data.products) ? data.products : [];
       state.clients = Array.isArray(data.clients) ? data.clients : [];
+      state.issuerState = String(companyData.company && companyData.company.state || '').trim().toUpperCase();
+      state.taxProfiles = Array.isArray(profileData.records) ? profileData.records : [];
       fillRecipients();
       fillCarriers();
       addItem();
       // Sugestões oficiais não podem impedir o uso de rascunhos se o catálogo falhar.
+      var auxiliary = await Promise.all([
+        api('/api/fiscal/cfop').catch(function () { return { records: [] }; }),
+        refreshHistory().catch(function () { return null; }),
+      ]);
       try {
-        var cfops = await api('/api/fiscal/cfop');
+        var cfops = auxiliary[0];
         var options = document.getElementById('cfopOptions');
         (cfops.records || []).forEach(function (record) {
           options.append(option(record.code, record.customLabel || record.title));
         });
       } catch { /* campo livre continua disponível */ }
-      await refreshHistory();
+      document.getElementById('recipientId').addEventListener('change', updateItemTaxSuggestions);
       state.ready = state.products.some(function (p) { return p.active; }) &&
         state.clients.some(function (c) { return c.active && c.isCustomer === true && c.type !== 'EXT'; });
       saveButton.disabled = !state.ready;
