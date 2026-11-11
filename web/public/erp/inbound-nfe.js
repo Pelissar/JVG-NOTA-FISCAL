@@ -12,8 +12,9 @@
     if(!docs.length){root.innerHTML='<p class="empty-documents">Nenhuma NF-e de entrada importada nesta empresa ainda.</p>';return;}
     root.innerHTML=docs.map(function(doc){
       var received=doc.status==='received';
+      var receivedWithoutStock=received&&doc.receivedWithoutStock===true;
       var itemCount=Array.isArray(doc.items)?doc.items.length:0;
-      return '<article class="document-row"><div class="document-main"><strong>NF-e '+escapeHtml(doc.invoiceNumber||'—')+' · '+escapeHtml(doc.issuerName||'Fornecedor')+'</strong><small>Emitida em '+date(doc.issuedAt)+' · Série '+escapeHtml(doc.series||'—')+' · chave '+escapeHtml(doc.accessKey)+(doc.carrierName?' · Transportadora: '+escapeHtml(doc.carrierName):'')+'</small></div><div class="document-meta"><b>'+money(doc.total)+'</b><small>'+itemCount+' item(ns) · cStat '+escapeHtml(doc.authorizationStatus)+'</small></div><div class="document-meta total"><span class="status-chip '+(received?'received':'')+'">'+(received?'Recebida':'Pendente de conferência')+'</span></div><div class="document-actions">'+(received?'<button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">Ver</button>':'<button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">Conferir</button>')+'<a class="secondary-button" href="/api/inbound-nfe?xml='+encodeURIComponent(doc.id)+'">XML</a></div></article>';
+      return '<article class="document-row"><div class="document-main"><strong>NF-e '+escapeHtml(doc.invoiceNumber||'—')+' · '+escapeHtml(doc.issuerName||'Fornecedor')+'</strong><small>Emitida em '+date(doc.issuedAt)+' · Série '+escapeHtml(doc.series||'—')+' · chave '+escapeHtml(doc.accessKey)+(doc.carrierName?' · Transportadora: '+escapeHtml(doc.carrierName):'')+'</small></div><div class="document-meta"><b>'+money(doc.total)+'</b><small>'+itemCount+' item(ns) · cStat '+escapeHtml(doc.authorizationStatus)+'</small></div><div class="document-meta total"><span class="status-chip '+(received?(receivedWithoutStock?'recovery':'received'):'')+'">'+(received?(receivedWithoutStock?'Recebida sem estoque':'Recebida'):'Pendente de conferência')+'</span></div><div class="document-actions">'+(received?'<button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">'+(receivedWithoutStock?'Corrigir estoque':'Ver')+'</button>':'<button class="secondary-button" type="button" data-open="'+escapeHtml(doc.id)+'">Conferir</button>')+'<a class="secondary-button" href="/api/inbound-nfe?xml='+encodeURIComponent(doc.id)+'">XML</a></div></article>';
     }).join('');
   }
   function supplierOptions(selected, doc){
@@ -42,18 +43,22 @@
     selectedDoc=docs.find(function(doc){return doc.id===id;});
     if(!selectedDoc)return;
     var received=selectedDoc.status==='received';
-    $('reviewHeading').textContent='Conferir NF-e '+selectedDoc.invoiceNumber;
+    var recoverable=received&&selectedDoc.receivedWithoutStock===true;
+    var locked=received&&!recoverable;
+    $('reviewHeading').textContent=recoverable?'Corrigir entrada da NF-e '+selectedDoc.invoiceNumber:'Conferir NF-e '+selectedDoc.invoiceNumber;
     $('reviewSummary').textContent=selectedDoc.issuerName+' · '+date(selectedDoc.issuedAt)+' · '+money(selectedDoc.total);
     $('supplierSelect').innerHTML=supplierOptions(selectedDoc.supplierId,selectedDoc);
-    $('authorizationSummary').textContent='Protocolo informado no XML: cStat '+selectedDoc.authorizationStatus+' — '+(selectedDoc.authorizationReason||'Autorização de uso')+'. Assinatura ainda precisa ser conferida no portal oficial.';
+    $('authorizationSummary').textContent=recoverable?'Esta NF-e foi marcada como recebida, mas não gerou movimentos de estoque. Associe o produto, marque o lançamento e confirme novamente.':'Protocolo informado no XML: cStat '+selectedDoc.authorizationStatus+' — '+(selectedDoc.authorizationReason||'Autorização de uso')+'. Assinatura ainda precisa ser conferida no portal oficial.';
+    $('authorizationSummary').classList.toggle('recovery',recoverable);
     $('fiscalDataReview').innerHTML='<p>Carregando dados fiscais do XML...</p>';
     $('reviewItems').innerHTML=(selectedDoc.items||[]).map(itemMarkup).join('');
     $('officialStatus').checked=false;
-    $('officialStatus').disabled=received;
-    $('supplierSelect').disabled=received;
-    $('reviewItems').querySelectorAll('select,input').forEach(function(input){input.disabled=input.disabled||received;});
-    $('saveReviewButton').hidden=received;
-    $('receiveButton').hidden=received;
+    $('officialStatus').disabled=locked;
+    $('supplierSelect').disabled=locked;
+    $('reviewItems').querySelectorAll('select,input').forEach(function(input){input.disabled=input.disabled||locked;});
+    $('saveReviewButton').hidden=locked;
+    $('receiveButton').hidden=locked;
+    $('receiveButton').textContent=recoverable?'Reabrir e lançar no estoque':'Confirmar entrada no estoque';
     $('closeReview').textContent='Fechar';
     $('reviewCard').hidden=false;
     $('reviewCard').scrollIntoView({behavior:'smooth',block:'start'});
@@ -64,8 +69,17 @@
       $('supplierSelect').innerHTML=supplierOptions(selectedDoc.supplierId,selectedDoc);
       $('reviewItems').innerHTML=(selectedDoc.items||[]).map(itemMarkup).join('');
       showFiscalData(selectedDoc);
-      $('supplierSelect').disabled=received;
-      $('reviewItems').querySelectorAll('select,input').forEach(function(input){input.disabled=input.disabled||received;});
+      var updatedReceived=selectedDoc.status==='received';
+      var updatedRecoverable=updatedReceived&&selectedDoc.receivedWithoutStock===true;
+      var updatedLocked=updatedReceived&&!updatedRecoverable;
+      $('authorizationSummary').textContent=updatedRecoverable?'Esta NF-e foi marcada como recebida, mas não gerou movimentos de estoque. Associe o produto, marque o lançamento e confirme novamente.':'Protocolo informado no XML: cStat '+selectedDoc.authorizationStatus+' — '+(selectedDoc.authorizationReason||'Autorização de uso')+'. Assinatura ainda precisa ser conferida no portal oficial.';
+      $('authorizationSummary').classList.toggle('recovery',updatedRecoverable);
+      $('supplierSelect').disabled=updatedLocked;
+      $('reviewItems').querySelectorAll('select,input').forEach(function(input){input.disabled=input.disabled||updatedLocked;});
+      $('officialStatus').disabled=updatedLocked;
+      $('saveReviewButton').hidden=updatedLocked;
+      $('receiveButton').hidden=updatedLocked;
+      $('receiveButton').textContent=updatedRecoverable?'Reabrir e lançar no estoque':'Confirmar entrada no estoque';
     }catch(error){$('fiscalDataReview').innerHTML='<p class="error">Não foi possível abrir os dados completos do XML: '+escapeHtml(error.message)+'</p>';}
   }
   async function load(){
@@ -114,16 +128,22 @@
     var items=Array.from($('reviewItems').querySelectorAll('[data-line]')).map(function(row){
       return {lineNumber:Number(row.dataset.line),productId:row.querySelector('[name="productId"]').value||null,trackStock:row.querySelector('[name="trackStock"]').checked};
     });
+    if(receive&&!$('officialStatus').checked){setStatus('Marque que conferiu a autorização no portal oficial da NF-e.',true);return;}
+    if(receive&&!items.some(function(item){return item.trackStock;})){setStatus('Marque “Lançar no estoque” em pelo menos um item. Se quiser apenas guardar os vínculos, use “Salvar conferência”.',true);return;}
+    if(receive&&items.some(function(item){return item.trackStock&&!item.productId;})){setStatus('Associe um produto a cada item marcado para movimentar o estoque.',true);return;}
     var buttons=[$('saveReviewButton'),$('receiveButton')];buttons.forEach(function(button){button.disabled=true;});
     try{
+      if(receive&&selectedDoc.receivedWithoutStock===true){
+        await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'reopen-empty',id:selectedDoc.id})});
+      }
       await api('/api/inbound-nfe',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:selectedDoc.id,supplierId:supplierId,items:items})});
       if(receive){
-        if(!$('officialStatus').checked)throw new Error('Marque que conferiu a autorização no portal oficial da NF-e.');
-        await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'confirm',id:selectedDoc.id,checkedOfficialStatus:true})});
-        $('uploadStatus').textContent='NF-e recebida. Os movimentos de estoque foram vinculados à chave do documento.';
+        var confirmation=await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'confirm',id:selectedDoc.id,checkedOfficialStatus:true})});
+        var stockLines=confirmation.result&&Number(confirmation.result.stockLines||0);
+        $('uploadStatus').textContent='NF-e recebida. '+stockLines+' item(ns) geraram movimentos de estoque vinculados à chave.';
       }else $('uploadStatus').textContent='Conferência salva sem movimentar estoque.';
       $('reviewCard').hidden=true;selectedDoc=null;await load();
-    }catch(error){$('pageStatus').textContent=error.message;$('pageStatus').classList.add('error');}
+    }catch(error){setStatus(error.message,true);}
     finally{buttons.forEach(function(button){button.disabled=false;});}
   });
   load();

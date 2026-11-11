@@ -71,11 +71,30 @@ test("a API protege dados por empresa e a confirmação de estoque é atômica",
   assert.match(route, /getJvgUser\(\)/);
   assert.match(route, /supplier_party_id/);
   assert.match(route, /checkedOfficialStatus !== true/);
+  assert.match(route, /Marque ao menos um item para lançar no estoque/);
+  assert.match(route, /jvg_reopen_empty_inbound_nfe/);
+  assert.match(route, /receivedWithoutStock/);
   assert.match(route, /jvg_confirm_inbound_nfe/);
   assert.match(migration, /unique \(company_id, access_key\)/);
   assert.match(migration, /movement_type, reason, inbound_nfe_id, inbound_nfe_item_number/);
   assert.match(migration, /for update/);
   assert.match(migration, /begin[\s\S]*insert into public\.jvg_inventory_movements[\s\S]*update public\.jvg_inbound_nfe_documents[\s\S]*end;/i);
+  const recoveryMigration = readFileSync(new URL("../../supabase/migrations/20261111_jvg_inbound_nfe_stock_guard_recovery.sql", import.meta.url), "utf8");
+  assert.match(recoveryMigration, /if v_count = 0 then raise exception/i);
+  assert.match(recoveryMigration, /function public\.jvg_reopen_empty_inbound_nfe/i);
+  assert.match(recoveryMigration, /inbound_nfe_id = p_document_id/i);
+});
+
+test("confirmação vazia é bloqueada e uma NF-e recebida sem movimentos pode ser corrigida", () => {
+  const route = readFileSync(new URL("../app/api/inbound-nfe/route.ts", import.meta.url), "utf8");
+  const script = readFileSync(new URL("../public/erp/inbound-nfe.js", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../public/erp/inbound-nfe.html", import.meta.url), "utf8");
+  assert.match(route, /reopen-empty/);
+  assert.match(route, /!hasStockItems\(items\)/);
+  assert.match(script, /receivedWithoutStock/);
+  assert.match(script, /Reabrir e lançar no estoque/);
+  assert.match(script, /Marque “Lançar no estoque” em pelo menos um item/);
+  assert.match(page, /Confirmar entrada grava os movimentos de compra de forma única/);
 });
 
 test("importação localiza ou cria fornecedor por documento e guarda tributos e totais originais", () => {

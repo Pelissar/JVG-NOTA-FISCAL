@@ -52,6 +52,10 @@ async function readDocument(account: SiteAccount, id: string) {
   return rows[0];
 }
 
+function hasStockItems(value: unknown): boolean {
+  return Array.isArray(value) && value.some(item => !!item && typeof item === "object" && (item as InboundNfeItem).trackStock === true);
+}
+
 function partyDocumentType(document: string): "cpf" | "cnpj" | null {
   const normalized = document.toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (/^[0-9]{11}$/.test(normalized)) return "cpf";
@@ -161,6 +165,7 @@ export async function GET(request: Request) {
         total: Number(row.total_amount), supplierId: row.supplier_party_id || "",
         carrierId: row.carrier_party_id || "", carrierDocument: row.carrier_document || "",
         carrierName: row.carrier_name || "", fiscalData, items,
+        receivedWithoutStock: row.status === "received" && !hasStockItems(items),
         createdAt: row.created_at, receivedAt: row.received_at,
       } });
     }
@@ -193,6 +198,7 @@ export async function GET(request: Request) {
       authorizationReason: row.authorization_reason || "", total: Number(row.total_amount),
       supplierId: row.supplier_party_id || "", carrierId: row.carrier_party_id || "",
       carrierDocument: row.carrier_document || "", carrierName: row.carrier_name || "", items: row.items,
+      receivedWithoutStock: row.status === "received" && !hasStockItems(row.items),
       createdAt: row.created_at, receivedAt: row.received_at,
     })) });
   } catch (error) { return safeError(error); }
@@ -274,6 +280,20 @@ export async function POST(request: Request) {
     let data: Row;
     try { data = JSON.parse(raw) as Row; }
     catch { throw new JvgBackendError("Envie um JSON válido.", 400); }
+    if (data.action === "reopen-empty") {
+      const id = validId(data.id, "Identificador");
+      const doc = await readDocument(account, id);
+      if (doc.status !== "received" || hasStockItems(doc.items))
+        throw new JvgBackendError("A correção só está disponível para NF-e recebida sem itens lançados no estoque.", 409);
+      const result = await dbRequest<Row>("/rest/v1/rpc/jvg_reopen_empty_inbound_nfe", {
+        method: "POST",
+        body: JSON.stringify({
+          p_tenant_id: account.tenant_id, p_company_id: account.company_id,
+          p_document_id: id, p_actor_user_id: user.userId,
+        }),
+      });
+      return apiJson({ ok: true, result });
+    }
     if (data.action !== "confirm") throw new JvgBackendError("Ação de NF-e de entrada inválida.", 400);
     if (data.checkedOfficialStatus !== true)
       throw new JvgBackendError("Confirme que verificou a chave e a autorização na consulta oficial da NF-e.", 400);
@@ -282,6 +302,8 @@ export async function POST(request: Request) {
     if (doc.status === "received") return apiJson({ ok: true, alreadyReceived: true });
     if (!doc.supplier_party_id) throw new JvgBackendError("Selecione o fornecedor antes de receber a NF-e.", 400);
     const items = Array.isArray(doc.items) ? doc.items as InboundNfeItem[] : [];
+    if (!hasStockItems(items))
+      throw new JvgBackendError("Marque ao menos um item para lançar no estoque. Para guardar apenas os vínculos, use ‘Salvar conferência’.", 400);
     if (items.some(item => item.trackStock && !item.productId))
       throw new JvgBackendError("Associe um produto a todos os itens que vão movimentar o estoque.", 400);
 
