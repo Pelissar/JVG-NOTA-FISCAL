@@ -46,7 +46,7 @@ function decodeXml(bytes: Uint8Array): string {
 async function readDocument(account: SiteAccount, id: string) {
   const rows = await dbRequest<Row[]>(
     "/rest/v1/jvg_inbound_nfe_documents?" + scope(account) + "&id=" + filterEq(id) +
-    "&select=id,status,access_key,invoice_number,series,issued_at,issuer_document,issuer_name,authorization_status,authorization_reason,total_amount,supplier_party_id,carrier_party_id,carrier_document,carrier_name,fiscal_data,items,created_at,received_at&limit=1",
+    "&select=id,status,access_key,invoice_number,series,issued_at,issuer_document,issuer_name,authorization_status,authorization_reason,total_amount,supplier_party_id,carrier_party_id,carrier_document,carrier_name,fiscal_data,items,created_at,received_at,cancelled_at,cancelled_by,cancellation_reason,cancelled_from_status&limit=1",
   );
   if (!rows[0]) throw new JvgBackendError("NF-e de entrada não encontrada nesta empresa.", 404);
   return rows[0];
@@ -145,7 +145,7 @@ export async function GET(request: Request) {
       const id = validId(requestedId, "Identificador");
       const rows = await dbRequest<Row[]>(
         "/rest/v1/jvg_inbound_nfe_documents?" + scope(account) + "&id=" + filterEq(id) +
-        "&select=id,status,access_key,invoice_number,series,issued_at,issuer_document,issuer_name,destination_document,authorization_status,authorization_reason,total_amount,supplier_party_id,carrier_party_id,carrier_document,carrier_name,fiscal_data,items,xml_content,created_at,received_at&limit=1",
+        "&select=id,status,access_key,invoice_number,series,issued_at,issuer_document,issuer_name,destination_document,authorization_status,authorization_reason,total_amount,supplier_party_id,carrier_party_id,carrier_document,carrier_name,fiscal_data,items,xml_content,created_at,received_at,cancelled_at,cancelled_by,cancellation_reason,cancelled_from_status&limit=1",
       );
       const row = rows[0];
       if (!row) throw new JvgBackendError("NF-e de entrada não encontrada nesta empresa.", 404);
@@ -167,6 +167,8 @@ export async function GET(request: Request) {
         carrierName: row.carrier_name || "", fiscalData, items,
         receivedWithoutStock: row.status === "received" && !hasStockItems(items),
         createdAt: row.created_at, receivedAt: row.received_at,
+        cancelledAt: row.cancelled_at || null, cancellationReason: row.cancellation_reason || "",
+        canReopenCancelled: row.status === "cancelled" && row.cancelled_from_status === "draft",
       } });
     }
     const xmlId = params.get("xml");
@@ -189,7 +191,7 @@ export async function GET(request: Request) {
     }
     const rows = await dbRequest<Row[]>(
       "/rest/v1/jvg_inbound_nfe_documents?" + scope(account) +
-      "&select=id,status,access_key,invoice_number,series,issued_at,issuer_document,issuer_name,authorization_status,authorization_reason,total_amount,supplier_party_id,carrier_party_id,carrier_document,carrier_name,items,created_at,received_at&order=created_at.desc&limit=100",
+      "&select=id,status,access_key,invoice_number,series,issued_at,issuer_document,issuer_name,authorization_status,authorization_reason,total_amount,supplier_party_id,carrier_party_id,carrier_document,carrier_name,items,created_at,received_at,cancelled_at,cancellation_reason,cancelled_from_status&order=created_at.desc&limit=100",
     );
     return apiJson({ documents: rows.map(row => ({
       id: row.id, status: row.status, accessKey: row.access_key, invoiceNumber: row.invoice_number,
@@ -200,6 +202,8 @@ export async function GET(request: Request) {
       carrierDocument: row.carrier_document || "", carrierName: row.carrier_name || "", items: row.items,
       receivedWithoutStock: row.status === "received" && !hasStockItems(row.items),
       createdAt: row.created_at, receivedAt: row.received_at,
+      cancelledAt: row.cancelled_at || null, cancellationReason: row.cancellation_reason || "",
+      canReopenCancelled: row.status === "cancelled" && row.cancelled_from_status === "draft",
     })) });
   } catch (error) { return safeError(error); }
 }
@@ -280,6 +284,37 @@ export async function POST(request: Request) {
     let data: Row;
     try { data = JSON.parse(raw) as Row; }
     catch { throw new JvgBackendError("Envie um JSON válido.", 400); }
+    if (data.action === "cancel") {
+      const id = validId(data.id, "Identificador");
+      const reason = typeof data.reason === "string" ? data.reason.trim() : "";
+      if (reason.length < 5 || reason.length > 500)
+        throw new JvgBackendError("Informe um motivo entre 5 e 500 caracteres.", 400);
+      const doc = await readDocument(account, id);
+      if (doc.status === "cancelled")
+        return apiJson({ ok: true, result: { cancelled: true, alreadyCancelled: true, reversedLines: 0 } });
+      const result = await dbRequest<Row>("/rest/v1/rpc/jvg_cancel_inbound_nfe", {
+        method: "POST",
+        body: JSON.stringify({
+          p_tenant_id: account.tenant_id, p_company_id: account.company_id,
+          p_document_id: id, p_actor_user_id: user.userId, p_reason: reason,
+        }),
+      });
+      return apiJson({ ok: true, result });
+    }
+    if (data.action === "reopen-cancelled") {
+      const id = validId(data.id, "Identificador");
+      const doc = await readDocument(account, id);
+      if (doc.status !== "cancelled" || doc.cancelled_from_status !== "draft")
+        throw new JvgBackendError("Só é possível reabrir um lançamento cancelado antes de movimentar o estoque.", 409);
+      const result = await dbRequest<Row>("/rest/v1/rpc/jvg_reopen_cancelled_inbound_nfe", {
+        method: "POST",
+        body: JSON.stringify({
+          p_tenant_id: account.tenant_id, p_company_id: account.company_id,
+          p_document_id: id, p_actor_user_id: user.userId,
+        }),
+      });
+      return apiJson({ ok: true, result });
+    }
     if (data.action === "reopen-empty") {
       const id = validId(data.id, "Identificador");
       const doc = await readDocument(account, id);
@@ -300,6 +335,7 @@ export async function POST(request: Request) {
     const id = validId(data.id, "Identificador");
     const doc = await readDocument(account, id);
     if (doc.status === "received") return apiJson({ ok: true, alreadyReceived: true });
+    if (doc.status === "cancelled") throw new JvgBackendError("Este lançamento foi cancelado no ERP. Reabra-o antes de receber.", 409);
     if (!doc.supplier_party_id) throw new JvgBackendError("Selecione o fornecedor antes de receber a NF-e.", 400);
     const items = Array.isArray(doc.items) ? doc.items as InboundNfeItem[] : [];
     if (!hasStockItems(items))
