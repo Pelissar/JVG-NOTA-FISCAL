@@ -228,12 +228,16 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
   add("presenca_comprador", "Presença do comprador", presenceValid,
       "Informe a condição real da operação; o ERP não infere presença ou canal de venda.", presenceValid ? presence : undefined);
 
-  const cnpj = textDigits(issuer.cnpj), issuerName = text(issuer.legalName || issuer.name);
+  const normalizeCnpj = (value: unknown) => text(value).toUpperCase().replace(/[.\-/\s]/g, "");
+  const cnpj = normalizeCnpj(issuer.cnpj), issuerName = text(issuer.legalName || issuer.name);
   const ie = text(issuer.stateRegistration);
   const regime = issuer.taxRegime === "simples_nacional" ? 1 :
     issuer.taxRegime === "lucro_presumido" || issuer.taxRegime === "lucro_real" ? 3 : null;
-  add("cnpj_emitente", "CNPJ do emitente", /^\d{14}$/.test(cnpj),
-      "Informe o CNPJ numérico do estabelecimento.", /^\d{14}$/.test(cnpj) ? cnpj : undefined);
+  const alphaIssuerCnpj = /^[A-Z0-9]{12}\d{2}$/.test(cnpj) && /[A-Z]/.test(cnpj);
+  const validIssuerCnpj = /^\d{14}$/.test(cnpj) && cnpjDocumentIsValid(cnpj);
+  add("cnpj_emitente", "CNPJ do emitente", validIssuerCnpj,
+      alphaIssuerCnpj ? "CNPJ alfanumérico preservado, mas a referência Focus de homologação ainda define cnpj_emitente como Integer[14]; confirme o suporte antes de transmitir." :
+      "Informe um CNPJ numérico válido, com 14 dígitos verificadores corretos.", validIssuerCnpj ? cnpj : undefined);
   add("nome_emitente", "Razão social do emitente", issuerName.length >= 2 && issuerName.length <= 60,
       "Razão social deve ter de 2 a 60 caracteres.", issuerName.length >= 2 && issuerName.length <= 60 ? issuerName : undefined);
   add("inscricao_estadual_emitente", "Inscrição estadual do emitente", ie.length >= 2 && ie.length <= 14,
@@ -269,12 +273,15 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
   }
 
   const recipientType = text(recipient.documentType).toLowerCase();
-  const recipientDocument = textDigits(recipient.documentNumber);
-  const validCpf = recipientType === "cpf" && /^\d{11}$/.test(recipientDocument);
-  const validCnpj = recipientType === "cnpj" && /^\d{14}$/.test(recipientDocument);
+  const rawRecipientDocument = text(recipient.documentNumber);
+  const recipientDocument = recipientType === "cnpj" ? normalizeCnpj(rawRecipientDocument) : textDigits(rawRecipientDocument);
+  const alphaRecipientCnpj = recipientType === "cnpj" && /^[A-Z0-9]{12}\d{2}$/.test(recipientDocument) && /[A-Z]/.test(recipientDocument);
+  const validCpf = recipientType === "cpf" && cpfDocumentIsValid(recipientDocument);
+  const validCnpj = recipientType === "cnpj" && /^\d{14}$/.test(recipientDocument) && cnpjDocumentIsValid(recipientDocument);
   const docOk = validCpf || validCnpj;
   add("documento_destinatario", "CPF/CNPJ do destinatário", docOk,
-      "Documento nacional do destinatário; estrangeiro ainda não está mapeado.");
+      alphaRecipientCnpj ? "CNPJ alfanumérico preservado, mas a referência Focus de homologação ainda define cnpj_destinatario como Integer[14]; confirme o suporte antes de transmitir." :
+      "Informe CPF/CNPJ com formato e dígitos verificadores válidos; documento estrangeiro ainda não está mapeado.");
   if (validCpf) requestPreview.cpf_destinatario = recipientDocument;
   if (validCnpj) requestPreview.cnpj_destinatario = recipientDocument;
   const recipientName = text(recipient.legalName || recipient.name);
@@ -399,12 +406,15 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
 
     const carrierDocumentType = text(carrier.documentType).toLowerCase();
     const rawCarrierDocument = text(carrier.documentNumber);
-    const carrierDocument = rawCarrierDocument.replace(/[.\-/\s]/g, "");
+    const carrierDocument = rawCarrierDocument.replace(/[.\-/\s]/g, "").toUpperCase();
+    const alphaCarrierCnpj = carrierDocumentType === "cnpj" && /^[A-Z0-9]{12}\d{2}$/.test(carrierDocument) && /[A-Z]/.test(carrierDocument);
     if (carrierDocumentType === "cnpj" && cnpjDocumentIsValid(carrierDocument))
       requestPreview.cnpj_transportador = carrierDocument;
     else if (carrierDocumentType === "cpf" && cpfDocumentIsValid(carrierDocument))
       requestPreview.cpf_transportador = carrierDocument;
-    else carrierProblems.push("CPF/CNPJ válido, com dígitos verificadores corretos e tipo compatível");
+    else carrierProblems.push(alphaCarrierCnpj ?
+      "CNPJ alfanumérico preservado, mas a referência Focus de homologação ainda define cnpj_transportador como Integer[14]; confirme o suporte antes de transmitir" :
+      "CPF/CNPJ válido, com dígitos verificadores corretos e tipo compatível");
 
     const carrierIe = text(carrier.stateRegistration);
     if (carrierIe && /^.{2,14}$/.test(carrierIe)) requestPreview.inscricao_estadual_transportador = carrierIe;

@@ -81,6 +81,35 @@ test('prévia mapeia códigos e somente valores Focus permitidos, sem inventar t
   assert.equal(result.transmissionEnabled,false);
 });
 
+test('valida CPF/CNPJ do destinatário e bloqueia CNPJ alfanumérico sem truncar letras', () => {
+  const invalidCpf = focusPayload();
+  invalidCpf.recipient.documentNumber = '52998224724';
+  const invalidCpfReview = reviewFocusNfePayload(invalidCpf);
+  assert.equal(invalidCpfReview.checks.find(row => row.key === 'documento_destinatario').ok, false);
+  assert.equal('cpf_destinatario' in invalidCpfReview.requestPreview, false);
+
+  const invalidCnpj = focusPayload();
+  invalidCnpj.recipient.documentType = 'cnpj';
+  invalidCnpj.recipient.documentNumber = '12345678000196';
+  const invalidCnpjReview = reviewFocusNfePayload(invalidCnpj);
+  assert.equal(invalidCnpjReview.checks.find(row => row.key === 'documento_destinatario').ok, false);
+  assert.equal('cnpj_destinatario' in invalidCnpjReview.requestPreview, false);
+
+  const alphaCnpj = focusPayload();
+  alphaCnpj.issuer.cnpj = '12.ABCDEF.3456-12';
+  alphaCnpj.recipient.documentType = 'cnpj';
+  alphaCnpj.recipient.documentNumber = '12.ABCDEF.3456-12';
+  const alphaReview = reviewFocusNfePayload(alphaCnpj);
+  const issuerCheck = alphaReview.checks.find(row => row.key === 'cnpj_emitente');
+  const recipientCheck = alphaReview.checks.find(row => row.key === 'documento_destinatario');
+  assert.equal(issuerCheck.ok, false);
+  assert.equal(recipientCheck.ok, false);
+  assert.match(issuerCheck.detail, /Integer\[14\]/);
+  assert.match(recipientCheck.detail, /Integer\[14\]/);
+  assert.equal('cnpj_emitente' in alphaReview.requestPreview, false);
+  assert.equal('cnpj_destinatario' in alphaReview.requestPreview, false);
+});
+
 test('prévia aponta os campos ICMS exigidos por CSOSN sem completar valores', () => {
   const payload=focusPayload();
   payload.items[0].csosn='101';
@@ -151,6 +180,13 @@ test('prévia bloqueia transportadora com tipo incompatível ou dígitos verific
     assert.equal('cpf_transportador' in invalidReview.requestPreview,false);
     assert.equal('cnpj_transportador' in invalidReview.requestPreview,false);
   }
+
+  const alphaCnpj = focusPayload();
+  alphaCnpj.transport.carrier={name:'Transportadora Exemplo',documentType:'cnpj',documentNumber:'12.ABCDEF.3456-12'};
+  const alphaReview = reviewFocusNfePayload(alphaCnpj);
+  assert.equal(alphaReview.checks.find(row=>row.key==='transportador').ok,false);
+  assert.match(alphaReview.checks.find(row=>row.key==='transportador').detail,/Integer\[14\]/);
+  assert.equal('cnpj_transportador' in alphaReview.requestPreview,false);
 });
 
 test('cabecalho incompleto permanece pendente sem converter campos vazios em zero', () => {
