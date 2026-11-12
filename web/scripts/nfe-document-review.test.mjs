@@ -16,6 +16,7 @@ const valid = () => ({
 });
 
 const check = (review, key) => review.checks.find(row => row.key === key);
+test('unmapped IBS class is blocked and Focus calculated total is omitted',()=>{const payload=focusPayload();payload.items[0].taxRules.classTrib='000003';const result=reviewFocusNfePayload(payload);assert.equal(check(result,'ibs_cbs_campos_condicionais').ok,false);assert.equal(check(result,'focus_campos_numericos').ok,false);assert.equal('ibs_valor_total' in result.requestPreview.items[0],false);assert.equal(result.canSend,false);});
 
 test('revisa estrutura interna e totais comerciais sem habilitar emissão', () => {
   const result = reviewNfeDocument(valid());
@@ -133,7 +134,7 @@ test('data de emissao e obrigatoria no payload e nao e declarada como automatica
   assert.equal(withIssueAt.requestPreview.data_emissao,payload.issueAt);
 });
 
-test('modalidades de frete oficiais 3 e 4 sao aceitas e CSOSN 900 nao exige grupo opcional', () => {
+test('modalidades de frete oficiais 3 e 4 sao aceitas e CSOSN 900 exige um grupo opcional', () => {
   for (const mode of [3,4]) {
     const payload=focusPayload();
     payload.transport.mode=mode;
@@ -142,7 +143,11 @@ test('modalidades de frete oficiais 3 e 4 sao aceitas e CSOSN 900 nao exige grup
   const payload=focusPayload();
   payload.items[0].csosn='900';
   const result=reviewFocusNfePayload(payload);
-  assert.equal(result.checks.find(row=>row.key==='icms_campos_condicionais').ok,true);
+  assert.equal(result.checks.find(row=>row.key==='icms_campos_condicionais').ok,false);
+  const withGroup=focusPayload();
+  withGroup.items[0].csosn='900';
+  withGroup.items[0].taxRules.focusFields={...withGroup.items[0].taxRules.focusFields,icms_modalidade_base_calculo:0,icms_base_calculo:0,icms_reducao_base_calculo:0,icms_aliquota:0,icms_valor:0};
+  assert.equal(reviewFocusNfePayload(withGroup).checks.find(row=>row.key==='icms_campos_condicionais').ok,true);
 });
 
 test('prévia envia os dados cadastrados da transportadora usando os campos oficiais Focus', () => {

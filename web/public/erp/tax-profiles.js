@@ -17,9 +17,61 @@
   let taxRegimeConfirmed = false;
   let taxRegime = null;
   let records = [];
+  let focusFieldCache = {};
 
   const operationLabels = { interna: 'Venda interna', interestadual: 'Venda interestadual' };
   const operationNames = ['interna', 'interestadual'];
+  const focusFieldSpecs = {
+    icms_modalidade_base_calculo: ['Modalidade da base do ICMS', 'Código informado pela contabilidade.'],
+    icms_reducao_base_calculo: ['Redução da base do ICMS (%)', 'Percentual orientado para esta operação.'],
+    icms_base_calculo: ['Base de cálculo do ICMS (R$)', 'Base informada para este item.'],
+    icms_aliquota: ['Alíquota do ICMS (%)', 'Percentual orientado para esta operação.'],
+    icms_valor: ['Valor do ICMS (R$)', 'Valor informado para este item.'],
+    icms_modalidade_base_calculo_st: ['Modalidade da base do ICMS-ST', 'Código informado pela contabilidade.'],
+    icms_margem_valor_adicionado_st: ['MVA do ICMS-ST (%)', 'Percentual orientado para esta operação.'],
+    icms_reducao_base_calculo_st: ['Redução da base do ICMS-ST (%)', 'Percentual orientado para esta operação.'],
+    icms_base_calculo_st: ['Base de cálculo do ICMS-ST (R$)', 'Base informada para este item.'],
+    icms_aliquota_st: ['Alíquota do ICMS-ST (%)', 'Percentual orientado para esta operação.'],
+    icms_valor_st: ['Valor do ICMS-ST (R$)', 'Valor informado para este item.'],
+    icms_aliquota_credito_simples: ['Alíquota de crédito do Simples (%)', 'Use somente se a operação aprovada conceder crédito.'],
+    icms_valor_credito_simples: ['Valor de crédito do Simples (R$)', 'Use somente se a operação aprovada conceder crédito.'],
+    icms_base_calculo_retido_st: ['Base do ICMS-ST retido anteriormente (R$)', 'Valor informado para este item, se aplicável.'],
+    icms_valor_retido_st: ['ICMS-ST retido anteriormente (R$)', 'Valor informado para este item, se aplicável.'],
+    icms_aliquota_final: ['Alíquota final informada para o ICMS (%)', 'Percentual orientado para este item, se aplicável.'],
+    icms_valor_substituto: ['Valor do ICMS do substituto (R$)', 'Valor informado para este item, se aplicável.'],
+    pis_base_calculo: ['Base de cálculo do PIS (R$)', 'Base informada para este item.'],
+    pis_aliquota_porcentual: ['Alíquota percentual do PIS (%)', 'Percentual orientado para esta operação.'],
+    pis_quantidade_vendida: ['Quantidade tributável do PIS', 'Quantidade informada para este item.'],
+    pis_aliquota_valor: ['Alíquota do PIS por unidade (R$)', 'Valor por unidade informado pela contabilidade.'],
+    pis_valor: ['Valor do PIS (R$)', 'Valor informado para este item.'],
+    pis_base_calculo_st: ['Base do PIS-ST (R$)', 'Base informada para este item.'],
+    pis_aliquota_porcentual_st: ['Alíquota percentual do PIS-ST (%)', 'Percentual orientado para esta operação.'],
+    pis_quantidade_vendida_st: ['Quantidade tributável do PIS-ST', 'Quantidade informada para este item.'],
+    pis_aliquota_valor_st: ['Alíquota do PIS-ST por unidade (R$)', 'Valor por unidade informado pela contabilidade.'],
+    pis_valor_st: ['Valor do PIS-ST (R$)', 'Valor informado para este item.'],
+    cofins_base_calculo: ['Base de cálculo da Cofins (R$)', 'Base informada para este item.'],
+    cofins_aliquota_porcentual: ['Alíquota percentual da Cofins (%)', 'Percentual orientado para esta operação.'],
+    cofins_quantidade_vendida: ['Quantidade tributável da Cofins', 'Quantidade informada para este item.'],
+    cofins_aliquota_valor: ['Alíquota da Cofins por unidade (R$)', 'Valor por unidade informado pela contabilidade.'],
+    cofins_valor: ['Valor da Cofins (R$)', 'Valor informado para este item.'],
+    cofins_base_calculo_st: ['Base da Cofins-ST (R$)', 'Base informada para este item.'],
+    cofins_aliquota_porcentual_st: ['Alíquota percentual da Cofins-ST (%)', 'Percentual orientado para esta operação.'],
+    cofins_quantidade_vendida_st: ['Quantidade tributável da Cofins-ST', 'Quantidade informada para este item.'],
+    cofins_aliquota_valor_st: ['Alíquota da Cofins-ST por unidade (R$)', 'Valor por unidade informado pela contabilidade.'],
+    cofins_valor_st: ['Valor da Cofins-ST (R$)', 'Valor informado para este item.'],
+    ibs_cbs_base_calculo: ['Base do IBS/CBS (R$)', 'Base informada para este item.'],
+    ibs_uf_aliquota: ['Alíquota do IBS estadual (%)', 'Percentual orientado para esta operação.'],
+    ibs_uf_valor: ['Valor do IBS estadual (R$)', 'Valor informado para este item.'],
+    ibs_mun_aliquota: ['Alíquota do IBS municipal (%)', 'Percentual orientado para esta operação.'],
+    ibs_mun_valor: ['Valor do IBS municipal (R$)', 'Valor informado para este item.'],
+    cbs_aliquota: ['Alíquota da CBS (%)', 'Percentual orientado para esta operação.'],
+    cbs_valor: ['Valor da CBS (R$)', 'Valor informado para este item.'],
+  };
+  const focusIcmsBasic = ['icms_modalidade_base_calculo', 'icms_base_calculo', 'icms_reducao_base_calculo', 'icms_aliquota', 'icms_valor'];
+  const focusIcmsSt = ['icms_modalidade_base_calculo_st', 'icms_margem_valor_adicionado_st', 'icms_reducao_base_calculo_st', 'icms_base_calculo_st', 'icms_aliquota_st', 'icms_valor_st'];
+  const focusIcmsRetainedSt = ['icms_base_calculo_retido_st', 'icms_valor_retido_st', 'icms_aliquota_final', 'icms_valor_substituto'];
+  const focusIcmsCredit = ['icms_aliquota_credito_simples', 'icms_valor_credito_simples'];
+  const focusIbsCbs000 = ['ibs_cbs_base_calculo', 'ibs_uf_aliquota', 'ibs_uf_valor', 'ibs_mun_aliquota', 'ibs_mun_valor', 'cbs_aliquota', 'cbs_valor'];
 
   function updateCsosnHelp() {
     const control = form.elements.namedItem('csosn');
@@ -97,15 +149,148 @@
     if (control) control.value = value == null ? '' : String(value);
   }
 
+  function readFocusFields() {
+    const fields = {};
+    document.querySelectorAll('[data-focus-tax-field]').forEach(input => {
+      const value = input.value.trim();
+      if (value) fields[input.dataset.focusTaxField] = value;
+    });
+    focusFieldCache = Object.assign({}, focusFieldCache, fields);
+    return fields;
+  }
+
+  function addFocusFieldGroup(target, title, names, values, optional) {
+    const section = document.createElement('section');
+    section.className = 'focus-tax-field-group';
+    const heading = document.createElement('h3');
+    heading.textContent = title;
+    if (optional) {
+      const tag = document.createElement('span');
+      tag.className = 'optional-tag';
+      tag.textContent = 'Opcional';
+      heading.append(' ', tag);
+    }
+    const description = document.createElement('p');
+    description.className = 'group-description';
+    description.textContent = optional
+      ? 'Preencha somente se esta parte da operação se aplicar. Ao iniciar um grupo, complete todos os campos.'
+      : 'Grupo exigido pelo mapeamento Focus para os códigos selecionados. Informe os valores aprovados.';
+    const grid = document.createElement('div');
+    grid.className = 'field-grid';
+    for (const name of names) {
+      const spec = focusFieldSpecs[name];
+      if (!spec) continue;
+      const label = document.createElement('label');
+      label.className = 'field';
+      const caption = document.createElement('span');
+      caption.className = 'field-label';
+      caption.textContent = spec[0];
+      const input = document.createElement('input');
+      input.className = 'field-control';
+      input.type = 'text';
+      input.inputMode = 'decimal';
+      input.autocomplete = 'off';
+      input.placeholder = 'Informado pela contabilidade';
+      const integerCode = name === 'icms_modalidade_base_calculo' || name === 'icms_modalidade_base_calculo_st';
+      input.pattern = integerCode ? '[0-9]+' : '(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)';
+      input.title = integerCode ? 'Informe o código inteiro recebido da contabilidade.' : 'Use ponto para separar casas decimais.';
+      input.dataset.focusTaxField = name;
+      input.value = values && values[name] != null ? String(values[name]) : '';
+      const help = document.createElement('small');
+      help.className = 'field-help';
+      help.textContent = spec[1];
+      label.append(caption, input, help);
+      grid.append(label);
+    }
+    section.append(heading, description, grid);
+    target.append(section);
+  }
+
+  function renderFocusFields(savedValues) {
+    const target = document.getElementById('focusTaxFields');
+    const guidance = document.getElementById('focusTaxGuidance');
+    const visibleValues = readFocusFields();
+    const values = Object.assign({}, focusFieldCache, visibleValues,
+      savedValues && typeof savedValues === 'object' ? savedValues : {});
+    focusFieldCache = values;
+    const csosn = form.elements.namedItem('csosn').value.trim();
+    const pisCst = form.elements.namedItem('pisCst').value.trim();
+    const cofinsCst = form.elements.namedItem('cofinsCst').value.trim();
+    const cstIbsCbs = form.elements.namedItem('cstIbsCbs').value.trim();
+    const classTrib = form.elements.namedItem('classTrib').value.trim();
+    const unsupported = [];
+    let groups = 0;
+    target.replaceChildren();
+
+    if (csosn === '101') {
+      addFocusFieldGroup(target, 'ICMS · crédito do Simples', ['icms_aliquota_credito_simples', 'icms_valor_credito_simples'], values, false); groups++;
+    } else if (csosn === '201') {
+      addFocusFieldGroup(target, 'ICMS-ST · campos condicionais', [...focusIcmsSt, 'icms_aliquota_credito_simples', 'icms_valor_credito_simples'], values, false); groups++;
+    } else if (csosn === '202' || csosn === '203') {
+      addFocusFieldGroup(target, 'ICMS-ST · campos condicionais', focusIcmsSt, values, false); groups++;
+    } else if (csosn === '900') {
+      addFocusFieldGroup(target, 'ICMS · grupo opcional', focusIcmsBasic, values, true); groups++;
+      addFocusFieldGroup(target, 'ICMS-ST · grupo opcional', focusIcmsSt, values, true); groups++;
+      addFocusFieldGroup(target, 'Crédito do Simples · opcional', focusIcmsCredit, values, true); groups++;
+      const basicPresent = focusIcmsBasic.some(name => values && values[name] != null && String(values[name]).trim() !== '');
+      const stPresent = focusIcmsSt.some(name => values && values[name] != null && String(values[name]).trim() !== '');
+      if (basicPresent === stPresent) unsupported.push('CSOSN 900 exige exatamente um dos grupos opcionais de ICMS ou ICMS-ST.');
+    } else if (csosn === '500') {
+      addFocusFieldGroup(target, 'ICMS-ST retido anteriormente', focusIcmsRetainedSt, values, true); groups++;
+    } else if (csosn && !['102', '103', '300', '400', '500'].includes(csosn)) {
+      unsupported.push(`CSOSN ${csosn}: grupo condicional ainda não mapeado.`);
+    }
+
+    function addPisCofinsGroup(prefix, cst) {
+      if (!cst) return;
+      let fields = [];
+      if (cst === '01' || cst === '02') fields = [`${prefix}_base_calculo`, `${prefix}_aliquota_porcentual`, `${prefix}_valor`];
+      else if (cst === '03') fields = [`${prefix}_quantidade_vendida`, `${prefix}_aliquota_valor`, `${prefix}_valor`];
+      else if (cst === '05') fields = [`${prefix}_base_calculo_st`, `${prefix}_aliquota_porcentual_st`, `${prefix}_valor_st`];
+      else if (!['04', '06', '07', '08', '09'].includes(cst)) {
+        unsupported.push(`CST ${prefix.toUpperCase()} ${cst}: grupo condicional ainda não mapeado.`);
+        return;
+      }
+      if (fields.length) {
+        addFocusFieldGroup(target, `${prefix.toUpperCase()} · CST ${cst}`, fields, values, false);
+        groups++;
+      }
+    }
+    addPisCofinsGroup('pis', pisCst);
+    addPisCofinsGroup('cofins', cofinsCst);
+
+    if (cstIbsCbs || classTrib) {
+      if (cstIbsCbs === '000' && ['000001', '000005'].includes(classTrib)) {
+        addFocusFieldGroup(target, `IBS/CBS · CST ${cstIbsCbs} · classificação ${classTrib}`, focusIbsCbs000, values, false);
+        groups++;
+      } else {
+        unsupported.push(`IBS/CBS ${cstIbsCbs || '(CST pendente)'}/${classTrib || '(classificação pendente)'}: grupo ainda não mapeado.`);
+      }
+    }
+
+    guidance.className = `notice form-notice ${unsupported.length ? 'warning' : 'info'}`;
+    if (unsupported.length) {
+      guidance.textContent = `${unsupported.join(' ')} Esta combinação permanece bloqueada para emissão até o mapeamento e a revisão fiscal.`;
+    } else if (groups) {
+      guidance.textContent = 'Preencha os grupos exibidos com os valores aprovados pela contabilidade. A Focus pode totalizar campos calculados; o ERP não calcula nem presume estes valores.';
+    } else if (csosn || pisCst || cofinsCst) {
+      guidance.textContent = 'Para os códigos informados, o mapeamento atual não exige outros campos numéricos de ICMS/PIS/Cofins. A classificação IBS/CBS continua separada e pode exigir parâmetros próprios.';
+    } else {
+      guidance.textContent = 'Selecione os códigos fiscais para ver os grupos numéricos conhecidos. Informe apenas valores recebidos da contabilidade; o ERP não calcula nem presume impostos.';
+    }
+  }
+
   function editProfile(record, operation) {
     const rules = record.rules && typeof record.rules === 'object' ? record.rules : {};
     const variants = rules.operations && typeof rules.operations === 'object' ? rules.operations : {};
     const variant = variants[operation] && typeof variants[operation] === 'object' ? variants[operation] : {};
+    focusFieldCache = {};
     form.reset();
     setValue('profileId', record.id);
     setValue('name', record.name);
     setValue('operation', operation);
     for (const field of ['cfop', 'csosn', 'pisCst', 'cofinsCst', 'cstIbsCbs', 'classTrib']) setValue(field, variant[field]);
+    renderFocusFields(variant.focusFields);
     updateCsosnHelp();
     document.getElementById('formTitle').textContent = variants[operation]
       ? `Editar regra · ${operationLabels[operation]}`
@@ -118,7 +303,9 @@
   }
 
   function resetForm() {
+    focusFieldCache = {};
     form.reset();
+    renderFocusFields({});
     updateCsosnHelp();
     setValue('profileId', '');
     document.getElementById('formTitle').textContent = 'Criar perfil';
@@ -217,6 +404,7 @@
     show('Salvando a regra como rascunho...', 'info');
     try {
       const values = Object.fromEntries(new FormData(form).entries());
+      values.focusFields = readFocusFields();
       const profileId = String(values.profileId || '');
       delete values.profileId;
       await api('/api/fiscal/tax-profiles', {
@@ -257,8 +445,16 @@
     }
   });
 
-  form.elements.namedItem('csosn').addEventListener('input', updateCsosnHelp);
+  form.elements.namedItem('csosn').addEventListener('input', () => {
+    const values = readFocusFields();
+    updateCsosnHelp();
+    renderFocusFields(values);
+  });
+  for (const name of ['pisCst', 'cofinsCst', 'cstIbsCbs', 'classTrib']) {
+    form.elements.namedItem(name).addEventListener('input', () => renderFocusFields(readFocusFields()));
+  }
   updateCsosnHelp();
+  renderFocusFields({});
 
   const loading = document.createElement('p');
   loading.className = 'loading-state';

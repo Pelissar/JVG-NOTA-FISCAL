@@ -3,6 +3,8 @@
  * validação de schema, regras fiscais ou autorização da SEFAZ.
  * Não assume que um rascunho sem pendências está apto a emitir.
  */
+import { reviewFocusTaxRule } from "./focus-tax-fields.ts";
+
 type Json = Record<string, unknown>;
 export type ReviewCheck = {
   key: string;
@@ -310,7 +312,7 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
 
   const mappedItems: Json[] = [];
   const itemBasicMissing: string[] = [], itemCodeMissing: string[] = [], itemIbsMissing: string[] = [];
-  const itemIcmsMissing: string[] = [], itemPisCofinsMissing: string[] = [], itemIbsDetailsMissing: string[] = [];
+  const itemIcmsMissing: string[] = [], itemPisCofinsMissing: string[] = [], itemIbsDetailsMissing: string[] = [], itemFocusFieldIssues: string[] = [];
   sourceItems.forEach((raw, index) => {
     const item = obj(raw), row: Json = { numero_item: index + 1 };
     const put = (key: string, valid: boolean, mapped: unknown) => {
@@ -334,6 +336,7 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
     const rules = obj(item.taxRules);
     const focusFields = obj(rules.focusFields);
     const csosn = text(item.csosn), pis = text(rules.pisCst), cofins = text(rules.cofinsCst);
+    const taxRuleReview = reviewFocusTaxRule({ ...rules, csosn });
     if (/^\d{3}$/.test(csosn) && supportedCsosn.has(csosn)) row.icms_situacao_tributaria = csosn;
     else itemCodeMissing.push("Item " + (index + 1) + " CSOSN/ICMS");
     if (/^\d{2}$/.test(pis)) row.pis_situacao_tributaria = pis;
@@ -351,9 +354,16 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
         typeof rawValue === "string" && /^\d+(?:\.\d+)?$/.test(rawValue.trim()) ? Number(rawValue) : Number.NaN;
       if (Number.isFinite(numericValue) && numericValue >= 0) row[field] = numericValue;
     }
-    const missingIcms = conditionalIcmsMissing(csosn, focusFields);
+    const missingIcms = [...new Set([...conditionalIcmsMissing(csosn, focusFields), ...taxRuleReview.icmsMissing])];
     if (!supportedCsosn.has(csosn)) missingIcms.push("CSOSN válido para o regime confirmado");
+    for (const issue of taxRuleReview.unsupported) {
+      if (issue.startsWith("CSOSN")) missingIcms.push(issue);
+      else if (issue.startsWith("CST PIS") || issue.startsWith("CST COFINS")) itemPisCofinsMissing.push(`Item ${index + 1}: ${issue}`);
+      else itemIbsDetailsMissing.push(`Item ${index + 1}: ${issue}`);
+    }
     if (missingIcms.length) itemIcmsMissing.push(`Item ${index + 1}: ${missingIcms.join(", ")}`);
+    if (taxRuleReview.invalidFields.length)
+      itemFocusFieldIssues.push(`Item ${index + 1}: ${taxRuleReview.invalidFields.join(", ")}`);
     for (const [prefix, cst] of [["pis", pis], ["cofins", cofins]] as const) {
       const expectedFields = conditionalPisCofinsFields(cst, prefix);
       const missing = missingTaxFields(expectedFields, focusFields);
@@ -361,15 +371,8 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
       if (cst && !expectedFields.length && !["04", "06", "07", "08", "09"].includes(cst))
         itemPisCofinsMissing.push(`Item ${index + 1}: revisar o grupo condicional do ${prefix.toUpperCase()} para CST ${cst} com a tabela Focus e a contabilidade`);
     }
-    if (cstIbs && classTrib) {
-      if (cstIbs === "000") {
-        const required = ["ibs_cbs_base_calculo", "ibs_uf_aliquota", "ibs_uf_valor", "ibs_mun_aliquota", "ibs_mun_valor", "cbs_aliquota", "cbs_valor"];
-        const missing = missingTaxFields(required, focusFields);
-        if (missing.length) itemIbsDetailsMissing.push(`Item ${index + 1}: ${missing.join(", ")}`);
-      } else {
-        itemIbsDetailsMissing.push(`Item ${index + 1}: campos IBS/CBS condicionais ao CST ${cstIbs} e classificação ${classTrib} precisam de definição e revisão específica`);
-      }
-    }
+    if (taxRuleReview.ibsCbsMissing.length)
+      itemIbsDetailsMissing.push(`Item ${index + 1}: ${taxRuleReview.ibsCbsMissing.join(", ")}`);
     const gtin = textDigits(item.gtin);
     if (/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/.test(gtin)) row.codigo_barras_comercial = gtin;
     mappedItems.push(row);
@@ -386,6 +389,8 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
       itemIcmsMissing.length ? itemIcmsMissing.slice(0,8).join("; ") : "A combinação exige apenas origem e CSOSN, ou não pede grupo numérico adicional.");
   add("pis_cofins_campos_condicionais", "Campos condicionais de PIS/Cofins", itemCodeMissing.length === 0 && itemPisCofinsMissing.length === 0 && sourceItems.length > 0,
       itemPisCofinsMissing.length ? itemPisCofinsMissing.slice(0,8).join("; ") : "Confira se os grupos numéricos exigidos para cada CST foram informados e revisados.");
+  add("focus_campos_numericos", "Campos numéricos Focus", itemFocusFieldIssues.length === 0 && sourceItems.length > 0,
+      itemFocusFieldIssues.length ? itemFocusFieldIssues.slice(0,8).join("; ") : "Campos numéricos permitidos e informados foram mapeados sem cálculo automático.");
   add("ibs_cbs_campos_condicionais", "Campos condicionais de IBS/CBS", itemIbsMissing.length === 0 && itemIbsDetailsMissing.length === 0 && sourceItems.length > 0,
       itemIbsDetailsMissing.length ? itemIbsDetailsMissing.slice(0,8).join("; ") :
       itemIbsMissing.length ? "Informe CST e cClassTrib orientados pela contabilidade." : "Grupo numérico ainda não cadastrado para as classificações deste item.");

@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {test} from 'node:test';
+import {parseFocusTaxFields, reviewFocusTaxRule} from '../lib/fiscal/focus-tax-fields.ts';
+test('ICMS base modality fields accept integer codes only',()=>{assert.throws(()=>parseFocusTaxFields({icms_modalidade_base_calculo:1.5}));assert.throws(()=>parseFocusTaxFields({icms_modalidade_base_calculo_st:'2.5'}));assert.deepEqual(parseFocusTaxFields({icms_modalidade_base_calculo:'3'}),{icms_modalidade_base_calculo:3});});
+test('Focus numeric fields reject guessed formats and values',()=>{assert.deepEqual(parseFocusTaxFields({ibs_uf_valor:'0',cbs_valor:'1.25'}),{ibs_uf_valor:0,cbs_valor:1.25});for(const invalid of [{pis_valor:'1,25'},{pis_valor:'-1'},{ibs_valor_total:1},{cbs_valor:'1e2'}])assert.throws(()=>parseFocusTaxFields(invalid));});
+test('Focus review checks conditionally required groups without filling values',()=>{const base={csosn:'102',pisCst:'06',cofinsCst:'06',cstIbsCbs:'000',classTrib:'000001'};const empty=reviewFocusTaxRule(base);assert.deepEqual(empty.icmsMissing,[]);assert.equal(empty.ibsCbsMissing.length,7);const ready=reviewFocusTaxRule({...base,focusFields:{ibs_cbs_base_calculo:0,ibs_uf_aliquota:0,ibs_uf_valor:0,ibs_mun_aliquota:0,ibs_mun_valor:0,cbs_aliquota:0,cbs_valor:0}});assert.equal(ready.ibsCbsMissing.length,0);const unsupported=reviewFocusTaxRule({...base,classTrib:'000003'});assert.ok(unsupported.unsupported.some(value=>value.includes('IBS/CBS')));const credit=reviewFocusTaxRule({...base,csosn:'101'});assert.deepEqual(credit.icmsMissing,['icms_aliquota_credito_simples','icms_valor_credito_simples']);});
 const api=readFileSync(new URL('../app/api/fiscal/tax-profiles/route.ts',import.meta.url),'utf8');
 const page=readFileSync(new URL('../public/erp/tax-profiles.html',import.meta.url),'utf8');
 const drafts=readFileSync(new URL('../app/api/fiscal/nfe-drafts/route.ts',import.meta.url),'utf8');

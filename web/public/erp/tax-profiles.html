@@ -8,10 +8,10 @@
   <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
   <link rel="stylesheet" href="/erp/unified-pages.css">
   <link rel="stylesheet" href="/erp/erp-design-v2.css">
-  <link rel="stylesheet" href="/erp/tax-profiles.css?v=20261111-2">
+  <link rel="stylesheet" href="/erp/tax-profiles.css?v=20261112-1">
   <script src="/erp/theme-switch.js"></script>
   <script defer src="/erp/erp-page-nav.js"></script>
-  <script defer src="./tax-profiles.js?v=20261111-1"></script>
+  <script defer src="./tax-profiles.js?v=20261112-1"></script>
 </head>
 <body class="tax-profiles-page">
   <div id="erpGlobalNav"></div>
@@ -123,6 +123,15 @@
                 <small class="field-help">Formato de 6 dígitos; valide na tabela vigente com a contabilidade.</small>
               </label>
             </div>
+          </fieldset>
+
+          <fieldset id="focusTaxGroup" class="form-group">
+            <legend><span>3</span> Parâmetros numéricos da Focus</legend>
+            <p class="group-description">Os campos aparecem conforme os códigos desta operação e somente para grupos mapeados no ERP.</p>
+            <div id="focusTaxGuidance" class="notice info form-notice" role="status" aria-live="polite">
+              Informe apenas valores recebidos da contabilidade. O ERP não calcula nem completa impostos; grupos sem mapeamento ficam bloqueados.
+            </div>
+            <div id="focusTaxFields" class="focus-tax-fields"></div>
           </fieldset>
 
           <div class="notice warning form-notice">

@@ -4,6 +4,7 @@ import {
   type SiteAccount,
 } from "../../../../lib/jvg-backend";
 import { isOfficialCfopCode } from "../../../../lib/fiscal/cfop";
+import { parseFocusTaxFields, reviewFocusTaxRule } from "../../../../lib/fiscal/focus-tax-fields";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,11 @@ function profileFields(input: Record<string, unknown>) {
   const cofinsCst = textValue(input.cofinsCst, 2);
   const cstIbsCbs = textValue(input.cstIbsCbs, 3);
   const classTrib = textValue(input.classTrib, 6);
+  let focusFields: Record<string, number>;
+  try { focusFields = parseFocusTaxFields(input.focusFields); }
+  catch (error) {
+    throw new JvgBackendError(error instanceof Error ? error.message : "Campos numéricos Focus inválidos.", 400);
+  }
   if (cfop && !isOfficialCfopCode(cfop)) throw new JvgBackendError("CFOP não consta do catálogo oficial.", 400);
   if (csosnValue && !csosn.has(csosnValue)) throw new JvgBackendError("CSOSN inválido.", 400);
   if (pisCst && !/^\d{2}$/.test(pisCst)) throw new JvgBackendError("CST PIS deve ter 2 dígitos.", 400);
@@ -74,7 +80,7 @@ function profileFields(input: Record<string, unknown>) {
   return {
     name,
     operation,
-    rule: { cfop, csosn: csosnValue, pisCst, cofinsCst, cstIbsCbs, classTrib, requiresAccountantReview: true },
+    rule: { cfop, csosn: csosnValue, pisCst, cofinsCst, cstIbsCbs, classTrib, focusFields, requiresAccountantReview: true },
   };
 }
 function withoutLegacyFields(rules: Record<string, unknown>) {
@@ -159,6 +165,19 @@ export async function PATCH(request: Request) {
       });
       if (incomplete)
         throw new JvgBackendError("Cada operação precisa ter CFOP, CSOSN, CST de PIS/Cofins e CST/classificação IBS-CBS antes de registrar a revisão.", 409);
+      const focusIssues = configuredEntries.flatMap(([key, rawRule]) => {
+        const review = reviewFocusTaxRule(object(rawRule));
+        const issues = [
+          ...review.icmsMissing.map(field => `ICMS ${field}`),
+          ...review.pisCofinsMissing.map(field => `PIS/Cofins ${field}`),
+          ...review.ibsCbsMissing.map(field => `IBS/CBS ${field}`),
+          ...review.invalidFields.map(field => `campo inválido ${field}`),
+          ...review.unsupported,
+        ];
+        return issues.map(issue => `${key}: ${issue}`);
+      });
+      if (focusIssues.length)
+        throw new JvgBackendError(`Há campos Focus obrigatórios pendentes ou combinações ainda não mapeadas: ${focusIssues.slice(0, 8).join("; ")}.`, 409);
       const reviewedRules = {
         ...rules,
         accountantReview: { name: accountantName, crc: accountantCrc, declaredBy: user.userId, declaredAt: new Date().toISOString() },

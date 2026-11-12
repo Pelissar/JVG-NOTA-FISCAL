@@ -376,3 +376,15 @@
   .tax-profiles-page .record-heading { align-items: flex-start; flex-direction: column; }
   .tax-profiles-page .review-dialog { padding: 19px; }
 }
+
+.tax-profiles-page .focus-tax-fields { display: grid; gap: 11px; }
+.tax-profiles-page .focus-tax-field-group {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+.tax-profiles-page .focus-tax-field-group h3 { margin: 0 0 6px; color: var(--ink); font-size: 13px; }
+.tax-profiles-page .focus-tax-field-group .group-description { margin: 0 0 12px; }
+.tax-profiles-page .focus-tax-field-group .field-grid { gap: 12px; }
