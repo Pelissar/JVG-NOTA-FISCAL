@@ -1,286 +1,913 @@
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×½õÙ:-jZ.¶›­–)Ş³R†gVæ7F–öâ‚’µÆâwW6R7G&–7BsµÆåÆâf"7FFRÒ²&öGV7G3¢µÒÂ6Æ–VçG3¢µÒÂF…&öf–ÆW3¢µÒÂ—77VW%7FFS¢rrÂG&gG3¢µÒÂ†öÖöÆövF–öå6WGW¢çVÆÂÂ&VG“¢fÇ6RÂ6÷W&6T÷&FW$–C¢çVÆÂÂ6÷W&6T÷&FW$çVÖ&W#¢rrÓµÆâf"–FV×÷FVæ7”¶W’ÒçVÆÃµÆâf"7FGW2ÒFö7VÖVçBævWDVÆVÖVçD'”–B‚w7FGW2r“µÆâf"f÷&ÒÒFö7VÖVçBævWDVÆVÖVçD'”–B‚vG&gDf÷&Òr“µÆâf"—FV×2ÒFö7VÖVçBævWDVÆVÖVçD'”–B‚v—FV×2r“µÆâf"6fT'WGFöâÒFö7VÖVçBævWDVÆVÖVçD'”–B‚w6fT'WGFöâr“µÆâf"ÖöæW’ÒæWr–çFÂäçVÖ&W$f÷&ÖB‚wBÔ%"rÂ²7G–ÆS¢v7W'&Væ7’rÂ7W'&Væ7“¢t%$ÂrÒ“µÆåÆâgVæ7F–öâ&W÷'B†ÖW76vRÂ¶–æB’µÆâ7FGW2çFW‡D6öçFVçBÒÖW76vSµÆâ7FGW2æ6Æ74æÖRÒvæ÷F–6Rr²†¶–æBòrr²¶–æB¢rr“µÆâÕÆåÆâgVæ7F–öâ&VF–æW74—FVÒ‡F&vWBÂF—FÆRÂ&VG’ÂFWF–Â’µÆâf"—FVÒÒFö7VÖVçBæ7&VFTVÆVÖVçB‚v'F–6ÆRr“µÆâ—FVÒæ6Æ74æÖRÒw&VF–æW72Ö—FVÒr²‡&VG’òv—2×&VG’r¢v—2×VæF–ærr“µÆâf"†VF–ærÒFö7VÖVçBæ7&VFTVÆVÖVçB‚vF—br“µÆâ†VF–æræ6Æ74æÖRÒw&VF–æW72Ö—FVÒÖ†VF–ærsµÆâf"æÖRÒFö7VÖVçBæ7&VFTVÆVÖVçB‚w7G&öærr“µÆâæÖRçFW‡D6öçFVçBÒF—FÆSµÆâf"&FvRÒFö7VÖVçBæ7&VFTVÆVÖVçB‚w7âr“µÆâ&FvRæ6Æ74æÖRÒw&VF–æW72×7FFRsµÆâ&FvRçFW‡D6öçFVçBÒ&VG’òt6öæ6Ç\:ÖFòr¢uVæFVçFRsµÆâ†VF–æræVæB†æÖRÂ&FvR“µÆâf"6÷’ÒFö7VÖVçBæ7&VFTVÆVÖVçB‚wr“µÆâ6÷’çFW‡D6öçFVçBÒFWF–ÃµÆâ—FVÒæVæB††VF–ærÂ6÷’“µÆâF&vWBæVæB†—FVÒ“µÆâÕÆåÆâgVæ7F–öâ&VæFW$†öÖöÆövF–öå&VF–æW72‚’µÆâf"F&vWBÒFö7VÖVçBævWDVÆVÖVçD'”–B‚v†öÖöÆövF–öå&VF–æW72r“µÆâf"7VÖÖ'’ÒFö7VÖVçBævWDVÆVÖVçD'”–B‚w&VF–æW757VÖÖ'’r“µÆâ–b‚F&vWBÇÂ7VÖÖ'’’&WGW&ãµÆâF&vWBç&WÆ6T6†–ÆG&Vâ‚“µÆâf"6WGWÒ7FFRæ†öÖöÆövF–öå6WGWµÆâ–b‚6WGW’µÆâ7VÖÖ'’çFW‡D6öçFVçBÒtwV&FæFòFF÷2sµÆâf"v—F–ærÒFö7VÖVçBæ7&VFTVÆVÖVçB‚wr“µÆâv—F–ærçFW‡D6öçFVçBÒtì:6òfö’÷7<:×fVÂ6'&Vv"ò6†V6¶Æ—7Bv÷&â&V6'&VwVR:v–æ&FVçF"æ÷fÖVçFRâsµÆâF&vWBæVæB‡v—F–ær“µÆâ&WGW&ãµÆâÕÆåÆâf"7F—fU&öGV7G2Ò7FFRç&öGV7G2æf–ÇFW"†gVæ7F–öâ‡&öGV7B’²&WGW&â&öGV7Bæ7F—fRÓÓÒG'VS²Ò“µÆâf"&VG•&öGV7G2Ò7F—fU&öGV7G2æf–ÇFW"†gVæ7F–öâ‡&öGV7B’µÆâ&WGW&âõåÆG³‡ÒBòçFW7B…7G&–ær‡&öGV7Bææ6ÒÇÂrr’’bbõå³Ó…ÒBòçFW7B…7G&–ær‡&öGV7Bæ÷&–v–âÇÂrr’’bb&ööÆVâ‡&öGV7BçF…&öf–ÆT–B“µÆâÒ’æÆVæwFƒµÆâf"–æ6ö×ÆWFU&öGV7G2Ò7F—fU&öGV7G2æÆVæwF‚Ò&VG•&öGV7G3µÆâf"Ö—76–ætæ6ÒÒ7F—fU&öGV7G2æf–ÇFW"†gVæ7F–öâ‡&öGV7B’²&WGW&âõåÆG³‡ÒBòçFW7B…7G&–ær‡&öGV7Bææ6ÒÇÂrr’“²Ò’æÆVæwFƒµÆâf"Ö—76–æt÷&–v–âÒ7F—fU&öGV7G2æf–ÇFW"†gVæ7F–öâ‡&öGV7B’²&WGW&âõå³Ó…ÒBòçFW7B…7G&–ær‡&öGV7Bæ÷&–v–âÇÂrr’“²Ò’æÆVæwFƒµÆâf"Ö—76–æu&öf–ÆRÒ7F—fU&öGV7G2æf–ÇFW"†gVæ7F–öâ‡&öGV7B’²&WGW&â&öGV7BçF…&öf–ÆT–C²Ò’æÆVæwFƒµÆâf"&öGV7E&VG’Ò&VG•&öGV7G2âµÆâf"&÷fVE&öf–ÆW2Ò7FFRçF…&öf–ÆW2æf–ÇFW"†gVæ7F–öâ‡&öf–ÆR’µÆâf"'VÆW2Ò&öf–ÆRbb&öf–ÆRç'VÆW2bbG—Vöb&öf–ÆRç'VÆW2ÓÓÒvö&¦V7Brò&öf–ÆRç'VÆW2¢·ÓµÆâf"÷W&F–öç2Ò'VÆW2æ÷W&F–öç2bbG—Vöb'VÆW2æ÷W&F–öç2ÓÓÒvö&¦V7Brò'VÆW2æ÷W&F–öç2¢·ÓµÆâ&WGW&â&öf–ÆRç&Wf–Wu÷7FGW2ÓÓÒw&Wf–WvVBrbbö&¦V7Bæ¶W—2†÷W&F–öç2’æÆVæwF‚âµÆâÒ’æÆVæwFƒµÆâf"&Wf–WuVæF–ærÒ7FFRçF…&öf–ÆW2æf–ÇFW"†gVæ7F–öâ‡&öf–ÆR’²&WGW&â&öf–ÆRç&Wf–Wu÷7FGW2ÓÒw&Wf–WvVBs²Ò’æÆVæwFƒµÆâf"Vçf—&öæÖVçD66W75&VG’Ò6WGWçÆFf÷&ÔFÖ–âbb6WGWæ66÷VçD6å7V&Ö—Bbb6WGWç–Æ÷D6ö×ç”6öæf–wW&VBbb6WGWç–Æ÷D6ö×ç”ÖF6†W3µÆâf"&Vv–ÖU&VG’Ò6WGWçF…&Vv–ÖT6öæf—&ÖF–öäf–Æ&ÆRbb6WGWçF…&Vv–ÖT6öæf—&ÖVBbb6WGWç7W÷'FVEF…&Vv–ÖSµÆâf"—77VW%&VG’Ò6WGWæ—77VW$f÷VæBbb'&’æ—4'&’‡6WGWæ—77VW$Ö—76–ær’bb6WGWæ—77VW$Ö—76–æræÆVæwF‚ÓÓÒµÆâf"6†V6·2ÒµÆâ¶Vçf—&öæÖVçD66W75&VG’Ât6W76òò–Æ÷Fò¥drrÂ6WGWç–Æ÷D6ö×ç”ÖF6†W5Æâò‡6WGWçÆFf÷&ÔFÖ–âòtV×&W6–Æ÷FòW7L:f–æ7VÆFâòVçf–òFRFW7FR:’fV—Fò÷"FÖ–æ—7G&F÷"FÆFf÷&Öâr¢tV×&W6–Æ÷FòW7L:f–æ7VÆFÂÖ2òVçf–ò:’&W7G&—FòVÒFÖ–æ—7G&F÷"FÆFf÷&Öâr•Æâ¢tòVçf–òFRFW7FRW7L:&W7G&—Fò:V×&W6–Æ÷Fò¥drRFWVæFRF6öæf–wW&:|:6òFòÖ&–VçFRâuÒÅÆâ·6WGWæfö7W5Fö¶Vä6öæf–wW&VBÂuFö¶VâF’fö7W2æò6W'f–F÷"rÂ6WGWæfö7W5Fö¶Vä6öæf–wW&VEÆâòtòFö¶VâW7L:6öæf–wW&FòâVÆR:’F–fW&VçFRFò6W'F–f–6FòF–v—FÂæW†Fòæò–æVÂfö7W3²W6R(	ÅfW&–f–6"6öæWŒ:6òfö7W2äf^(	Ò&fÆ–F"ò6W76ò:’âuÆâ¢tòFö¶VâFR’FR†öÖöÆöv:|:6òì:6òW7L:6öæf–wW&Fòæò6W'f–F÷"FòU%âVÆR:’6W&FòFò6W'F–f–6FòF–v—FÂæW†Fòæfö7W2âuÒÅÆâ¶—77VW%&VG’ÂtFF÷2f—66—2FòVÖ—FVçFRrÂ—77VW%&VG•Æâòt÷26×÷2ö'&–vL;7&–÷2FòVÖ—FVçFRW7L:6ò6ö×ÆWF÷2âuÆâ¢‡6WGWæ—77VW$Ö—76–ærÇÂµÒ’æÆVæwF…ÆâòtfÇFÓ¢r²6WGWæ—77VW$Ö—76–æræ¦ö–â‚s²r’²râuÆâ¢tò6F7G&òf—66ÂFV×&W6ì:6òfö’Væ6öçG&FòâuÒÅÆâ·&Vv–ÖU&VG’Âu&Vv–ÖRG&–'WL:&–òrÂ&Vv–ÖU&VG•Æâòu6–×ÆW2æ6–öæÂ6öæf—&ÖFòæ÷2FF÷2FV×&W6âuÆâ¢6WGWçF…&Vv–ÖT6öæf—&ÖF–öäf–Æ&ÆUÆâòt6öæf—&Ö:|:6ò–æFì:6òW7L:F—7öì:×fVÂæò&æ6òâÖ–w&:|:6òf—66Â6÷'&W7öæFVçFR&V6—66W"Æ–6Fæò7W&6RâuÆâ¢6WGWçF…&Vv–ÖT6öæf—&ÖVEÆâòtò&Vv–ÖR&V6—66W"6öæf—&ÖFò6öÒ6öçF&–Æ–FFRR6Çfòæ÷2FF÷2FV×&W6âuÆâ¢tòfÇW†òFR†öÖöÆöv:|:6òGVÂFVæFR6öÖVçFRò6–×ÆW2æ6–öæÂ6öæf—&ÖFòâuÒÅÆâ·&öGV7E&VG’Ât6L:ÆövòFR&öGWF÷2rÂ7F—fU&öGV7G2æÆVæwF…Æâò7F—fU&öGV7G2æÆVæwF‚²r&öGWFò‡2’F—fò‡2“²r²&VG•&öGV7G2²r6ö×ÆWFò‡2’Âr²–æ6ö×ÆWFU&öGV7G2²r–æ6ö×ÆWFò‡2’âä4ÒVæFVçFS¢r²Ö—76–ætæ6Ò²rÂ÷&–vVÓ¢r²Ö—76–æt÷&–v–â²rÂW&f–Âf—66Ã¢r²Ö—76–æu&öf–ÆR²râ<;2÷2—FVç2W66öÆ†–F÷2æò&67Væ†ò&V6—6Ò76"÷"W7F6öæfW,:¦æ6–âuÆâ¢t6F7G&RòÖVæ÷2VÒ&öGWFòF—fò&&W&"VÖäbÖRâuÒÅÆâ¶&÷fVE&öf–ÆW2âÂu&Vw&f—66Â&Wf—6FrÂ&÷fVE&öf–ÆW2âÆâò&÷fVE&öf–ÆW2²rW&f–Â†—2’6öÒ÷W&:|:6ò&Vv—7G&FR&Wf—<:6òFV6Æ&Fr²‡&Wf–WuVæF–æròs²r²&Wf–WuVæF–ær²rW&f–Â†—2’–æFwV&FÒ&Wf—<:6òâr¢râ6öæf—&ÖR6RòW&f–Â6÷'&W7öæFR:fVæFâr•Æâ¢7FFRçF…&öf–ÆW2æÆVæwF…Æâò7FFRçF…&öf–ÆW2æÆVæwF‚²rW&f–Â†—2’6F7G&Fò‡2’Â–æF6VÒ&Wf—<:6ò6öçL:&–Â&Vv—7G&FâuÆâ¢tæVæ‡VÒW&f–Âf—66Â6F7G&Fòâ2&Vw&2&V6—6Ò6W"f÷&æV6–F2R6öæfW&–F26öÒ6öçF&–Æ–FFR&6F÷W&:|:6òâuÒÅÆâÓµÆâf"VæF–ærÒµÆâ6†V6·2æf÷$V6‚†gVæ7F–öâ†6†V6²’µÆâ–b‚6†V6µ³Ò’VæF–ær³ÒµÆâ&VF–æW74—FVÒ‡F&vWBÂ6†V6µ³ÒÂ6†V6µ³ÒÂ6†V6µ³%Ò“µÆâÒ“µÆâ7VÖÖ'’çFW‡D6öçFVçBÒVæF–æròVæF–ær²rWF‡2’FR6F7G&òVæFVçFR‡2’r¢t6F7G&÷2&6R6öæfW&–F÷2sµÆâ7VÖÖ'’æ6Æ74æÖRÒw&VF–æW72Ö&FvRr²‡VæF–æròv—2×VæF–ærr¢v—2×&VG’r“µÆâÕÆåÆâgVæ7F–öâ6VÆV7FVDçVÖ&W"†æÖR’µÆâf"fÇVRÒf÷&ÒæVÆVÖVçG2ææÖVD—FVÒ†æÖR’çfÇVSµÆâ&WGW&âfÇVRÓÓÒrròçVÆÂ¢çVÖ&W"‡fÇVR“µÆâÕÆåÆâgVæ7F–öâ6VÆV7FVD—77VTB‚’µÆâf"fÇVRÒf÷&ÒæVÆVÖVçG2ææÖVD—FVÒ‚v—77VTBr’çfÇVSµÆâ–b‚fÇVR’&WGW&âçVÆÃµÆâf"FFRÒæWrFFR‡fÇVR“µÆâ–b‚çVÖ&W"æ—4f–æ—FR†FFRævWEF–ÖR‚’’’&WGW&âçVÆÃµÆâf"öfg6WBÒÖFFRævWEF–ÖW¦öæTöfg6WB‚“µÆâf"6–vâÒöfg6WBãÒòr²r¢rÒsµÆâf"'6öÇWFRÒÖF‚æ'2†öfg6WB“µÆâf"†÷W'2Ò7G&–ær„ÖF‚æfÆö÷"†'6öÇWFRòc’’çE7F'Bƒ"Âsr“µÆâf"Ö–çWFW2Ò7G&–ær†'6öÇWFRRc’çE7F'Bƒ"Âsr“µÆâ&WGW&âfÇVR²s£r²6–vâ²†÷W'2²s¢r²Ö–çWFW3µÆâÕÆåÆâ7–æ2gVæ7F–öâ’†VæGö–çBÂ÷F–öç2’µÆâf"6öçG&öÆÆW"ÒæWr&÷'D6öçG&öÆÆW"‚“µÆâf"F–ÖW"Ò6WEF–ÖV÷WB†gVæ7F–öâ‚’²6öçG&öÆÆW"æ&÷'B‚“²ÒÂS“µÆâG'’µÆâf"&W7öç6RÒv—BfWF6‚†VæGö–çBÂö&¦V7Bæ76–vâ‡µÆâ7&VFVçF–Ç3¢w6ÖRÖ÷&–v–ârÂ66†S¢væò×7F÷&RrÅÆâÒÂ÷F–öç2ÇÂ·ÒÂ²6–væÃ¢6öçG&öÆÆW"ç6–væÂÒ’“µÆâf"FFÒv—B&W7öç6Ræ§6öâ‚’æ6F6‚†gVæ7F–öâ‚’²&WGW&â·Ó²Ò“µÆâ–b‡&W7öç6Rç7FGW2ÓÓÒC’µÆâv–æF÷ræÆö6F–öâç&WÆ6R‚röÆöv–âr“µÆâF‡&÷ræWrW'&÷"‚tf:vÆöv–âæ÷fÖVçFRâr“µÆâÕÆâ–b‚&W7öç6Ræö²’F‡&÷ræWrW'&÷"†FFæW'&÷"ÇÂFFæÖW76vRÇÅÆâ„'&’æ—4'&’†FFæ—77VW2’òFFæ—77VW2æ¦ö–â‚r+rr’¢rr’ÇÂtì:6òfö’÷7<:×fVÂ6öæ6ÇV—"÷W&:|:6òâr“µÆâ&WGW&âFFµÆâÒ6F6‚†W'&÷"’µÆâ–b†W'&÷"ææÖRÓÓÒt&÷'DW'&÷"r’F‡&÷ræWrW'&÷"‚tò6W'f–F÷"ì:6ò&W7öæFWRVÒR6VwVæF÷2âFVçFRæ÷fÖVçFRâr“µÆâF‡&÷rW'&÷#µÆâÒf–æÆÇ’µÆâ6ÆV%F–ÖV÷WB‡F–ÖW"“µÆâÕÆâÕÆåÆâgVæ7F–öâ÷F–öâ‡fÇVRÂFW‡B’µÆâf"VÂÒFö7VÖVçBæ7&VFTVÆVÖVçB‚v÷F–öâr“µÆâVÂçfÇVRÒfÇVSµÆâVÂçFW‡D6öçFVçBÒFW‡CµÆâ&WGW&âVÃµÆâÕÆåÆâgVæ7F–öâf–ÆÅ&V6—–VçG2‚’µÆâf"6VÆV7BÒFö7VÖVçBævWDVÆVÖVçD'”–B‚w&V6—–VçD–Br“µÆâ6VÆV7Bç&WÆ6T6†–ÆG&Vâ†÷F–öâ‚rrÂu6VÆV6–öæRVÒFW7F–æL:&–òr’“µÆâ7FFRæ6Æ–VçG2æf–ÇFW"†gVæ7F–öâ†2’²&WGW&â2æ7F—fRbb2æ—47W7FöÖW"ÓÓÒG'VRbb2çG—RÓÒtU…Bs²Ò’æf÷$V6‚†gVæ7F–öâ†6Æ–VçB’µÆâ6VÆV7BæVæB†÷F–öâ†6Æ–VçBæ–BÂ6Æ–VçBææÖR²†6Æ–VçBæFö7VÖVçBòr+rr²6Æ–VçBæFö7VÖVçB¢rr’’“µÆâÒ“µÆâÕÆåÆâv–æF÷ræ§ftæfTvWE&V6—–VçBÒgVæ7F–öâ†–B’µÆâ&WGW&â7FFRæ6Æ–VçG2æf–æB†gVæ7F–öâ†6Æ–VçB’²&WGW&â6Æ–VçBæ–BÓÓÒ–C²Ò’ÇÂçVÆÃµÆâÓµÆâv–æF÷ræ§ftæfTvWE&öGV7BÒgVæ7F–öâ†–B’µÆâ&WGW&â7FFRç&öGV7G2æf–æB†gVæ7F–öâ‡&öGV7B’²&WGW&â&öGV7Bæ–BÓÓÒ–C²Ò’ÇÂçVÆÃµÆâÓµÆåÆâgVæ7F–öâf–ÆÄ6'&–W'2‚’µÆâf"6VÆV7BÒFö7VÖVçBævWDVÆVÖVçD'”–B‚v6'&–W$–Br“µÆâ–b‚6VÆV7B’&WGW&ãµÆâ6VÆV7Bç&WÆ6T6†–ÆG&Vâ†÷F–öâ‚rrÂtì:6ò–æf÷&ÖFr’“µÆâ7FFRæ6Æ–VçG2æf–ÇFW"†gVæ7F–öâ‡'G’’²&WGW&â'G’æ7F—fRbb'G’æ—46'&–W"ÓÓÒG'VS²Ò’æf÷$V6‚†gVæ7F–öâ‡'G’’µÆâ6VÆV7BæVæB†÷F–öâ‡'G’æ–BÂ'G’ææÖR²‡'G’æFö7VÖVçBòr+rr²'G’æFö7VÖVçB¢rr’’“µÆâÒ“µÆâÕÆåÆâgVæ7F–öâF…'VÆTf÷"‡&öGV7BÂ&V6—–VçD–B’µÆâf"&V6—–VçBÒ7FFRæ6Æ–VçG2æf–æB†gVæ7F–öâ†6Æ–VçB’²&WGW&â6Æ–VçBæ–BÓÓÒ&V6—–VçD–C²Ò“µÆâ&WGW&âv–æF÷rä§ftæfUF…7VvvW7F–öâç&W6öÇfR‡&öGV7BÂ&V6—–VçBÂ7FFRæ—77VW%7FFRÂ7FFRçF…&öf–ÆW2“µÆâÕÆåÆâgVæ7F–öâWFFUF…7VvvW7F–öâ‡&÷rÂ&öGV7BÂ&W6WEF÷V6†VB’µÆâf"6f÷Ò&÷rçVW'•6VÆV7F÷"‚ræ6f÷r“µÆâf"76÷6âÒ&÷rçVW'•6VÆV7F÷"‚ræ76÷6âr“µÆâf"æ÷FRÒ&÷rçVW'•6VÆV7F÷"‚rçF‚×7VvvW7F–öâr“µÆâ–b‡&W6WEF÷V6†VB’µÆâ&÷ræFF6WBæ6f÷F÷V6†VBÒvfÇ6RsµÆâ&÷ræFF6WBæ76÷6åF÷V6†VBÒvfÇ6RsµÆâÕÆâ–b‚&öGV7B’µÆâ–b‡&÷ræFF6WBæ6f÷F÷V6†VBÓÒwG'VRr’6f÷çfÇVRÒrsµÆâ–b‡&÷ræFF6WBæ76÷6åF÷V6†VBÓÒwG'VRr’76÷6âçfÇVRÒrsµÆâ&VæFW%&öGV7Df—66Äf7G2‡&÷rÂçVÆÂÂçVÆÂ“µÆâæ÷FRçFW‡D6öçFVçBÒu6VÆV6–öæR&öGWFòRFW7F–æL:&–ò&6öç7VÇF"&Vw&f—66Âf–æ7VÆFâsµÆâ&WGW&ãµÆâÕÆåÆâf"6VÆV7FVBÒF…'VÆTf÷"‡&öGV7BÂFö7VÖVçBævWDVÆVÖVçD'”–B‚w&V6—–VçD–Br’çfÇVR“µÆâf"'VÆRÒ6VÆV7FVBç'VÆSµÆâf"7VvvW7FVD6f÷Ò'VÆRbb'VÆRæ6f÷ò7G&–ær‡'VÆRæ6f÷’¥Æâ6VÆV7FVBæ÷W&F–öâòrr¢7G&–ær‡&öGV7BæFVfVÇD6f÷ÇÂrr“µÆâf"7VvvW7FVD76÷6âÒ'VÆRbb'VÆRæ76÷6âò7G&–ær‡'VÆRæ76÷6â’¢rsµÆâ–b‡&÷ræFF6WBæ6f÷F÷V6†VBÓÒwG'VRr’6f÷çfÇVRÒ7VvvW7FVD6f÷µÆâ–b‡&÷ræFF6WBæ76÷6åF÷V6†VBÓÒwG'VRr’76÷6âçfÇVRÒ7VvvW7FVD76÷6ãµÆâ&VæFW%&öGV7Df—66Äf7G2‡&÷rÂ&öGV7BÂ6VÆV7FVB“µÆåÆâ–b‡'VÆRbb6VÆV7FVBç&öf–ÆR’µÆâf"&Wf–WtÆ&VÂÒ6VÆV7FVBç&öf–ÆRç&Wf–Wu÷7FGW2ÓÓÒw&Wf–WvVBuÆâòvFV6Æ&:|:6òFR&Wf—<:6ò&Vv—7G&F²6öæf—&÷&–VçF:|:6ò6öçL:&–ÂuÆâ¢w&67Væ†ò–æF6VÒ&Wf—<:6ò6öçL:&–ÂsµÆâæ÷FRçFW‡D6öçFVçBÒ‡6VÆV7FVBç&öf–ÆRææÖRÇÂuW&f–Âf—66Âr’²r+rrµÆâ‡6VÆV7FVBæ÷W&F–öâÓÓÒv–çFW&æròwfVæF–çFW&ær¢wfVæF–çFW&W7FGVÂr’µÆâr+rr²&Wf–WtÆ&VÂ²râVÖ—7<:6ò6öçF–çV7V¦V—F:6öæfW,:¦æ6–F÷2FVÖ—26×÷2âsµÆâÒVÇ6R–b‡6VÆV7FVBæ÷W&F–öâ’µÆâæ÷FRçFW‡D6öçFVçBÒ‡&öGV7BçF…&öf–ÆT–BòtòW&f–ÂFW7FR&öGWFòì:6òFVÒ&Vw&r¢tW7FR&öGWFòì:6òFVÒW&f–Âf—66Âf–æ7VÆFòr’µÆâr&r²‡6VÆV7FVBæ÷W&F–öâÓÓÒv–çFW&æròwfVæF–çFW&ær¢wfVæF–çFW&W7FGVÂr’µÆârâ6öæf–wW&R÷W&:|:6òæòW&f–Âf—66Ã²æVæ‡VÒ<;6F–vòfö’&W7VÖ–FòâsµÆâÒVÇ6R–b‡&öGV7BæFVfVÇD6f÷’µÆâæ÷FRçFW‡D6öçFVçBÒt4dõ6F7G&Fò6öÖò7VvW7L:6òvW&ÂFò&öGWFòâ6VÆV6–öæRòFW7F–æL:&–òR6öæf—&ÖR÷W&:|:6ò6öÒ6öçF&–Æ–FFRâsµÆâÒVÇ6RµÆâæ÷FRçFW‡D6öçFVçBÒt–æf÷&ÖRTbFòVÖ—FVçFRR6VÆV6–öæRVÒFW7F–æL:&–ò6öÒTb&–FVçF–f–6"&Vw&F÷W&:|:6òâsµÆâÕÆâÕÆåÆâgVæ7F–öâ&VæFW%&öGV7Df—66Äf7G2‡&÷rÂ&öGV7BÂ6VÆV7FVB’µÆâf"F&vWBÒ&÷rçVW'•6VÆV7F÷"‚rç&öGV7BÖf—66ÂÖf7G2r“µÆâ–b‚F&vWB’&WGW&ãµÆâF&vWBç&WÆ6T6†–ÆG&Vâ‚“µÆâf"f7G2ÒµÆâ²tä4ÒrÂ&öGV7Bbb&öGV7Bææ6ÕÒÂ²t4U5BrÂ&öGV7Bbb&öGV7Bæ6W7EÒÅÆâ²t÷&–vVÒrÂ&öGV7Bbb&öGV7Bæ÷&–v–åÒÅÆâ²uW&f–ÂG&–'WL:&–òrÂ6VÆV7FVBbb6VÆV7FVBç&öf–ÆRbb6VÆV7FVBç&öf–ÆRææÖUÒÅÆâ²t4dõ7VvW&–FòrÂ6VÆV7FVBbb6VÆV7FVBç'VÆRbb6VÆV7FVBç'VÆRæ6f÷ÒÅÆâ²t54õ4â7VvW&–FòrÂ6VÆV7FVBbb6VÆV7FVBç'VÆRbb6VÆV7FVBç'VÆRæ76÷6åÒÅÆâÓµÆâf7G2æf÷$V6‚†gVæ7F–öâ†f7B’µÆâf"—FVÒÒFö7VÖVçBæ7&VFTVÆVÖVçB‚vF—br“µÆâf"Æ&VÂÒFö7VÖVçBæ7&VFTVÆVÖVçB‚w7âr“²Æ&VÂçFW‡D6öçFVçBÒf7E³ÓµÆâf"fÇVRÒFö7VÖVçBæ7&VFTVÆVÖVçB‚w7G&öærr“²fÇVRçFW‡D6öçFVçBÒf7E³ÒÓÒçVÆÂÇÂf7E³ÒÓÓÒrròtì:6ò6F7G&Fòr¢7G&–ær†f7E³Ò“µÆâ—FVÒæVæB†Æ&VÂÂfÇVR“²F&vWBæVæB†—FVÒ“µÆâÒ“µÆâÕÆåÆâgVæ7F–öâWFFT—FVÕF…7VvvW7F–öç2‚’µÆâ'&’æg&öÒ†—FV×2çVW'•6VÆV7F÷$ÆÂ‚ræ—FVÒ×&÷rr’’æf÷$V6‚†gVæ7F–öâ‡&÷r’µÆâf"&öGV7BÒ7FFRç&öGV7G2æf–æB†gVæ7F–öâ†VçG'’’²&WGW&âVçG'’æ–BÓÓÒ&÷rçVW'•6VÆV7F÷"‚rç&öGV7Br’çfÇVS²Ò“µÆâ–b‡&öGV7B’WFFUF…7VvvW7F–öâ‡&÷rÂ&öGV7BÂfÇ6R“µÆâÒ“µÆâÕÆåÆâgVæ7F–öâFD—FVÒ‚’µÆâ–b†—FV×2æ6†–ÆG&VâæÆVæwF‚ãÒ#’µÆâ&W÷'B‚tÆ–Ö—FRFR#&öGWF÷2÷"&67Væ†òârÂvW'&÷"r“µÆâ&WGW&ãµÆâÕÆâf"&÷rÒFö7VÖVçBæ7&VFTVÆVÖVçB‚vF—br“µÆâ&÷ræ6Æ74æÖRÒv—FVÒ×&÷rsµÆâ&÷ræ–ææW$…DÔÂÕÆâsÆÆ&VÂ6Æ73Ò&f–VÆB&öGV7BÖf–VÆB#ãÇ7ãå&öGWFò£Â÷7ããÇ6VÆV7B6Æ73Ò'&öGV7B"&WV—&VCãÂ÷6VÆV7CãÂöÆ&VÃârµÆâsÆÆ&VÂ6Æ73Ò&f–VÆB#ãÇ7ãåFBâ£Â÷7ããÆ–çWB6Æ73Ò'VçF—G’"G—SÒ&çVÖ&W""Ö–ãÒ#ã"ÖƒÒ#"7FWÒ#ã"fÇVSÒ#"&WV—&VCãÂöÆ&VÃârµÆâsÆÆ&VÂ6Æ73Ò&f–VÆB#ãÇ7ãå&\:vò…"B’£Â÷7ããÆ–çWB6Æ73Ò'&–6R"G—SÒ&çVÖ&W""Ö–ãÒ#"ÖƒÒ#“““““’ã“’"7FWÒ#ã"&WV—&VCãÂöÆ&VÃârµÆâsÆÆ&VÂ6Æ73Ò&f–VÆB#ãÇ7ãä4dõF÷W&:|:6óÂ÷7ããÆ–çWB6Æ73Ò&6f÷"Ö†ÆVæwFƒÒ#B"–çWFÖöFSÒ&çVÖW&–2"Æ—7CÒ&6f÷÷F–öç2"Æ6V†öÆFW#Ò%7VvW7L:6òFòW&f–Â#ãÂöÆ&VÃârµÆâsÆÆ&VÂ6Æ73Ò&f–VÆB#ãÇ7ãä54õ4âF÷W&:|:6óÂ÷7ããÆ–çWB6Æ73Ò&76÷6â"Ö†ÆVæwFƒÒ#2"–çWFÖöFSÒ&çVÖW&–2"Æ6V†öÆFW#Ò%7VvW7L:6òFòW&f–Â#ãÂöÆ&VÃârµÆâsÆ'WGFöâG—SÒ&'WGFöâ"6Æ73Ò'&VÖ÷fRÖ—FVÒ"&–ÖÆ&VÃÒ%&VÖ÷fW"W7FR&öGWFò"F—FÆSÒ%&VÖ÷fW"&öGWFò#ì9sÂö'WGFöãârµÆâsÇ6Æ73Ò'F‚×7VvvW7F–öâ"&öÆSÒ'7FGW2"&–ÖÆ—fSÒ'öÆ—FR#å6VÆV6–öæR&öGWFòRFW7F–æL:&–ò&6öç7VÇF"&Vw&f—66Âf–æ7VÆFãÂ÷ârµÆâsÆFWF–Ç26Æ73Ò'&öGV7BÖf—66ÂÖFWF–Ç2#ãÇ7VÖÖ'“äFF÷2f—66—26F7G&F÷3Â÷7VÖÖ'“ãÆF—b6Æ73Ò'&öGV7BÖf—66ÂÖf7G2#ãÂöF—cãÂöFWF–Ç3âsµÆâf"6VÆV7BÒ&÷rçVW'•6VÆV7F÷"‚rç&öGV7Br“µÆâ6VÆV7BæVæB†÷F–öâ‚rrÂu6VÆV6–öæRr’“µÆâ7FFRç&öGV7G2æf–ÇFW"†gVæ7F–öâ‡’²&WGW&âæ7F—fS²Ò’æf÷$V6‚†gVæ7F–öâ‡’µÆâ6VÆV7BæVæB†÷F–öâ‡æ–BÂææÖR²r+rr²ç6·R’“µÆâÒ“µÆâ6VÆV7BæFDWfVçDÆ—7FVæW"‚v6†ævRrÂgVæ7F–öâ‚’µÆâf"&öGV7BÒ7FFRç&öGV7G2æf–æB†gVæ7F–öâ‡’²&WGW&âæ–BÓÓÒ6VÆV7BçfÇVS²Ò“µÆâ&÷rçVW'•6VÆV7F÷"‚rç&–6Rr’çfÇVRÒ&öGV7BòçVÖ&W"‡&öGV7Bç&–6RÇÂ’çFôf—†VBƒ"’¢rsµÆâWFFUF…7VvvW7F–öâ‡&÷rÂ&öGV7BÂG'VR“µÆâWFFUF÷FÂ‚“µÆâÒ“µÆâ&÷rçVW'•6VÆV7F÷"‚ræ6f÷r’æFDWfVçDÆ—7FVæW"‚v–çWBrÂgVæ7F–öâ‚’²&÷ræFF6WBæ6f÷F÷V6†VBÒwG'VRs²Ò“µÆâ&÷rçVW'•6VÆV7F÷"‚ræ76÷6âr’æFDWfVçDÆ—7FVæW"‚v–çWBrÂgVæ7F–öâ‚’²&÷ræFF6WBæ76÷6åF÷V6†VBÒwG'VRs²Ò“µÆâ&÷rçVW'•6VÆV7F÷"‚rç&VÖ÷fRÖ—FVÒr’æFDWfVçDÆ—7FVæW"‚v6Æ–6²rÂgVæ7F–öâ‚’µÆâ–b†—FV×2æ6†–ÆG&VâæÆVæwF‚â’&÷rç&VÖ÷fR‚“µÆâVÇ6R&W÷'B‚tÖçFVæ†VÆòÖVæ÷2VÒ&öGWFòæò&67Væ†òârÂvW'&÷"r“µÆâWFFUF÷FÂ‚“µÆâÒ“µÆâ&÷rçVW'•6VÆV7F÷$ÆÂ‚v–çWBr’æf÷$V6‚†gVæ7F–öâ†–çWB’²–çWBæFDWfVçDÆ—7FVæW"‚v–çWBrÂWFFUF÷FÂ“²Ò“µÆâ—FV×2æVæB‡&÷r“µÆâWFFUF÷FÂ‚“µÆâÕÆåÆâgVæ7F–öâ&VD—FV×2‚’µÆâ&WGW&â'&’æg&öÒ†—FV×2çVW'•6VÆV7F÷$ÆÂ‚ræ—FVÒ×&÷rr’’æÖ†gVæ7F–öâ‡&÷r’µÆâ&WGW&âµÆâ&öGV7D–C¢&÷rçVW'•6VÆV7F÷"‚rç&öGV7Br’çfÇVRÅÆâVçF—G“¢&÷rçVW'•6VÆV7F÷"‚rçVçF—G’r’çfÇVRÅÆâVæ—E&–6S¢&÷rçVW'•6VÆV7F÷"‚rç&–6Rr’çfÇVRÅÆâ6f÷¢&÷rçVW'•6VÆV7F÷"‚ræ6f÷r’çfÇVRçG&–Ò‚’ÅÆâ76÷6ã¢&÷rçVW'•6VÆV7F÷"‚ræ76÷6âr’çfÇVRçG&–Ò‚’ÅÆâÓµÆâÒ“µÆâÕÆåÆâgVæ7F–öâWFFUF÷FÂ‚’µÆâf"6VçG2Ò&VD—FV×2‚’ç&VGV6R†gVæ7F–öâ‡7VÒÂ—FVÒ’µÆâf"VçF—G’ÒçVÖ&W"†—FVÒçVçF—G’’Â&–6RÒçVÖ&W"†—FVÒçVæ—E&–6R“µÆâ&WGW&â7VÒ²„çVÖ&W"æ—4f–æ—FR‡VçF—G’’bbçVÖ&W"æ—4f–æ—FR‡&–6R’bbVçF—G’âbb&–6RãÒõÆâÖF‚ç&÷VæB„ÖF‚ç&÷VæB‡VçF—G’¢’¢ÖF‚ç&÷VæB‡&–6R¢’ò’¢“µÆâÒÂ“µÆâf"F÷FÂÒFö7VÖVçBævWDVÆVÖVçD'”–B‚wF÷FÂr“µÆâ–b‡F÷FÂ’F÷FÂçFW‡D6öçFVçBÒÖöæW’æf÷&ÖB†6VçG2ò“µÆâ–b‡G—Vöbv–æF÷ræ§ftæfUv—¦&E&Vg&W6‚ÓÓÒvgVæ7F–öâr’v–æF÷ræ§ftæfUv—¦&E&Vg&W6‚‚“µÆâÕÆåÆâgVæ7F–öâ&VæFW$†—7F÷'’‚’µÆâf"F&vWBÒFö7VÖVçBævWDVÆVÖVçD'”–B‚v†—7F÷'’r“µÆâF&vWBç&WÆ6T6†–ÆG&Vâ‚“µÆâ–b‚7FFRæG&gG2æÆVæwF‚’µÆâf"V×G’ÒFö7VÖVçBæ7&VFTVÆVÖVçB‚wr“µÆâV×G’çFW‡D6öçFVçBÒtæVæ‡VÒ&67Væ†ò6Çfòâ&W&Rò&–ÖV—&ò:W7VW&FâsµÆâF&vWBæVæB†V×G’“µÆâ&WGW&ãµÆâÕÆâ7FFRæG&gG2æf÷$V6‚†gVæ7F–öâ†G&gB’µÆâf"&÷rÒFö7VÖVçBæ7&VFTVÆVÖVçB‚vF—br“µÆâ&÷ræ6Æ74æÖRÒv†—7F÷'’×&÷rsµÆâf"æÖRÒFö7VÖVçBæ7&VFTVÆVÖVçB‚w7G&öærr“µÆâæÖRçFW‡D6öçFVçBÒG&gBç&V6—–VçDæÖSµÆâf"FFRÒFö7VÖVçBæ7&VFTVÆVÖVçB‚w6ÖÆÂr“µÆâFFRçFW‡D6öçFVçBÒG&gBæ—FV×46÷VçB²r&öGWFò‡2’+rr²æWrFFR†G&gBæ7&VFVDB’çFôÆö6ÆU7G&–ær‚wNw×kh‘éì¶»§q«^v[šÈÈS˜H›Øİ\Îˆ	È
-È›İšY\›ÙK˜Ø[Z[š×Ş[Û›İWÙš\ØØ[
-N×ˆYˆ
-›İšY\›ÙK˜Ø[Z[š×Ù[™™JWˆ\[™[™J\™Ù]	Ü	Ë	ĞØ[Z[šÈÈS‘‘H˜H›Øİ\Îˆ	È
-È›İšY\›ÙK˜Ø[Z[š×Ù[™™JN×ˆ˜\ˆ›Øİ\Ñ]™[ÈH\œ˜^Kš\Ğ\œ˜^J›İšY\›ÙK™]™[ÜÊHÈ›İšY\›ÙK™]™[ÜÈˆ×N×ˆYˆ
-›Øİ\Ñ]™[Ë›[™İ
-H×ˆ\[™[™J\™Ù]	Ú	Ë	Ñ]™[ÜÈ™]Ü›˜YÜÈ[H›Øİ\ÉÊN×ˆ›Øİ\Ñ]™[ËœÛXÙJŒ
-K™›Ü‘XXÚ
-[˜İ[Ûˆ
-]™[
-H×ˆ˜\ˆ]™[[™›ÈHÙ]™[\×Ù]™[Ë]™[œİ]\Ë]™[˜ÛÙYÛ×Üİ]\Ë]™[›Y[œØYÙ[WÜÙY˜^ˆ]™[›Y[œØYÙ[WWˆ™š[\Š[˜İ[Ûˆ
-˜[YJHÈ™]\›ˆ˜[YHOH[	‰ˆİš[™Ê˜[YJKš[J
-HOOH	ÉÎÈJK›X\
-İš[™ÊKš›Ú[Š	È0­È	ÊN×ˆYˆ
-]™[[™›ÊH\[™[™J\™Ù]	Ü	Ë]™[[™›ÊN×ˆJN×ˆWˆ\[™[™J\™Ù]	Ü	Ë	Ó˜]\™^˜Nˆ	È
-È
-˜Y›˜]\™H	Û°èÛÈ[™›Ü›XYIÊJN×ˆ˜\ˆ\œÜÙS˜[Y\ÈHÈNˆ	Ó›Ü›X[	Ëˆ	ĞÛÛ\[Y[\‰ËÎˆ	ĞZ\İIËˆ	Ñ]›ÛpéğèÛÉÈN×ˆ\[™[™J\™Ù]	Ü	Ë	Ñš[˜[YYNˆ	È
-È
-\œÜÙS˜[Y\ÖÙ˜Yœ\œÜÙWH	Û°èÛÈ[™›Ü›XYIÊH
-×ˆ	È0­È]KÚÜ˜Nˆ	È
-È
-˜Yš\ÜİYP]	Û°èÛÈ[™›Ü›XYIÊJN×ˆ\[™[™J\™Ù]	Ü	Ë	ĞÛÛœİ[ZYÜˆš[˜[ˆ	È
-È
-˜Y˜ÛÛœİ[Y\‘š[˜[OOHYHÈ	ÔÚ[IÈ—ˆ˜Y˜ÛÛœİ[Y\‘š[˜[OOH˜[ÙHÈ	Ó°èÛÉÈˆ	Û°èÛÈ[™›Ü›XYÉÊH
-×ˆ	È0­È™\Ù[°éØNˆ	È
-È
-˜Y˜^Y\”™\Ù[˜ÙHOH[È	Û°èÛÈ[™›Ü›XYIÈˆİš[™Ê˜Y˜^Y\”™\Ù[˜ÙJJH
-×ˆ	È0­Èœ™]Nˆ	È
-È
-˜Y˜[œÜÜ[ÙHOH[È	Û°èÛÈ[™›Ü›XYÉÈˆİš[™Ê˜Y˜[œÜÜ[ÙJJJN×ˆYˆ
-˜Y˜Ø\œšY\ŠH\[™[™J\™Ù]	Ü	Ë	Õ˜[œÜÜYÜ˜Nˆ	È
-È
-˜Y˜Ø\œšY\‹›˜[YH	Ó°èÛÈ[™›Ü›XYIÊH
-×ˆ
-˜Y˜Ø\œšY\‹™Øİ[Y[[X™\ˆÈ	È0­È	È
-È˜Y˜Ø\œšY\‹™Øİ[Y[[X™\ˆˆ	ÉÊJN×ˆYˆ
-˜Y™ZXÛH	‰ˆ˜Y™ZXÛKœ]JWˆ\[™[™J\™Ù]	Ü	Ë	Õ™pëXİ[Îˆ	È
-È˜Y™ZXÛKœ]KÕ\\Ø\ÙJ
-H
-×ˆ
-˜Y™ZXÛKœİ]HÈ	È0­È	È
-È˜Y™ZXÛKœİ]KÕ\\Ø\ÙJ
-Hˆ	ÉÊH
-×ˆ
-˜Y™ZXÛKœ›ÈÈ	È0­È“•È	È
-È˜Y™ZXÛKœ›Èˆ	ÉÊJN×ˆ
-\œ˜^Kš\Ğ\œ˜^J˜Y›Û[Y\ÊHÈ˜Y›Û[Y\Èˆ×JK™›Ü‘XXÚ
-[˜İ[Ûˆ
-›Û[YJH×ˆ˜\ˆÙZYÚH›Û[YK›™]ÙZYÚZ[HOH[›Û[YK™Ü›ÜÜÕÙZYÚZ[HOH[×ˆ	È0­È\ÛÈ0ë\]ZYËØœ]Îˆ	È
-È
-›Û[YK›™]ÙZYÚZ[HOH[È	ø %	Èˆ
-[X™\Š›Û[YK›™]ÙZYÚZ[JHÈL
-KÑš^Y
-ÊJH
-×ˆ	ËÉÈ
-È
-›Û[YK™Ü›ÜÜÕÙZYÚZ[HOH[È	ø %	Èˆ
-[X™\Š›Û[YK™Ü›ÜÜÕÙZYÚZ[JHÈL
-KÑš^Y
-ÊJHˆ	ÉÎ×ˆ\[™[™J\™Ù]	Ü	Ë	Õ›Û[Y\Îˆ	È
-È›Û[YKœ]X[]H
-È
-›Û[YKœÜXÚY\ÈÈ	È0­È	È
-È›Û[YKœÜXÚY\Èˆ	ÉÊH
-ÈÙZYÚ
-N×ˆJN×ˆYˆ
-˜YœÛİ\˜ÙSÜ™\ˆ	‰ˆ˜YœÛİ\˜ÙSÜ™\‹›[X™\ŠWˆ\[™[™J\™Ù]	Ü	Ë	ÔYYÈHÜšYÙ[Nˆ	È
-È˜YœÛİ\˜ÙSÜ™\‹›[X™\ˆ
-È	È0­ÈÚ]XpéğèÛÈ	È
-È
-˜YœÛİ\˜ÙSÜ™\‹œİ]\È	ÉÊJN×ˆ\[™[™J\™Ù]	Ü	Ë	Õİ[ÛÛY\˜ÚX[ˆ	È
-È[Û™^K™›Ü›X]
-[X™\Š˜Y˜ÛÛ[Y\˜ÚX[İ[Ù[ÈÏÈ˜Yİ[Ù[ÈÏÈ
-HÈL
-JN×ˆYˆ
-˜Yœ™Y›YÚ
-H×ˆ\[™[™J\™Ù]	Ú	Ë	Ô°êKXÛÛ™™\°ê›˜ÚXHØY\İ˜[	ÊN×ˆ\[™[™J\™Ù]	Ü	Ë˜Yœ™Y›YÚ™]PÛÛ\]H×ˆ	ÑYÜÈ°è\ÚXÛÜÈ™\Ù[\Ëˆ™]š\ğèÛÈš\ØØ[HÛ[ÛÙØpéğèÛÈZ[™HØœšYØ]0ìÜšX\Ë‰È—ˆ	ÑYÜÈØY\İ˜Z\È[˜ÛÛ\]ÜÎˆ™Z˜H\È[™0ê›˜ÚX\ÈX˜Z^Ë‰ÊN×ˆ\[™[™J\™Ù]	Ü	Ë	ĞH°êKXÛÛ™™\°ê›˜ÚXH™\šYšXØHYÜÈØY\İ˜Z\ÎÈ[H°èÛÈİXœİ]ZH™]š\ğèÛÈš\ØØ[ˆH[Z\ÜğèÛÈ[H›ÙpéğèÛÈÛÛ[XH›Ü]YXYK‰ÊN×ˆH[ÙH×ˆ\[™[™J\™Ù]	Ü	Ë	Ô˜\Øİ[šÈ[YÛÎˆ°êKXÛÛ™™\°ê›˜ÚXHØY\İ˜[[™\ÜÛ°ë]™[‰ÊN×ˆWˆ˜\ˆØİ[Y[™]šY]ÈH˜Y™Øİ[Y[™]šY]ÈßN×ˆYˆ
-\œ˜^Kš\Ğ\œ˜^JØİ[Y[™]šY]Ë˜ÚXÚÜÊJH×ˆ\[™[™J\™Ù]	Ú	Ë	ĞÚXÚÛ\İH™\\˜péğèÛÈH‘‹YIÊN×ˆ˜\ˆÚXÚÓ\İHØİ[Y[˜Ü™X]Q[[Y[
-	İ[	ÊN×ˆØİ[Y[™]šY]Ë˜ÚXÚÜË™š[\Š[˜İ[Ûˆ
-ÚXÚÊHÈ™]\›ˆÚXÚËšÙ^HOOH	İ^™]šY]ÉÈ	‰ˆÚXÚËšÙ^HOOH	İ˜[œÛZ\ÜÚ[Û‰ÎÈJK™›Ü‘XXÚ
-[˜İ[Ûˆ
-ÚXÚÊH×ˆ\[™[™JÚXÚÓ\İ	ÛIË
-ÚXÚË›ÚÈÈ	ø§$È	Èˆ	Ô[™[Nˆ	ÊH
-×ˆÚXÚË›X™[
-È	È8 %	È
-ÈÚXÚË™]Z[
-N×ˆJN×ˆ\™Ù]˜\[™
-ÚXÚÓ\İ
-N×ˆ\[™[™J\™Ù]	Ü	Ë	ĞÚXÚÛ\İ[\››Îˆ°èÛÈ0êHSS‘‘K˜[YpéğèÛÈHÑQVˆİH\›Z\ÜğèÛÈH[Z\ÜğèÛË‰ÊN×ˆWˆ˜\ˆ›Øİ\Ô™]šY]ÈH˜Y™›Øİ\Ô^[ØY™]šY]ÈßN×ˆ\[™[™J\™Ù]	Ú	Ë	ĞÛÛ™™\°ê›˜ÚXHÈ^[ØY›Øİ\ÉÊN×ˆ\[™[™J\™Ù]	Ü	Ë	ĞØ[\ÜÈš\ØØZ\ÈX\XYÜÈ\˜H[°è[\ÙKˆ	È
-×ˆİš[™Ê›Øİ\Ô™]šY]Ë›Z\ÜÚ[™ĞÛİ[
-H
-È	ÈÛÛ™™\°ê›˜ÚXJÊH\İ]\˜[
-\ÊH[™[JÊK‰ÊN×ˆ˜\ˆ›Øİ\ĞÚXÚÜÈH\œ˜^Kš\Ğ\œ˜^J›Øİ\Ô™]šY]Ë˜ÚXÚÜÊHÈ›Øİ\Ô™]šY]Ë˜ÚXÚÜÈˆ×N×ˆYˆ
-›Øİ\ĞÚXÚÜË›[™İ
-H×ˆ˜\ˆ›Øİ\Ó\İHØİ[Y[˜Ü™X]Q[[Y[
-	İ[	ÊN×ˆ›Øİ\ĞÚXÚÜË™›Ü‘XXÚ
-[˜İ[Ûˆ
-ÚXÚÊH×ˆ\[™[™J›Øİ\Ó\İ	ÛIË
-ÚXÚË›ÚÈÈ	ø§$È	Èˆ	Ô[™[Nˆ	ÊH
-×ˆÚXÚË›X™[
-È	È8 %	È
-ÈÚXÚË™]Z[
-N×ˆJN×ˆ\™Ù]˜\[™
-›Øİ\Ó\İ
-N×ˆWˆYˆ
-›Øİ\Ô™]šY]Ëœ™\]Y\İ™]šY]È	‰ˆ\[Ùˆ›Øİ\Ô™]šY]Ëœ™\]Y\İ™]šY]ÈOOH	ÛØš™Xİ	ÊH×ˆ˜\ˆ™]šY]Ñ]Z[ÈHØİ[Y[˜Ü™X]Q[[Y[
-	Ù]Z[ÉÊN×ˆ˜\ˆ™]šY]Ôİ[[X\HHØİ[Y[˜Ü™X]Q[[Y[
-	Üİ[[X\IÊN×ˆ™]šY]Ôİ[[X\K^ÛÛ[H	ĞXœš\ˆ”ÓÓˆ0êXÛšXÛÈX\XYÈ\˜HH›Øİ\ÉÎ×ˆ˜\ˆ™]šY]ÒœÛÛˆHØİ[Y[˜Ü™X]Q[[Y[
-	Ü™IÊN×ˆ™]šY]ÒœÛÛ‹˜Û\ÜÓ˜[YHH	Ù›Øİ\ËZœÛÛ‹\™]šY]ÉÎ×ˆ™]šY]ÒœÛÛ‹^ÛÛ[H”ÓÓ‹œİš[™ÚYJ›Øİ\Ô™]šY]Ëœ™\]Y\İ™]šY]Ë[ŠN×ˆ™]šY]Ñ]Z[Ë˜\[™
-™]šY]Ôİ[[X\K™]šY]ÒœÛÛŠN×ˆ\™Ù]˜\[™
-™]šY]Ñ]Z[ÊN×ˆWˆ™[™\‘›Øİ\Ò][T™]šY]Ê\™Ù]˜Y›Øİ\Ô™]šY]ÊN×ˆ\[™[™J\™Ù]	Ú	Ë	Ô[™0ê›˜ÚX\ÈHÛÛ™™\°ê›˜ÚXIÊN×ˆ˜\ˆ[™[™ÈH\œ˜^Kš\Ğ\œ˜^J˜Yœ[™[™ÊHÈ˜Yœ[™[™Èˆ×N×ˆYˆ
-[™[™Ë›[™İ
-H×ˆ˜\ˆ\İHØİ[Y[˜Ü™X]Q[[Y[
-	İ[	ÊN×ˆ[™[™Ë™›Ü‘XXÚ
-[˜İ[Ûˆ
-\ÜİYJHÈ\[™[™J\İ	ÛIËİš[™Ê\ÜİYJJNÈJN×ˆ\™Ù]˜\[™
-\İ
-N×ˆH[ÙH×ˆ\[™[™J\™Ù]	Ü	Ë	ÔÙ[H[™0ê›˜ÚX\È™YÚ\İ˜Y\È™\İH˜\Øİ[šËˆ\ÜÛÈ°èÛÈ™\™\Ù[H\›İ˜péğèÛÈš\ØØ[‰ÊN×ˆWˆ\[™[™J\™Ù]	Ú	Ë	Ğ\\˜péğèÛÈšX]0è\šXIÊN×ˆ\[™[™J\™Ù]	Ü	Ë	Ó°èÛÈ™X[^˜YKˆÈT”Z[™H°èÛÈØ[İ[H˜\Ù\Ë[0ë\][İ\ÈİH˜[Ü™\ÈH[\ÜİÜËˆH°ê]šXH[Üİ˜HÜÈØ[\ÜÈH›Øİ\È°èHX\XYÜÈHÜÈYÜÈ]YH\[™[HHÛÛXš[YYK‰ÊN×ˆ\[™[™J\™Ù]	Ü	Ë	ĞH[YÜ˜péğèÛÈ°èÛÈØ[İ[H™[H™\İ[YHšX]ÜËˆÈ[š[ÈHÛ[ÛÙØpéğèÛÈ\[™HH™YÜ˜H\›İ˜YHÜˆÜ\˜péğèÛÈHHÛÛ™™\°ê›˜ÚXHHÙÜÈÜÈØ[\ÜÈ^YÚYÜÈ[H›Øİ\Ë‰ÊN×ˆ\[™[™J\™Ù]	Ü	Ë	ø '™]š\ğèÛÈ™YÚ\İ˜YH›ÈT”8 'H[™XØH\[˜\È[XHXÛ\˜péğèÛÈØ[˜H›ÈÚ\İ[XNÈ°èÛÈ˜[YHH]X[YšXØpéğèÛÈÈÛÛYÜˆ™[HİXœİ]ZHH\›İ˜péğèÛÈš\ØØ[HÜ\˜péğèÛË‰ÊN×ˆ™[™\’Û[ÛÙØ][ÛXİ[ÛœÊ\™Ù]˜Y
-N×ˆ\™Ù]šY[ˆH˜[ÙN×ˆ\™Ù]œØÜ›Û[ÕšY]ÊÈ™Z]š[Üˆ	ÜÛ[Ûİ	Ë›ØÚÎˆ	Û™X\™\İ	ÈJN×ˆHØ]Ú
-\œ›ÜŠH×ˆ\™Ù]œ™\XÙPÚ[™[Š
-N×ˆ\[™[™J\™Ù]	Ü	Ë	Ñ˜[H˜HÛÛœİ[Nˆ	È
-È\œ›Ü‹›Y\ÜØYÙJN×ˆ\™Ù]šY[ˆH˜[ÙN×ˆWˆW—ˆ\Ş[˜È[˜İ[Ûˆ™Yœ™\Ú\İÜJ
-H×ˆ˜\ˆ™\ÜÛœÙHH]ØZ]\J	ËØ\KÙš\ØØ[Û™™KY˜YÉÊN×ˆİ]K™˜YÈH\œ˜^Kš\Ğ\œ˜^J™\ÜÛœÙK™˜YÊHÈ™\ÜÛœÙK™˜YÈˆ×N×ˆİ]KšÛ[ÛÙØ][Û”Ù]\H™\ÜÛœÙKšÛ[ÛÙØ][Û”Ù]\[×ˆ™[™\’\İÜJ
-N×ˆ™[™\’Û[ÛÙØ][Û”™XY[™\ÜÊ
-N×ˆW—ˆ[˜İ[ÛˆÛX\“Ü™\”]Y\J
-H×ˆ˜\ˆ\›H™]ÈT“
-Ú[™İË›ØØ][Û‹š™YŠN×ˆ\›œÙX\˜Ú\˜[\Ë™[]J	ÛÜ™\’Y	ÊN×ˆÚ[™İËš\İÜKœ™\XÙTİ]JßK	ÉË\›œ]˜[YH
-È\›œÙX\˜Ú
-È\›š\Ú
-N×ˆW—ˆ[˜İ[Ûˆ[›[šÔÛİ\˜ÙSÜ™\Š
-H×ˆİ]KœÛİ\˜ÙSÜ™\’YH[×ˆİ]KœÛİ\˜ÙSÜ™\“[X™\ˆH	ÉÎ×ˆY[\İ[˜ŞRÙ^HH[×ˆ][\Ëœ]Y\TÙ[XİÜ[
-	Ëœ›ÙXİœ]X[]KœšXÙKœ™[[İ™KZ][IÊK™›Ü‘XXÚ
-[˜İ[Ûˆ
-šY[
-H×ˆšY[™\ØX›YH˜[ÙN×ˆJN×ˆØİ[Y[™Ù][[Y[RY
-	ØY][IÊK™\ØX›YH\İ]Kœ™XYH][\Ë˜Ú[™[‹›[™İHŒ×ˆØİ[Y[™Ù][[Y[RY
-	ÜÛİ\˜ÙSÜ™\“›İXÙIÊKšY[ˆHYN×ˆØİ[Y[™Ù][[Y[RY
-	Ü™XÚ\Y[Y	ÊK™\ØX›YH˜[ÙN×ˆÛX\“Ü™\”]Y\J
-N×ˆ™\Ü
-	Õ°ë[˜İ[ÈÛÛHÈYYÈ™[[İšYËˆ›ØğêˆÙHY]\ˆÜÈ][œÎÈHÜšYÙ[H°èÛÈÙ\°èH™YÚ\İ˜YH›È˜\Øİ[šË‰ÊN×ˆW—ˆ[˜İ[Ûˆ[\ÜÜ™\ŠÜ™\ŠH×ˆYˆ
-[Ü™\ˆ[Ü™\‹šY
-H›İÈ™]È\œ›ÜŠ	ÔYYÈ[°è[YË‰ÊN×ˆYˆ
-Ü™\‹œİ]\ÈOOH	ÛÜ[‰È	‰ˆÜ™\‹œİ]\ÈOOH	Ù[š[Y	ÊWˆ›İÈ™]È\œ›ÜŠ	ÔÛÛY[HYYÜÈ[HX™\ÈİHÛÛ˜ÛpëYÜÈÙ[HÙ\ˆ™\\˜YÜÈ\˜H‘‹YK‰ÊN×ˆYˆ
-[Ü™\‹˜İ\İÛY\—ÚY
-H›İÈ™]È\œ›ÜŠ	ÓÈYYÈ™XÚ\ØH\ˆ[HÛY[HØY\İ˜YË‰ÊN×ˆYˆ
-P\œ˜^Kš\Ğ\œ˜^JÜ™\‹š][\ÊHÜ™\‹š][\Ë›[™İHÜ™\‹š][\Ë›[™İˆŒ
-Wˆ›İÈ™]È\œ›ÜŠ	ĞH‘‹YHXÙZ]H]0êHŒ][œÈÜˆ˜\Øİ[šÎÈ\İHYYÈ°èÛÈÙHÙ\ˆ[\ÜYË‰ÊN×ˆ˜\ˆ™XÚ\Y[Hİ]K˜ÛY[Ë™š[™
-[˜İ[Ûˆ
-ÛY[
-H×ˆ™]\›ˆÛY[šYOOHÜ™\‹˜İ\İÛY\—ÚY	‰ˆÛY[˜Xİ]™H	‰ˆÛY[š\Ğİ\İÛY\ˆOOHYH	‰ˆÛY[\HOOH	ÑV	Î×ˆJN×ˆYˆ
-\™XÚ\Y[
-H›İÈ™]È\œ›ÜŠ	ÓÈÛY[HÈYYÈ\İ0èH[˜]]›ÈİH°èÛÈ\İ0èH\ÜÛ°ë]™[\˜H‘‹YK‰ÊN×ˆ˜\ˆX\YHÜ™\‹š][\Ë›X\
-[˜İ[Ûˆ
-][JH×ˆYˆ
-Z][HZ][Kœ›ÙXİY][KœÙ\šXÙRY
-Wˆ›İÈ™]È\œ›ÜŠ	Ñ\İHYYÈÛÛ0ê[HÙ\špéÛÈİH][HÙ[H›Ù]Èš[˜İ[YËˆÈ˜\Øİ[šÈ]X[0êH\˜HY\˜ØYÜšX\Ë‰ÊN×ˆ˜\ˆ›ÙXİHİ]Kœ›ÙXİË™š[™
-[˜İ[Ûˆ
-[JHÈ™]\›ˆ[KšYOOH][Kœ›ÙXİY	‰ˆ[K˜Xİ]™NÈJN×ˆYˆ
-\›ÙXİ
-H›İÈ™]È\œ›ÜŠ	Õ[H›Ù]ÈÈYYÈ\İ0èH[˜]]›ÈİH°èÛÈ\[˜ÙH[ÈØ]0è[ÙÛÈØ\œ™YØYË‰ÊN×ˆ˜\ˆ]X[]HH[X™\Š][Kœ]X[]JK[š]šXÙHH[X™\Š][K[š]šXÙJN×ˆYˆ
-S[X™\‹š\Ñš[š]J]X[]JH]X[]HHS[X™\‹š\Ñš[š]J[š]šXÙJH[š]šXÙH
-Wˆ›İÈ™]È\œ›ÜŠ	Ô]X[YYHİH™péÛÈÈYYÈ\İ0èH[°è[YË‰ÊN×ˆ™]\›ˆÈ›ÙXİYˆ][Kœ›ÙXİY]X[]Nˆ]X[]K[š]šXÙNˆ[š]šXÙK›ÙXİˆ›ÙXİN×ˆJN×ˆYˆ
-İ]K™˜YËœÛÛYJ[˜İ[Ûˆ
-˜Y
-HÈ™]\›ˆ˜YœÛİ\˜ÙSÜ™\’YOOHÜ™\‹šYÈJH	‰—ˆ]Ú[™İË˜ÛÛ™š\›J	Ò°èH^\İH[H˜\Øİ[šÈ‘‹YHš[˜İ[YÈH\İHYYËˆÜšX\ˆİ]›È˜\Øİ[šÈH™\\˜péğèÛÏÉÊJWˆ™]\›×ˆYˆ
-][\Ë˜Ú[™[‹›[™İ	‰ˆ]Ú[™İË˜ÛÛ™š\›J	ĞØ\œ™YØ\ˆ\İHYYÈİXœİ]Z\°èHÜÈYÜÈ]XZ\ÈÈ›Ü›][0è\š[ËˆÛÛ[X\ÉÊJWˆ™]\›×—ˆ›Ü›Kœ™\Ù]
+(function () {
+  'use strict';
 
-N×ˆYˆ
-\[ÙˆÚ[™İËš™Ó™™UÚ^˜\™™\Ù]OOH	Ù[˜İ[Û‰ÊHÚ[™İËš™Ó™™UÚ^˜\™™\Ù]
+  var state = { products: [], clients: [], taxProfiles: [], issuerState: '', drafts: [], homologationSetup: null, ready: false, sourceOrderId: null, sourceOrderNumber: '' };
+  var idempotencyKey = null;
+  var status = document.getElementById('status');
+  var form = document.getElementById('draftForm');
+  var items = document.getElementById('items');
+  var saveButton = document.getElementById('saveButton');
+  var money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
-N×ˆ][\Ëœ™\XÙPÚ[™[Š
-N×ˆØİ[Y[™Ù][[Y[RY
-	Ü™XÚ\Y[Y	ÊK˜[YHHÜ™\‹˜İ\İÛY\—ÚY×ˆØİ[Y[™Ù][[Y[RY
-	Ü™XÚ\Y[Y	ÊK™\ØX›YHYN×ˆØİ[Y[™Ù][[Y[RY
-	Ü™XÚ\Y[Y	ÊK™\Ü]Ú]™[
-™]È]™[
-	ØÚ[™ÙIËÈX˜›\ÎˆYHJJN×ˆX\Y™›Ü‘XXÚ
-[˜İ[Ûˆ
-[JH×ˆY][J
-N×ˆ˜\ˆ›İÈH][\Ë›\İ[[Y[Ú[×ˆ˜\ˆ›ÙXİÙ[XİH›İËœ]Y\TÙ[XİÜŠ	Ëœ›ÙXİ	ÊN×ˆ›ÙXİÙ[Xİ˜[YHH[Kœ›ÙXİY×ˆ›ÙXİÙ[Xİ™\Ü]Ú]™[
-™]È]™[
-	ØÚ[™ÙIÊJN×ˆ›İËœ]Y\TÙ[XİÜŠ	Ëœ]X[]IÊK˜[YHHİš[™Ê[Kœ]X[]JN×ˆ›İËœ]Y\TÙ[XİÜŠ	ËœšXÙIÊK˜[YHH[X™\Š[K[š]šXÙJKÑš^Y
-ŠN×ˆ›ÙXİÙ[Xİ™\ØX›YHYN×ˆ›İËœ]Y\TÙ[XİÜŠ	Ëœ]X[]IÊK™\ØX›YHYN×ˆ›İËœ]Y\TÙ[XİÜŠ	ËœšXÙIÊK™\ØX›YHYN×ˆ›İËœ]Y\TÙ[XİÜŠ	Ëœ™[[İ™KZ][IÊK™\ØX›YHYN×ˆJN×ˆİ]KœÛİ\˜ÙSÜ™\’YHÜ™\‹šY×ˆİ]KœÛİ\˜ÙSÜ™\“[X™\ˆH	ÔQIÈ
-Èİš[™ÊÜ™\‹šY
-KœÛXÙJ
-KÕ\\Ø\ÙJ
-N×ˆY[\İ[˜ŞRÙ^HH[×ˆØİ[Y[™Ù][[Y[RY
-	ÜÛİ\˜ÙSÜ™\“X™[	ÊK^ÛÛ[Hİ]KœÛİ\˜ÙSÜ™\“[X™\×ˆØİ[Y[™Ù][[Y[RY
-	ÜÛİ\˜ÙSÜ™\“›İXÙIÊKšY[ˆH˜[ÙN×ˆØİ[Y[™Ù][[Y[RY
-	ØY][IÊK™\ØX›YHYN×ˆ\]Uİ[
+  function report(message, kind) {
+    status.textContent = message;
+    status.className = 'notice' + (kind ? ' ' + kind : '');
+  }
 
-N×ˆ™\Ü
-	ÔYYÈØ\œ™YØYËˆ™]š\ÙHH˜]\™^˜KÑ“ÔHÔÓÔÓˆÛÛHHÛÛXš[YYKˆ™[š[XH›İH›ÚH˜[œÛZ]YK‰ÊN×ˆØİ[Y[™Ù][[Y[RY
-	Ù˜Y›Ü›IÊKœØÜ›Û[ÕšY]ÊÈ™Z]š[Üˆ	ÜÛ[Ûİ	Ë›ØÚÎˆ	Üİ\	ÈJN×ˆW—ˆ\Ş[˜È[˜İ[ÛˆØY
+  function readinessItem(target, title, ready, detail) {
+    var item = document.createElement('article');
+    item.className = 'readiness-item ' + (ready ? 'is-ready' : 'is-pending');
+    var heading = document.createElement('div');
+    heading.className = 'readiness-item-heading';
+    var name = document.createElement('strong');
+    name.textContent = title;
+    var badge = document.createElement('span');
+    badge.className = 'readiness-state';
+    badge.textContent = ready ? 'ConcluÃ­do' : 'Pendente';
+    heading.append(name, badge);
+    var copy = document.createElement('p');
+    copy.textContent = detail;
+    item.append(heading, copy);
+    target.append(item);
+  }
 
-H×ˆH×ˆ˜\ˆ™\İ[ÈH]ØZ]›ÛZ\ÙK˜[
-×ˆ\J	ËØ\KÜ™XÛÜ™ÏÜØÛÜO\][İ\ÉÊKˆ\J	ËØ\KØÛÛ\[IÊK˜Ø]Ú
-[˜İ[Ûˆ
+  function renderHomologationReadiness() {
+    var target = document.getElementById('homologationReadiness');
+    var summary = document.getElementById('readinessSummary');
+    if (!target || !summary) return;
+    target.replaceChildren();
+    var setup = state.homologationSetup;
+    if (!setup) {
+      summary.textContent = 'Aguardando dados';
+      var waiting = document.createElement('p');
+      waiting.textContent = 'NÃ£o foi possÃ­vel carregar o checklist agora. Recarregue a pÃ¡gina para tentar novamente.';
+      target.append(waiting);
+      return;
+    }
 
-HÈ™]\›ˆßNÈJKˆ\J	ËØ\KÙš\ØØ[İ^\›Ùš[\ÉÊK˜Ø]Ú
-[˜İ[Ûˆ
+    var activeProducts = state.products.filter(function (product) { return product.active === true; });
+    var readyProducts = activeProducts.filter(function (product) {
+      return /^\d{8}$/.test(String(product.ncm || '')) && /^[0-8]$/.test(String(product.origin || '')) && Boolean(product.taxProfileId);
+    }).length;
+    var incompleteProducts = activeProducts.length - readyProducts;
+    var missingNcm = activeProducts.filter(function (product) { return !/^\d{8}$/.test(String(product.ncm || '')); }).length;
+    var missingOrigin = activeProducts.filter(function (product) { return !/^[0-8]$/.test(String(product.origin || '')); }).length;
+    var missingProfile = activeProducts.filter(function (product) { return !product.taxProfileId; }).length;
+    var productReady = readyProducts > 0;
+    var approvedProfiles = state.taxProfiles.filter(function (profile) {
+      var rules = profile && profile.rules && typeof profile.rules === 'object' ? profile.rules : {};
+      var operations = rules.operations && typeof rules.operations === 'object' ? rules.operations : {};
+      return profile.review_status === 'reviewed' && Object.keys(operations).length > 0;
+    }).length;
+    var reviewPending = state.taxProfiles.filter(function (profile) { return profile.review_status !== 'reviewed'; }).length;
+    var environmentAccessReady = setup.platformAdmin && setup.accountCanSubmit && setup.pilotCompanyConfigured && setup.pilotCompanyMatches;
+    var regimeReady = setup.taxRegimeConfirmationAvailable && setup.taxRegimeConfirmed && setup.supportedTaxRegime;
+    var issuerReady = setup.issuerFound && Array.isArray(setup.issuerMissing) && setup.issuerMissing.length === 0;
+    var checks = [
+      [environmentAccessReady, 'Acesso ao piloto JVG', setup.pilotCompanyMatches
+        ? (setup.platformAdmin ? 'A empresa piloto estÃ¡ vinculada. O envio de teste Ã© feito por administrador da plataforma.' : 'A empresa piloto estÃ¡ vinculada, mas o envio Ã© restrito a um administrador da plataforma.')
+        : 'O envio de teste estÃ¡ restrito Ã  empresa piloto JVG e depende da configuraÃ§Ã£o do ambiente.'],
+      [setup.focusTokenConfigured, 'Token da API Focus no servidor', setup.focusTokenConfigured
+        ? 'O token estÃ¡ configurado. Ele Ã© diferente do certificado digital anexado no painel Focus; use â€œVerificar conexÃ£o Focus NFeâ€ para validar o acesso Ã  API.'
+        : 'O token de API de homologaÃ§Ã£o nÃ£o estÃ¡ configurado no servidor do ERP. Ele Ã© separado do certificado digital anexado na Focus.'],
+      [issuerReady, 'Dados fiscais do emitente', issuerReady
+        ? 'Os campos obrigatÃ³rios do emitente estÃ£o completos.'
+        : (setup.issuerMissing || []).length
+          ? 'Faltam: ' + setup.issuerMissing.join('; ') + '.'
+          : 'O cadastro fiscal da empresa nÃ£o foi encontrado.'],
+      [regimeReady, 'Regime tributÃ¡rio', regimeReady
+        ? 'Simples Nacional confirmado nos dados da empresa.'
+        : !setup.taxRegimeConfirmationAvailable
+          ? 'A confirmaÃ§Ã£o ainda nÃ£o estÃ¡ disponÃ­vel no banco. A migraÃ§Ã£o fiscal correspondente precisa ser aplicada no Supabase.'
+          : !setup.taxRegimeConfirmed
+            ? 'O regime precisa ser confirmado com a contabilidade e salvo nos dados da empresa.'
+            : 'O fluxo de homologaÃ§Ã£o atual atende somente ao Simples Nacional confirmado.'],
+      [productReady, 'CatÃ¡logo de produtos', activeProducts.length
+        ? activeProducts.length + ' produto(s) ativo(s); ' + readyProducts + ' completo(s), ' + incompleteProducts + ' incompleto(s). NCM pendente: ' + missingNcm + ', origem: ' + missingOrigin + ', perfil fiscal: ' + missingProfile + '. SÃ³ os itens escolhidos no rascunho precisam passar por esta conferÃªncia.'
+        : 'Cadastre ao menos um produto ativo para preparar uma NF-e.'],
+      [approvedProfiles > 0, 'Regra fiscal revisada', approvedProfiles > 0
+        ? approvedProfiles + ' perfil(is) com operaÃ§Ã£o registrada e revisÃ£o declarada' + (reviewPending ? '; ' + reviewPending + ' perfil(is) ainda aguardam revisÃ£o.' : '. Confirme se o perfil corresponde Ã  venda.')
+        : state.taxProfiles.length
+          ? state.taxProfiles.length + ' perfil(is) cadastrado(s), ainda sem revisÃ£o contÃ¡bil registrada.'
+          : 'Nenhum perfil fiscal cadastrado. As regras precisam ser fornecidas e conferidas com a contabilidade para cada operaÃ§Ã£o.'],
+    ];
+    var pending = 0;
+    checks.forEach(function (check) {
+      if (!check[0]) pending += 1;
+      readinessItem(target, check[1], check[0], check[2]);
+    });
+    summary.textContent = pending ? pending + ' etapa(s) de cadastro pendente(s)' : 'Cadastros base conferidos';
+    summary.className = 'readiness-badge ' + (pending ? 'is-pending' : 'is-ready');
+  }
 
-HÈ™]\›ˆÈ™XÛÜ™Îˆ×HNÈJKˆJN×ˆ˜\ˆ]HH™\İ[ÖÌN×ˆ˜\ˆÛÛ\[Q]HH™\İ[ÖÌWN×ˆ˜\ˆ›Ùš[Q]HH™\İ[ÖÌ—N×ˆİ]Kœ›ÙXİÈH\œ˜^Kš\Ğ\œ˜^J]Kœ›ÙXİÊHÈ]Kœ›ÙXİÈˆ×N×ˆİ]K˜ÛY[ÈH\œ˜^Kš\Ğ\œ˜^J]K˜ÛY[ÊHÈ]K˜ÛY[Èˆ×N×ˆİ]Kš\ÜİY\”İ]HHİš[™ÊÛÛ\[Q]K˜ÛÛ\[H	‰ˆÛÛ\[Q]K˜ÛÛ\[Kœİ]H	ÉÊKš[J
-KÕ\\Ø\ÙJ
-N×ˆİ]K^›Ùš[\ÈH\œ˜^Kš\Ğ\œ˜^J›Ùš[Q]Kœ™XÛÜ™ÊHÈ›Ùš[Q]Kœ™XÛÜ™Èˆ×N×ˆ™[™\’Û[ÛÙØ][Û”™XY[™\ÜÊ
-N×ˆš[™XÚ\Y[Ê
-N×ˆš[Ø\œšY\œÊ
-N×ˆY][J
-N×ˆËÈİYÙ\İ0íY\ÈÙšXÚXZ\È°èÛÈÙ[H[\Y\ˆÈ\ÛÈH˜\Øİ[šÜÈÙHÈØ]0è[ÙÛÈ˜[\‹—ˆ˜\ˆ]^[X\HH]ØZ]›ÛZ\ÙK˜[
-×ˆ\J	ËØ\KÙš\ØØ[ØÙ›Ü	ÊK˜Ø]Ú
-[˜İ[Ûˆ
+  function selectedNumber(name) {
+    var value = form.elements.namedItem(name).value;
+    return value === '' ? null : Number(value);
+  }
 
-HÈ™]\›ˆÈ™XÛÜ™Îˆ×HNÈJKˆ™Yœ™\Ú\İÜJ
-K˜Ø]Ú
-[˜İ[Ûˆ
+  function selectedIssueAt() {
+    var value = form.elements.namedItem('issueAt').value;
+    if (!value) return null;
+    var date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return null;
+    var offset = -date.getTimezoneOffset();
+    var sign = offset >= 0 ? '+' : '-';
+    var absolute = Math.abs(offset);
+    var hours = String(Math.floor(absolute / 60)).padStart(2, '0');
+    var minutes = String(absolute % 60).padStart(2, '0');
+    return value + ':00' + sign + hours + ':' + minutes;
+  }
 
-HÈ™]\›ˆ[ÈJKˆJN×ˆH×ˆ˜\ˆÙ›ÜÈH]^[X\VÌN×ˆ˜\ˆÜ[ÛœÈHØİ[Y[™Ù][[Y[RY
-	ØÙ›ÜÜ[ÛœÉÊN×ˆ
-Ù›ÜËœ™XÛÜ™È×JK™›Ü‘XXÚ
-[˜İ[Ûˆ
-™XÛÜ™
-H×ˆÜ[ÛœË˜\[™
-Ü[ÛŠ™XÛÜ™˜ÛÙK™XÛÜ™˜İ\İÛSX™[™XÛÜ™]JJN×ˆJN×ˆHØ]ÚÈÊˆØ[\È]œ™HÛÛ[XH\ÜÛ°ë]™[
-‹ÈWˆØİ[Y[™Ù][[Y[RY
-	Ü™XÚ\Y[Y	ÊK˜Y]™[\İ[™\Š	ØÚ[™ÙIË\]R][U^İYÙÙ\İ[ÛœÊN×ˆİ]Kœ™XYHHİ]Kœ›ÙXİËœÛÛYJ[˜İ[Ûˆ
-
-HÈ™]\›ˆ˜Xİ]™NÈJH	‰—ˆİ]K˜ÛY[ËœÛÛYJ[˜İ[Ûˆ
-ÊHÈ™]\›ˆË˜Xİ]™H	‰ˆËš\Ğİ\İÛY\ˆOOHYH	‰ˆË\HOOH	ÑV	ÎÈJN×ˆØ]™P]Û‹™\ØX›YH\İ]Kœ™XYN×ˆ™\Ü
-İ]Kœ™XYH×ˆ	ĞÛÛ™XİYÈ[Èİ\X˜\ÙKˆÜÈ˜\Øİ[šÜÈÙ\°èÛÈØ[›ÜÈÛÛY[H\˜H\İH[\™\ØHH°èÛÈÙ\°èÛÈ˜[œÛZ]YÜË‰È—ˆ	ĞØY\İ™H[ÈY[›ÜÈ[H›Ù]ÈH[HÛY[H]]›ÜÈ›ÈT”\˜H™\\˜\ˆH‘‹YK‰Ëİ]Kœ™XYHÈ	ÉÈˆ	Ú[™›ÉÊN×ˆ˜\ˆÛİ\˜ÙSÜ™\’YH™]ÈT“ÙX\˜Ú\˜[\ÊÚ[™İË›ØØ][Û‹œÙX\˜Ú
-K™Ù]
-	ÛÜ™\’Y	ÊN×ˆYˆ
-Ûİ\˜ÙSÜ™\’Y
-H×ˆH×ˆ˜\ˆÜ™\”™\ÜÛœÙHH]ØZ]\J	ËØ\KÛÜ™\œÏÚYIÈ
-È[˜ÛÙUT’PÛÛ\Û™[
-Ûİ\˜ÙSÜ™\’Y
-JN×ˆ[\ÜÜ™\ŠÜ™\”™\ÜÛœÙK›Ü™\ŠN×ˆHØ]Ú
-\œ›ÜŠH×ˆ™\Ü
-	Ó°èÛÈ›ÚHÜÜğë]™[Ø\œ™YØ\ˆÈYYÈ›È˜\Øİ[šÎˆ	È
-È\œ›Ü‹›Y\ÜØYÙK	Ù\œ›Ü‰ÊN×ˆWˆWˆHØ]Ú
-\œ›ÜŠH×ˆ™\Ü
-	Ñ˜[H[ÈØ\œ™YØ\ˆHÙ[˜[š\ØØ[ˆ	È
-È\œ›Ü‹›Y\ÜØYÙH
-È	È›ÛH[ÈT”İH™XØ\œ™YİYH\İH0èYÚ[˜K‰Ë	Ù\œ›Ü‰ÊN×ˆØ]™P]Û‹™\ØX›YHYN×ˆWˆW—ˆØİ[Y[™Ù][[Y[RY
-	ØY][IÊK˜Y]™[\İ[™\Š	ØÛXÚÉËY][JN×ˆØİ[Y[™Ù][[Y[RY
-	İ[›[šÔÛİ\˜ÙSÜ™\‰ÊK˜Y]™[\İ[™\Š	ØÛXÚÉË[›[šÔÛİ\˜ÙSÜ™\ŠN×ˆ›Ü›K˜Y]™[\İ[™\Š	ÜİX›Z]	Ë\Ş[˜È[˜İ[Ûˆ
-]™[
-H×ˆ]™[œ™]™[Y˜][
+  async function api(endpoint, options) {
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, 15000);
+    try {
+      var response = await fetch(endpoint, Object.assign({
+        credentials: 'same-origin', cache: 'no-store',
+      }, options || {}, { signal: controller.signal }));
+      var data = await response.json().catch(function () { return {}; });
+      if (response.status === 401) {
+        window.location.replace('/login');
+        throw new Error('FaÃ§a login novamente.');
+      }
+      if (!response.ok) throw new Error(data.error || data.message ||
+        (Array.isArray(data.issues) ? data.issues.join(' Â· ') : '') || 'NÃ£o foi possÃ­vel concluir a operaÃ§Ã£o.');
+      return data;
+    } catch (error) {
+      if (error.name === 'AbortError') throw new Error('O servidor nÃ£o respondeu em 15 segundos. Tente novamente.');
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
 
-N×ˆYˆ
-\İ]Kœ™XYJH™]\›×ˆØ]™P]Û‹™\ØX›YHYN×ˆØ]™P]Û‹^ÛÛ[H	ÔØ[˜[™Ë‹‹‰Î×ˆH×ˆYˆ
-ZY[\İ[˜ŞRÙ^JH×ˆYˆ
-]Ú[™İË˜Ü\È\[ÙˆÚ[™İË˜Ü\Ëœ˜[™ÛUURQOOH	Ù[˜İ[Û‰ÊWˆ›İÈ™]È\œ›ÜŠ	Ñ\İH˜]™YØYÜˆ°èÛÈÙ™\™XÙH[XHÚ]™HÙYİ\˜H\˜H]š]\ˆ\XÚYYKˆ]X[^™HÈ˜]™YØYÜ‹‰ÊN×ˆY[\İ[˜ŞRÙ^HHÚ[™İË˜Ü\Ëœ˜[™ÛUURQ
+  function option(value, text) {
+    var el = document.createElement('option');
+    el.value = value;
+    el.textContent = text;
+    return el;
+  }
 
-N×ˆWˆ˜\ˆ™\İ[H]ØZ]\J	ËØ\KÙš\ØØ[Û™™KY˜YÉË×ˆY]Ùˆ	ÔÔÕ	ËXY\œÎˆÈ	ĞÛÛ[U\IÎˆ	Ø\XØ][Û‹ÚœÛÛ‰Ë	ÒY[\İ[˜ŞKRÙ^IÎˆY[\İ[˜ŞRÙ^HKˆ›ÙNˆ”ÓÓ‹œİš[™ÚYJØš™Xİ˜\ÜÚYÛŠ×ˆ˜]\™Nˆ›Ü›K™[[Y[Ë›˜[YY][J	Û˜]\™IÊK˜[YKš[J
-Kˆ\œÜÙNˆÙ[XİY[X™\Š	Ü\œÜÙIÊKˆ\ÜİYP]ˆÙ[XİY\ÜİYP]
+  function fillRecipients() {
+    var select = document.getElementById('recipientId');
+    select.replaceChildren(option('', 'Selecione um destinatÃ¡rio'));
+    state.clients.filter(function (c) { return c.active && c.isCustomer === true && c.type !== 'EXT'; }).forEach(function (client) {
+      select.append(option(client.id, client.name + (client.document ? ' Â· ' + client.document : '')));
+    });
+  }
 
-KˆÛÛœİ[Y\‘š[˜[ˆ›Ü›K™[[Y[Ë›˜[YY][J	ØÛÛœİ[Y\‘š[˜[	ÊK˜[YHOOH	ÉÈÈ[—ˆ›Ü›K™[[Y[Ë›˜[YY][J	ØÛÛœİ[Y\‘š[˜[	ÊK˜[YHOOH	ÌIËˆ^Y\”™\Ù[˜ÙNˆÙ[XİY[X™\Š	Ø^Y\”™\Ù[˜ÙIÊKˆ˜[œÜÜ[ÙNˆÙ[XİY[X™\Š	İ˜[œÜÜ[ÙIÊKˆØ\œšY\’Yˆ›Ü›K™[[Y[Ë›˜[YY][J	ØØ\œšY\’Y	ÊK˜[YH[ˆ™ZXÛNˆ×ˆ]Nˆ›Ü›K™[[Y[Ë›˜[YY][J	İ™ZXÛT]IÊK˜[YKš[J
-Kˆİ]Nˆ›Ü›K™[[Y[Ë›˜[YY][J	İ™ZXÛTİ]IÊK˜[YKš[J
-Kˆ›Îˆ›Ü›K™[[Y[Ë›˜[YY][J	İ™ZXÛT›ÉÊK˜[YKš[J
-KˆKˆ›Û[Y\ÎˆŞ×ˆ]X[]Nˆ›Ü›K™[[Y[Ë›˜[YY][J	İ›Û[YT]X[]IÊK˜[YKˆÜXÚY\Îˆ›Ü›K™[[Y[Ë›˜[YY][J	İ›Û[YTÜXÚY\ÉÊK˜[YKš[J
-Kˆœ˜[™ˆ›Ü›K™[[Y[Ë›˜[YY][J	İ›Û[YPœ˜[™	ÊK˜[YKš[J
-Kˆ[X™\ˆ›Ü›K™[[Y[Ë›˜[YY][J	İ›Û[YS[X™\‰ÊK˜[YKš[J
-Kˆ™]ÙZYÚˆ›Ü›K™[[Y[Ë›˜[YY][J	İ›Û[YS™]ÙZYÚ	ÊK˜[YKˆÜ›ÜÜÕÙZYÚˆ›Ü›K™[[Y[Ë›˜[YY][J	İ›Û[YQÜ›ÜÜÕÙZYÚ	ÊK˜[YKˆWKˆ™XÚ\Y[Yˆ›Ü›K™[[Y[Ë›˜[YY][J	Ü™XÚ\Y[Y	ÊK˜[YKˆÛİ\˜ÙSÜ™\’Yˆİ]KœÛİ\˜ÙSÜ™\’Yˆ][\Îˆ™XY][\Ê
-KˆK\[ÙˆÚ[™İËš™Ó™™UÚ^˜\™]HOOH	Ù[˜İ[Û‰ÈÈÚ[™İËš™Ó™™UÚ^˜\™]J
-HˆßJJKˆJN×ˆY[\İ[˜ŞRÙ^HH[×ˆİ]KœÛİ\˜ÙSÜ™\’YH[×ˆİ]KœÛİ\˜ÙSÜ™\“[X™\ˆH	ÉÎ×ˆØİ[Y[™Ù][[Y[RY
-	ÜÛİ\˜ÙSÜ™\“›İXÙIÊKšY[ˆHYN×ˆØİ[Y[™Ù][[Y[RY
-	Ü™XÚ\Y[Y	ÊK™\ØX›YH˜[ÙN×ˆÛX\“Ü™\”]Y\J
-N×ˆ›Ü›Kœ™\Ù]
+  window.jvgNfeGetRecipient = function (id) {
+    return state.clients.find(function (client) { return client.id === id; }) || null;
+  };
+  window.jvgNfeGetProduct = function (id) {
+    return state.products.find(function (product) { return product.id === id; }) || null;
+  };
 
-N×ˆYˆ
-\[ÙˆÚ[™İËš™Ó™™UÚ^˜\™™\Ù]OOH	Ù[˜İ[Û‰ÊHÚ[™İËš™Ó™™UÚ^˜\™™\Ù]
+  function fillCarriers() {
+    var select = document.getElementById('carrierId');
+    if (!select) return;
+    select.replaceChildren(option('', 'NÃ£o informada'));
+    state.clients.filter(function (party) { return party.active && party.isCarrier === true; }).forEach(function (party) {
+      select.append(option(party.id, party.name + (party.document ? ' Â· ' + party.document : '')));
+    });
+  }
 
-N×ˆ][\Ëœ™\XÙPÚ[™[Š
-N×ˆY][J
-N×ˆH×ˆ]ØZ]™Yœ™\Ú\İÜJ
-N×ˆHØ]Ú×ˆ™\Ü
-	Ô˜\Øİ[šÈØ[›ÈÛÛHİXÙ\ÜÛËX\È°èÛÈ›ÚHÜÜğë]™[]X[^˜\ˆÈ\İ0ìÜšXÛËˆ™XØ\œ™YİYHH0èYÚ[˜H\˜HÛÛ™™\š\‹‰Ë	Ù\œ›Ü‰ÊN×ˆ™]\›×ˆWˆ™\Ü
-	Ô˜\Øİ[šÈØ[›È›Èİ\X˜\ÙKˆ™\İ[H	È
-È™\İ[œ[™[™Ë›[™İ
-×ˆ	ÈÛÛ™™\°ê›˜ÚXJÊHš\ØØZ\È[\ÈH]X[]Y\ˆ[Z\ÜğèÛËˆ™[š[HØİ[Y[È›ÚH˜[œÛZ]YË‰ÊN×ˆHØ]Ú
-\œ›ÜŠH×ˆ™\Ü
-	Ó°èÛÈ›ÚHÜÜğë]™[Ø[˜\ˆ	È
-È\œ›Ü‹›Y\ÜØYÙK	Ù\œ›Ü‰ÊN×ˆHš[˜[H×ˆØ]™P]Û‹™\ØX›YH\İ]Kœ™XYN×ˆØ]™P]Û‹^ÛÛ[H	ÔØ[˜\ˆ˜\Øİ[šÈ‘‹YIÎ×ˆWˆJN×—ˆØY
+  function taxRuleFor(product, recipientId) {
+    var recipient = state.clients.find(function (client) { return client.id === recipientId; });
+    return window.JvgNfeTaxSuggestion.resolve(product, recipient, state.issuerState, state.taxProfiles);
+  }
 
-N×ŸJJ
-N×
+  function updateTaxSuggestion(row, product, resetTouched) {
+    var cfop = row.querySelector('.cfop');
+    var csosn = row.querySelector('.csosn');
+    var note = row.querySelector('.tax-suggestion');
+    if (resetTouched) {
+      row.dataset.cfopTouched = 'false';
+      row.dataset.csosnTouched = 'false';
+    }
+    if (!product) {
+      if (row.dataset.cfopTouched !== 'true') cfop.value = '';
+      if (row.dataset.csosnTouched !== 'true') csosn.value = '';
+      renderProductFiscalFacts(row, null, null);
+      note.textContent = 'Selecione produto e destinatÃ¡rio para consultar a regra fiscal vinculada.';
+      return;
+    }
+
+    var selected = taxRuleFor(product, document.getElementById('recipientId').value);
+    var rule = selected.rule;
+    var suggestedCfop = rule && rule.cfop ? String(rule.cfop) :
+      selected.operation ? '' : String(product.defaultCfop || '');
+    var suggestedCsosn = rule && rule.csosn ? String(rule.csosn) : '';
+    if (row.dataset.cfopTouched !== 'true') cfop.value = suggestedCfop;
+    if (row.dataset.csosnTouched !== 'true') csosn.value = suggestedCsosn;
+    renderProductFiscalFacts(row, product, selected);
+
+    if (rule && selected.profile) {
+      var reviewLabel = selected.profile.review_status === 'reviewed'
+        ? 'declaraÃ§Ã£o de revisÃ£o registrada; confira a orientaÃ§Ã£o contÃ¡bil'
+        : 'rascunho ainda sem revisÃ£o contÃ¡bil';
+      note.textContent = (selected.profile.name || 'Perfil fiscal') + ' Â· ' +
+        (selected.operation === 'interna' ? 'venda interna' : 'venda interestadual') +
+        ' Â· ' + reviewLabel + '. A emissÃ£o continua sujeita Ã  conferÃªncia dos demais campos.';
+    } else if (selected.operation) {
+      note.textContent = (product.taxProfileId ? 'O perfil deste produto nÃ£o tem regra' : 'Este produto nÃ£o tem perfil fiscal vinculado') +
+        ' para ' + (selected.operation === 'interna' ? 'venda interna' : 'venda interestadual') +
+        '. Configure a operaÃ§Ã£o no perfil fiscal; nenhum cÃ³digo foi presumido.';
+    } else if (product.defaultCfop) {
+      note.textContent = 'CFOP cadastrado como sugestÃ£o geral do produto. Selecione o destinatÃ¡rio e confirme a operaÃ§Ã£o com a contabilidade.';
+    } else {
+      note.textContent = 'Informe a UF do emitente e selecione um destinatÃ¡rio com UF para identificar a regra da operaÃ§Ã£o.';
+    }
+  }
+
+  function renderProductFiscalFacts(row, product, selected) {
+    var target = row.querySelector('.product-fiscal-facts');
+    if (!target) return;
+    target.replaceChildren();
+    var facts = [
+      ['NCM', product && product.ncm], ['CEST', product && product.cest],
+      ['Origem', product && product.origin],
+      ['Perfil tributÃ¡rio', selected && selected.profile && selected.profile.name],
+      ['CFOP sugerido', selected && selected.rule && selected.rule.cfop],
+      ['CSOSN sugerido', selected && selected.rule && selected.rule.csosn],
+    ];
+    facts.forEach(function (fact) {
+      var item = document.createElement('div');
+      var label = document.createElement('span'); label.textContent = fact[0];
+      var value = document.createElement('strong'); value.textContent = fact[1] == null || fact[1] === '' ? 'NÃ£o cadastrado' : String(fact[1]);
+      item.append(label, value); target.append(item);
+    });
+  }
+
+  function updateItemTaxSuggestions() {
+    Array.from(items.querySelectorAll('.item-row')).forEach(function (row) {
+      var product = state.products.find(function (entry) { return entry.id === row.querySelector('.product').value; });
+      if (product) updateTaxSuggestion(row, product, false);
+    });
+  }
+
+  function addItem() {
+    if (items.children.length >= 20) {
+      report('Limite de 20 produtos por rascunho.', 'error');
+      return;
+    }
+    var row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML =
+      '<label class="field product-field"><span>Produto *</span><select class="product" required></select></label>' +
+      '<label class="field"><span>Qtd. *</span><input class="quantity" type="number" min="0.001" max="100000" step="0.001" value="1" required></label>' +
+      '<label class="field"><span>PreÃ§o (R$) *</span><input class="price" type="number" min="0" max="999999.99" step="0.01" required></label>' +
+      '<label class="field"><span>CFOP da operaÃ§Ã£o</span><input class="cfop" maxlength="4" inputmode="numeric" list="cfopOptions" placeholder="SugestÃ£o do perfil"></label>' +
+      '<label class="field"><span>CSOSN da operaÃ§Ã£o</span><input class="csosn" maxlength="3" inputmode="numeric" placeholder="SugestÃ£o do perfil"></label>' +
+      '<button type="button" class="remove-item" aria-label="Remover este produto" title="Remover produto">Ã—</button>' +
+      '<p class="tax-suggestion" role="status" aria-live="polite">Selecione produto e destinatÃ¡rio para consultar a regra fiscal vinculada.</p>' +
+      '<details class="product-fiscal-details"><summary>Dados fiscais cadastrados</summary><div class="product-fiscal-facts"></div></details>';
+    var select = row.querySelector('.product');
+    select.append(option('', 'Selecione'));
+    state.products.filter(function (p) { return p.active; }).forEach(function (p) {
+      select.append(option(p.id, p.name + ' Â· ' + p.sku));
+    });
+    select.addEventListener('change', function () {
+      var product = state.products.find(function (p) { return p.id === select.value; });
+      row.querySelector('.price').value = product ? Number(product.price || 0).toFixed(2) : '';
+      updateTaxSuggestion(row, product, true);
+      updateTotal();
+    });
+    row.querySelector('.cfop').addEventListener('input', function () { row.dataset.cfopTouched = 'true'; });
+    row.querySelector('.csosn').addEventListener('input', function () { row.dataset.csosnTouched = 'true'; });
+    row.querySelector('.remove-item').addEventListener('click', function () {
+      if (items.children.length > 1) row.remove();
+      else report('Mantenha pelo menos um produto no rascunho.', 'error');
+      updateTotal();
+    });
+    row.querySelectorAll('input').forEach(function (input) { input.addEventListener('input', updateTotal); });
+    items.append(row);
+    updateTotal();
+  }
+
+  function readItems() {
+    return Array.from(items.querySelectorAll('.item-row')).map(function (row) {
+      return {
+        productId: row.querySelector('.product').value,
+        quantity: row.querySelector('.quantity').value,
+        unitPrice: row.querySelector('.price').value,
+        cfop: row.querySelector('.cfop').value.trim(),
+        csosn: row.querySelector('.csosn').value.trim(),
+      };
+    });
+  }
+
+  function updateTotal() {
+    var cents = readItems().reduce(function (sum, item) {
+      var quantity = Number(item.quantity), price = Number(item.unitPrice);
+      return sum + (Number.isFinite(quantity) && Number.isFinite(price) && quantity > 0 && price >= 0 ?
+        Math.round(Math.round(quantity * 1000) * Math.round(price * 100) / 1000) : 0);
+    }, 0);
+    var total = document.getElementById('total');
+    if (total) total.textContent = money.format(cents / 100);
+    if (typeof window.jvgNfeWizardRefresh === 'function') window.jvgNfeWizardRefresh();
+  }
+
+  function renderHistory() {
+    var target = document.getElementById('history');
+    target.replaceChildren();
+    if (!state.drafts.length) {
+      var empty = document.createElement('p');
+      empty.textContent = 'Nenhum rascunho salvo. Prepare o primeiro Ã  esquerda.';
+      target.append(empty);
+      return;
+    }
+    state.drafts.forEach(function (draft) {
+      var row = document.createElement('div');
+      row.className = 'history-row';
+      var name = document.createElement('strong');
+      name.textContent = draft.recipientName;
+      var date = document.createElement('small');
+      date.textContent = draft.itemsCount + ' produto(s) Â· ' + new Date(draft.createdAt).toLocaleString('pt-BR');
+      var source = document.createElement('small');
+      source.textContent = draft.sourceOrderNumber ? 'Pedido de origem: ' + draft.sourceOrderNumber : 'Criado sem pedido de origem';
+      var foot = document.createElement('div');
+      var price = document.createElement('b');
+      price.textContent = money.format(Number(draft.commercialTotalCents ?? draft.totalCents) / 100);
+      var badge = document.createElement('span');
+      var statusNames = { draft: 'Rascunho', processing: 'Em processamento na Focus', queued: 'Na fila da Focus',
+        authorized: 'Autorizada', rejected: 'Rejeitada', denied: 'Denegada', cancelled: 'Cancelada', contingency: 'ContingÃªncia',
+        waiting_certificate: 'Aguardando certificado' };
+      badge.textContent = draft.status === 'draft' ? 'Rascunho Â· ' + draft.pendingCount + ' pendÃªncia(s)' :
+        (statusNames[draft.status] || draft.status);
+      foot.append(price, badge);
+      const preview = document.createElement('small');
+      preview.textContent = 'Impostos nÃ£o calculados';
+      var inspect = document.createElement('button');
+      inspect.type = 'button';
+      inspect.className = 'draft-inspect';
+      inspect.textContent = 'Ver pendÃªncias e detalhes';
+      inspect.addEventListener('click', function () { inspectDraft(draft.id); });
+      row.append(name, date, source, foot, preview, inspect);
+      target.append(row);
+    });
+  }
+
+  function appendLine(parent, tag, value) {
+    var node = document.createElement(tag);
+    node.textContent = value;
+    parent.append(node);
+  }
+
+  async function runFocusAction(id, action, button) {
+    button.disabled = true;
+    var previousLabel = button.textContent;
+    button.textContent = action === 'emit' ? 'Enviando para homologaÃ§Ã£o...' : 'Consultando Focus...';
+    try {
+      var result = await api('/api/fiscal/nfe-drafts/transmit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, action: action, confirmFiscalReview: action === 'emit' }),
+      });
+      if (result.needsReconciliation) {
+        report('A solicitaÃ§Ã£o foi enviada Ã  Focus para homologaÃ§Ã£o e continua em processamento. NÃ£o reenvie; consulte o status.', 'info');
+      } else if (result.status === 'authorized') {
+        report('A Focus retornou status autorizado em homologaÃ§Ã£o. Confira a chave e o protocolo nos detalhes; isso nÃ£o Ã© autorizaÃ§Ã£o de produÃ§Ã£o.', 'success');
+      } else if (result.status === 'rejected' || result.status === 'denied') {
+        report('A Focus retornou ' + result.status + '. Consulte a mensagem detalhada antes de qualquer nova preparaÃ§Ã£o.', 'error');
+      } else {
+        report('Status atualizado a partir da consulta Ã  Focus: ' + (result.status || 'retorno recebido') + '.', 'info');
+      }
+      await refreshHistory();
+      await inspectDraft(id);
+    } catch (error) {
+      report('NÃ£o foi possÃ­vel concluir a aÃ§Ã£o na Focus: ' + error.message, 'error');
+      try { await inspectDraft(id); } catch { /* A mensagem principal jÃ¡ foi mostrada. */ }
+    } finally {
+      button.disabled = false;
+      button.textContent = previousLabel;
+    }
+  }
+
+  function renderHomologationActions(target, draft) {
+    var panel = document.createElement('section');
+    panel.className = 'homologation-actions';
+    appendLine(panel, 'h4', 'Focus NFe Â· ambiente de homologaÃ§Ã£o');
+    if (draft.status === 'draft') {
+      if (draft.canSubmitHomologation === true) {
+        appendLine(panel, 'p', 'O envio sÃ³ ficarÃ¡ disponÃ­vel apÃ³s sua confirmaÃ§Ã£o explÃ­cita. Ele usa exclusivamente o ambiente de testes da Focus; nÃ£o altera sÃ©rie ou numeraÃ§Ã£o de produÃ§Ã£o.');
+        var label = document.createElement('label');
+        label.className = 'homologation-confirm';
+        var check = document.createElement('input');
+        check.type = 'checkbox';
+        var copy = document.createElement('span');
+        copy.textContent = 'Revisei os dados desta operaÃ§Ã£o com a contabilidade e confirmo que este envio Ã© apenas para homologaÃ§Ã£o.';
+        label.append(check, copy);
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'add-button';
+        button.disabled = true;
+        button.textContent = 'Enviar NF-e de teste Ã  Focus';
+        check.addEventListener('change', function () { button.disabled = !check.checked; });
+        button.addEventListener('click', function () {
+          if (!check.checked) return;
+          runFocusAction(draft.id, 'emit', button);
+        });
+        panel.append(label, button);
+      } else {
+        var setupIssues = draft.homologationSetup && Array.isArray(draft.homologationSetup.accessIssues)
+          ? draft.homologationSetup.accessIssues : [];
+        if (setupIssues.length) {
+          appendLine(panel, 'p', 'Acesso ao ambiente de teste ou cadastro do emitente:');
+          var setupList = document.createElement('ul');
+          setupIssues.forEach(function (issue) { appendLine(setupList, 'li', String(issue)); });
+          panel.append(setupList);
+        } else {
+          appendLine(panel, 'p', 'Envio bloqueado: conclua e revise os dados fiscais exigidos antes de transmitir.');
+        }
+        var issues = draft.homologationGate && Array.isArray(draft.homologationGate.issues)
+          ? draft.homologationGate.issues : [];
+        if (issues.length) {
+          var list = document.createElement('ul');
+          issues.forEach(function (issue) { appendLine(list, 'li', String(issue)); });
+          panel.append(list);
+        }
+      }
+    } else if (draft.focusReference && ['processing', 'queued', 'authorized', 'rejected', 'denied', 'cancelled'].includes(draft.status)) {
+      appendLine(panel, 'p', 'A consulta atualiza o status desta referÃªncia. Ela nÃ£o cria uma nova emissÃ£o.');
+      var query = document.createElement('button');
+      query.type = 'button';
+      query.className = 'add-button';
+      query.textContent = 'Consultar status na Focus';
+      query.addEventListener('click', function () { runFocusAction(draft.id, 'reconcile', query); });
+      panel.append(query);
+    } else {
+      appendLine(panel, 'p', 'Este documento nÃ£o tem uma solicitaÃ§Ã£o Focus consultÃ¡vel. Nenhuma transmissÃ£o serÃ¡ repetida automaticamente.');
+    }
+    target.append(panel);
+  }
+
+  function focusFieldLabel(key) {
+    var labels = {
+      codigo_produto: 'SKU', codigo_ncm: 'NCM', cfop: 'CFOP', codigo_barras_comercial: 'GTIN',
+      cest: 'CEST',
+      unidade_comercial: 'Unidade', quantidade_comercial: 'Quantidade',
+      valor_unitario_comercial: 'Valor unitÃ¡rio', valor_bruto: 'Valor bruto',
+      icms_origem: 'Origem da mercadoria', icms_situacao_tributaria: 'CSOSN / ICMS',
+      pis_situacao_tributaria: 'CST do PIS', cofins_situacao_tributaria: 'CST da Cofins',
+      ibs_cbs_situacao_tributaria: 'CST IBS/CBS',
+      ibs_cbs_classificacao_tributaria: 'ClassificaÃ§Ã£o IBS/CBS (cClassTrib)',
+    };
+    if (labels[key]) return labels[key];
+    var upper = { icms: 'ICMS', ibs: 'IBS', cbs: 'CBS', pis: 'PIS', cofins: 'Cofins', st: 'ST', uf: 'estadual', mun: 'municipal' };
+    return key.split('_').map(function (word) {
+      if (upper[word]) return upper[word];
+      var labels = {
+        aliquota: 'alÃ­quota', base: 'base', calculo: 'cÃ¡lculo', modalidade: 'modalidade',
+        reducao: 'reduÃ§Ã£o', margem: 'margem', valor: 'valor', adicionado: 'adicionado',
+        credito: 'crÃ©dito', simples: 'Simples', retido: 'retido', substituto: 'substituto',
+        quantidade: 'quantidade', vendida: 'vendida', porcentual: 'percentual',
+      };
+      return labels[word] || word;
+    }).join(' ');
+  }
+
+  function focusFieldValue(key, value) {
+    if (value === undefined || value === null || value === '') return 'NÃ£o mapeado';
+    if (typeof value !== 'number' || !Number.isFinite(value)) return String(value);
+    if (/aliquota/.test(key)) return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 6 }).format(value) + ' %';
+    if (/valor|base_calculo/.test(key)) return money.format(value);
+    if (key === 'quantidade_comercial') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 4 }).format(value);
+    return String(value);
+  }
+
+  function appendFocusField(target, key, row) {
+    var missing = !Object.prototype.hasOwnProperty.call(row, key) || row[key] === null || row[key] === '';
+    var field = document.createElement('div');
+    field.className = 'focus-preview-field' + (missing ? ' is-missing' : '');
+    var label = document.createElement('span');
+    label.textContent = focusFieldLabel(key);
+    var value = document.createElement('strong');
+    value.textContent = focusFieldValue(key, missing ? undefined : row[key]);
+    field.append(label, value);
+    target.append(field);
+  }
+
+  function renderFocusItemPreview(target, draft, focusReview) {
+    var requestPreview = focusReview.requestPreview || {};
+    var mappedItems = Array.isArray(requestPreview.items) ? requestPreview.items : [];
+    var sourceItems = Array.isArray(draft.items) ? draft.items : [];
+    if (!sourceItems.length) return;
+
+    var section = document.createElement('section');
+    section.className = 'focus-item-preview';
+    var heading = document.createElement('div');
+    heading.className = 'focus-item-preview-heading';
+    var title = document.createElement('h4');
+    title.textContent = 'PrÃ©via fiscal por item';
+    var note = document.createElement('p');
+    note.textContent = 'Campos que o servidor conseguiu mapear para a Focus. O ERP nÃ£o calcula impostos nem presume cÃ³digos; confira as pendÃªncias e a aprovaÃ§Ã£o contÃ¡bil antes de qualquer envio.';
+    heading.append(title, note);
+    section.append(heading);
+
+    var fiscalKeys = [
+      'cfop', 'icms_origem', 'icms_situacao_tributaria', 'cest', 'pis_situacao_tributaria',
+      'cofins_situacao_tributaria', 'ibs_cbs_situacao_tributaria',
+      'ibs_cbs_classificacao_tributaria',
+    ];
+    var commercialKeys = [
+      'codigo_produto', 'codigo_ncm', 'codigo_barras_comercial', 'unidade_comercial',
+      'quantidade_comercial', 'valor_unitario_comercial', 'valor_bruto',
+    ];
+    var knownKeys = commercialKeys.concat(fiscalKeys, ['numero_item', 'descricao']);
+    var checks = Array.isArray(focusReview.checks) ? focusReview.checks : [];
+    var pending = Array.isArray(draft.pending) ? draft.pending : [];
+
+    sourceItems.forEach(function (item, index) {
+      var row = mappedItems[index] && typeof mappedItems[index] === 'object' ? mappedItems[index] : {};
+      var card = document.createElement('article');
+      card.className = 'focus-item-card';
+      var cardHeading = document.createElement('div');
+      cardHeading.className = 'focus-item-card-heading';
+      var name = document.createElement('strong');
+      name.textContent = (index + 1) + '. ' + String(item.description || row.descricao || 'Produto');
+      var profile = item.taxProfile && typeof item.taxProfile === 'object' ? item.taxProfile : {};
+      var state = document.createElement('span');
+      state.className = profile.reviewStatus === 'reviewed' && profile.accountantReviewDeclared === true
+        ? 'focus-item-status is-review-declared' : 'focus-item-status is-review-pending';
+      state.textContent = profile.reviewStatus === 'reviewed' && profile.accountantReviewDeclared === true
+        ? 'RevisÃ£o registrada no ERP' : 'RevisÃ£o contÃ¡bil pendente';
+      cardHeading.append(name, state);
+      card.append(cardHeading);
+
+      var commercialHeading = document.createElement('h5');
+      commercialHeading.textContent = 'Produto e valores comerciais';
+      var commercial = document.createElement('div');
+      commercial.className = 'focus-item-field-grid';
+      commercialKeys.forEach(function (key) { appendFocusField(commercial, key, row); });
+      var taxHeading = document.createElement('h5');
+      taxHeading.textContent = 'ClassificaÃ§Ãµes fiscais do item';
+      var classifications = document.createElement('div');
+      classifications.className = 'focus-item-field-grid focus-item-tax-codes';
+      fiscalKeys.forEach(function (key) { appendFocusField(classifications, key, row); });
+      card.append(commercialHeading, commercial, taxHeading, classifications);
+
+      var additionalKeys = Object.keys(row).filter(function (key) {
+        return !knownKeys.includes(key) && /^(icms|pis|cofins|ibs|cbs)_/.test(key);
+      });
+      if (additionalKeys.length) {
+        var valuesHeading = document.createElement('h5');
+        valuesHeading.textContent = 'Valores fiscais mapeados';
+        var values = document.createElement('div');
+        values.className = 'focus-item-field-grid';
+        additionalKeys.forEach(function (key) { appendFocusField(values, key, row); });
+        card.append(valuesHeading, values);
+      }
+
+      var itemMarker = new RegExp('\\bItem\\s+' + (index + 1) + '\\b');
+      var itemIssues = checks.filter(function (check) {
+        return !check.ok && itemMarker.test(String(check.detail || ''));
+      }).map(function (check) { return check.label + ': ' + check.detail; });
+      itemIssues = itemIssues.concat(pending.filter(function (issue) { return itemMarker.test(String(issue)); }));
+      itemIssues = Array.from(new Set(itemIssues));
+      if (itemIssues.length) {
+        var issuesHeading = document.createElement('h5');
+        issuesHeading.textContent = 'PendÃªncias deste item';
+        var issues = document.createElement('ul');
+        itemIssues.forEach(function (issue) { appendLine(issues, 'li', issue); });
+        card.append(issuesHeading, issues);
+      }
+      section.append(card);
+    });
+
+    target.append(section);
+  }
+
+  async function inspectDraft(id) {
+    var target = document.getElementById('draftDetails');
+    target.replaceChildren();
+    appendLine(target, 'p', 'Buscando detalhes do rascunho...');
+    try {
+      var response = await api('/api/fiscal/nfe-drafts?id=' + encodeURIComponent(id));
+      var draft = response.draft;
+      if (!draft || draft.readyToTransmit !== false || draft.transmissionEnabled !== false)
+        throw new Error('Resposta fiscal inesperada. Consulte o suporte.');
+      target.replaceChildren();
+      var recipient = draft.recipient || {};
+      var statusNames = { draft: 'Rascunho', processing: 'Em processamento na Focus', queued: 'Na fila da Focus',
+        authorized: 'NF-e autorizada', rejected: 'NF-e rejeitada', denied: 'NF-e denegada', cancelled: 'NF-e cancelada', contingency: 'ContingÃªncia' };
+      appendLine(target, 'h3', (statusNames[draft.status] || 'Documento NF-e') + ' Â· ' + (recipient.name || 'DestinatÃ¡rio'));
+      if (draft.focusReference) appendLine(target, 'p', 'ReferÃªncia Focus: ' + draft.focusReference);
+      if (draft.documentNumber) appendLine(target, 'p', 'NÃºmero/SÃ©rie: ' + draft.documentNumber + ' / ' + (draft.series || 'â€”'));
+      if (draft.accessKey) appendLine(target, 'p', 'Chave de acesso: ' + draft.accessKey);
+      var providerResponse = draft.providerResponse || {};
+      var providerBody = providerResponse.response || {};
+      if (providerResponse.phase) appendLine(target, 'p', 'Etapa registrada: ' + providerResponse.phase);
+      var providerStatus = providerBody.status_sefaz || providerBody.status || providerBody.codigo_status;
+      var providerMessage = providerBody.mensagem_sefaz || providerBody.mensagem || providerBody.erro;
+      if (providerStatus || providerMessage)
+        appendLine(target, 'p', 'Retorno Focus/SEFAZ: ' + [providerStatus, providerMessage].filter(Boolean).join(' Â· '));
+      if (providerBody.caminho_xml_nota_fiscal)
+        appendLine(target, 'p', 'Caminho do XML na Focus: ' + providerBody.caminho_xml_nota_fiscal);
+      if (providerBody.caminho_danfe)
+        appendLine(target, 'p', 'Caminho do DANFE na Focus: ' + providerBody.caminho_danfe);
+      var focusEvents = Array.isArray(providerBody.eventos) ? providerBody.eventos : [];
+      if (focusEvents.length) {
+        appendLine(target, 'h4', 'Eventos retornados pela Focus');
+        focusEvents.slice(0, 20).forEach(function (event) {
+          var eventInfo = [event.tipo_evento, event.status, event.codigo_status, event.mensagem_sefaz || event.mensagem]
+            .filter(function (value) { return value != null && String(value).trim() !== ''; }).map(String).join(' Â· ');
+          if (eventInfo) appendLine(target, 'p', eventInfo);
+        });
+      }
+      appendLine(target, 'p', 'Natureza: ' + (draft.nature || 'nÃ£o informada'));
+      var purposeNames = { 1: 'Normal', 2: 'Complementar', 3: 'Ajuste', 4: 'DevoluÃ§Ã£o' };
+      appendLine(target, 'p', 'Finalidade: ' + (purposeNames[draft.purpose] || 'nÃ£o informada') +
+        ' Â· Data/hora: ' + (draft.issueAt || 'nÃ£o informada'));
+      appendLine(target, 'p', 'Consumidor final: ' + (draft.consumerFinal === true ? 'Sim' :
+        draft.consumerFinal === false ? 'NÃ£o' : 'nÃ£o informado') +
+        ' Â· PresenÃ§a: ' + (draft.buyerPresence == null ? 'nÃ£o informada' : String(draft.buyerPresence)) +
+        ' Â· Frete: ' + (draft.transportMode == null ? 'nÃ£o informado' : String(draft.transportMode)));
+      if (draft.carrier) appendLine(target, 'p', 'Transportadora: ' + (draft.carrier.name || 'NÃ£o informada') +
+        (draft.carrier.documentNumber ? ' Â· ' + draft.carrier.documentNumber : ''));
+      if (draft.vehicle && draft.vehicle.plate)
+        appendLine(target, 'p', 'VeÃ­culo: ' + draft.vehicle.plate.toUpperCase() +
+          (draft.vehicle.state ? ' Â· ' + draft.vehicle.state.toUpperCase() : '') +
+          (draft.vehicle.rntc ? ' Â· RNTC ' + draft.vehicle.rntc : ''));
+      (Array.isArray(draft.volumes) ? draft.volumes : []).forEach(function (volume) {
+        var weight = volume.netWeightMilli != null || volume.grossWeightMilli != null ?
+          ' Â· peso lÃ­quido/bruto: ' + (volume.netWeightMilli == null ? 'â€”' : (Number(volume.netWeightMilli) / 1000).toFixed(3)) +
+          '/' + (volume.grossWeightMilli == null ? 'â€”' : (Number(volume.grossWeightMilli) / 1000).toFixed(3)) : '';
+        appendLine(target, 'p', 'Volumes: ' + volume.quantity + (volume.species ? ' Â· ' + volume.species : '') + weight);
+      });
+      if (draft.sourceOrder && draft.sourceOrder.number)
+        appendLine(target, 'p', 'Pedido de origem: ' + draft.sourceOrder.number + ' Â· situaÃ§Ã£o ' + (draft.sourceOrder.status || ''));
+      appendLine(target, 'p', 'Total comercial: ' + money.format(Number(draft.commercialTotalCents ?? draft.totalCents ?? 0) / 100));
+      if (draft.preflight) {
+        appendLine(target, 'h4', 'PrÃ©-conferÃªncia cadastral');
+        appendLine(target, 'p', draft.preflight.dataComplete ?
+          'Dados bÃ¡sicos presentes. RevisÃ£o fiscal e homologaÃ§Ã£o ainda obrigatÃ³rias.' :
+          'Dados cadastrais incompletos: veja as pendÃªncias abaixo.');
+        appendLine(target, 'p', 'A prÃ©-conferÃªncia verifica dados cadastrais; ela nÃ£o substitui revisÃ£o fiscal. A emissÃ£o em produÃ§Ã£o continua bloqueada.');
+      } else {
+        appendLine(target, 'p', 'Rascunho antigo: prÃ©-conferÃªncia cadastral indisponÃ­vel.');
+      }
+      var documentReview = draft.documentReview || {};
+      if (Array.isArray(documentReview.checks)) {
+        appendLine(target, 'h4', 'Checklist de preparaÃ§Ã£o da NF-e');
+        var checkList = document.createElement('ul');
+        documentReview.checks.filter(function (check) { return check.key !== 'taxPreview' && check.key !== 'transmission'; }).forEach(function (check) {
+          appendLine(checkList, 'li', (check.ok ? 'âœ“ ' : 'Pendente: ') +
+            check.label + ' â€” ' + check.detail);
+        });
+        target.append(checkList);
+        appendLine(target, 'p', 'Checklist interno: nÃ£o Ã© XML, DANFE, validaÃ§Ã£o da SEFAZ ou permissÃ£o de emissÃ£o.');
+      }
+      var focusReview = draft.focusPayloadReview || {};
+      appendLine(target, 'h4', 'ConferÃªncia do payload Focus');
+      appendLine(target, 'p', 'Campos fiscais mapeados para anÃ¡lise. ' +
+        String(focusReview.missingCount || 0) + ' conferÃªncia(s) estrutural(is) pendente(s).');
+      var focusChecks = Array.isArray(focusReview.checks) ? focusReview.checks : [];
+      if (focusChecks.length) {
+        var focusList = document.createElement('ul');
+        focusChecks.forEach(function (check) {
+          appendLine(focusList, 'li', (check.ok ? 'âœ“ ' : 'Pendente: ') +
+            check.label + ' â€” ' + check.detail);
+        });
+        target.append(focusList);
+      }
+      if (focusReview.requestPreview && typeof focusReview.requestPreview === 'object') {
+        var previewDetails = document.createElement('details');
+        var previewSummary = document.createElement('summary');
+        previewSummary.textContent = 'Abrir JSON tÃ©cnico mapeado para a Focus';
+        var previewJson = document.createElement('pre');
+        previewJson.className = 'focus-json-preview';
+        previewJson.textContent = JSON.stringify(focusReview.requestPreview, null, 2);
+        previewDetails.append(previewSummary, previewJson);
+        target.append(previewDetails);
+      }
+      renderFocusItemPreview(target, draft, focusReview);
+      appendLine(target, 'h4', 'PendÃªncias de conferÃªncia');
+      var pending = Array.isArray(draft.pending) ? draft.pending : [];
+      if (pending.length) {
+        var list = document.createElement('ul');
+        pending.forEach(function (issue) { appendLine(list, 'li', String(issue)); });
+        target.append(list);
+      } else {
+        appendLine(target, 'p', 'Sem pendÃªncias registradas neste rascunho. Isso nÃ£o representa aprovaÃ§Ã£o fiscal.');
+      }
+      appendLine(target, 'h4', 'ApuraÃ§Ã£o tributÃ¡ria');
+      appendLine(target, 'p', 'NÃ£o realizada. O ERP ainda nÃ£o calcula bases, alÃ­quotas ou valores de impostos. A prÃ©via mostra os campos da Focus jÃ¡ mapeados e os dados que dependem da contabilidade.');
+      appendLine(target, 'p', 'A integraÃ§Ã£o nÃ£o calcula nem presume tributos. O envio de homologaÃ§Ã£o depende da regra aprovada por operaÃ§Ã£o e da conferÃªncia de todos os campos exigidos pela Focus.');
+      appendLine(target, 'p', 'â€œRevisÃ£o registrada no ERPâ€ indica apenas uma declaraÃ§Ã£o salva no sistema; nÃ£o valida a qualificaÃ§Ã£o do contador nem substitui a aprovaÃ§Ã£o fiscal da operaÃ§Ã£o.');
+      renderHomologationActions(target, draft);
+      target.hidden = false;
+      target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (error) {
+      target.replaceChildren();
+      appendLine(target, 'p', 'Falha na consulta: ' + error.message);
+      target.hidden = false;
+    }
+  }
+
+  async function refreshHistory() {
+    var response = await api('/api/fiscal/nfe-drafts');
+    state.drafts = Array.isArray(response.drafts) ? response.drafts : [];
+    state.homologationSetup = response.homologationSetup || null;
+    renderHistory();
+    renderHomologationReadiness();
+  }
+
+  function clearOrderQuery() {
+    var url = new URL(window.location.href);
+    url.searchParams.delete('orderId');
+    window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+  }
+
+  function unlinkSourceOrder() {
+    state.sourceOrderId = null;
+    state.sourceOrderNumber = '';
+    idempotencyKey = null;
+    items.querySelectorAll('.product, .quantity, .price, .remove-item').forEach(function (field) {
+      field.disabled = false;
+    });
+    document.getElementById('addItem').disabled = !state.ready || items.children.length >= 20;
+    document.getElementById('sourceOrderNotice').hidden = true;
+    document.getElementById('recipientId').disabled = false;
+    clearOrderQuery();
+    report('VÃ­nculo com o pedido removido. VocÃª pode editar os itens; a origem nÃ£o serÃ¡ registrada no rascunho.');
+  }
+
+  function importOrder(order) {
+    if (!order || !order.id) throw new Error('Pedido invÃ¡lido.');
+    if (order.status !== 'open' && order.status !== 'fulfilled')
+      throw new Error('Somente pedidos em aberto ou concluÃ­dos podem ser preparados para NF-e.');
+    if (!order.customer_id) throw new Error('O pedido precisa ter um cliente cadastrado.');
+    if (!Array.isArray(order.items) || order.items.length < 1 || order.items.length > 20)
+      throw new Error('A NF-e aceita atÃ© 20 itens por rascunho; este pedido nÃ£o pode ser importado.');
+    var recipient = state.clients.find(function (client) {
+      return client.id === order.customer_id && client.active && client.isCustomer === true && client.type !== 'EXT';
+    });
+    if (!recipient) throw new Error('O cliente do pedido estÃ¡ inativo ou nÃ£o estÃ¡ disponÃ­vel para NF-e.');
+    var mapped = order.items.map(function (item) {
+      if (!item || !item.productId || item.serviceId)
+        throw new Error('Este pedido contÃ©m serviÃ§o ou item sem produto vinculado. O rascunho atual Ã© para mercadorias.');
+      var product = state.products.find(function (entry) { return entry.id === item.productId && entry.active; });
+      if (!product) throw new Error('Um produto do pedido estÃ¡ inativo ou nÃ£o pertence ao catÃ¡logo carregado.');
+      var quantity = Number(item.quantity), unitPrice = Number(item.unitPrice);
+      if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(unitPrice) || unitPrice < 0)
+        throw new Error('Quantidade ou preÃ§o do pedido estÃ¡ invÃ¡lido.');
+      return { productId: item.productId, quantity: quantity, unitPrice: unitPrice, product: product };
+    });
+    if (state.drafts.some(function (draft) { return draft.sourceOrderId === order.id; }) &&
+        !window.confirm('JÃ¡ existe um rascunho NF-e vinculado a este pedido. Criar outro rascunho de preparaÃ§Ã£o?'))
+      return;
+    if (items.children.length && !window.confirm('Carregar este pedido substituirÃ¡ os dados atuais do formulÃ¡rio. Continuar?'))
+      return;
+
+    form.reset();
+    if (typeof window.jvgNfeWizardReset === 'function') window.jvgNfeWizardReset();
+    items.replaceChildren();
+    document.getElementById('recipientId').value = order.customer_id;
+    document.getElementById('recipientId').disabled = true;
+    document.getElementById('recipientId').dispatchEvent(new Event('change', { bubbles: true }));
+    mapped.forEach(function (entry) {
+      addItem();
+      var row = items.lastElementChild;
+      var productSelect = row.querySelector('.product');
+      productSelect.value = entry.productId;
+      productSelect.dispatchEvent(new Event('change'));
+      row.querySelector('.quantity').value = String(entry.quantity);
+      row.querySelector('.price').value = Number(entry.unitPrice).toFixed(2);
+      productSelect.disabled = true;
+      row.querySelector('.quantity').disabled = true;
+      row.querySelector('.price').disabled = true;
+      row.querySelector('.remove-item').disabled = true;
+    });
+    state.sourceOrderId = order.id;
+    state.sourceOrderNumber = 'PED-' + String(order.id).slice(0, 8).toUpperCase();
+    idempotencyKey = null;
+    document.getElementById('sourceOrderLabel').textContent = state.sourceOrderNumber;
+    document.getElementById('sourceOrderNotice').hidden = false;
+    document.getElementById('addItem').disabled = true;
+    updateTotal();
+    report('Pedido carregado. Revise a natureza, CFOP e CSOSN com a contabilidade. Nenhuma nota foi transmitida.');
+    document.getElementById('draftForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function load() {
+    try {
+      var results = await Promise.all([
+        api('/api/records?scope=quotes'),
+        api('/api/company').catch(function () { return {}; }),
+        api('/api/fiscal/tax-profiles').catch(function () { return { records: [] }; }),
+      ]);
+      var data = results[0];
+      var companyData = results[1];
+      var profileData = results[2];
+      state.products = Array.isArray(data.products) ? data.products : [];
+      state.clients = Array.isArray(data.clients) ? data.clients : [];
+      state.issuerState = String(companyData.company && companyData.company.state || '').trim().toUpperCase();
+      state.taxProfiles = Array.isArray(profileData.records) ? profileData.records : [];
+      renderHomologationReadiness();
+      fillRecipients();
+      fillCarriers();
+      addItem();
+      // SugestÃµes oficiais nÃ£o podem impedir o uso de rascunhos se o catÃ¡logo falhar.
+      var auxiliary = await Promise.all([
+        api('/api/fiscal/cfop').catch(function () { return { records: [] }; }),
+        refreshHistory().catch(function () { return null; }),
+      ]);
+      try {
+        var cfops = auxiliary[0];
+        var options = document.getElementById('cfopOptions');
+        (cfops.records || []).forEach(function (record) {
+          options.append(option(record.code, record.customLabel || record.title));
+        });
+      } catch { /* campo livre continua disponÃ­vel */ }
+      document.getElementById('recipientId').addEventListener('change', updateItemTaxSuggestions);
+      state.ready = state.products.some(function (p) { return p.active; }) &&
+        state.clients.some(function (c) { return c.active && c.isCustomer === true && c.type !== 'EXT'; });
+      saveButton.disabled = !state.ready;
+      report(state.ready ?
+        'Conectado ao Supabase. Os rascunhos serÃ£o salvos somente para esta empresa e nÃ£o serÃ£o transmitidos.' :
+        'Cadastre pelo menos um produto e um cliente ativos no ERP para preparar a NF-e.', state.ready ? '' : 'info');
+      var sourceOrderId = new URLSearchParams(window.location.search).get('orderId');
+      if (sourceOrderId) {
+        try {
+          var orderResponse = await api('/api/orders?id=' + encodeURIComponent(sourceOrderId));
+          importOrder(orderResponse.order);
+        } catch (error) {
+          report('NÃ£o foi possÃ­vel carregar o pedido no rascunho: ' + error.message, 'error');
+        }
+      }
+    } catch (error) {
+      report('Falha ao carregar a central fiscal: ' + error.message + ' Volte ao ERP ou recarregue esta pÃ¡gina.', 'error');
+      saveButton.disabled = true;
+    }
+  }
+
+  document.getElementById('addItem').addEventListener('click', addItem);
+  document.getElementById('unlinkSourceOrder').addEventListener('click', unlinkSourceOrder);
+  form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    if (!state.ready) return;
+    saveButton.disabled = true;
+    saveButton.textContent = 'Salvando...';
+    try {
+      if (!idempotencyKey) {
+        if (!window.crypto || typeof window.crypto.randomUUID !== 'function')
+          throw new Error('Este navegador nÃ£o oferece uma chave segura para evitar duplicidade. Atualize o navegador.');
+        idempotencyKey = window.crypto.randomUUID();
+      }
+      var result = await api('/api/fiscal/nfe-drafts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify(Object.assign({
+          nature: form.elements.namedItem('nature').value.trim(),
+          purpose: selectedNumber('purpose'),
+          issueAt: selectedIssueAt(),
+          consumerFinal: form.elements.namedItem('consumerFinal').value === '' ? null :
+            form.elements.namedItem('consumerFinal').value === '1',
+          buyerPresence: selectedNumber('buyerPresence'),
+          transportMode: selectedNumber('transportMode'),
+          carrierId: form.elements.namedItem('carrierId').value || null,
+          vehicle: {
+            plate: form.elements.namedItem('vehiclePlate').value.trim(),
+            state: form.elements.namedItem('vehicleState').value.trim(),
+            rntc: form.elements.namedItem('vehicleRntc').value.trim(),
+          },
+          volumes: [{
+            quantity: form.elements.namedItem('volumeQuantity').value,
+            species: form.elements.namedItem('volumeSpecies').value.trim(),
+            brand: form.elements.namedItem('volumeBrand').value.trim(),
+            number: form.elements.namedItem('volumeNumber').value.trim(),
+            netWeight: form.elements.namedItem('volumeNetWeight').value,
+            grossWeight: form.elements.namedItem('volumeGrossWeight').value,
+          }],
+          recipientId: form.elements.namedItem('recipientId').value,
+          sourceOrderId: state.sourceOrderId,
+          items: readItems(),
+        }, typeof window.jvgNfeWizardData === 'function' ? window.jvgNfeWizardData() : {})),
+      });
+      idempotencyKey = null;
+      state.sourceOrderId = null;
+      state.sourceOrderNumber = '';
+      document.getElementById('sourceOrderNotice').hidden = true;
+      document.getElementById('recipientId').disabled = false;
+      clearOrderQuery();
+      form.reset();
+      if (typeof window.jvgNfeWizardReset === 'function') window.jvgNfeWizardReset();
+      items.replaceChildren();
+      addItem();
+      try {
+        await refreshHistory();
+      } catch {
+        report('Rascunho salvo com sucesso, mas nÃ£o foi possÃ­vel atualizar o histÃ³rico. Recarregue a pÃ¡gina para conferir.', 'error');
+        return;
+      }
+      report('Rascunho salvo no Supabase. Restam ' + result.pending.length +
+        ' conferÃªncia(s) fiscais antes de qualquer emissÃ£o. Nenhum documento foi transmitido.');
+    } catch (error) {
+      report('NÃ£o foi possÃ­vel salvar: ' + error.message, 'error');
+    } finally {
+      saveButton.disabled = !state.ready;
+      saveButton.textContent = 'Salvar rascunho NF-e';
+    }
+  });
+
+  load();
+})();
