@@ -1,4 +1,5 @@
 /* SigmaFiscal / JVG — visual unificado para telas comerciais e fiscais independentes. */
+*,*::before,*::after{box-sizing:border-box}
 :root{--surface:#14283dd9;--line:#9bc8f43b;--text:#edf6ff;--muted:#c0d3e8;--accent:#7fc1ff;color-scheme:dark}
 html{min-width:320px;scrollbar-color:#496e93 #091727}
 body:not(:has(> .app-shell)){min-width:320px;min-height:100dvh;height:auto;overflow-y:auto;background:radial-gradient(ellipse 65% 60% at 85% 5%,#2258a34a,transparent 75%),radial-gradient(ellipse 55% 60% at 10% 95%,#0e74824a,transparent 75%),linear-gradient(145deg,#07111f,#0d2038 65%,#081724);color:var(--text);background-attachment:fixed}
