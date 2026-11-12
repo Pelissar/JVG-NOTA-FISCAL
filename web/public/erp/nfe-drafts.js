@@ -413,6 +413,7 @@
   function focusFieldLabel(key) {
     var labels = {
       codigo_produto: 'SKU', codigo_ncm: 'NCM', cfop: 'CFOP', codigo_barras_comercial: 'GTIN',
+      cest: 'CEST',
       unidade_comercial: 'Unidade', quantidade_comercial: 'Quantidade',
       valor_unitario_comercial: 'Valor unitário', valor_bruto: 'Valor bruto',
       icms_origem: 'Origem da mercadoria', icms_situacao_tributaria: 'CSOSN / ICMS',
@@ -473,7 +474,7 @@
     section.append(heading);
 
     var fiscalKeys = [
-      'cfop', 'icms_origem', 'icms_situacao_tributaria', 'pis_situacao_tributaria',
+      'cfop', 'icms_origem', 'icms_situacao_tributaria', 'cest', 'pis_situacao_tributaria',
       'cofins_situacao_tributaria', 'ibs_cbs_situacao_tributaria',
       'ibs_cbs_classificacao_tributaria',
     ];
@@ -569,6 +570,19 @@
       var providerMessage = providerBody.mensagem_sefaz || providerBody.mensagem || providerBody.erro;
       if (providerStatus || providerMessage)
         appendLine(target, 'p', 'Retorno Focus/SEFAZ: ' + [providerStatus, providerMessage].filter(Boolean).join(' · '));
+      if (providerBody.caminho_xml_nota_fiscal)
+        appendLine(target, 'p', 'Caminho do XML na Focus: ' + providerBody.caminho_xml_nota_fiscal);
+      if (providerBody.caminho_danfe)
+        appendLine(target, 'p', 'Caminho do DANFE na Focus: ' + providerBody.caminho_danfe);
+      var focusEvents = Array.isArray(providerBody.eventos) ? providerBody.eventos : [];
+      if (focusEvents.length) {
+        appendLine(target, 'h4', 'Eventos retornados pela Focus');
+        focusEvents.slice(0, 20).forEach(function (event) {
+          var eventInfo = [event.tipo_evento, event.status, event.codigo_status, event.mensagem_sefaz || event.mensagem]
+            .filter(function (value) { return value != null && String(value).trim() !== ''; }).map(String).join(' · ');
+          if (eventInfo) appendLine(target, 'p', eventInfo);
+        });
+      }
       appendLine(target, 'p', 'Natureza: ' + (draft.nature || 'não informada'));
       var purposeNames = { 1: 'Normal', 2: 'Complementar', 3: 'Ajuste', 4: 'Devolução' };
       appendLine(target, 'p', 'Finalidade: ' + (purposeNames[draft.purpose] || 'não informada') +

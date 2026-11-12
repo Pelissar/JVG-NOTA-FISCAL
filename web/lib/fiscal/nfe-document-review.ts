@@ -3,7 +3,7 @@
  * validação de schema, regras fiscais ou autorização da SEFAZ.
  * Não assume que um rascunho sem pendências está apto a emitir.
  */
-import { reviewFocusTaxRule } from "./focus-tax-fields.ts";
+import { isIbsCbsEnabledForNfe, reviewFocusTaxRule } from "./focus-tax-fields.ts";
 
 type Json = Record<string, unknown>;
 export type ReviewCheck = {
@@ -311,8 +311,9 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
       ieIndicatorValid ? ieIndicator : undefined);
 
   const mappedItems: Json[] = [];
-  const itemBasicMissing: string[] = [], itemCodeMissing: string[] = [], itemIbsMissing: string[] = [];
+  const itemBasicMissing: string[] = [], itemCodeMissing: string[] = [], itemIbsMissing: string[] = [], itemCestIssues: string[] = [];
   const itemIcmsMissing: string[] = [], itemPisCofinsMissing: string[] = [], itemIbsDetailsMissing: string[] = [], itemFocusFieldIssues: string[] = [];
+  let ibsCbsEnabledCount = 0;
   sourceItems.forEach((raw, index) => {
     const item = obj(raw), row: Json = { numero_item: index + 1 };
     const put = (key: string, valid: boolean, mapped: unknown) => {
@@ -334,9 +335,11 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
     put("valor_bruto", Number.isFinite(gross) && gross >= 0, gross);
     put("icms_origem", originValid, origin);
     const rules = obj(item.taxRules);
-    const focusFields = obj(rules.focusFields);
     const csosn = text(item.csosn), pis = text(rules.pisCst), cofins = text(rules.cofinsCst);
-    const taxRuleReview = reviewFocusTaxRule({ ...rules, csosn });
+    const ibsCbsEnabled = isIbsCbsEnabledForNfe(issuer, rules, payload.issueAt);
+    if (ibsCbsEnabled) ibsCbsEnabledCount++;
+    const taxRuleReview = reviewFocusTaxRule({ ...rules, csosn }, { includeIbsCbs: ibsCbsEnabled });
+    const focusFields = taxRuleReview.focusFields;
     if (/^\d{3}$/.test(csosn) && supportedCsosn.has(csosn)) row.icms_situacao_tributaria = csosn;
     else itemCodeMissing.push("Item " + (index + 1) + " CSOSN/ICMS");
     if (/^\d{2}$/.test(pis)) row.pis_situacao_tributaria = pis;
@@ -344,14 +347,15 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
     if (/^\d{2}$/.test(cofins)) row.cofins_situacao_tributaria = cofins;
     else itemCodeMissing.push("Item " + (index + 1) + " CST COFINS");
     const cstIbs = text(rules.cstIbsCbs), classTrib = text(rules.classTrib);
-    if (/^\d{3}$/.test(cstIbs) && /^\d{6}$/.test(classTrib)) {
-      row.ibs_cbs_situacao_tributaria = cstIbs;
-      row.ibs_cbs_classificacao_tributaria = classTrib;
-    } else itemIbsMissing.push("Item " + (index + 1));
+    if (ibsCbsEnabled) {
+      if (/^\d{3}$/.test(cstIbs) && /^\d{6}$/.test(classTrib)) {
+        row.ibs_cbs_situacao_tributaria = cstIbs;
+        row.ibs_cbs_classificacao_tributaria = classTrib;
+      } else itemIbsMissing.push("Item " + (index + 1));
+    }
     for (const [field, rawValue] of Object.entries(focusFields)) {
       if (!focusTaxFieldNames.has(field)) continue;
-      const numericValue = typeof rawValue === "number" ? rawValue :
-        typeof rawValue === "string" && /^\d+(?:\.\d+)?$/.test(rawValue.trim()) ? Number(rawValue) : Number.NaN;
+      const numericValue = rawValue;
       if (Number.isFinite(numericValue) && numericValue >= 0) row[field] = numericValue;
     }
     const missingIcms = [...new Set([...conditionalIcmsMissing(csosn, focusFields), ...taxRuleReview.icmsMissing])];
@@ -373,17 +377,28 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
     }
     if (taxRuleReview.ibsCbsMissing.length)
       itemIbsDetailsMissing.push(`Item ${index + 1}: ${taxRuleReview.ibsCbsMissing.join(", ")}`);
+    const cestValue = item.cest;
+    const rawCest = cestValue == null ? "" : String(cestValue).trim();
+    const cest = rawCest.replace(/\D/g, "");
+    const cestRequired = ["201", "202", "203", "500"].includes(csosn);
+    if (rawCest && /^\d{7}$/.test(cest)) row.cest = cest;
+    else if (rawCest) itemCestIssues.push(`Item ${index + 1}: CEST informado deve conter exatamente 7 dígitos.`);
+    if (cestRequired && !rawCest) itemCestIssues.push(`Item ${index + 1}: CEST obrigatório para CSOSN ${csosn} (Substituição Tributária).`);
     const gtin = textDigits(item.gtin);
     if (/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/.test(gtin)) row.codigo_barras_comercial = gtin;
     mappedItems.push(row);
   });
+  const ibsCbsActive = ibsCbsEnabledCount > 0;
   const itemsComplete = sourceItems.length > 0 && itemBasicMissing.length === 0;
   requestPreview.items = mappedItems;
   add("itens", "Dados básicos dos itens", itemsComplete,
       itemBasicMissing.length ? itemBasicMissing.slice(0,8).join("; ") : "Código, descrição, NCM, CFOP, unidade, quantidade e valores mapeados.");
   add("codigos_tributarios", "CSOSN e CST de PIS/COFINS", itemCodeMissing.length === 0 && sourceItems.length > 0,
       itemCodeMissing.length ? itemCodeMissing.slice(0,8).join("; ") : "Códigos disponíveis no rascunho.");
-  add("ibs_cbs", "CST/classificação IBS-CBS", itemIbsMissing.length === 0 && sourceItems.length > 0,
+  add("cest", "CEST dos itens com ICMS-ST", itemCestIssues.length === 0 && sourceItems.length > 0,
+      itemCestIssues.length ? itemCestIssues.slice(0,8).join("; ") : "CEST de 7 dígitos informado quando aplicável; nenhum código foi presumido.");
+  add("ibs_cbs", "CST/classificação IBS-CBS", !ibsCbsActive || (itemIbsMissing.length === 0 && sourceItems.length > 0),
+      !ibsCbsActive ? "Não aplicável: IBS/CBS permanece fora do payload para Simples Nacional ou enquanto a flag de regime regular e a vigência futura não estiverem ativas." :
       itemIbsMissing.length ? itemIbsMissing.slice(0,8).join("; ") : "Códigos disponíveis; ainda precisam de conferência.");
   add("icms_campos_condicionais", "Campos de ICMS exigidos pelo CSOSN", itemIcmsMissing.length === 0 && sourceItems.length > 0,
       itemIcmsMissing.length ? itemIcmsMissing.slice(0,8).join("; ") : "A combinação exige apenas origem e CSOSN, ou não pede grupo numérico adicional.");
@@ -391,7 +406,8 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
       itemPisCofinsMissing.length ? itemPisCofinsMissing.slice(0,8).join("; ") : "Confira se os grupos numéricos exigidos para cada CST foram informados e revisados.");
   add("focus_campos_numericos", "Campos numéricos Focus", itemFocusFieldIssues.length === 0 && sourceItems.length > 0,
       itemFocusFieldIssues.length ? itemFocusFieldIssues.slice(0,8).join("; ") : "Campos numéricos permitidos e informados foram mapeados sem cálculo automático.");
-  add("ibs_cbs_campos_condicionais", "Campos condicionais de IBS/CBS", itemIbsMissing.length === 0 && itemIbsDetailsMissing.length === 0 && sourceItems.length > 0,
+  add("ibs_cbs_campos_condicionais", "Campos condicionais de IBS/CBS", !ibsCbsActive || (itemIbsMissing.length === 0 && itemIbsDetailsMissing.length === 0 && sourceItems.length > 0),
+      !ibsCbsActive ? "Campos omitidos: Simples Nacional não envia IBS/CBS neste fluxo; a ativação futura exige flag explícita e vigência aplicável." :
       itemIbsDetailsMissing.length ? itemIbsDetailsMissing.slice(0,8).join("; ") :
       itemIbsMissing.length ? "Informe CST e cClassTrib orientados pela contabilidade." : "Grupo numérico ainda não cadastrado para as classificações deste item.");
 

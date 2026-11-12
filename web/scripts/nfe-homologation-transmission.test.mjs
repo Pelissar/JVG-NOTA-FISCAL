@@ -38,7 +38,16 @@ test('cliente Focus usa somente o host de homologação e status retorna pela AP
   assert.match(focus, /queryFocusNfeHomologacao/);
   assert.doesNotMatch(focus, /https:\/\/api\.focusnfe\.com\.br/);
   assert.match(detailApi, /publicProviderResponse\(selected\[0\]\.provider_response\)/);
-  assert.doesNotMatch(route, /caminho_xml_nota_fiscal|caminho_danfe/);
+  assert.match(route, /caminho_xml_nota_fiscal/);
+  assert.match(route, /caminho_danfe/);
+  assert.match(route, /eventos/);
+  assert.match(route, /createFocusAttemptEvent/);
+  assert.match(route, /finishFocusAttemptEvent/);
+  assert.match(route, /jvg_fiscal_events/);
+  assert.match(detailApi, /caminho_xml_nota_fiscal/);
+  assert.match(detailApi, /caminho_danfe/);
+  assert.match(ui, /Caminho do XML na Focus/);
+  assert.match(ui, /Caminho do DANFE na Focus/);
 });
 
 test('interface só oferece envio quando o servidor libera e exige confirmação explícita', () => {

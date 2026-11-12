@@ -16,7 +16,7 @@ const valid = () => ({
 });
 
 const check = (review, key) => review.checks.find(row => row.key === key);
-test('unmapped IBS class is blocked and Focus calculated total is omitted',()=>{const payload=focusPayload();payload.items[0].taxRules.classTrib='000003';const result=reviewFocusNfePayload(payload);assert.equal(check(result,'ibs_cbs_campos_condicionais').ok,false);assert.equal(check(result,'focus_campos_numericos').ok,false);assert.equal('ibs_valor_total' in result.requestPreview.items[0],false);assert.equal(result.canSend,false);});
+test('Simples omits IBS/CBS and ignores inactive IBS fields while omitting Focus calculated total',()=>{const payload=focusPayload();payload.items[0].taxRules.classTrib='000003';const result=reviewFocusNfePayload(payload);assert.equal(check(result,'ibs_cbs').ok,true);assert.equal(check(result,'ibs_cbs_campos_condicionais').ok,true);assert.equal(check(result,'focus_campos_numericos').ok,true);assert.equal('ibs_cbs_situacao_tributaria' in result.requestPreview.items[0],false);assert.equal('ibs_uf_valor' in result.requestPreview.items[0],false);assert.equal('ibs_valor_total' in result.requestPreview.items[0],false);assert.equal(result.canSend,false);});
 
 test('revisa estrutura interna e totais comerciais sem habilitar emissão', () => {
   const result = reviewNfeDocument(valid());
@@ -71,15 +71,44 @@ test('prévia mapeia códigos e somente valores Focus permitidos, sem inventar t
   assert.equal(item.icms_situacao_tributaria,'102');
   assert.equal(item.pis_situacao_tributaria,'06');
   assert.equal(item.cofins_situacao_tributaria,'06');
-  assert.equal(item.ibs_cbs_situacao_tributaria,'000');
-  assert.equal(item.ibs_cbs_classificacao_tributaria,'000001');
-  assert.equal(item.ibs_uf_valor,0);
+  assert.equal('ibs_cbs_situacao_tributaria' in item,false);
+  assert.equal('ibs_cbs_classificacao_tributaria' in item,false);
+  assert.equal('ibs_uf_valor' in item,false);
   assert.equal('ibs_valor_total' in item,false);
   assert.equal('valor_total' in result.requestPreview,false);
   assert.equal('formas_pagamento' in result.requestPreview,false);
   assert.equal(result.checks.find(row=>row.key==='formas_pagamento').ok,false);
   assert.equal(result.canSend,false);
   assert.equal(result.transmissionEnabled,false);
+});
+
+test('IBS/CBS só entra com flag explícita, regime regular confirmado e vigência futura',()=>{
+  const payload=focusPayload();
+  payload.issueAt='2027-01-01T00:00:00-03:00';
+  payload.issuer.taxRegime='lucro_presumido';
+  payload.items[0].taxRules.ibsCbsRegularRegimeEnabled=true;
+  const result=reviewFocusNfePayload(payload);
+  assert.equal(result.requestPreview.items[0].ibs_cbs_situacao_tributaria,'000');
+  assert.equal(result.requestPreview.items[0].ibs_cbs_classificacao_tributaria,'000001');
+  assert.equal(result.requestPreview.items[0].ibs_uf_valor,0);
+  payload.issuer.taxRegime='simples_nacional';
+  const simplesResult=reviewFocusNfePayload(payload);
+  assert.equal('ibs_cbs_situacao_tributaria' in simplesResult.requestPreview.items[0],false);
+});
+
+test('CEST é limpo no payload e obrigatório para CSOSN com ICMS-ST',()=>{
+  const payload=focusPayload();
+  payload.items[0].csosn='201';
+  let result=reviewFocusNfePayload(payload);
+  assert.equal(check(result,'cest').ok,false);
+  assert.match(check(result,'cest').detail,/CEST obrigatório para CSOSN 201/);
+  payload.items[0].cest='12.345.67';
+  result=reviewFocusNfePayload(payload);
+  assert.equal(check(result,'cest').ok,true);
+  assert.equal(result.requestPreview.items[0].cest,'1234567');
+  payload.items[0].cest='123';
+  result=reviewFocusNfePayload(payload);
+  assert.equal(check(result,'cest').ok,false);
 });
 
 test('valida CPF/CNPJ do destinatário e bloqueia CNPJ alfanumérico sem truncar letras', () => {

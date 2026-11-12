@@ -96,8 +96,37 @@ function pisCofinsFields(cst: string, prefix: "pis" | "cofins"): string[] | null
   return null;
 }
 
-export function reviewFocusTaxRule(rule: Record<string, unknown>): FocusTaxRuleReview {
-  const inspected = inspectFocusTaxFields(rule.focusFields);
+/**
+ * IBS/CBS só entra no payload quando a empresa confirmou regime regular,
+ * a regra habilitou explicitamente o uso futuro e a data de emissão já
+ * alcançou 01/01/2027. O Simples Nacional permanece sempre fora deste grupo.
+ */
+export function isIbsCbsEnabledForNfe(
+  issuer: Record<string, unknown>,
+  rule: Record<string, unknown>,
+  issueAt: unknown,
+): boolean {
+  const regime = String(issuer.taxRegime ?? issuer.tax_regime ?? issuer.regime_tributario ?? "").trim().toLowerCase();
+  if (["1", "simples_nacional", "simples nacional"].includes(regime)) return false;
+  if (!["lucro_presumido", "lucro_real", "regime_regular", "regular"].includes(regime)) return false;
+  if (issuer.taxRegimeConfirmed !== true && issuer.tax_regime_confirmed !== true) return false;
+  if (rule.ibsCbsRegularRegimeEnabled !== true) return false;
+  if (typeof issueAt !== "string" || !issueAt.trim()) return false;
+  const issueTimestamp = Date.parse(issueAt);
+  const effectiveTimestamp = Date.parse("2027-01-01T00:00:00-03:00");
+  return Number.isFinite(issueTimestamp) && issueTimestamp >= effectiveTimestamp;
+}
+
+export function reviewFocusTaxRule(
+  rule: Record<string, unknown>,
+  options: { includeIbsCbs?: boolean } = {},
+): FocusTaxRuleReview {
+  const includeIbsCbs = options.includeIbsCbs === true;
+  const rawFocusFields = !includeIbsCbs && isRecord(rule.focusFields)
+    ? Object.fromEntries(Object.entries(rule.focusFields).filter(([name]) =>
+      !name.toLowerCase().startsWith("ibs_") && !name.toLowerCase().startsWith("cbs_")))
+    : rule.focusFields;
+  const inspected = inspectFocusTaxFields(rawFocusFields);
   const focusFields = inspected.fields;
   const result: FocusTaxRuleReview = {
     focusFields, icmsMissing: [], pisCofinsMissing: [], ibsCbsMissing: [],
@@ -129,12 +158,16 @@ export function reviewFocusTaxRule(rule: Record<string, unknown>): FocusTaxRuleR
     if (fields === null) result.unsupported.push(`CST ${prefix.toUpperCase()} ${cst || "(vazio)"} ainda não tem grupo Focus mapeado.`);
     else result.pisCofinsMissing.push(...missing(fields, focusFields));
   }
-  const cstIbsCbs = typeof rule.cstIbsCbs === "string" ? rule.cstIbsCbs.trim() : "";
-  const classTrib = typeof rule.classTrib === "string" ? rule.classTrib.trim() : "";
-  if (cstIbsCbs === "000" && (classTrib === "000001" || classTrib === "000005")) {
-    result.ibsCbsMissing.push(...missing(ibsCbs000Fields, focusFields));
-  } else if (cstIbsCbs || classTrib) {
-    result.unsupported.push(`Combinação IBS/CBS ${cstIbsCbs || "(CST vazio)"}/${classTrib || "(classificação vazia)"} ainda não tem grupo Focus mapeado.`);
+  if (includeIbsCbs) {
+    const cstIbsCbs = typeof rule.cstIbsCbs === "string" ? rule.cstIbsCbs.trim() : "";
+    const classTrib = typeof rule.classTrib === "string" ? rule.classTrib.trim() : "";
+    if (!/^\d{3}$/.test(cstIbsCbs) || !/^\d{6}$/.test(classTrib)) {
+      result.ibsCbsMissing.push("CST IBS/CBS de 3 dígitos e cClassTrib de 6 dígitos");
+    } else if (cstIbsCbs === "000" && (classTrib === "000001" || classTrib === "000005")) {
+      result.ibsCbsMissing.push(...missing(ibsCbs000Fields, focusFields));
+    } else {
+      result.unsupported.push(`Combinação IBS/CBS ${cstIbsCbs}/${classTrib} ainda não tem grupo Focus mapeado.`);
+    }
   }
   return result;
 }

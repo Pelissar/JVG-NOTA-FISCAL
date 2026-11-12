@@ -113,6 +113,11 @@
                 <small class="field-help">Formato de 2 dígitos; confirme o enquadramento com o contador.</small>
               </label>
               <label class="field">
+                <span class="field-label">IBS/CBS para regime regular futuro</span>
+                <input name="ibsCbsRegularRegimeEnabled" type="checkbox">
+                <small class="field-help">Flag explícita. Nunca ativa para Simples Nacional e só pode entrar no payload a partir de 01/01/2027, com regime regular confirmado.</small>
+              </label>
+              <label class="field">
                 <span class="field-label">CST IBS/CBS <span class="optional-tag">Opcional</span></span>
                 <input class="field-control" name="cstIbsCbs" type="text" pattern="[0-9]{3}" maxlength="3" inputmode="numeric" autocomplete="off" placeholder="Preencher após orientação contábil">
                 <small class="field-help">Formato de 3 dígitos; depende da regra aplicável à operação.</small>
@@ -127,7 +132,7 @@
 
           <fieldset id="focusTaxGroup" class="form-group">
             <legend><span>3</span> Parâmetros numéricos da Focus</legend>
-            <p class="group-description">Os campos aparecem conforme os códigos desta operação e somente para grupos mapeados no ERP.</p>
+            <p class="group-description">Os campos aparecem conforme os códigos desta operação e somente para grupos mapeados no ERP. IBS/CBS fica fora do envio para o Simples Nacional e antes da vigência futura.</p>
             <div id="focusTaxGuidance" class="notice info form-notice" role="status" aria-live="polite">
               Informe apenas valores recebidos da contabilidade. O ERP não calcula nem completa impostos; grupos sem mapeamento ficam bloqueados.
             </div>

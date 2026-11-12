@@ -39,6 +39,7 @@ export function reviewProfileConsistency(
   csosn: string,
   itemNumber: number,
   operation: OperationReview["operation"],
+  requireIbsCbs = false,
 ): string[] {
   const pending: string[] = [];
   if (!profileRules) {
@@ -53,7 +54,7 @@ export function reviewProfileConsistency(
     pending.push(`Item ${itemNumber}: CSOSN do rascunho difere do perfil fiscal vinculado`);
   if (!profileRules.pisCst || !profileRules.cofinsCst)
     pending.push(`Item ${itemNumber}: classificação PIS/Cofins pendente no perfil`);
-  if (!profileRules.cstIbsCbs || !profileRules.classTrib)
+  if (requireIbsCbs && (!profileRules.cstIbsCbs || !profileRules.classTrib))
     pending.push(`Item ${itemNumber}: CST ou classificação IBS/CBS pendente no perfil`);
   return pending;
 }

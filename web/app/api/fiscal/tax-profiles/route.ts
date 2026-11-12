@@ -66,6 +66,7 @@ function profileFields(input: Record<string, unknown>) {
   const cofinsCst = textValue(input.cofinsCst, 2);
   const cstIbsCbs = textValue(input.cstIbsCbs, 3);
   const classTrib = textValue(input.classTrib, 6);
+  const ibsCbsRegularRegimeEnabled = input.ibsCbsRegularRegimeEnabled === true;
   let focusFields: Record<string, number>;
   try { focusFields = parseFocusTaxFields(input.focusFields); }
   catch (error) {
@@ -80,7 +81,8 @@ function profileFields(input: Record<string, unknown>) {
   return {
     name,
     operation,
-    rule: { cfop, csosn: csosnValue, pisCst, cofinsCst, cstIbsCbs, classTrib, focusFields, requiresAccountantReview: true },
+    rule: { cfop, csosn: csosnValue, pisCst, cofinsCst, cstIbsCbs, classTrib, focusFields,
+      ibsCbsRegularRegimeEnabled, requiresAccountantReview: true },
   };
 }
 function withoutLegacyFields(rules: Record<string, unknown>) {
@@ -159,14 +161,18 @@ export async function PATCH(request: Request) {
       const incomplete = configuredEntries.some(([key, rawRule]) => {
         if (!operations.has(key as Operation)) return true;
         const rule = object(rawRule);
+        const ibsCbsRequired = company.tax_regime !== "simples_nacional" && rule.ibsCbsRegularRegimeEnabled === true;
         return !isOfficialCfopCode(String(rule.cfop || "")) || !csosn.has(String(rule.csosn || "")) ||
           !/^\d{2}$/.test(String(rule.pisCst || "")) || !/^\d{2}$/.test(String(rule.cofinsCst || "")) ||
-          !/^\d{3}$/.test(String(rule.cstIbsCbs || "")) || !/^\d{6}$/.test(String(rule.classTrib || ""));
+          (ibsCbsRequired && (!/^\d{3}$/.test(String(rule.cstIbsCbs || "")) || !/^\d{6}$/.test(String(rule.classTrib || ""))));
       });
       if (incomplete)
-        throw new JvgBackendError("Cada operação precisa ter CFOP, CSOSN, CST de PIS/Cofins e CST/classificação IBS-CBS antes de registrar a revisão.", 409);
+        throw new JvgBackendError("Cada operação precisa ter CFOP, CSOSN e CST de PIS/Cofins. CST/classificação IBS-CBS só são exigidos quando a flag futura está ativa para regime regular.", 409);
       const focusIssues = configuredEntries.flatMap(([key, rawRule]) => {
-        const review = reviewFocusTaxRule(object(rawRule));
+        const rule = object(rawRule);
+        const review = reviewFocusTaxRule(rule, {
+          includeIbsCbs: company.tax_regime !== "simples_nacional" && rule.ibsCbsRegularRegimeEnabled === true,
+        });
         const issues = [
           ...review.icmsMissing.map(field => `ICMS ${field}`),
           ...review.pisCofinsMissing.map(field => `PIS/Cofins ${field}`),

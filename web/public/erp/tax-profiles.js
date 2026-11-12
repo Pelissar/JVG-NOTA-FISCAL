@@ -218,6 +218,7 @@
     const cofinsCst = form.elements.namedItem('cofinsCst').value.trim();
     const cstIbsCbs = form.elements.namedItem('cstIbsCbs').value.trim();
     const classTrib = form.elements.namedItem('classTrib').value.trim();
+    const ibsCbsFutureEnabled = form.elements.namedItem('ibsCbsRegularRegimeEnabled').checked === true;
     const unsupported = [];
     let groups = 0;
     target.replaceChildren();
@@ -259,7 +260,7 @@
     addPisCofinsGroup('pis', pisCst);
     addPisCofinsGroup('cofins', cofinsCst);
 
-    if (cstIbsCbs || classTrib) {
+    if (ibsCbsFutureEnabled && (cstIbsCbs || classTrib)) {
       if (cstIbsCbs === '000' && ['000001', '000005'].includes(classTrib)) {
         addFocusFieldGroup(target, `IBS/CBS · CST ${cstIbsCbs} · classificação ${classTrib}`, focusIbsCbs000, values, false);
         groups++;
@@ -269,12 +270,15 @@
     }
 
     guidance.className = `notice form-notice ${unsupported.length ? 'warning' : 'info'}`;
-    if (unsupported.length) {
+    if (!ibsCbsFutureEnabled) {
+      guidance.textContent = 'ICMS, PIS e Cofins seguem os grupos informados. IBS/CBS está desligado: Simples Nacional não envia esses campos; a flag futura só produz efeito para regime regular confirmado e emissão a partir de 01/01/2027.';
+      if (unsupported.length) guidance.textContent += ` ${unsupported.join(' ')}`;
+    } else if (unsupported.length) {
       guidance.textContent = `${unsupported.join(' ')} Esta combinação permanece bloqueada para emissão até o mapeamento e a revisão fiscal.`;
     } else if (groups) {
       guidance.textContent = 'Preencha os grupos exibidos com os valores aprovados pela contabilidade. A Focus pode totalizar campos calculados; o ERP não calcula nem presume estes valores.';
     } else if (csosn || pisCst || cofinsCst) {
-      guidance.textContent = 'Para os códigos informados, o mapeamento atual não exige outros campos numéricos de ICMS/PIS/Cofins. A classificação IBS/CBS continua separada e pode exigir parâmetros próprios.';
+      guidance.textContent = 'Para os códigos informados, o mapeamento atual não exige outros campos numéricos de ICMS/PIS/Cofins. IBS/CBS só será considerado com a flag futura, regime regular confirmado e vigência aplicável.';
     } else {
       guidance.textContent = 'Selecione os códigos fiscais para ver os grupos numéricos conhecidos. Informe apenas valores recebidos da contabilidade; o ERP não calcula nem presume impostos.';
     }
@@ -290,6 +294,7 @@
     setValue('name', record.name);
     setValue('operation', operation);
     for (const field of ['cfop', 'csosn', 'pisCst', 'cofinsCst', 'cstIbsCbs', 'classTrib']) setValue(field, variant[field]);
+    form.elements.namedItem('ibsCbsRegularRegimeEnabled').checked = variant.ibsCbsRegularRegimeEnabled === true;
     renderFocusFields(variant.focusFields);
     updateCsosnHelp();
     document.getElementById('formTitle').textContent = variants[operation]
@@ -404,7 +409,12 @@
     show('Salvando a regra como rascunho...', 'info');
     try {
       const values = Object.fromEntries(new FormData(form).entries());
-      values.focusFields = readFocusFields();
+      const visibleFocusFields = readFocusFields();
+      const ibsCbsFlag = form.elements.namedItem('ibsCbsRegularRegimeEnabled').checked === true;
+      const preservedIbsCbsFields = ibsCbsFlag ? {} : Object.fromEntries(Object.entries(focusFieldCache)
+        .filter(([name]) => name.toLowerCase().startsWith('ibs_') || name.toLowerCase().startsWith('cbs_')));
+      values.focusFields = Object.assign({}, preservedIbsCbsFields, visibleFocusFields);
+      values.ibsCbsRegularRegimeEnabled = ibsCbsFlag;
       const profileId = String(values.profileId || '');
       delete values.profileId;
       await api('/api/fiscal/tax-profiles', {
@@ -453,6 +463,7 @@
   for (const name of ['pisCst', 'cofinsCst', 'cstIbsCbs', 'classTrib']) {
     form.elements.namedItem(name).addEventListener('input', () => renderFocusFields(readFocusFields()));
   }
+  form.elements.namedItem('ibsCbsRegularRegimeEnabled').addEventListener('change', () => renderFocusFields(readFocusFields()));
   updateCsosnHelp();
   renderFocusFields({});
 

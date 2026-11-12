@@ -10,6 +10,7 @@ import {
 import { focusRuntimeEnv } from "../../../../../lib/focus/runtime-env";
 import { reviewApprovedTaxProfile, reviewNfeHomologationGate } from "../../../../../lib/fiscal/nfe-homologation-gate";
 import { reviewNfeOperation, reviewProfileConsistency } from "../../../../../lib/fiscal/operation-review";
+import { isIbsCbsEnabledForNfe } from "../../../../../lib/fiscal/focus-tax-fields";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,8 @@ type FocusContext = { userId: string; account: SiteAccount; token: string; compa
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const focusSafeFields = [
   "status", "status_sefaz", "mensagem_sefaz", "ref", "chave_nfe",
-  "numero", "serie", "protocolo", "codigo_status", "erro", "mensagem",
+  "numero", "serie", "protocolo", "numero_protocolo", "codigo_status", "erro", "mensagem",
+  "caminho_xml_nota_fiscal", "caminho_danfe", "eventos",
 ];
 
 const obj = (value: unknown): Json =>
@@ -49,10 +51,77 @@ function safeFocusBody(body: Json): Json {
   const result: Json = {};
   for (const key of focusSafeFields) {
     const value = body[key];
+    if (key === "eventos" && Array.isArray(value)) {
+      const events = value.slice(0, 50).flatMap(rawEvent => {
+        const event = obj(rawEvent);
+        const safeEvent = Object.fromEntries(Object.entries(event).filter(([name, item]) =>
+          /^[a-zA-Z0-9_]{1,64}$/.test(name) &&
+          ((typeof item === "string" && item.length <= 1000) ||
+            (typeof item === "number" && Number.isFinite(item)) || typeof item === "boolean")));
+        return Object.keys(safeEvent).length ? [safeEvent] : [];
+      });
+      if (events.length) result.eventos = events;
+      continue;
+    }
     if ((typeof value === "string" && value.length <= 2000) ||
         (typeof value === "number" && Number.isFinite(value))) result[key] = value;
   }
   return result;
+}
+
+async function createFocusAttemptEvent(
+  context: FocusContext,
+  documentId: string,
+  action: "transmission" | "consultation",
+  reference: string,
+  requestedAt: string,
+): Promise<string> {
+  const rows = await dbRequest<Array<{ id: string }>>("/rest/v1/jvg_fiscal_events?select=id", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: context.account.tenant_id,
+      company_id: context.account.company_id,
+      fiscal_document_id: documentId,
+      event_type: "status_update",
+      status: `${action}_started`,
+      event_payload: {
+        provider: "focus_nfe", action, phase: "request_started", environment: "homologacao",
+        reference, requestedAt, requestedBy: context.userId,
+      },
+    }),
+  });
+  const id = rows[0]?.id;
+  if (!id || !uuidPattern.test(id)) throw new JvgBackendError("Não foi possível registrar a tentativa fiscal no histórico.", 503);
+  return id;
+}
+
+async function finishFocusAttemptEvent(
+  context: FocusContext,
+  eventId: string,
+  values: { documentId: string; action: "transmission" | "consultation"; reference: string; requestedAt: string;
+    status: string; response?: Json; httpStatus?: number; error?: string; eventType?: "status_update" | "error" },
+): Promise<void> {
+  const response = values.response ? safeFocusBody(values.response) : undefined;
+  const protocol = values.response
+    ? scalarText(values.response.numero_protocolo ?? values.response.protocolo).slice(0, 80)
+    : "";
+  const rows = await dbRequest<Array<{ id: string }>>(
+    `/rest/v1/jvg_fiscal_events?${scope(context.account)}&id=${filterEq(eventId)}&fiscal_document_id=${filterEq(values.documentId)}&select=id`,
+    { method: "PATCH", body: JSON.stringify({
+      event_type: values.eventType || "status_update",
+      status: values.status.slice(0, 40),
+      protocol: protocol || null,
+      event_payload: {
+        provider: "focus_nfe", action: values.action, phase: values.status,
+        environment: "homologacao", reference: values.reference,
+        requestedAt: values.requestedAt, requestedBy: context.userId, observedAt: new Date().toISOString(),
+        ...(response ? { response } : {}),
+        ...(typeof values.httpStatus === "number" ? { httpStatus: values.httpStatus } : {}),
+        ...(values.error ? { error: values.error.slice(0, 500) } : {}),
+      },
+    }) },
+  );
+  if (!rows.length) throw new JvgBackendError("A tentativa foi enviada, mas não foi possível atualizar seu evento no histórico.", 502);
 }
 
 function internalStatus(providerStatus: unknown, current = "processing"): string {
@@ -209,7 +278,11 @@ async function currentSnapshotIssues(context: FocusContext, payload: Json): Prom
     const selectedRules = obj(operations[operation]);
     if (!Object.keys(selectedRules).length || stableJson(selectedRules) !== stableJson(obj(item.taxRules)))
       add(`Item ${index + 1}: a regra fiscal aprovada mudou; crie um novo rascunho.`);
-    else reviewProfileConsistency(selectedRules, text(item.cfop), text(item.csosn), index + 1, operation)
+    else reviewProfileConsistency(selectedRules, text(item.cfop), text(item.csosn), index + 1, operation,
+      isIbsCbsEnabledForNfe({
+        taxRegime: company.tax_regime,
+        taxRegimeConfirmed: company.tax_regime_confirmed === true,
+      }, selectedRules, payload.issueAt))
       .forEach(problem => add(problem));
   });
 
@@ -244,17 +317,25 @@ async function currentSnapshotIssues(context: FocusContext, payload: Json): Prom
   return issues;
 }
 
-function documentResponsePatch(body: Json, currentStatus: string, reference: string, userId: string): Json {
+function documentResponsePatch(
+  body: Json,
+  currentStatus: string,
+  reference: string,
+  userId: string,
+  previousProviderResponse?: unknown,
+): Json {
   const safeBody = safeFocusBody(body);
+  const previousResponse = obj(obj(previousProviderResponse).response);
   const nextStatus = internalStatus(body.status, currentStatus);
   const patch: Json = {
     status: nextStatus,
     provider_response: {
       operation: "focus_nfe",
+      phase: "response_received",
       observedAt: new Date().toISOString(),
       observedBy: userId,
       reference,
-      response: safeBody,
+      response: { ...previousResponse, ...safeBody },
     },
   };
   const accessKey = text(body.chave_nfe).replace(/^NFe/i, "");
@@ -293,20 +374,35 @@ async function emit(context: FocusContext, id: string, body: Json): Promise<Resp
   });
   if (!reserved) throw new JvgBackendError("Outro processo atualizou este rascunho. Recarregue antes de tentar novamente.", 409);
 
+  let attemptEventId: string;
+  try {
+    attemptEventId = await createFocusAttemptEvent(context, id, "transmission", reference, startedAt);
+  } catch {
+    await patchDocument(context.account, id, "processing", {
+      status: "draft",
+      provider_response: { operation: "focus_nfe", phase: "audit_log_failed", requestedAt: startedAt,
+        requestedBy: context.userId, environment: "homologacao", reference },
+    });
+    throw new JvgBackendError("A tentativa não foi enviada: não foi possível registrá-la no histórico fiscal.", 503);
+  }
+
   try {
     const result = await emitFocusNfeHomologacao(context.token, reference, gate.focusRequestPreview);
     const providerReference = text(result.body.ref);
     if (providerReference && providerReference !== reference) {
-      await patchDocument(context.account, id, "processing", {
-        provider_response: { operation: "focus_nfe", phase: "reference_mismatch", requestedAt: startedAt,
-          requestedBy: context.userId, reference, response: safeFocusBody(result.body) },
-      });
+      const responsePatch = documentResponsePatch(result.body, "processing", reference, context.userId, document.provider_response);
+      await patchDocument(context.account, id, "processing", responsePatch);
+      await finishFocusAttemptEvent(context, attemptEventId, { documentId: id, action: "transmission", reference,
+        requestedAt: startedAt, status: "reference_mismatch", response: result.body, eventType: "error" });
       return apiJson({ ok: false, status: "processing", reference, needsReconciliation: true,
         message: "A Focus retornou uma referência diferente. Não reenvie; consulte o documento pela referência salva." }, 202);
     }
-    const patch = documentResponsePatch(result.body, "processing", reference, context.userId);
+    const patch = documentResponsePatch(result.body, "processing", reference, context.userId, document.provider_response);
     await patchDocument(context.account, id, "processing", patch);
     const status = String(patch.status);
+    await finishFocusAttemptEvent(context, attemptEventId, { documentId: id, action: "transmission", reference,
+      requestedAt: startedAt, status, response: result.body,
+      eventType: ["rejected", "denied"].includes(status) ? "error" : "status_update" });
     return apiJson({ ok: true, status, reference, accessKey: patch.access_key || null,
       number: patch.document_number || null, series: patch.series || null,
       needsReconciliation: status === "processing" }, status === "processing" ? 202 : 200);
@@ -316,14 +412,18 @@ async function emit(context: FocusContext, id: string, body: Json): Promise<Resp
       const retryableNoAcceptance = [401, 403].includes(httpStatus);
       const providerRejected = [400, 422].includes(httpStatus);
       const nextStatus = retryableNoAcceptance ? "draft" : providerRejected ? "rejected" : "processing";
+      const safeBody = safeFocusBody(error.body);
       await patchDocument(context.account, id, "processing", {
         status: nextStatus,
         provider_response: { operation: "focus_nfe", phase: providerRejected ? "rejected" : "http_error",
           requestedAt: startedAt, observedAt: new Date().toISOString(), observedBy: context.userId,
-          reference, httpStatus, response: safeFocusBody(error.body) },
+          reference, httpStatus, response: { ...obj(obj(document.provider_response).response), ...safeBody } },
       });
+      await finishFocusAttemptEvent(context, attemptEventId, { documentId: id, action: "transmission", reference,
+        requestedAt: startedAt, status: providerRejected ? "provider_rejected" : "http_error",
+        response: error.body, httpStatus, eventType: "error" });
       return apiJson({ ok: false, status: nextStatus, reference,
-        providerResponse: safeFocusBody(error.body),
+        providerResponse: { ...obj(obj(document.provider_response).response), ...safeBody },
         needsReconciliation: nextStatus === "processing",
         message: providerRejected ? "A Focus rejeitou os dados. Corrija as pendências antes de criar um novo rascunho." :
           retryableNoAcceptance ? "A Focus não aceitou a solicitação; confira a conexão e tente novamente com o mesmo rascunho." :
@@ -334,8 +434,11 @@ async function emit(context: FocusContext, id: string, body: Json): Promise<Resp
     // Mantém status processing e referência para reconciliar sem POST duplicado.
     await patchDocument(context.account, id, "processing", {
       provider_response: { operation: "focus_nfe", phase: "outcome_unknown", requestedAt: startedAt,
-        observedAt: new Date().toISOString(), observedBy: context.userId, reference },
+        observedAt: new Date().toISOString(), observedBy: context.userId, reference,
+        response: obj(obj(document.provider_response).response) },
     });
+    await finishFocusAttemptEvent(context, attemptEventId, { documentId: id, action: "transmission", reference,
+      requestedAt: startedAt, status: "outcome_unknown", eventType: "error" });
     return apiJson({ ok: false, status: "processing", reference, needsReconciliation: true,
       message: "Não foi possível confirmar a resposta da Focus. Use Consultar Focus; não envie este rascunho novamente." }, 202);
   }
@@ -349,22 +452,39 @@ async function reconcile(context: FocusContext, id: string): Promise<Response> {
   if (!reference) throw new JvgBackendError("Este documento ainda não tem referência Focus para consulta.", 409);
   if (!["processing", "queued", "authorized", "rejected", "denied", "cancelled"].includes(String(document.status)))
     throw new JvgBackendError("Consulte a Focus somente depois que houver uma solicitação de emissão.", 409);
+  const requestedAt = new Date().toISOString();
+  const attemptEventId = await createFocusAttemptEvent(context, id, "consultation", reference, requestedAt);
   try {
     const result = await queryFocusNfeHomologacao(context.token, reference, true);
     const providerReference = text(result.body.ref);
     if (providerReference && providerReference !== reference)
       throw new JvgBackendError("A resposta da Focus pertence a outra referência.", 502);
-    const patch = documentResponsePatch(result.body, String(document.status), reference, context.userId);
+    const patch = documentResponsePatch(result.body, String(document.status), reference, context.userId, document.provider_response);
     await patchDocument(context.account, id, String(document.status), patch);
+    const status = String(patch.status);
+    await finishFocusAttemptEvent(context, attemptEventId, { documentId: id, action: "consultation", reference,
+      requestedAt, status, response: result.body,
+      eventType: ["rejected", "denied", "cancelled"].includes(status) ? "error" : "status_update" });
     return apiJson({ ok: true, status: patch.status, reference,
       accessKey: patch.access_key || document.access_key || null,
       number: patch.document_number || document.document_number || null,
       series: patch.series || document.series || null,
-      providerResponse: safeFocusBody(result.body) });
+      providerResponse: { ...obj(obj(document.provider_response).response), ...safeFocusBody(result.body) } });
   } catch (error) {
-    if (error instanceof FocusNfeApiError && error.httpStatus === 404)
+    if (error instanceof FocusNfeApiError && error.httpStatus === 404) {
+      await finishFocusAttemptEvent(context, attemptEventId, { documentId: id, action: "consultation", reference,
+        requestedAt, status: "not_found_yet", response: error.body, httpStatus: error.httpStatus });
       return apiJson({ ok: false, status: document.status, reference, needsReconciliation: true,
         message: "A Focus ainda não localizou esta referência. O status foi preservado; não reenvie automaticamente." }, 202);
+    }
+    await finishFocusAttemptEvent(context, attemptEventId, { documentId: id, action: "consultation", reference,
+      requestedAt, status: error instanceof FocusNfeApiError ? "http_error" : "consultation_failed",
+      response: error instanceof FocusNfeApiError ? error.body : undefined,
+      httpStatus: error instanceof FocusNfeApiError ? error.httpStatus : undefined,
+      error: error instanceof FocusNfeApiError
+        ? "A Focus retornou erro HTTP; o status do documento foi preservado."
+        : "Falha inesperada na consulta; confira o status antes de qualquer nova ação.",
+      eventType: "error" });
     throw error;
   }
 }

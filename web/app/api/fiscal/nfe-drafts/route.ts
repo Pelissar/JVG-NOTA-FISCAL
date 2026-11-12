@@ -7,6 +7,7 @@ import { focusRuntimeEnv } from "../../../../lib/focus/runtime-env";
 import { parseNfeDraftInput } from "../../../../lib/fiscal/nfe-draft";
 import { isOfficialCfopCode } from "../../../../lib/fiscal/cfop";
 import { reviewNfeOperation, reviewProfileConsistency } from "../../../../lib/fiscal/operation-review";
+import { isIbsCbsEnabledForNfe } from "../../../../lib/fiscal/focus-tax-fields";
 import { reviewNfePreparation } from "../../../../lib/fiscal/nfe-preflight";
 import { reviewNfeDocument, reviewFocusNfePayload } from "../../../../lib/fiscal/nfe-document-review";
 import { reviewApprovedTaxProfile, reviewNfeHomologationGate } from "../../../../lib/fiscal/nfe-homologation-gate";
@@ -21,11 +22,24 @@ function publicProviderResponse(value: unknown): DbRow | null {
   const stored = value as DbRow;
   const response = stored.response && typeof stored.response === "object" && !Array.isArray(stored.response)
     ? stored.response as DbRow : {};
-  const allowed = ["status", "status_sefaz", "mensagem_sefaz", "ref", "numero", "serie", "chave_nfe", "protocolo", "codigo_status", "erro", "mensagem"];
+  const allowed = ["status", "status_sefaz", "mensagem_sefaz", "ref", "numero", "serie", "chave_nfe", "protocolo",
+    "numero_protocolo", "codigo_status", "erro", "mensagem", "caminho_xml_nota_fiscal", "caminho_danfe", "eventos"];
   const safeResponse: DbRow = {};
   for (const key of allowed) {
     const item = response[key];
-    if ((typeof item === "string" && item.length <= 1000) || (typeof item === "number" && Number.isFinite(item)))
+    if (key === "eventos" && Array.isArray(item)) {
+      const safeEvents = item.slice(0, 50).flatMap(rawEvent => {
+        if (!rawEvent || typeof rawEvent !== "object" || Array.isArray(rawEvent)) return [];
+        const safeEvent = Object.fromEntries(Object.entries(rawEvent as DbRow).filter(([name, value]) =>
+          /^[a-zA-Z0-9_]{1,64}$/.test(name) &&
+          ((typeof value === "string" && value.length <= 1000) ||
+            (typeof value === "number" && Number.isFinite(value)) || typeof value === "boolean")));
+        return Object.keys(safeEvent).length ? [safeEvent] : [];
+      });
+      if (safeEvents.length) safeResponse.eventos = safeEvents;
+      continue;
+    }
+    if ((typeof item === "string" && item.length <= 2000) || (typeof item === "number" && Number.isFinite(item)))
       safeResponse[key] = item;
   }
   const result: DbRow = {};
@@ -262,7 +276,11 @@ export async function POST(request: Request) {
       const selectedRules = operationRules[review.operation] && typeof operationRules[review.operation] === "object" && !Array.isArray(operationRules[review.operation])
         ? operationRules[review.operation] as DbRow : undefined;
       const hasOperationRule = Boolean(selectedRules && review.operation !== "indeterminada");
-      pending.push(...reviewProfileConsistency(selectedRules, input.cfop, input.csosn, index + 1, review.operation));
+      const ibsCbsEnabled = isIbsCbsEnabledForNfe(
+        { taxRegime: company.tax_regime, taxRegimeConfirmed: company.tax_regime_confirmed === true },
+        selectedRules || {}, draft.issueAt,
+      );
+      pending.push(...reviewProfileConsistency(selectedRules, input.cfop, input.csosn, index + 1, review.operation, ibsCbsEnabled));
       if (rules.operations && !hasOperationRule)
         pending.push(`Item ${index + 1}: cadastre e aprove uma regra fiscal específica para a operação ${review.operation}`);
       if (!rules.operations && profile)
