@@ -1,4 +1,8 @@
 /* SigmaFiscal UI 2.0 — single source of truth for ERP surfaces and themes. */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
 :root {
   color-scheme: light;
   --canvas: #f4f6f8;
