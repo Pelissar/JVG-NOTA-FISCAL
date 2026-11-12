@@ -22,7 +22,8 @@
     "test:document-review": "node --experimental-strip-types --test scripts/nfe-document-review.test.mjs",
     "test:parties": "node --test scripts/party-registration.test.mjs",
     "test:inbound": "node --experimental-strip-types --test scripts/inbound-nfe.test.mjs",
-    "test:nfe-issued": "node --experimental-strip-types --test scripts/nfe-issued.test.mjs"
+    "test:nfe-issued": "node --experimental-strip-types --test scripts/nfe-issued.test.mjs",
+    "test:fiscal-async": "node --experimental-strip-types --test scripts/focus-webhook.test.mjs scripts/focus-nfse-national.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

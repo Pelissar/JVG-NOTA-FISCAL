@@ -206,7 +206,7 @@
     select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false')+
     '<p class="lookup-note field full">A consulta de CNPJ combina a Focus com fontes cadastrais complementares. Confira os dados antes de salvar; IE e IM podem exigir confirmação direta com a empresa.</p>';}
   function updatePartyRequirements(form){if(!form||form.dataset.kind!=='client')return;var supplier=form.querySelector('[name="isSupplier"]'),type=form.querySelector('[name="type"]'),doc=form.querySelector('[name="document"]'),label=form.querySelector('label[for="f-document"]');var required=!!(supplier&&supplier.checked&&type&&type.value!=='EXT');if(doc)doc.required=required;if(label)label.textContent='CPF / CNPJ'+(required?' *':'');}
-  function serviceForm(p){return field('code','Código do serviço *',p.code,'required maxlength="40"',false)+field('name','Descrição do serviço *',p.name,'required maxlength="160"',false)+field('description','Detalhamento',p.description,'maxlength="255"',true)+field('lc116','Subitem da LC 116',p.lc116,'maxlength="12"',false)+field('nbs','Código NBS',p.nbs,'maxlength="12"',false)+field('price','Valor (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
+  function serviceForm(p){return field('code','Código do serviço *',p.code,'required maxlength="40"',false)+field('name','Descrição do serviço *',p.name,'required maxlength="160"',false)+field('description','Detalhamento',p.description,'maxlength="255"',true)+field('lc116','Subitem da LC 116',p.lc116,'maxlength="12"',false)+field('nationalTaxationCode','Código de tributação nacional ISS (6 dígitos)',p.nationalTaxationCode,'inputmode=numeric maxlength=6',false)+field('nbs','Código NBS',p.nbs,'maxlength="12"',false)+field('price','Valor (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
   async function callApi(endpoint,options){
     var controller=new AbortController(),timeout=setTimeout(function(){controller.abort();},20000);
     try{
@@ -437,7 +437,7 @@
       if(!isCustomer&&!isSupplier&&!isCarrier){toast('Selecione pelo menos um tipo: cliente, fornecedor ou transportadora.','error');return;}
       record=Object.assign(record,{name:values.name.trim(),legalName:values.legalName.trim(),type:values.type,document:doc,stateRegistration:values.stateRegistration.trim(),municipalRegistration:values.municipalRegistration.trim(),isCustomer:isCustomer,isSupplier:isSupplier,isCarrier:isCarrier,email:values.email.trim(),phone:values.phone.trim(),street:values.street.trim(),number:values.number.trim(),complement:values.complement.trim(),district:values.district.trim(),postalCode:values.postalCode.replace(/\D/g,''),cityCode:values.cityCode.replace(/\D/g,''),city:values.city.trim(),state:values.state.trim().toUpperCase(),active:values.active==='true'});
     }else{
-      record=Object.assign(record,{code:values.code.trim(),name:values.name.trim(),description:values.description.trim(),lc116:values.lc116.trim(),nbs:values.nbs.trim(),price:Number(values.price||0),active:values.active==='true'});
+      record=Object.assign(record,{code:values.code.trim(),name:values.name.trim(),description:values.description.trim(),lc116:values.lc116.trim(),nbs:values.nbs.trim(),nationalTaxationCode:values.nationalTaxationCode.trim(),price:Number(values.price||0),active:values.active==='true'});
       if(record.price<0){toast('Valor inválido.','error');return;}
     }
     var submit=form.querySelector('button[type="submit"]');if(submit)submit.disabled=true;
@@ -475,7 +475,7 @@
   }
   function exportCsv(kind){
     if(cloud.status!=='ready'){toast('Conecte ao banco antes de exportar.','error');return;}
-    var data=state[kind],fields=kind==='products'?['sku','name','category','unit','ncm','cest','defaultCfop','gtin','origin','cost','price','stock','active']:kind==='clients'?['name','type','document','email','phone','postalCode','street','number','complement','district','city','state','cityCode','active']:['code','name','description','lc116','nbs','price','active'];
+    var data=state[kind],fields=kind==='products'?['sku','name','category','unit','ncm','cest','defaultCfop','gtin','origin','cost','price','stock','active']:kind==='clients'?['name','type','document','email','phone','postalCode','street','number','complement','district','city','state','cityCode','active']:['code','name','description','lc116','nationalTaxationCode','nbs','price','active'];
     if(!Array.isArray(data)||!data.length){toast('Não há dados para exportar.','error');return;}
     var lines=[fields.join(';')].concat(data.map(function(r){return fields.map(function(f){return '"'+String(r[f]??'').replace(/"/g,'""')+'"';}).join(';');}));
     var blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');

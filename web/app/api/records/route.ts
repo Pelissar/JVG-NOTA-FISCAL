@@ -66,8 +66,12 @@ function buildRow(kind: RecordKind, input: Record<string, unknown>, account: Sit
   const code = str(input.code, 40), name = str(input.name, 160);
   if (!code || !name) throw new JvgBackendError("Código e descrição são obrigatórios.", 400);
   if (input.price === undefined || input.price === null || String(input.price).trim() === "") throw new JvgBackendError("Preço do serviço é obrigatório; informe 0,00 se não houver cobrança.", 400);
+  const nationalTaxationCode = typeof input.nationalTaxationCode === "string" ? input.nationalTaxationCode.trim() : "";
+  if (nationalTaxationCode && !/^\d{6}$/.test(nationalTaxationCode))
+    throw new JvgBackendError("O código nacional ISS deve ter 6 dígitos e ser informado pela contabilidade.", 400);
   return { ...base, code, name, description: str(input.description, 255),
     national_service_code: str(input.lc116, 12) || null, nbs: str(input.nbs, 12) || null,
+    national_taxation_code: nationalTaxationCode || null,
     sale_price: positiveMoney(input.price ?? 0), active: input.active !== false };
 }
 
@@ -121,7 +125,8 @@ export async function GET(request: Request) {
         ? dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_parties?${scope}&select=id,registration_number,display_name,legal_name,document_type,document_number,state_registration,municipal_registration,email,phone,address,is_customer,is_supplier,is_carrier,active&order=registration_number.desc&limit=5000`)
         : Promise.resolve(emptyRows),
       wantsServices
-        ? dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_services?${scope}&select=id,code,name,description,national_service_code,nbs,sale_price,active&order=created_at.desc&limit=1000`)
+        ? dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_services?${scope}&select=id,code,name,description,national_service_code,national_taxation_code,nbs,sale_price,active&order=created_at.desc&limit=1000`)
+          .catch(() => dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_services?${scope}&select=id,code,name,description,national_service_code,nbs,sale_price,active&order=created_at.desc&limit=1000`))
         : Promise.resolve(emptyRows),
       wantsMovements
         ? dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_inventory_movements?${scope}&select=product_id,quantity_delta,reason,created_at&order=created_at.desc&limit=10000`)
@@ -146,7 +151,8 @@ export async function GET(request: Request) {
         city: address.city || "", state: address.state || "", active: p.active };
     });
     const serviceRecords = services.map(p => ({ id: p.id, code: p.code, name: p.name, description: p.description || "",
-      lc116: p.national_service_code || "", nbs: p.nbs || "", price: Number(p.sale_price), active: p.active }));
+      lc116: p.national_service_code || "", nationalTaxationCode: p.national_taxation_code || "",
+      nbs: p.nbs || "", price: Number(p.sale_price), active: p.active }));
     const movementRecords = movements.map(m => ({ productId: m.product_id, delta: Number(m.quantity_delta), reason: m.reason || "",
       at: m.created_at }));
     if (dashboardFallback) {
@@ -209,17 +215,29 @@ export async function POST(request: Request) {
       const profiles = await dbRequest<Array<{ id: string }>>(`/rest/v1/jvg_tax_profiles?tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}&id=${filterEq(String(row.tax_profile_id))}&document_type=eq.nfe&select=id&limit=1`);
       if (!profiles.length) throw new JvgBackendError("Perfil fiscal não pertence a esta empresa.", 400);
     }
+    const save = async (body: Record<string, unknown>, id?: string) => {
+      if (id) {
+        const update = { ...body };
+        delete update.tenant_id;
+        delete update.company_id;
+        await dbRequest(`/rest/v1/${table}?id=${filterEq(id)}&tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`, {
+          method: "PATCH", body: JSON.stringify({ ...update, updated_at: new Date().toISOString() }),
+        });
+        return id;
+      }
+      const created = await dbRequest<Array<{ id: string }>>(`/rest/v1/${table}`, { method: "POST", body: JSON.stringify(body) });
+      return created[0]?.id;
+    };
+    const id = data.id ? validUuid(data.id) : undefined;
     let savedId: string | undefined;
-    if (data.id) {
-      const id = validUuid(data.id);
-      savedId = id;
-      const { tenant_id: _tenantId, company_id: _companyId, ...update } = row;
-      await dbRequest(`/rest/v1/${table}?id=${filterEq(id)}&tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`, {
-        method: "PATCH", body: JSON.stringify({ ...update, updated_at: new Date().toISOString() }),
-      });
-    } else {
-      const created = await dbRequest<Array<{ id: string }>>(`/rest/v1/${table}`, { method: "POST", body: JSON.stringify(row) });
-      savedId = created[0]?.id;
+    try { savedId = await save(row, id); }
+    catch (error) {
+      // A ausência da migration não interrompe cadastros sem esse campo opcional.
+      const nationalTaxationCode = (row as Record<string, unknown>).national_taxation_code;
+      if (kind !== "service" || nationalTaxationCode !== null) throw error;
+      const legacyRow = { ...row };
+      delete (legacyRow as Record<string, unknown>).national_taxation_code;
+      savedId = await save(legacyRow, id);
     }
     return apiJson({ ok: true, id: savedId });
   } catch (error) { return safeError(error); }

@@ -122,3 +122,11 @@ No painel privado, abra **Tabela CFOP** na barra lateral ou **Notas fiscais → 
 - O cadastro de produtos possui o campo opcional `default_cfop`. Só são aceitos códigos presentes no catálogo oficial. O painel oferece sugestões com os nomes personalizados da empresa.
 - Ao selecionar um produto no rascunho de NF-e, o CFOP sugerido preenche inicialmente o campo, mas o operador pode alterá-lo. Código inexistente na tabela oficial gera pendência no rascunho; nenhum CFOP é tratado como classificação tributária definitiva.
 - Aplicar a migração `supabase/migrations/20261106_jvg_etapa11_cfop_sugerido_produto.sql` antes do deploy que usa a coluna. A transmissão fiscal permanece desabilitada.
+
+### Focus webhook and NFS-e Nacional
+
+- Configure `JVG_FOCUS_WEBHOOK_SECRET` as a server-only random secret with at least 32 characters. `JVG_FOCUS_WEBHOOK_HEADER` is optional and defaults to `X-JVG-Focus-Webhook`.
+- When registering hooks with Focus, set the `authorization` value to the same secret and `authorization_header` to the configured header name. Register separate events for `nfe` and `nfsen`; registration is manual.
+- The callback only updates fiscal documents stored in homologation. Its SQL migration adds atomic event deduplication and the service ISS code. Apply `supabase/migrations/20261112_jvg_fiscal_webhook_nfse.sql` manually before deploying the callback.
+- Focus National NFS-e uses `POST /v2/nfsen?ref=...`; this client is pinned to the homologation host. The mapper accepts service catalog and service order snapshots, but requires accountant-reviewed NFS-e classifications, DPS number/series, service municipality, and National ISS code. It does not infer tax choices or include IBS/CBS fields.
+- This is a mapper/client foundation; no NFS-e screen or transmission route is wired yet. The connected Supabase project did not expose the migration columns/RPC when checked, so the webhook cannot process callbacks there yet. Production emission remains unavailable from this integration.
