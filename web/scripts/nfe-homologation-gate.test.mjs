@@ -47,14 +47,15 @@ test('preparação pode passar quando a regra revisada contém todos os campos d
   assert.equal('taxPreview' in gate.focusRequestPreview, false);
 });
 
-test('estimativas fiscais nunca substituem valores exigidos pela regra Focus', () => {
+test('Simples Nacional omite IBS/CBS e estimativas nao substituem valores exigidos pela regra Focus', () => {
   const draft = completeDraft();
   draft.items[0].taxRules.focusFields = {};
   draft.taxPreview = { provisional: false, validForEmission: true, calculationMethod: 'approved_rule_engine', lines: [{ tax: 'IBS', estimateCents: 500 }] };
   const gate = reviewNfeHomologationGate(draft);
-  assert.equal(gate.ready, false);
-  assert.ok(gate.issues.some(issue => issue.includes('IBS/CBS')));
+  assert.equal(gate.ready, true);
+  assert.equal(gate.issues.some(issue => issue.includes('IBS/CBS')), false);
   assert.equal('taxPreview' in gate.focusRequestPreview, false);
+  assert.equal('ibs_cbs_situacao_tributaria' in gate.focusRequestPreview.items[0], false);
 });
 
 test('pendências fiscais, perfil não revisado ou regra de outra operação bloqueiam', () => {
