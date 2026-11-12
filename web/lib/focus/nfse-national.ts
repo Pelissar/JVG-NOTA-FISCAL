@@ -10,6 +10,8 @@ export type NfseNationalSources = {
   customer: Record<string, unknown>;
   service: Record<string, unknown>;
   serviceOrder: Record<string, unknown>;
+  /** Confirmed commercial amount for this invoice; OS estimates are not reused implicitly. */
+  serviceValue?: number | string;
   approvedTaxRules: {
     reviewStatus: string;
     codigoOpcaoSimplesNacional?: string | number;
@@ -101,8 +103,8 @@ export function buildFocusNfseNationalPayload(source: NfseNationalSources): Focu
   const customerName = str(customer.legal_name || customer.display_name, 150);
   const serviceName = str(service.name, 160);
   const serviceDescription = str(service.description, 255);
-  const osNumber = optionalNumber(typeof serviceOrder.os_number === "number" ? serviceOrder.os_number : String(serviceOrder.os_number ?? ""));
-  const serviceValue = Number(serviceOrder.estimated_value);
+  const serviceValue = source.serviceValue === undefined || source.serviceValue === null || source.serviceValue === ""
+    ? Number.NaN : Number(source.serviceValue);
   const codeIss = digits(service.national_taxation_code);
   const nbs = digits(service.nbs);
   const reviewed = source.approvedTaxRules.reviewStatus === "reviewed";
@@ -116,6 +118,7 @@ export function buildFocusNfseNationalPayload(source: NfseNationalSources): Focu
   addMissing(finalidadeEmissao !== "0", "Finalidade da emissão precisa ser confirmada como NFS-e regular (código 0).");
   addMissing(!["0", "1"].includes(consumidorFinal), "Informe explicitamente se o serviço é para uso ou consumo pessoal (consumidor final).");
   addMissing(!["0", "1"].includes(indicadorDestinatario), "Informe explicitamente se o destinatário é o próprio tomador.");
+  addMissing(indicadorDestinatario === "1", "Esta etapa só prepara NFS-e quando o destinatário é o próprio tomador; cadastre os dados do destinatário diferente antes de usar essa situação.");
   addMissing(!validDpsDateTime(issueDate), "Data e hora de emissão da DPS ausentes ou inválidas.");
   addMissing(!validDateOnly(competencyDate), "Data de competência do serviço ausente ou inválida.");
   addMissing(!/^\d{7}$/.test(issuerCityCode), "Código IBGE de 7 dígitos do município emissor ausente no endereço da empresa.");
@@ -129,7 +132,7 @@ export function buildFocusNfseNationalPayload(source: NfseNationalSources): Focu
   addMissing(!/^\d{7}$/.test(serviceCityCode), "Código IBGE do local da prestação precisa ser informado; a OS não presume o município do serviço.");
   addMissing(!/^\d{6}$/.test(codeIss), "Código nacional ISS de 6 dígitos ausente no serviço; o subitem LC 116 não é convertido automaticamente.");
   addMissing(!serviceName, "Serviço do catálogo não foi informado.");
-  addMissing(!Number.isFinite(serviceValue) || serviceValue <= 0, "A OS precisa ter valor aprovado maior que zero.");
+  addMissing(!Number.isFinite(serviceValue) || serviceValue <= 0, "Informe o valor final do serviço aprovado para faturamento.");
   addMissing(serviceOrder.status !== "delivered", "A OS precisa estar entregue antes de preparar a NFS-e.");
   addMissing(serviceOrder.customer_approved !== true, "A aprovação do cliente para a OS está pendente.");
   addMissing(Boolean(serviceOrder.customer_id) && String(serviceOrder.customer_id) !== String(customer.id), "O tomador informado não corresponde ao cliente da OS.");
@@ -141,7 +144,7 @@ export function buildFocusNfseNationalPayload(source: NfseNationalSources): Focu
   if (number && Number(number) >= 1) set("numero_dps", Number(number));
   if (finalidadeEmissao === "0") set("finalidade_emissao", Number(finalidadeEmissao));
   if (["0", "1"].includes(consumidorFinal)) set("consumidor_final", Number(consumidorFinal));
-  if (["0", "1"].includes(indicadorDestinatario)) set("indicador_destinatario", Number(indicadorDestinatario));
+  if (indicadorDestinatario === "0") set("indicador_destinatario", 0);
   set("data_emissao", issueDate);
   set("data_competencia", competencyDate);
   set("emitente_dps", "1"); // Focus documents 1 as the default: service provider.
@@ -168,11 +171,10 @@ export function buildFocusNfseNationalPayload(source: NfseNationalSources): Focu
   set("codigo_municipio_prestacao", serviceCityCode);
   set("codigo_tributacao_nacional_iss", codeIss);
   set("codigo_nbs", /^\d{9}$/.test(nbs) ? nbs : "");
-  const description = [serviceName, serviceDescription, str(serviceOrder.diagnosis, 5000), str(serviceOrder.reported_issue, 5000)]
+  const description = [serviceName, serviceDescription]
     .filter(Boolean).join(" — ").slice(0, 1000);
   set("descricao_servico", description);
   set("valor_servico", Number.isFinite(serviceValue) && serviceValue > 0 ? Number(serviceValue.toFixed(2)) : "");
-  if (osNumber) set("pedido_compra", `OS ${osNumber}`);
   if (service.lc116) warnings.push("O subitem LC 116 fica registrado como referência e não substitui o código nacional ISS de 6 dígitos.");
   if (!nbs) warnings.push("NBS não informado no cadastro do serviço; confirme se deve constar para esta atividade.");
   else if (!/^\d{9}$/.test(nbs)) warnings.push("NBS não tem 9 dígitos e foi omitido do payload até ser corrigido no cadastro do serviço.");

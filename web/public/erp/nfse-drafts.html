@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f4f6f8"><title>Preparar NFS-e · SigmaFiscal</title>
+<link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg"><link rel="stylesheet" href="/erp/styles.css"><link rel="stylesheet" href="/erp/responsive.css"><link rel="stylesheet" href="/erp/design-system.css"><link rel="stylesheet" href="/erp/commercial-responsive.css"><link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css"><link rel="stylesheet" href="/erp/commercial-experience.css"><link rel="stylesheet" href="/erp/nfse-drafts.css">
+<script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js"></script><script defer src="/erp/nfse-drafts.js"></script></head>
+<body><div id="erpGlobalNav"></div>
+<main class="commercial-page nfse-page">
+  <header class="page-heading"><div><div class="eyebrow">FISCAL / SERVIÇOS</div><h1>Preparar NFS-e Nacional</h1><p>Monte e revise a prévia a partir de uma ordem de serviço concluída e aprovada.</p></div><div class="nfse-status-badge"><span></span>Homologação · somente rascunho</div></header>
+  <div id="nfseNotice" class="sales-notice" role="status" aria-live="polite">Carregando OS e configuração fiscal...</div>
+  <section class="nfse-safety-callout" aria-label="Limite da tela"><strong>Esta tela não transmite NFS-e.</strong><span>Os códigos e valores precisam vir da contabilidade. A prévia mostra pendências; não calcula ISS nem envia IBS/CBS.</span></section>
+
+  <section class="panel nfse-source-panel"><div class="panel-head"><div><h2>Ordem de serviço e tomador</h2><p>A NFS-e fica vinculada a uma OS entregue e aprovada pelo cliente.</p></div><a class="btn" href="/erp/service-orders.html">Voltar às ordens</a></div><div id="nfseSource" class="nfse-source-grid"><span>Carregando...</span></div><div id="nfseSetupIssues" class="nfse-setup-issues" hidden></div></section>
+
+  <section class="panel nfse-profile-panel"><div class="panel-head"><div><h2>Perfil fiscal de serviço</h2><p>Salve os códigos orientados pela contabilidade; a revisão fica registrada por perfil.</p></div><button id="nfseNewProfile" class="btn" type="button">Novo perfil</button></div>
+    <div class="nfse-form-grid nfse-profile-select-grid"><label>Perfil usado nesta prévia<select id="nfseProfile"><option value="">Selecione um perfil revisado</option></select></label><div id="nfseProfileState" class="nfse-profile-state" aria-live="polite">Nenhum perfil selecionado.</div></div>
+    <div id="nfseProfileEditor" class="nfse-profile-editor" hidden>
+      <div class="nfse-section-heading"><span>CADASTRO FISCAL</span><h3 id="nfseProfileEditorTitle">Novo perfil</h3><p>Os códigos são guardados como referência da empresa. Não há cálculo de imposto.</p></div>
+      <div class="nfse-form-grid">
+        <label>Nome do perfil<input id="nfseProfileName" maxlength="120" placeholder="Ex.: Manutenção eletrônica" autocomplete="off"></label>
+        <label>Opção do Simples Nacional<select id="nfseSimpleOption"><option value="">Selecione conforme a contabilidade</option><option value="1">1 · Não optante</option><option value="2">2 · MEI</option><option value="3">3 · ME/EPP optante</option></select></label>
+        <label>Regime especial de tributação<select id="nfseSpecialRegime"><option value="">Selecione conforme a contabilidade</option><option value="0">0 · Nenhum</option><option value="1">1 · Ato cooperado</option><option value="2">2 · Estimativa</option><option value="3">3 · Microempresa municipal</option><option value="4">4 · Notário ou registrador</option><option value="5">5 · Profissional autônomo</option><option value="6">6 · Sociedade de profissionais</option><option value="9">9 · Outros</option></select></label>
+        <label>Tributação do ISS<select id="nfseIssTaxation"><option value="">Selecione conforme a contabilidade</option><option value="1">1 · Operação tributável</option><option value="2">2 · Imunidade</option><option value="3">3 · Exportação de serviço</option><option value="4">4 · Não incidência</option></select></label>
+        <label>Regime de apuração do Simples <small>Opcional; não informado por padrão.</small><select id="nfseSimpleTaxRegime"><option value="">Sem orientação / não informado</option><option value="1">1 · Tributos federais e ISS pelo Simples</option><option value="2">2 · Tributos federais pelo Simples; ISS fora</option><option value="3">3 · Tributos federais e ISS fora do Simples</option></select></label>
+      </div>
+      <div class="nfse-profile-actions"><button id="nfseSaveProfile" class="btn primary" type="button">Salvar perfil como rascunho</button><button id="nfseCancelProfileEdit" class="btn" type="button">Fechar</button></div>
+      <div id="nfseAccountantReview" class="nfse-review-box" hidden><div><strong>Revisão contábil declarada</strong><p>Confirme somente depois de receber esses códigos da contabilidade. O ERP não verifica a identidade do contador.</p></div><label>Contador ou escritório<input id="nfseAccountantName" maxlength="120" autocomplete="off"></label><label>CRC (opcional)<input id="nfseAccountantCrc" maxlength="30" autocomplete="off"></label><label class="nfse-check"><input id="nfseReviewConfirmed" type="checkbox"> Confirmo que os códigos deste perfil foram revisados com a contabilidade.</label><button id="nfseReviewProfile" class="btn" type="button">Registrar revisão declarada</button></div>
+    </div>
+  </section>
+
+  <section class="panel nfse-dps-panel"><div class="panel-head"><div><h2>Dados da prestação</h2><p>Informe os dados reais desta prestação. O valor estimado da OS não é usado automaticamente.</p></div><span class="nfse-draft-chip">NFS-e · DPS Nacional</span></div>
+    <div class="nfse-form-grid">
+      <label>Serviço do catálogo<select id="nfseService"><option value="">Selecione o serviço realmente prestado</option></select></label>
+      <label>Código nacional de tributação do ISS<input id="nfseNationalTaxationCode" inputmode="numeric" maxlength="6" placeholder="6 dígitos conforme contador"><small id="nfseServiceCodeHint">Não convertemos automaticamente o subitem da LC 116.</small></label>
+      <label class="nfse-wide">Descrição do serviço<input id="nfseServiceDescription" maxlength="1000" placeholder="Descreva o serviço efetivamente realizado"></label>
+      <label>Valor final do serviço (R$)<input id="nfseServiceValue" type="number" min="0.01" max="999999999" step="0.01" placeholder="Informe o valor aprovado"></label>
+      <label>Código IBGE do município da prestação<input id="nfseServiceCityCode" inputmode="numeric" maxlength="7" placeholder="7 dígitos"></label>
+      <label>Série da DPS<input id="nfseSeries" inputmode="numeric" maxlength="5" placeholder="Série de homologação"></label>
+      <label>Número da DPS<input id="nfseNumber" inputmode="numeric" maxlength="15" placeholder="Número ainda não reservado"></label>
+      <label>Data e hora de emissão<input id="nfseIssueAt" type="datetime-local"></label>
+      <label>Data de competência<input id="nfseCompetence" type="date"></label>
+      <label>Finalidade da emissão<select id="nfsePurpose"><option value="">Selecione</option><option value="0">0 · NFS-e regular</option></select></label>
+      <label>Serviço para uso ou consumo pessoal?<select id="nfseConsumerFinal"><option value="">Selecione</option><option value="0">0 · Não</option><option value="1">1 · Sim</option></select></label>
+      <label>Destinatário do serviço<select id="nfseRecipientIndicator"><option value="">Selecione conforme a operação</option><option value="0">0 · É o próprio tomador</option><option value="1">1 · É outra pessoa ou estabelecimento</option></select><small>Por enquanto, a prévia só prepara o caso em que destinatário e tomador são a mesma pessoa. O caso diferente fica bloqueado até haver cadastro dos dados do destinatário.</small></label>
+    </div>
+    <div class="nfse-confirm-row"><label class="nfse-check"><input id="nfseValueConfirmed" type="checkbox"> Confirmo que este é o valor final aprovado para faturamento desta OS.</label><span>Ao salvar, o ERP guarda apenas a prévia e as pendências. Nenhuma DPS é enviada à Focus.</span></div>
+    <div class="nfse-draft-actions"><button id="nfseSaveDraft" class="btn primary" type="button" disabled>Salvar rascunho e conferir prévia</button><span id="nfseSaveState" aria-live="polite"></span></div>
+  </section>
+
+  <section id="nfsePreviewPanel" class="panel nfse-preview-panel" hidden><div class="panel-head"><div><h2>Prévia fiscal</h2><p>Campos que seriam preparados para NFS-e Nacional em homologação.</p></div><span id="nfsePreviewStatus" class="nfse-preview-status">Rascunho</span></div><div id="nfsePreviewIssues"></div><dl id="nfseMappedFields" class="nfse-mapped-fields"></dl><details class="nfse-json-details"><summary>Ver payload mapeado</summary><pre id="nfsePayloadJson"></pre></details></section>
+</main>
+</body></html>

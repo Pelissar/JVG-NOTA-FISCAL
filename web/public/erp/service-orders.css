@@ -7,6 +7,8 @@
 .service-orders-page .summary-tile{min-height:115px;align-content:center}
 .os-fiscal-note{margin:0 0 20px;padding:11px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft);color:var(--muted);font-size:11px;line-height:1.55}
 .service-orders-page .order-list-panel .commercial-table{padding:0 18px}
+.os-row-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:180px}
+.os-row-actions .btn{min-height:34px;padding:7px 9px;font-size:10px;white-space:nowrap}
 .service-orders-page table{min-width:1040px}
 .os-number{color:var(--accent-strong);font-weight:800;white-space:nowrap}
 .os-equipment{display:grid;gap:3px;min-width:130px}

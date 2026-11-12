@@ -22,6 +22,7 @@ const fixture = () => ({
     os_number: 42, customer_id: "22222222-2222-4222-8222-222222222222", status: "delivered",
     customer_approved: true, estimated_value: 250, diagnosis: "Reparo concluído", reported_issue: "Falha relatada",
   },
+  serviceValue: 250,
   approvedTaxRules: {
     reviewStatus: "reviewed", codigoOpcaoSimplesNacional: "3",
     regimeEspecialTributacao: "0", tributacaoIss: "1", regimeTributarioSimplesNacional: "1",
@@ -43,14 +44,15 @@ test("maps a reviewed OS to the National DPS fields without guessing from LC 116
   assert.equal(result.payload.finalidade_emissao, 0);
   assert.equal(result.payload.consumidor_final, 0);
   assert.equal(result.payload.indicador_destinatario, 0);
-  assert.equal(result.payload.pedido_compra, "OS 42");
+  assert.equal("pedido_compra" in result.payload, false);
   assert.equal(result.payload.cnpj_prestador, "12345678000195");
   assert.equal(result.payload.cnpj_tomador, "98765432000198");
   assert.equal(result.payload.codigo_municipio_emissora, 3502804);
   assert.equal(result.payload.codigo_municipio_prestador, 3502804);
   assert.equal(result.payload.codigo_municipio_tomador, 3502804);
   assert.equal(result.payload.codigo_municipio_prestacao, "3502804");
-  assert.match(String(result.payload.descricao_servico), /Reparo concluído/);
+  assert.match(String(result.payload.descricao_servico), /Serviço técnico/);
+  assert.doesNotMatch(String(result.payload.descricao_servico), /Reparo concluído|Falha relatada/);
   assert.equal(Object.keys(result.payload).some(key => /^(ibs|cbs)_/i.test(key)), false);
   assert.ok(result.warnings.some(warning => warning.includes("LC 116")));
 });
@@ -83,4 +85,20 @@ test("requires the OS to match the customer and be delivered and approved", () =
   assert.ok(result.issues.some(issue => issue.includes("entregue")));
   assert.ok(result.issues.some(issue => issue.includes("aprovação do cliente")));
   assert.ok(result.issues.some(issue => issue.includes("não corresponde")));
+});
+
+test("does not reuse the OS estimate as the invoice service value", () => {
+  const source = fixture();
+  delete source.serviceValue;
+  const result = buildFocusNfseNationalPayload(source);
+  assert.ok(result.issues.some(issue => issue.includes("valor final do serviço")));
+  assert.equal("valor_servico" in result.payload, false);
+});
+
+test("blocks a different service recipient until recipient data is supported", () => {
+  const source = fixture();
+  source.dps.indicadorDestinatario = "1";
+  const result = buildFocusNfseNationalPayload(source);
+  assert.ok(result.issues.some(issue => issue.includes("destinatário diferente")));
+  assert.equal("indicador_destinatario" in result.payload, false);
 });
