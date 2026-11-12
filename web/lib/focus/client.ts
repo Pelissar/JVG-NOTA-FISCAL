@@ -90,6 +90,34 @@ export function queryFocusNfeHomologacao(
   }, complete ? "?completa=1" : "");
 }
 
+/** Inutiliza numeração somente no endpoint fixo de homologação da Focus. */
+export async function inutilizeFocusNfeNumberHomologacao(
+  token: string,
+  payload: { cnpj: string; serie: string; numero_inicial: number; numero_final: number; justificativa: string },
+): Promise<FocusNfeApiResult> {
+  const normalizedToken = token.trim();
+  if (!normalizedToken) throw new Error("Token Focus não configurado.");
+  const response = await fetch(FOCUS_HOMOLOGACAO + "/v2/nfe/inutilizacao", {
+    method: "POST",
+    headers: {
+      Authorization: focusAuthorization(normalizedToken),
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+    signal: AbortSignal.timeout(15000),
+  });
+  const raw = await response.text();
+  let body: Record<string, unknown> = {};
+  try {
+    const parsed: unknown = raw ? JSON.parse(raw) : {};
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) body = parsed as Record<string, unknown>;
+  } catch { /* Não expor resposta HTML ou texto arbitrário do provedor. */ }
+  if (!response.ok) throw new FocusNfeApiError(response.status, body);
+  return { httpStatus: response.status, body };
+}
+
 /**
  * Verifica um token de homologacao sem emitir ou alterar documentos fiscais.
  * Segundo a Focus, GET /v2/nfe/{ref} retorna 401 sem autenticacao e 404 se

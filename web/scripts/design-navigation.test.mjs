@@ -7,7 +7,7 @@ const js=read('../public/erp/app.js');
 const css=read('../public/erp/design-system.css');
 const matches=(text,re)=>[...text.matchAll(re)].length;
 test('navegação sem duplicatas nem links fiscais falsamente operacionais',()=>{
- for(const href of ['/erp/quotes.html','/erp/orders.html','/erp/sales.html','/erp/nfe-drafts.html','/erp/cfop.html','/erp/tax-profiles.html'])
+ for(const href of ['/erp/quotes.html','/erp/orders.html','/erp/sales.html','/erp/nfe-drafts.html','/erp/nfe-issued.html','/erp/cfop.html','/erp/tax-profiles.html'])
   assert.equal(matches(html,new RegExp('href="'+href.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'"','g')),1,href);
  assert.doesNotMatch(html,/Emitir NF-e|NFC-e \(65\) · Em preparação|NFS-e · Em preparação/);
  assert.doesNotMatch(html,/data-view="finance"|data-view="transport"/);
@@ -75,7 +75,7 @@ test('tema unificado preserva contraste, acessibilidade e navegação responsiva
 });
 
 test('todas as páginas comerciais e fiscais carregam tema e favicon compartilhados',()=>{
- const pages=['quotes','orders','sales','cfop','nfe-drafts','tax-profiles'];
+ const pages=['quotes','orders','sales','cfop','nfe-drafts','nfe-issued','tax-profiles'];
  for(const page of pages){
   const source=read('../public/erp/'+page+'.html');
   assert.match(source,/\/erp\/unified-pages\.css/);

@@ -12,7 +12,7 @@
     "test:nfe": "node --experimental-strip-types --test scripts/nfe-draft.test.mjs",
     "test:cfop": "node --test scripts/cfop.test.mjs",
     "test:cnpj-lookup": "node --experimental-strip-types --test scripts/cnpj-lookup.test.mjs",
-    "test:erp": "node --experimental-strip-types --test scripts/erp-data.test.mjs scripts/sales-contract.test.mjs scripts/records-permissions.test.mjs scripts/party-registration.test.mjs scripts/cpf-validation.test.mjs scripts/quotes-contract.test.mjs scripts/orders-contract.test.mjs scripts/design-navigation.test.mjs scripts/fiscal-release-gate.test.mjs scripts/fiscal-company.test.mjs scripts/inbound-nfe.test.mjs scripts/tax-profiles.test.mjs scripts/nfe-preflight.test.mjs scripts/nfe-document-review.test.mjs scripts/nfe-tax-suggestion.test.mjs scripts/nfe-inspect.test.mjs scripts/nfe-homologation-gate.test.mjs scripts/nfe-homologation-transmission.test.mjs scripts/saas-isolation.test.mjs scripts/cnpj-lookup.test.mjs",
+    "test:erp": "node --experimental-strip-types --test scripts/erp-data.test.mjs scripts/sales-contract.test.mjs scripts/records-permissions.test.mjs scripts/party-registration.test.mjs scripts/cpf-validation.test.mjs scripts/quotes-contract.test.mjs scripts/orders-contract.test.mjs scripts/design-navigation.test.mjs scripts/fiscal-release-gate.test.mjs scripts/fiscal-company.test.mjs scripts/inbound-nfe.test.mjs scripts/nfe-issued.test.mjs scripts/tax-profiles.test.mjs scripts/nfe-preflight.test.mjs scripts/nfe-document-review.test.mjs scripts/nfe-tax-suggestion.test.mjs scripts/nfe-inspect.test.mjs scripts/nfe-homologation-gate.test.mjs scripts/nfe-homologation-transmission.test.mjs scripts/saas-isolation.test.mjs scripts/cnpj-lookup.test.mjs",
     "start": "next start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
@@ -21,7 +21,8 @@
     "test:preflight": "node --experimental-strip-types --test scripts/nfe-preflight.test.mjs",
     "test:document-review": "node --experimental-strip-types --test scripts/nfe-document-review.test.mjs",
     "test:parties": "node --test scripts/party-registration.test.mjs",
-    "test:inbound": "node --experimental-strip-types --test scripts/inbound-nfe.test.mjs"
+    "test:inbound": "node --experimental-strip-types --test scripts/inbound-nfe.test.mjs",
+    "test:nfe-issued": "node --experimental-strip-types --test scripts/nfe-issued.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
