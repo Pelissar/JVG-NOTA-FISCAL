@@ -410,6 +410,141 @@
     target.append(panel);
   }
 
+  function focusFieldLabel(key) {
+    var labels = {
+      codigo_produto: 'SKU', codigo_ncm: 'NCM', cfop: 'CFOP', codigo_barras_comercial: 'GTIN',
+      unidade_comercial: 'Unidade', quantidade_comercial: 'Quantidade',
+      valor_unitario_comercial: 'Valor unitário', valor_bruto: 'Valor bruto',
+      icms_origem: 'Origem da mercadoria', icms_situacao_tributaria: 'CSOSN / ICMS',
+      pis_situacao_tributaria: 'CST do PIS', cofins_situacao_tributaria: 'CST da Cofins',
+      ibs_cbs_situacao_tributaria: 'CST IBS/CBS',
+      ibs_cbs_classificacao_tributaria: 'Classificação IBS/CBS (cClassTrib)',
+    };
+    if (labels[key]) return labels[key];
+    var upper = { icms: 'ICMS', ibs: 'IBS', cbs: 'CBS', pis: 'PIS', cofins: 'Cofins', st: 'ST', uf: 'estadual', mun: 'municipal' };
+    return key.split('_').map(function (word) {
+      if (upper[word]) return upper[word];
+      var labels = {
+        aliquota: 'alíquota', base: 'base', calculo: 'cálculo', modalidade: 'modalidade',
+        reducao: 'redução', margem: 'margem', valor: 'valor', adicionado: 'adicionado',
+        credito: 'crédito', simples: 'Simples', retido: 'retido', substituto: 'substituto',
+        quantidade: 'quantidade', vendida: 'vendida', porcentual: 'percentual',
+      };
+      return labels[word] || word;
+    }).join(' ');
+  }
+
+  function focusFieldValue(key, value) {
+    if (value === undefined || value === null || value === '') return 'Não mapeado';
+    if (typeof value !== 'number' || !Number.isFinite(value)) return String(value);
+    if (/aliquota/.test(key)) return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 6 }).format(value) + ' %';
+    if (/valor|base_calculo/.test(key)) return money.format(value);
+    if (key === 'quantidade_comercial') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 4 }).format(value);
+    return String(value);
+  }
+
+  function appendFocusField(target, key, row) {
+    var missing = !Object.prototype.hasOwnProperty.call(row, key) || row[key] === null || row[key] === '';
+    var field = document.createElement('div');
+    field.className = 'focus-preview-field' + (missing ? ' is-missing' : '');
+    var label = document.createElement('span');
+    label.textContent = focusFieldLabel(key);
+    var value = document.createElement('strong');
+    value.textContent = focusFieldValue(key, missing ? undefined : row[key]);
+    field.append(label, value);
+    target.append(field);
+  }
+
+  function renderFocusItemPreview(target, draft, focusReview) {
+    var requestPreview = focusReview.requestPreview || {};
+    var mappedItems = Array.isArray(requestPreview.items) ? requestPreview.items : [];
+    var sourceItems = Array.isArray(draft.items) ? draft.items : [];
+    if (!sourceItems.length) return;
+
+    var section = document.createElement('section');
+    section.className = 'focus-item-preview';
+    var heading = document.createElement('div');
+    heading.className = 'focus-item-preview-heading';
+    var title = document.createElement('h4');
+    title.textContent = 'Prévia fiscal por item';
+    var note = document.createElement('p');
+    note.textContent = 'Campos que o servidor conseguiu mapear para a Focus. O ERP não calcula impostos nem presume códigos; confira as pendências e a aprovação contábil antes de qualquer envio.';
+    heading.append(title, note);
+    section.append(heading);
+
+    var fiscalKeys = [
+      'cfop', 'icms_origem', 'icms_situacao_tributaria', 'pis_situacao_tributaria',
+      'cofins_situacao_tributaria', 'ibs_cbs_situacao_tributaria',
+      'ibs_cbs_classificacao_tributaria',
+    ];
+    var commercialKeys = [
+      'codigo_produto', 'codigo_ncm', 'codigo_barras_comercial', 'unidade_comercial',
+      'quantidade_comercial', 'valor_unitario_comercial', 'valor_bruto',
+    ];
+    var knownKeys = commercialKeys.concat(fiscalKeys, ['numero_item', 'descricao']);
+    var checks = Array.isArray(focusReview.checks) ? focusReview.checks : [];
+    var pending = Array.isArray(draft.pending) ? draft.pending : [];
+
+    sourceItems.forEach(function (item, index) {
+      var row = mappedItems[index] && typeof mappedItems[index] === 'object' ? mappedItems[index] : {};
+      var card = document.createElement('article');
+      card.className = 'focus-item-card';
+      var cardHeading = document.createElement('div');
+      cardHeading.className = 'focus-item-card-heading';
+      var name = document.createElement('strong');
+      name.textContent = (index + 1) + '. ' + String(item.description || row.descricao || 'Produto');
+      var profile = item.taxProfile && typeof item.taxProfile === 'object' ? item.taxProfile : {};
+      var state = document.createElement('span');
+      state.className = profile.reviewStatus === 'reviewed' && profile.accountantReviewDeclared === true
+        ? 'focus-item-status is-review-declared' : 'focus-item-status is-review-pending';
+      state.textContent = profile.reviewStatus === 'reviewed' && profile.accountantReviewDeclared === true
+        ? 'Revisão registrada no ERP' : 'Revisão contábil pendente';
+      cardHeading.append(name, state);
+      card.append(cardHeading);
+
+      var commercialHeading = document.createElement('h5');
+      commercialHeading.textContent = 'Produto e valores comerciais';
+      var commercial = document.createElement('div');
+      commercial.className = 'focus-item-field-grid';
+      commercialKeys.forEach(function (key) { appendFocusField(commercial, key, row); });
+      var taxHeading = document.createElement('h5');
+      taxHeading.textContent = 'Classificações fiscais do item';
+      var classifications = document.createElement('div');
+      classifications.className = 'focus-item-field-grid focus-item-tax-codes';
+      fiscalKeys.forEach(function (key) { appendFocusField(classifications, key, row); });
+      card.append(commercialHeading, commercial, taxHeading, classifications);
+
+      var additionalKeys = Object.keys(row).filter(function (key) {
+        return !knownKeys.includes(key) && /^(icms|pis|cofins|ibs|cbs)_/.test(key);
+      });
+      if (additionalKeys.length) {
+        var valuesHeading = document.createElement('h5');
+        valuesHeading.textContent = 'Valores fiscais mapeados';
+        var values = document.createElement('div');
+        values.className = 'focus-item-field-grid';
+        additionalKeys.forEach(function (key) { appendFocusField(values, key, row); });
+        card.append(valuesHeading, values);
+      }
+
+      var itemMarker = new RegExp('\\bItem\\s+' + (index + 1) + '\\b');
+      var itemIssues = checks.filter(function (check) {
+        return !check.ok && itemMarker.test(String(check.detail || ''));
+      }).map(function (check) { return check.label + ': ' + check.detail; });
+      itemIssues = itemIssues.concat(pending.filter(function (issue) { return itemMarker.test(String(issue)); }));
+      itemIssues = Array.from(new Set(itemIssues));
+      if (itemIssues.length) {
+        var issuesHeading = document.createElement('h5');
+        issuesHeading.textContent = 'Pendências deste item';
+        var issues = document.createElement('ul');
+        itemIssues.forEach(function (issue) { appendLine(issues, 'li', issue); });
+        card.append(issuesHeading, issues);
+      }
+      section.append(card);
+    });
+
+    target.append(section);
+  }
+
   async function inspectDraft(id) {
     var target = document.getElementById('draftDetails');
     target.replaceChildren();
@@ -493,22 +628,14 @@
       if (focusReview.requestPreview && typeof focusReview.requestPreview === 'object') {
         var previewDetails = document.createElement('details');
         var previewSummary = document.createElement('summary');
-        previewSummary.textContent = 'Ver dados mapeados para a Focus';
+        previewSummary.textContent = 'Abrir JSON técnico mapeado para a Focus';
         var previewJson = document.createElement('pre');
         previewJson.className = 'focus-json-preview';
         previewJson.textContent = JSON.stringify(focusReview.requestPreview, null, 2);
         previewDetails.append(previewSummary, previewJson);
         target.append(previewDetails);
       }
-      renderHomologationActions(target, draft);
-      appendLine(target, 'h4', 'Itens');
-      var itemList = document.createElement('ul');
-      (Array.isArray(draft.items) ? draft.items : []).forEach(function (item, i) {
-        appendLine(itemList, 'li', (i + 1) + '. ' + (item.description || 'Produto') +
-          ' · CFOP ' + (item.cfop || 'pendente') + ' · CSOSN ' + (item.csosn || 'pendente') +
-          ' · ' + money.format(Number(item.subtotalCents || 0) / 100));
-      });
-      target.append(itemList);
+      renderFocusItemPreview(target, draft, focusReview);
       appendLine(target, 'h4', 'Pendências de conferência');
       var pending = Array.isArray(draft.pending) ? draft.pending : [];
       if (pending.length) {
@@ -521,6 +648,8 @@
       appendLine(target, 'h4', 'Apuração tributária');
       appendLine(target, 'p', 'Não realizada. O ERP ainda não calcula bases, alíquotas ou valores de impostos. A prévia mostra os campos da Focus já mapeados e os dados que dependem da contabilidade.');
       appendLine(target, 'p', 'A integração não calcula nem presume tributos. O envio de homologação depende da regra aprovada por operação e da conferência de todos os campos exigidos pela Focus.');
+      appendLine(target, 'p', '“Revisão registrada no ERP” indica apenas uma declaração salva no sistema; não valida a qualificação do contador nem substitui a aprovação fiscal da operação.');
+      renderHomologationActions(target, draft);
       target.hidden = false;
       target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } catch (error) {
