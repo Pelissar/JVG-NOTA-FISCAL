@@ -138,6 +138,28 @@
 
     var general = sections.general;
     var generalGrid = general.querySelector('.field-grid') || general;
+    var natureSearch = makeField('Buscar natureza por CFOP ou descri\u00e7\u00e3o', 'natureCfopSearch', 'search', {
+      list: 'natureCfopOptions', maxlength: '180', autocomplete: 'off',
+      placeholder: 'Ex.: 5102, venda de mercadoria',
+      'aria-describedby': 'natureCfopHint'
+    });
+    natureSearch.wrapper.id = 'natureCfopSearchField';
+    var natureHint = document.createElement('small');
+    natureHint.id = 'natureCfopHint';
+    natureHint.textContent = 'Cat\u00e1logo oficial e apelido da empresa, se houver. Ao escolher, o CFOP vira sugest\u00e3o para os itens; confirme cada um com a contabilidade.';
+    natureSearch.wrapper.append(natureHint);
+    var natureOptions = document.createElement('datalist');
+    natureOptions.id = 'natureCfopOptions';
+    var natureField = general.querySelector('[name="nature"]');
+    if (natureField && natureField.closest('.field')) {
+      natureField.closest('.field').insertAdjacentElement('afterend', natureSearch.wrapper);
+    } else {
+      generalGrid.append(natureSearch.wrapper);
+    }
+    general.append(natureOptions);
+    natureSearch.input.addEventListener('change', function () {
+      if (typeof window.jvgNfeApplyNatureCfop === 'function') window.jvgNfeApplyNatureCfop(natureSearch.input.value);
+    });
     var cfop = makeField('CFOP da nota (resumo dos itens)', 'headerCfop', 'text', { readonly: 'readonly', placeholder: 'Definido por item' });
     cfop.wrapper.id = 'headerCfopField';
     cfop.input.id = 'headerCfopSummary';

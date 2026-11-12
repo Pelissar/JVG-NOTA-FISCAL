@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var state = { products: [], clients: [], taxProfiles: [], issuerState: '', drafts: [], homologationSetup: null, ready: false, sourceOrderId: null, sourceOrderNumber: '' };
+  var state = { products: [], clients: [], taxProfiles: [], issuerState: '', drafts: [], homologationSetup: null, ready: false, sourceOrderId: null, sourceOrderNumber: '', natureCfopSuggestion: '' };
   var idempotencyKey = null;
   var status = document.getElementById('status');
   var form = document.getElementById('draftForm');
@@ -195,14 +195,18 @@
 
     var selected = taxRuleFor(product, document.getElementById('recipientId').value);
     var rule = selected.rule;
-    var suggestedCfop = rule && rule.cfop ? String(rule.cfop) :
-      selected.operation ? '' : String(product.defaultCfop || '');
+    var natureCfop = String(state.natureCfopSuggestion || '');
+    var suggestedCfop = natureCfop || (rule && rule.cfop ? String(rule.cfop) :
+      selected.operation ? '' : String(product.defaultCfop || ''));
     var suggestedCsosn = rule && rule.csosn ? String(rule.csosn) : '';
     if (row.dataset.cfopTouched !== 'true') cfop.value = suggestedCfop;
     if (row.dataset.csosnTouched !== 'true') csosn.value = suggestedCsosn;
     renderProductFiscalFacts(row, product, selected);
 
-    if (rule && selected.profile) {
+    if (natureCfop) {
+      note.textContent = 'Natureza selecionada: CFOP ' + natureCfop +
+        ' sugerido para este item. A regra tribut\u00e1ria e o CSOSN precisam continuar conferidos por produto e opera\u00e7\u00e3o.';
+    } else if (rule && selected.profile) {
       var reviewLabel = selected.profile.review_status === 'reviewed'
         ? 'declaração de revisão registrada; confira a orientação contábil'
         : 'rascunho ainda sem revisão contábil';
@@ -220,6 +224,30 @@
     }
   }
 
+  window.jvgNfeApplyNatureCfop = function (selection) {
+    var query = String(selection || '').trim();
+    var match = query.match(/^(\d{4})\s*[-\u00b7\u2014]/);
+    state.natureCfopSuggestion = match ? match[1] : '';
+    if (match) {
+      var label = query.slice(match[0].length).trim();
+      var nature = document.querySelector('[name="nature"]');
+      if (nature && label) nature.value = label.slice(0, 60);
+      Array.from(items.querySelectorAll('.item-row')).forEach(function (row) {
+        var cfop = row.querySelector('.cfop');
+        if (row.dataset.cfopTouched !== 'true') cfop.value = state.natureCfopSuggestion;
+        var product = state.products.find(function (entry) { return entry.id === row.querySelector('.product').value; });
+        if (product) updateTaxSuggestion(row, product, false);
+      });
+    } else {
+      Array.from(items.querySelectorAll('.item-row')).forEach(function (row) {
+        var product = state.products.find(function (entry) { return entry.id === row.querySelector('.product').value; });
+        if (product) updateTaxSuggestion(row, product, false);
+        else if (row.dataset.cfopTouched !== 'true') row.querySelector('.cfop').value = '';
+      });
+    }
+    if (typeof window.jvgNfeWizardRefresh === 'function') window.jvgNfeWizardRefresh();
+  };
+
   function renderProductFiscalFacts(row, product, selected) {
     var target = row.querySelector('.product-fiscal-facts');
     if (!target) return;
@@ -228,7 +256,7 @@
       ['NCM', product && product.ncm], ['CEST', product && product.cest],
       ['Origem', product && product.origin],
       ['Perfil tributário', selected && selected.profile && selected.profile.name],
-      ['CFOP sugerido', selected && selected.rule && selected.rule.cfop],
+      ['CFOP do item', row.querySelector('.cfop').value || (selected && selected.rule && selected.rule.cfop)],
       ['CSOSN sugerido', selected && selected.rule && selected.rule.csosn],
     ];
     facts.forEach(function (fact) {
@@ -817,6 +845,16 @@
         var options = document.getElementById('cfopOptions');
         (cfops.records || []).forEach(function (record) {
           options.append(option(record.code, record.customLabel || record.title));
+        });
+        var natureOptions = document.getElementById('natureCfopOptions');
+        (cfops.records || []).filter(function (record) {
+          return /^[567]/.test(String(record.code || '')) &&
+            (!record.flags || record.flags.indNFe !== 0);
+        }).sort(function (left, right) {
+          return Number(right.code) - Number(left.code);
+        }).forEach(function (record) {
+          var description = String(record.customLabel || record.title || '').trim().slice(0, 60);
+          if (description && natureOptions) natureOptions.append(option(record.code + ' - ' + description, record.title || description));
         });
       } catch { /* campo livre continua disponível */ }
       document.getElementById('recipientId').addEventListener('change', updateItemTaxSuggestions);
