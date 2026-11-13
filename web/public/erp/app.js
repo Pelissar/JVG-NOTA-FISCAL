@@ -36,7 +36,7 @@
   function stat(label,value,icon,color,foot){return '<article class="stat-card"><div class="stat-top"><span>'+h(label)+'</span><div class="stat-icon '+(color||'')+'">'+ico(icon)+'</div></div><div class="stat-value">'+h(value)+'</div><div class="stat-foot">'+h(foot)+'</div></article>';}
   function tableShell(searchPlaceholder,body,count,type){return '<section class="table-panel"><div class="table-toolbar"><label class="toolbar-search">'+ico('search')+'<input data-search-input placeholder="'+h(searchPlaceholder)+'" value="'+h(query)+'" aria-label="Filtrar registros"></label><div class="toolbar-controls"><select class="filter-select" data-filter aria-label="Filtrar situação"><option value="all" '+(filter==='all'?'selected':'')+'>Todos os status</option><option value="active" '+(filter==='active'?'selected':'')+'>Ativos</option><option value="inactive" '+(filter==='inactive'?'selected':'')+'>Inativos</option></select><button class="btn ghost" data-action="export-'+type+'">'+ico('download')+' Exportar CSV</button></div></div>'+body+'<div class="table-summary"><span>'+count+' registro(s) exibido(s)</span><span>'+(cloud.status==='ready'?'Dados reais · Empresa isolada':'Aguardando conexão · Sem dados de exemplo')+'</span></div></section>';}
   function empty(icon,title,detail,action,actionText){return '<div class="empty-state"><div class="empty-icon">'+ico(icon)+'</div><h3>'+h(title)+'</h3><p>'+h(detail)+'</p>'+(action?btn(actionText,action,true):'')+'</div>';}
-  function rowActions(kind,recordId){return '<div class="table-actions"><button class="icon-btn" title="Editar" data-action="edit-'+kind+'" data-id="'+h(recordId)+'">'+ico('edit')+'</button><button class="icon-btn" title="Excluir" data-action="remove-'+kind+'" data-id="'+h(recordId)+'">'+ico('trash')+'</button></div>';}
+  function rowActions(kind,recordId){return '<div class="table-actions"><button class="icon-btn" title="Editar" data-action="edit-'+kind+'" data-id="'+h(recordId)+'">'+ico('edit')+'</button><button class="icon-btn" title="Inativar cadastro" aria-label="Inativar cadastro" data-action="remove-'+kind+'" data-id="'+h(recordId)+'">'+ico('trash')+'</button></div>';}
   function matches(row,keys){var hay=keys.map(function(k){return String(row[k]||'');}).join(' ').toLowerCase();return hay.indexOf(query.toLowerCase())!==-1 &&(filter==='all'||(filter==='active'?row.active:!row.active));}
   function dashboard(){
     var summary=state.dashboard;
@@ -461,8 +461,8 @@
     if(cloud.status!=='ready'){toast('Operação indisponível sem conexão com o banco.','error');return;}
     var list=state[kind+'s'],p=list&&list.find(function(x){return x.id===recordId;});if(!p)return;
     var name=p.name||p.sku||p.code;
-    if(!confirm('Inativar "'+name+'" no Supabase? O registro será preservado para auditoria.'))return;
-    try{await callApi('/api/records',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:kind,id:recordId})});await refreshCloud(scopeForView(view),true);toast('Cadastro inativado no banco.');}
+    if(!confirm('Remover "'+name+'" da lista ativa? O cadastro ficará inativo e será preservado no histórico da empresa.'))return;
+    try{await callApi('/api/records',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:kind,id:recordId})});filter='active';query='';await refreshCloud(scopeForView(view),true);toast('Cadastro removido da lista ativa. Consulte Inativos para ver o histórico.');}
     catch(error){toast(error.message,'error');}
   }
   function adjustStock(recordId){

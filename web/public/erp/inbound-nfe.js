@@ -340,6 +340,7 @@
     if(cestInput&&cestInput.value.trim()&&!/^\d{7}$/.test(cestInput.value.trim())){setStatus('CEST inválido: use sete dígitos ou deixe vazio.',true);cestInput.focus();return;}
     if(salePrice.value.trim()===''||!Number.isFinite(Number(salePrice.value))||Number(salePrice.value)<0){setStatus('Informe um preço de venda válido; use 0,00 se ainda não definiu o preço.',true);salePrice.focus();return;}
     button.disabled=true;
+    var createdProduct=null;
     try{
       var gtin=String(gtinInput.value||'').toUpperCase().trim();
       if(gtin==='SEMGTIN')gtin='';
@@ -354,16 +355,31 @@
       var tracksStock=tracksStockInput.checked;
       var result=await api('/api/records',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'product',record:{sku:sku.value.trim(),name:name,category:category,unit:unit,gtin:gtin,ncm:ncm,cest:cest,origin:origin,cost:cost,price:Number(salePrice.value),tracksStock:tracksStock,active:true}})});
       if(!result.id)throw new Error('O produto foi enviado, mas não retornou identificador para vínculo. Atualize o catálogo antes de tentar de novo.');
-      var created={id:String(result.id),sku:sku.value.trim(),name:name,category:category,unit:unit,gtin:gtin||'SEM GTIN',ncm:ncm,cest:cest,origin:origin,cost:cost,price:Number(salePrice.value),stock:0,tracksStock:tracksStock,active:true};
-      products.push(created);
-      item.productId=created.id;
+      createdProduct={id:String(result.id),sku:sku.value.trim(),name:name,category:category,unit:unit,gtin:gtin||'SEM GTIN',ncm:ncm,cest:cest,origin:origin,cost:cost,price:Number(salePrice.value),stock:0,tracksStock:tracksStock,active:true};
+      products=products.filter(function(product){return product.id!==createdProduct.id;});
+      products.push(createdProduct);
+      item.productId=createdProduct.id;
       item.trackStock=tracksStock;
       row.outerHTML=itemMarkup(item);
-      await persistReviewDraft();
+      var linkedRow=Array.from($('reviewItems').querySelectorAll('[data-line]')).find(function(entry){return Number(entry.dataset.line)===lineNumber;});
+      var linkedItems=collectReviewItems();
+      var linkedItem=linkedItems.find(function(entry){return Number(entry.lineNumber)===lineNumber;});
+      if(!linkedRow||!linkedItem||linkedItem.productId!==createdProduct.id||(tracksStock&&!linkedItem.trackStock))
+        throw new Error('O produto foi cadastrado, mas a tela não confirmou o vínculo e a seleção de estoque. Revise o item antes de continuar.');
+      await persistReviewDraft(linkedItems);
+      var savedItem=(selectedDoc.items||[]).find(function(entry){return Number(entry.lineNumber)===lineNumber;});
+      if(!savedItem||savedItem.productId!==createdProduct.id||(tracksStock&&!savedItem.trackStock))
+        throw new Error('O produto foi cadastrado, mas o vínculo não foi confirmado no lançamento. Salve a conferência antes de tentar receber.');
       $('uploadStatus').classList.remove('error');
       $('uploadStatus').textContent='Produto criado e vínculo salvo na conferência. A entrada no estoque só ocorre após a confirmação da NF-e.';
       setStatus('Produto criado, vínculo salvo e item marcado para estoque. Confirme a autorização no portal da SEFAZ para concluir.');
-    }catch(error){setStatus(error.message,true);button.disabled=false;}
+    }catch(error){
+      var message=createdProduct?'Produto '+createdProduct.sku+' cadastrado. '+error.message+' Se o produto já aparece selecionado, salve a conferência antes de tentar confirmar a entrada.':error.message;
+      $('uploadStatus').classList.add('error');
+      $('uploadStatus').textContent=message;
+      setStatus(message,true);
+      button.disabled=false;
+    }
   });
   $('cancelEntryButton').addEventListener('click',function(){
     if(!selectedDoc||selectedDoc.status==='cancelled')return;
@@ -414,11 +430,27 @@
       return;
     }
     if(receive&&!items.some(function(item){return item.trackStock;})){
-      setReviewActionStatus('Marque Incluir no estoque em pelo menos um item que esteja vinculado a um produto.',true);
+      var itemRows=Array.from($('reviewItems').querySelectorAll('[data-line]'));
+      var candidateRow=itemRows.find(function(row){var select=row.querySelector('[name="productId"]');var product=select&&products.find(function(entry){return entry.id===select.value;});return !!(product&&product.tracksStock);});
+      var linkedRow=itemRows.find(function(row){var select=row.querySelector('[name="productId"]');return !!(select&&select.value);});
+      var firstRow=candidateRow||linkedRow||itemRows[0];
+      var productSelect=firstRow&&firstRow.querySelector('[name="productId"]');
+      var stockCheckbox=firstRow&&firstRow.querySelector('[name="trackStock"]');
+      var selectedProduct=productSelect&&products.find(function(product){return product.id===productSelect.value;});
+      var message=!selectedProduct?'Vincule ao menos um item a um produto ativo do catálogo. Use “Cadastrar produto com dados desta nota” ou selecione um produto existente.':!selectedProduct.tracksStock?'Item '+firstRow.dataset.line+': o produto está vinculado, mas não controla estoque. Habilite o controle no cadastro antes de receber.':'Item '+firstRow.dataset.line+': marque “Incluir no estoque ao confirmar” para lançar a quantidade recebida.';
+      setReviewActionStatus(message,true);
+      setStatus(message,true);
+      if(!selectedProduct&&productSelect)productSelect.focus();
+      else if(stockCheckbox&&!stockCheckbox.disabled)stockCheckbox.focus();
+      else if(firstRow){var enableStock=firstRow.querySelector('[data-enable-stock]');if(enableStock)enableStock.focus();}
       return;
     }
     if(receive&&items.some(function(item){return item.trackStock&&!item.productId;})){
-      setReviewActionStatus('Vincule cada item marcado para estoque a um produto cadastrado.',true);
+      var missingLink=items.find(function(item){return item.trackStock&&!item.productId;});
+      var missingRow=Array.from($('reviewItems').querySelectorAll('[data-line]')).find(function(row){return Number(row.dataset.line)===Number(missingLink.lineNumber);});
+      var missingMessage='Item '+missingLink.lineNumber+': vincule um produto cadastrado antes de lançar no estoque.';
+      setReviewActionStatus(missingMessage,true);setStatus(missingMessage,true);
+      var missingSelect=missingRow&&missingRow.querySelector('[name="productId"]');if(missingSelect)missingSelect.focus();
       return;
     }
     if(receive&&!$('officialStatus').checked){
