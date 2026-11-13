@@ -1309,4 +1309,27 @@
           body: JSON.stringify({ id: fiscalDocument.id, action: 'emit', confirmHomologation: true }),
         });
         if (result.status === 'authorized') report('A Focus confirmou autoriza\u00e7\u00e3o em HOMOLOGA\u00c7\u00c3O. Confira o hist\u00f3rico fiscal e o retorno oficial.');
-        else repor
+        else report('Solicita\u00e7\u00e3o recebida pela Focus em HOMOLOGA\u00c7\u00c3O. Situa\u00e7\u00e3o: ' + (result.status || 'em processamento') + '. Consulte o hist\u00f3rico antes de tentar novamente.');
+        await inspectDraft(fiscalDocument.id);
+      } catch (error) {
+        var issues = error.responseData && Array.isArray(error.responseData.issues) ? error.responseData.issues.filter(Boolean).join(' \u00b7 ') : '';
+        report('A Focus n\u00e3o confirmou o envio. Os dados foram preservados para corre\u00e7\u00e3o. ' +
+          (issues || error.message) + ' Corrija o que estiver pendente antes de enviar novamente.', 'error');
+        await inspectDraft(fiscalDocument.id);
+      }
+    } catch (error) {
+      finalizeFeedback.textContent = error.message;
+      finalizeFeedback.classList.add('error');
+      finalizeFeedback.hidden = false;
+      report((documentId ? 'A NF-e continua dispon\u00edvel para revis\u00e3o. ' : 'N\u00e3o foi poss\u00edvel criar a NF-e. ') + error.message, 'error');
+    } finally {
+      confirmFinalizeButton.disabled = selectedFinalizationChoice() === 'emit' &&
+        !document.getElementById('confirmHomologation').checked;
+      saveButton.disabled = !state.ready;
+      saveButton.textContent = 'Concluir NF-e';
+    }
+  });
+
+  setDefaultIssueAt();
+  load();
+})();

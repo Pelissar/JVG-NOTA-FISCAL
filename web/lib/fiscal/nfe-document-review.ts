@@ -670,4 +670,17 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
   const totalsMatch = sourceItems.length > 0 && Number.isSafeInteger(productCents) && productCents >= 0 &&
     headerTotalCents !== null && productCents === headerTotalCents;
   add("valor_produtos", "Totalização de produtos", totalsMatch,
-      "A soma comercial d
+      "A soma comercial dos itens precisa corresponder ao rascunho; frete, seguro, desconto e despesas são mapeados separadamente.");
+  add("valor_total", "Total fiscal da NF-e", totalsMatch,
+      "A Focus calcula o total do cabeçalho a partir dos itens e dos valores fiscais informados; nenhum imposto estimado pelo ERP é enviado.");
+  return {
+    environment: "homologacao",
+    endpoint: "POST /v2/nfe?ref",
+    requestPreview,
+    checks,
+    missingCount: checks.filter(check => !check.ok).length,
+    autoAssignedFields: ["ref (ID fiscal interno)", "serie e numero (Focus, se a numeração automática estiver configurada)"],
+    transmissionEnabled: false,
+    canSend: false,
+  };
+}

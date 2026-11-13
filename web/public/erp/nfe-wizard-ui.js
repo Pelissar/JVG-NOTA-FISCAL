@@ -692,3 +692,22 @@
       paymentSet('paymentAuthorization', payment.authorizationNumber);
       var method = row.querySelector('[name="paymentMethod"]');
       if (method) method.dispatchEvent(new Event('change', { bubbles: true }));
+      var integration = row.querySelector('[name="paymentIntegration"]');
+      if (integration) integration.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    renderRecipient();
+    refreshComputed();
+    goToStep(0, false);
+  };
+  window.jvgNfeWizardReset = function () {
+    var payments = document.getElementById('payments');
+    if (payments) payments.replaceChildren();
+    var issueAt = form.elements.namedItem('issueAt');
+    if (issueAt) issueAt.dataset.userEdited = 'false';
+    setDefaultIssueAt(true);
+    if (steps[currentStep] && steps[currentStep][0] !== 'general') goToStep(0, false);
+    renderRecipient(); refreshComputed();
+  };
+
+  prepareWizard();
+})();
