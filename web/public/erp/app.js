@@ -15,6 +15,7 @@
   var loadingScope='';
   var scopeErrors={};
   var dashboardRpcAvailable=null;
+  function defaultFilterForView(name){return name==='products'?'active':'all';}
   function scopeForView(name){if(name==='dashboard')return 'dashboard';if(name==='products'||name==='inventory')return 'products';if(name==='clients')return 'clients';if(name==='services')return 'services';if(name==='reports')return 'reports';return '';}
   function loadingPanel(scope){var message=scopeErrors[scope]?'Não foi possível carregar os dados deste módulo.':'Carregando os dados da empresa…';return '<section class="panel"><div class="panel-body" role="status" aria-live="polite"><p>'+message+'</p>'+(scopeErrors[scope]?'<button class="btn" data-action="retry-data">Tentar novamente</button>':'')+'</div></section>';}
   function loadViewData(name){var scope=scopeForView(name);if(!scope||loadedScopes[scope]||loadingScope===scope||cloud.status!=='ready')return;refreshCloud(scope).catch(function(error){toast(error.message,'error');});}
@@ -187,7 +188,7 @@
     var search=document.getElementById('globalSearch');search.value=query;
     if(view==='profile')loadProfile();
   }
-  function setView(next){if(!labels[next])return;view=next;query='';filter='all';if(window.location.hash!=='#'+next)history.pushState(null,'','#'+next);document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');render();loadViewData(next);document.querySelector('.main-column').scrollTop=0;}
+  function setView(next){if(!labels[next])return;view=next;query='';filter=defaultFilterForView(next);if(window.location.hash!=='#'+next)history.pushState(null,'','#'+next);document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');render();loadViewData(next);document.querySelector('.main-column').scrollTop=0;}
   function field(name,label,value,extra,full,help){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+(extra||'')+'>'+(help?'<small>'+h(help)+'</small>':'')+'</div>';}
   function lookupField(name,label,value,extra,kind,full){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><div class="input-action"><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+extra+'><button class="btn ghost lookup-btn" type="button" data-action="lookup-'+kind+'">Consultar</button></div></div>';}
   function select(name,label,options,value,required){return '<div class="field"><label for="f-'+h(name)+'">'+h(label)+(required?' *':'')+'</label><select id="f-'+h(name)+'" name="'+h(name)+'" '+(required?'required':'')+'>'+options.map(function(o){return '<option value="'+h(o[0])+'" '+(String(value)===String(o[0])?'selected':'')+'>'+h(o[1])+'</option>';}).join('')+'</select>'+(name==='origin'?'<small class="field-help">Necessária para NF-e. Informe a origem real do item com a contabilidade.</small>':'')+'</div>';}
@@ -522,8 +523,9 @@
   document.querySelector('.main-column').scrollTop=0;
   var initialHash=decodeURIComponent(window.location.hash.slice(1));
   if(labels[initialHash])view=initialHash;
-  window.addEventListener('hashchange',function(){var next=decodeURIComponent(window.location.hash.slice(1))||'dashboard';if(labels[next]&&next!==view){view=next;query='';filter='all';closeSidebar();render();loadViewData(next);document.querySelector('.main-column').scrollTop=0;}});
-  window.addEventListener('popstate',function(){var next=decodeURIComponent(window.location.hash.slice(1))||'dashboard';if(labels[next]&&next!==view){view=next;query='';filter='all';closeSidebar();render();loadViewData(next);document.querySelector('.main-column').scrollTop=0;}});
+  filter=defaultFilterForView(view);
+  window.addEventListener('hashchange',function(){var next=decodeURIComponent(window.location.hash.slice(1))||'dashboard';if(labels[next]&&next!==view){view=next;query='';filter=defaultFilterForView(next);closeSidebar();render();loadViewData(next);document.querySelector('.main-column').scrollTop=0;}});
+  window.addEventListener('popstate',function(){var next=decodeURIComponent(window.location.hash.slice(1))||'dashboard';if(labels[next]&&next!==view){view=next;query='';filter=defaultFilterForView(next);closeSidebar();render();loadViewData(next);document.querySelector('.main-column').scrollTop=0;}});
   render();
   checkConnection();
 })();
