@@ -3,6 +3,8 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import styles from "./login.module.css";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -18,15 +20,26 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const ready = Boolean(url && key);
 
   useEffect(() => {
+    const savedTheme = window.localStorage.getItem("sigmafiscal-theme") === "dark" ? "dark" : "light";
+    document.documentElement.dataset.theme = savedTheme;
+    setTheme(savedTheme);
     const client = browserAuth();
     if (!client) return;
     void client.auth.getUser().then(({ data }) => {
       if (data.user) window.location.replace("/erp/index.html");
     });
   }, []);
+
+  function toggleTheme() {
+    const next = theme === "light" ? "dark" : "light";
+    setTheme(next);
+    document.documentElement.dataset.theme = next;
+    try { window.localStorage.setItem("sigmafiscal-theme", next); } catch { /* Tema segue ativo nesta tela. */ }
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -54,29 +67,32 @@ export default function LoginPage() {
   }
 
   return (
-    <main style={{ minHeight:"100vh", background:"linear-gradient(145deg,#081827,#153a50)", color:"#e8f0f6",display:"grid",placeItems:"center",padding:20,fontFamily:"system-ui,sans-serif" }}>
-      <section style={{ width:"100%",maxWidth:440,background:"#fff",color:"#172c3a",borderRadius:22,padding:"34px 30px",boxShadow:"0 22px 80px #020c1680" }}>
-        <Link href="/" style={{display:"inline-flex",alignItems:"center",gap:7,color:"#387b73",fontSize:12,textDecoration:"none",marginBottom:23,fontWeight:700}}>← Voltar ao site</Link>
-        <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:25}}>
-          <div style={{background:"#0a7b70",color:"#fff",borderRadius:13,width:47,height:47,display:"grid",placeItems:"center",fontSize:24,fontWeight:800}}>J</div>
-          <div><strong style={{fontSize:21}}>JVG Nota Fiscal</strong><div style={{fontSize:12,color:"#687e8c"}}>ERP multiempresa • ambiente piloto</div></div>
-        </div>
-        <h1 style={{fontSize:26,fontWeight:750,margin:"0 0 6px"}}>{mode==="login"?"Entrar no sistema":"Criar minha conta"}</h1>
-        <p style={{color:"#617785",fontSize:14,margin:"0 0 24px"}}>Acesso seguro ao painel de gestão. Cadastre sua empresa após entrar.</p>
-        {!ready && <p role="alert" style={{padding:13,background:"#fff3d9",borderRadius:9,color:"#855500",fontSize:13}}>Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY na Netlify e publique novamente.</p>}
-        <form onSubmit={submit} style={{display:"grid",gap:13}}>
-          <label style={{display:"grid",gap:6,fontSize:13,fontWeight:650}}>E-mail
-            <input type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="voce@empresa.com.br" style={{padding:"12px 13px",borderRadius:10,border:"1px solid #d0dbe2",fontSize:15,color:"#172c3a",background:"#fff"}} />
-          </label>
-          <label style={{display:"grid",gap:6,fontSize:13,fontWeight:650}}>Senha
-            <input type="password" autoComplete={mode==="login"?"current-password":"new-password"} required minLength={8} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Mínimo de 8 caracteres" style={{padding:"12px 13px",borderRadius:10,border:"1px solid #d0dbe2",fontSize:15,color:"#172c3a",background:"#fff"}} />
-          </label>
-          <button type="submit" disabled={pending||!ready} style={{padding:13,border:0,borderRadius:10,background:pending||!ready?"#8799a4":"#008b7e",color:"white",fontSize:15,fontWeight:700,cursor:pending||!ready?"not-allowed":"pointer",marginTop:8}}>{pending?"Aguarde...":mode==="login"?"Entrar":"Criar conta"}</button>
-        </form>
-        {message && <p role="status" style={{marginTop:15,fontSize:13,background:"#ecf5f5",padding:12,borderRadius:9}}>{message}</p>}
-        <button type="button" onClick={()=>{setMode(mode==="login"?"signup":"login");setMessage("");}} style={{marginTop:20,padding:0,border:0,background:"transparent",color:"#007f72",fontWeight:650,cursor:"pointer"}}>{mode==="login"?"Primeiro acesso? Criar conta":"Já tenho conta. Fazer login"}</button>
-        <p style={{fontSize:11,color:"#81929d",marginTop:25}}>Ambiente piloto. A emissão fiscal real permanece bloqueada até a conclusão dos testes de homologação.</p>
-      </section>
+    <main className={styles.page}>
+      <button type="button" className={styles.theme} onClick={toggleTheme} aria-label={theme === "light" ? "Ativar modo escuro" : "Ativar modo claro"}>{theme === "light" ? "◐ Modo escuro" : "☀ Modo claro"}</button>
+      <div className={styles.layout}>
+        <section className={styles.intro}>
+          <Link href="/" className={styles.brand}><Image src="/branding/sigmafiscal-icon.svg" alt="" width={62} height={62}/><span><strong>Sigma<span>Fiscal</span></strong><small>ERP EMPRESARIAL</small></span></Link>
+          <span className={styles.kicker}>Seu espaço de trabalho</span>
+          <h1>Bem-vindo ao <em>SigmaFiscal.</em></h1>
+          <p>Organize clientes, produtos, estoque e operações comerciais em uma plataforma feita para o seu negócio.</p>
+          <div className={styles.features}><span>✓ Gestão integrada</span><span>✓ Acesso seguro</span><span>✓ Interface responsiva</span></div>
+          <p className={styles.disclaimer}>Ambiente em desenvolvimento. A emissão fiscal real ainda não está disponível.</p>
+        </section>
+        <section className={styles.card} aria-label="Acesso à plataforma">
+          <Link href="/" className={styles.back}>← Voltar ao site</Link>
+          <h2>{mode==="login"?"Acesse sua conta":"Crie sua conta"}</h2>
+          <p className={styles.description}>{mode==="login"?"Entre para continuar a gestão da sua empresa.":"Preencha seus dados para iniciar seu cadastro."}</p>
+          {!ready && <p role="alert" className={styles.warning}>Configuração de autenticação indisponível neste ambiente. Verifique as variáveis públicas do Supabase.</p>}
+          <form onSubmit={submit} className={styles.form}>
+            <label>E-mail<input type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="voce@empresa.com.br" /></label>
+            <label>Senha<input type="password" autoComplete={mode==="login"?"current-password":"new-password"} required minLength={8} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Mínimo de 8 caracteres" /></label>
+            <button type="submit" disabled={pending||!ready} className={styles.submit}>{pending?"Aguarde...":mode==="login"?"Entrar no sistema →":"Criar minha conta →"}</button>
+          </form>
+          {message && <p role="status" className={styles.message}>{message}</p>}
+          <button type="button" className={styles.switch} onClick={()=>{setMode(mode==="login"?"signup":"login");setMessage("");}}>{mode==="login"?"Primeiro acesso? Criar conta":"Já tenho conta. Fazer login"}</button>
+          <p className={styles.fiscal}>Ambiente piloto · Sem emissão fiscal real</p>
+        </section>
+      </div>
     </main>
   );
 }

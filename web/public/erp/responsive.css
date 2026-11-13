@@ -1,5 +1,8 @@
 /* Layout adaptável para notebooks, telas baixas, tablets e celulares. */
-html, body { width: 100%; height: 100%; max-width: 100%; overflow: hidden; }
+html, body { width: 100%; min-height: 100%; max-width: 100%; overflow-x: hidden; }
+/* Páginas independentes devem rolar normalmente; o ERP com sidebar mantém rolagem interna. */
+body:has(> .app-shell) { height: 100dvh; overflow: hidden; }
+body:not(:has(> .app-shell)) { height: auto; min-height: 100dvh; overflow-y: auto; }
 .app-shell, .main-column, .topbar-left, .topbar-right, .breadcrumbs, .content, .panel, .banner-text { min-width: 0; }
 .app-shell { height: 100dvh; min-height: 0; overflow: hidden; }
 .main-column { height: 100dvh; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
@@ -17,7 +20,7 @@ html, body { width: 100%; height: 100%; max-width: 100%; overflow: hidden; }
 .release-status { margin: 0 10px 9px; }
 .support-box { padding: 10px 12px; gap: 4px; }
 .support-box small { font-size: 9px; }
-.site-back { color: #55e6bb; text-decoration: none; font-size: 10px; font-weight: 750; margin-top: 4px; }
+.site-back { color: var(--accent, #63b3ff); text-decoration: none; font-size: 10px; font-weight: 750; margin-top: 4px; }
 .site-back:hover { text-decoration: underline; }
 .sidebar-close { display: none; border: 0; background: #264455; color: white; font-size: 23px; border-radius: 8px; width: 32px; height: 32px; margin-left: auto; }
 .wide-info { max-width: none; }

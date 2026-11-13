@@ -59,6 +59,8 @@ export function reviewNfePreparation(
   const recipient = object(recipientValue);
   const items = Array.isArray(itemsValue) ? itemsValue : [];
   const issues: string[] = [];
+  if (issuer.taxRegimeConfirmed !== true)
+    issues.push("Emitente: regime tributário não confirmado pela contabilidade");
   if (!value(issuer.cnpj)) issues.push("Emitente: CNPJ não informado");
   if (!value(issuer.stateRegistration)) issues.push("Emitente: inscrição estadual não informada");
   const type = value(recipient.documentType).toLowerCase();

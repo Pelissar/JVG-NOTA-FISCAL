@@ -1,5 +1,5 @@
 import { getJvgUser } from "../../jvg-auth";
-import { apiJson, getCompany, getPlatformRole, getSiteAccount, isConfigured, safeError } from "../../../lib/jvg-backend";
+import { apiJson, getCompany, getDashboardSummary, getPlatformRole, getSiteAccount, isConfigured, safeError } from "../../../lib/jvg-backend";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +13,12 @@ export async function GET() {
     }
     const account = await getSiteAccount(user);
     if (!account) return apiJson({ authenticated: true, displayName: user.displayName, status: "needs_company" });
-    const company = await getCompany(account);
+    const [company, dashboard] = await Promise.all([
+      getCompany(account),
+      getDashboardSummary(account).catch(() => null),
+    ]);
     if (!company) return apiJson({ authenticated: true, status: "needs_company" });
-    return apiJson({ authenticated: true, displayName: user.displayName, status: "ready", company });
+    return apiJson({ authenticated: true, displayName: user.displayName, status: "ready", company,
+      dashboardAvailable: Boolean(dashboard), ...(dashboard ? { dashboard } : {}) });
   } catch (error) { return safeError(error); }
 }

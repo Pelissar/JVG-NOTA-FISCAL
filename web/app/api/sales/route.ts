@@ -41,14 +41,30 @@ async function accountForRequest() {
   return account;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const account = await accountForRequest();
+    const url = new URL(request.url);
+    const pageRaw = url.searchParams.get("page") ?? "1";
+    if (!/^[1-9]\d{0,5}$/.test(pageRaw)) throw new JvgBackendError("Página inválida.", 400);
+    const page = Number(pageRaw);
+    const pageSize = 50;
+    const offset = (page - 1) * pageSize;
     const scope = `tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`;
-    const sales = await dbRequest<Array<Record<string, unknown>>>(
-      `/rest/v1/jvg_sales?${scope}&select=id,customer_id,status,subtotal,discount_total,total,notes,created_at&order=created_at.desc&limit=200`,
+    const rows = await dbRequest<Array<Record<string, unknown>>>(
+      `/rest/v1/jvg_sales?${scope}&select=id,customer_id,status,subtotal,discount_total,total,notes,created_at,items:jvg_sale_items(description_snapshot,unit_snapshot,quantity,unit_price,line_total)&order=created_at.desc,id.desc&limit=${pageSize + 1}&offset=${offset}`,
     );
-    return apiJson({ sales });
+    const sales = rows.slice(0, pageSize).map((sale) => ({
+      ...sale,
+      items: (Array.isArray(sale.items) ? sale.items : []).map((item) => ({
+        description: item.description_snapshot,
+        unit: item.unit_snapshot,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unit_price),
+        lineTotal: Number(item.line_total),
+      })),
+    }));
+    return apiJson({ sales, page, pageSize, hasMore: rows.length > pageSize });
   } catch (error) { return safeError(error); }
 }
 
@@ -61,6 +77,7 @@ export async function POST(request: Request) {
     if (!input || typeof input !== "object" || Array.isArray(input)) throw new JvgBackendError("Venda inválida.", 400);
     const data = input as Record<string, unknown>;
     const customerId = data.customerId == null ? null : uuid(data.customerId);
+    const requestId = uuid(data.requestId);
     const items = itemsFrom(data.items);
     const notes = data.notes == null ? null : data.notes;
     if (notes !== null && (typeof notes !== "string" || notes.length > 2000)) {
@@ -74,6 +91,7 @@ export async function POST(request: Request) {
         p_customer_id: customerId,
         p_items: items,
         p_notes: notes,
+        p_request_id: requestId,
       }),
     });
     return apiJson({ ok: true, saleId }, 201);

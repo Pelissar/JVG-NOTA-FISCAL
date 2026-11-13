@@ -1,14 +1,24 @@
 (function () {
   'use strict';
-  var labels = {dashboard:'Visão geral',products:'Produtos',clients:'Clientes',services:'Serviços',fiscal:'Notas fiscais',inventory:'Estoque',finance:'Financeiro',transport:'Transporte',reports:'Relatórios',settings:'Configurações'};
+  var labels = {dashboard:'Visão geral',products:'Produtos',clients:'Clientes',services:'Serviços',fiscal:'Central fiscal',inventory:'Estoque',reports:'Relatórios',profile:'Meu perfil',settings:'Empresa e sistema'};
   // Nunca mostrar dados locais como se fossem cadastros reais da empresa.
   var state = emptyState();
-  var view = 'dashboard', query = '', filter = 'all';
+  var view = 'dashboard', query = '', filter = 'all', partyFilter = 'all';
   var cloud = {status:'checking',displayName:'',company:null};
+  var profileData = {displayName:'',email:''};
+  var logoCompanyId = '';
   var content = document.getElementById('content');
   var modalRoot = document.getElementById('modalRoot');
   var toastRoot = document.getElementById('toastRoot');
-  function emptyState(){return {products:[],clients:[],services:[],movements:[],companyName:'Minha empresa'};}
+  function emptyState(){return {products:[],clients:[],services:[],movements:[],dashboard:null,companyName:'Minha empresa'};}
+  var loadedScopes={dashboard:false,products:false,clients:false,services:false,reports:false};
+  var loadingScope='';
+  var scopeErrors={};
+  var dashboardRpcAvailable=null;
+  function defaultFilterForView(name){return name==='products'?'active':'all';}
+  function scopeForView(name){if(name==='dashboard')return 'dashboard';if(name==='products'||name==='inventory')return 'products';if(name==='clients')return 'clients';if(name==='services')return 'services';if(name==='reports')return 'reports';return '';}
+  function loadingPanel(scope){var message=scopeErrors[scope]?'Não foi possível carregar os dados deste módulo.':'Carregando os dados da empresa…';return '<section class="panel"><div class="panel-body" role="status" aria-live="polite"><p>'+message+'</p>'+(scopeErrors[scope]?'<button class="btn" data-action="retry-data">Tentar novamente</button>':'')+'</div></section>';}
+  function loadViewData(name){var scope=scopeForView(name);if(!scope||loadedScopes[scope]||loadingScope===scope||cloud.status!=='ready')return;refreshCloud(scope).catch(function(error){toast(error.message,'error');});}
   function h(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
   function ico(name){return '<svg aria-hidden="true"><use href="#i-'+name+'"></use></svg>';}
   function money(n){return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(n)||0);}
@@ -20,27 +30,28 @@
   function banner(){
     var ready=cloud.status==='ready',needs=cloud.status==='needs_company',pending=cloud.status==='waiting_secret',login=cloud.status==='login_required';
     var title=ready?'Supabase conectado · '+h(state.companyName):needs?'Cadastro da empresa piloto pendente':pending?'Integração segura preparada · chave privada pendente':login?'Login necessário no site publicado':cloud.status==='error'?'Servidor temporariamente indisponível':'Verificando integração do Supabase';
-    var detail=ready?'Os cadastros desta empresa são salvos no servidor. A emissão de notas continua bloqueada até a homologação fiscal.':needs?'Sua conta já está identificada. Cadastre o nome da empresa para criar o ambiente isolado no banco.':pending?'Falta configurar a chave privada do banco no servidor. Não serão exibidos nem salvos cadastros enquanto a conexão estiver indisponível.':login?'Faça login no site publicado para acessar os cadastros da sua empresa.':cloud.status==='error'?'A conexão não pôde ser validada. Nenhum cadastro de exemplo será exibido; tente novamente.':'Aguarde a verificação. Os cadastros serão carregados diretamente do banco.';
+    var detail=ready?'Os cadastros desta empresa são salvos no servidor. A integração Focus disponível neste ambiente envia somente para homologação; produção continua bloqueada.':needs?'Sua conta já está identificada. Cadastre o nome da empresa para criar o ambiente isolado no banco.':pending?'Falta configurar a chave privada do banco no servidor. Não serão exibidos nem salvos cadastros enquanto a conexão estiver indisponível.':login?'Faça login no site publicado para acessar os cadastros da sua empresa.':cloud.status==='error'?'A conexão não pôde ser validada. Nenhum cadastro de exemplo será exibido; tente novamente.':'Aguarde a verificação. Os cadastros serão carregados diretamente do banco.';
     var action=needs?'<div class="heading-actions" style="margin-top:10px"><button class="btn primary" data-action="configure-company">'+ico('plus')+' Cadastrar empresa</button></div>':pending?'<div class="heading-actions" style="margin-top:10px"><button class="btn" data-view="settings">Ver configuração</button></div>':cloud.status==='error'?'<div class="heading-actions" style="margin-top:10px"><button class="btn" data-action="check-connection">Tentar novamente</button></div>':'';
     return '<div class="banner" style="border-color:'+(ready?'#76bb9c':'#d5deea')+'"><span class="banner-icon">'+ico('shield')+'</span><div class="banner-text"><strong>'+title+'</strong><p>'+detail+'</p>'+action+'</div></div>';
   }
   function stat(label,value,icon,color,foot){return '<article class="stat-card"><div class="stat-top"><span>'+h(label)+'</span><div class="stat-icon '+(color||'')+'">'+ico(icon)+'</div></div><div class="stat-value">'+h(value)+'</div><div class="stat-foot">'+h(foot)+'</div></article>';}
   function tableShell(searchPlaceholder,body,count,type){return '<section class="table-panel"><div class="table-toolbar"><label class="toolbar-search">'+ico('search')+'<input data-search-input placeholder="'+h(searchPlaceholder)+'" value="'+h(query)+'" aria-label="Filtrar registros"></label><div class="toolbar-controls"><select class="filter-select" data-filter aria-label="Filtrar situação"><option value="all" '+(filter==='all'?'selected':'')+'>Todos os status</option><option value="active" '+(filter==='active'?'selected':'')+'>Ativos</option><option value="inactive" '+(filter==='inactive'?'selected':'')+'>Inativos</option></select><button class="btn ghost" data-action="export-'+type+'">'+ico('download')+' Exportar CSV</button></div></div>'+body+'<div class="table-summary"><span>'+count+' registro(s) exibido(s)</span><span>'+(cloud.status==='ready'?'Dados reais · Empresa isolada':'Aguardando conexão · Sem dados de exemplo')+'</span></div></section>';}
   function empty(icon,title,detail,action,actionText){return '<div class="empty-state"><div class="empty-icon">'+ico(icon)+'</div><h3>'+h(title)+'</h3><p>'+h(detail)+'</p>'+(action?btn(actionText,action,true):'')+'</div>';}
-  function rowActions(kind,recordId){return '<div class="table-actions"><button class="icon-btn" title="Editar" data-action="edit-'+kind+'" data-id="'+h(recordId)+'">'+ico('edit')+'</button><button class="icon-btn" title="Excluir" data-action="remove-'+kind+'" data-id="'+h(recordId)+'">'+ico('trash')+'</button></div>';}
+  function rowActions(kind,recordId){return '<div class="table-actions"><button class="icon-btn" title="Editar" data-action="edit-'+kind+'" data-id="'+h(recordId)+'">'+ico('edit')+'</button><button class="icon-btn" title="Inativar cadastro" aria-label="Inativar cadastro" data-action="remove-'+kind+'" data-id="'+h(recordId)+'">'+ico('trash')+'</button></div>';}
   function matches(row,keys){var hay=keys.map(function(k){return String(row[k]||'');}).join(' ').toLowerCase();return hay.indexOf(query.toLowerCase())!==-1 &&(filter==='all'||(filter==='active'?row.active:!row.active));}
   function dashboard(){
-    var totalStock=state.products.reduce(function(s,p){return s+Number(p.stock||0);},0);
-    var low=state.products.filter(function(p){return p.active&&Number(p.stock)<=10;}).length;
-    var valuation=state.products.reduce(function(s,p){return s+Number(p.stock||0)*Number(p.cost||0);},0);
-    var recent=[].concat(state.movements.map(function(m){return {title:'Estoque '+(m.delta>0?'adicionado: ':'reduzido: ')+(state.products.find(function(p){return p.id===m.productId;})||{}).name,at:m.at,icon:'warehouse'};})).sort(function(a,b){return new Date(b.at)-new Date(a.at);}).slice(0,4);
-    var quick=[['Cadastrar produto','SKU, preço e dados fiscais','box','new-product'],['Novo cliente','Dados de contato','users','new-client'],['Novo serviço','Catálogo de prestação','layers','new-service'],['Ver estoque','Saldo por produto','warehouse','goto-inventory'],['Notas fiscais','Etapa de integração','receipt','goto-fiscal'],['Relatórios','Resumo do cadastro','chart','goto-reports']];
-    var modules=[['Produtos','Cadastro e fiscal','box','products'],['Clientes','Relacionamento','users','clients'],['Estoque','Saldos e ajustes','warehouse','inventory'],['Notas fiscais','5 modelos previstos','receipt','fiscal'],['Serviços','NFS-e futuro','layers','services']];
-    return heading('Bom dia! Vamos construir seu ERP.','Acompanhe a estrutura inicial da sua empresa em um único lugar.')+banner()+
-      '<div class="stats-grid">'+stat('Produtos cadastrados',state.products.length,'box','','Itens no catálogo')+stat('Clientes cadastrados',state.clients.length,'users','blue','Pessoas e empresas')+stat('Unidades em estoque',num(totalStock),'warehouse','purple',low+' produto(s) com estoque baixo')+stat('Valor de custo em estoque',money(valuation),'cash','amber','Estimativa dos itens cadastrados')+'</div>'+
-      '<div class="panel-grid"><section class="panel"><div class="panel-head"><div><h2>Acesso rápido</h2><p>Comece pelos cadastros essenciais do sistema</p></div></div><div class="panel-body"><div class="quick-grid">'+quick.map(function(x){return '<button class="quick-card" data-action="'+x[3]+'"><span class="quick-icon">'+ico(x[2])+'</span><strong>'+x[0]+'</strong><small>'+x[1]+'</small></button>';}).join('')+'</div></div></section>'+
-      '<section class="panel"><div class="panel-head"><div><h2>Atividades recentes</h2><p>Movimentações registradas no banco</p></div><button data-view="inventory">Ver estoque</button></div><div class="panel-body"><div class="timeline">'+(recent.length?recent.map(function(x){return '<div class="timeline-row"><span class="timeline-dot">'+ico(x.icon)+'</span><div class="timeline-info"><strong>'+h(x.title)+'</strong><small>'+dateStr(x.at)+'</small></div></div>';}).join(''):'<div class="empty-mini">Nenhuma movimentação registrada ainda. Cadastre ou ajuste itens para começar.</div>')+'</div></div></section></div>'+
-      '<div class="section-row"><h2 class="section-title">Módulos do sistema</h2><span class="small-note">Versão piloto · Módulos em evolução</span></div><div class="module-grid">'+modules.map(function(x){return '<button class="module-card" data-view="'+x[3]+'">'+ico(x[2])+'<strong>'+x[0]+'</strong><small>'+x[1]+'</small></button>';}).join('')+'</div>';
+    var summary=state.dashboard;
+    var totalStock=summary?Number(summary.unitsStock||0):state.products.reduce(function(s,p){return s+Number(p.stock||0);},0);
+    var low=summary?Number(summary.lowStockCount||0):state.products.filter(function(p){return p.active&&Number(p.stock)<=10;}).length;
+    var valuation=summary?Number(summary.stockValue||0):state.products.reduce(function(s,p){return s+Number(p.stock||0)*Number(p.cost||0);},0);
+    var recent=summary?(summary.recentMovements||[]).map(function(m){return {title:'Estoque '+(Number(m.delta)>0?'adicionado: ':'reduzido: ')+(m.name||'produto'),at:m.at,icon:'warehouse'};}):[].concat(state.movements.map(function(m){return {title:'Estoque '+(m.delta>0?'adicionado: ':'reduzido: ')+(state.products.find(function(p){return p.id===m.productId;})||{}).name,at:m.at,icon:'warehouse'};})).sort(function(a,b){return new Date(b.at)-new Date(a.at);}).slice(0,4);
+    var productCount=summary?Number(summary.productsCount||0):state.products.length;
+    var clientCount=summary?Number(summary.clientsCount||0):state.clients.length;
+    var quick=[['Novo orçamento','Preparar proposta comercial','receipt','/erp/quotes.html'],['Ver pedidos','Acompanhar pedidos','layers','/erp/orders.html'],['Registrar venda','Confirmar operação comercial','cash','/erp/sales.html'],['Abrir ordem de serviço','Receber equipamento para manutenção','layers','/erp/service-orders.html'],['Emitir NF-e','Emitir em homologação','receipt','/erp/nfe.html']];
+    return heading('Seu negócio, em um só lugar.','Acesse as operações mais importantes e acompanhe os dados da empresa.')+banner()+
+      '<div class="stats-grid">'+stat('Produtos cadastrados',productCount,'box','','Itens no catálogo')+stat('Clientes cadastrados',clientCount,'users','blue','Pessoas e empresas')+stat('Unidades em estoque',num(totalStock),'warehouse','purple',low+' produto(s) com estoque baixo')+stat('Valor de custo em estoque',money(valuation),'cash','amber','Estimativa dos itens cadastrados')+'</div>'+
+      '<div class="panel-grid"><section class="panel"><div class="panel-head"><div><h2>Comece por aqui</h2><p>Atalhos para as operações do dia a dia</p></div></div><div class="panel-body"><div class="quick-grid">'+quick.map(function(x){return '<a class="quick-card" href="'+x[3]+'" aria-label="'+x[0]+': '+x[1]+'"><span class="quick-icon">'+ico(x[2])+'</span><span class="quick-copy"><strong>'+x[0]+'</strong><small>'+x[1]+'</small></span><span class="quick-arrow" aria-hidden="true">'+ico('arrow')+'</span></a>';}).join('')+'</div></div></section>'+
+      '<section class="panel"><div class="panel-head"><div><h2>Atividades recentes</h2><p>Movimentações registradas no banco</p></div><button data-view="inventory">Ver estoque</button></div><div class="panel-body"><div class="timeline">'+(recent.length?recent.map(function(x){return '<div class="timeline-row"><span class="timeline-dot">'+ico(x.icon)+'</span><div class="timeline-info"><strong>'+h(x.title)+'</strong><small>'+dateStr(x.at)+'</small></div></div>';}).join(''):'<div class="empty-mini">Nenhuma movimentação registrada ainda. Cadastre ou ajuste itens para começar.</div>')+'</div></div></section></div>';
   }
   function products(){
     var rows=state.products.filter(function(p){return matches(p,['sku','name','category','ncm','gtin']);});
@@ -48,9 +59,13 @@
     return heading('Cadastro de produtos','Organize SKU, descrição, preços, estoque e informações fiscais.','new-product','Novo produto')+banner()+tableShell('Buscar por nome, SKU ou NCM...',body,rows.length,'products');
   }
   function clients(){
-    var rows=state.clients.filter(function(p){return matches(p,['name','document','email','city']);});
-    var body=rows.length?'<div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Tipo</th><th>CPF/CNPJ</th><th>Cidade / UF</th><th>E-mail</th><th>Status</th><th class="text-right">Ações</th></tr></thead><tbody>'+rows.map(function(p){return '<tr><td><strong>'+h(p.name)+'</strong></td><td><span class="badge blue">'+h(p.type)+'</span></td><td class="mono">'+h(p.document||'Não informado')+'</td><td>'+h(p.city||'—')+' / '+h(p.state||'—')+'</td><td>'+h(p.email||'—')+'</td><td>'+badge(p.active)+'</td><td>'+rowActions('client',p.id)+'</td></tr>';}).join('')+'</tbody></table></div>':empty('users','Nenhum cliente encontrado','Registre pessoas e empresas para usar nos próximos módulos.','new-client','Novo cliente');
-    return heading('Clientes','Cadastro central de destinatários e tomadores de serviços.','new-client','Novo cliente')+banner()+tableShell('Buscar por nome, documento ou cidade...',body,rows.length,'clients');
+    var roleMatches=function(p){return partyFilter==='all'||(partyFilter==='customer'&&p.isCustomer)||(partyFilter==='supplier'&&p.isSupplier)||(partyFilter==='carrier'&&p.isCarrier);};
+    var rows=state.clients.filter(function(p){return matches(p,['registrationNumber','name','legalName','document','email','city','stateRegistration','municipalRegistration'])&&roleMatches(p);});
+    var roleLabels=function(p){return [p.isCustomer?'Cliente':'',p.isSupplier?'Fornecedor':'',p.isCarrier?'Transportadora':''].filter(Boolean);};
+    var body=rows.length?'<div class="table-wrap"><table><thead><tr><th>Nº cadastro</th><th>Nome / Razão social</th><th>Tipo de relacionamento</th><th>CPF / CNPJ</th><th>IE / IM</th><th>Cidade / UF</th><th>Status</th><th class="text-right">Ações</th></tr></thead><tbody>'+rows.map(function(p){return '<tr><td class="mono"><strong>'+h(p.registrationNumber||'—')+'</strong></td><td><strong>'+h(p.name)+'</strong>'+(p.legalName&&p.legalName!==p.name?'<div class="subcell">'+h(p.legalName)+'</div>':'')+'</td><td>'+roleLabels(p).map(function(x){return '<span class="badge blue">'+h(x)+'</span> ';}).join('')+'</td><td class="mono">'+h(p.document||'Não informado')+'</td><td><div class="mono">IE: '+h(p.stateRegistration||'—')+'</div><div class="mono">IM: '+h(p.municipalRegistration||'—')+'</div></td><td>'+h(p.city||'—')+' / '+h(p.state||'—')+'</td><td>'+badge(p.active)+'</td><td>'+rowActions('client',p.id)+'</td></tr>';}).join('')+'</tbody></table></div>':empty('users','Nenhum cadastro encontrado','Ajuste o filtro ou cadastre um cliente, fornecedor ou transportadora.','new-client','Novo cadastro');
+    var total=state.clients.length,customers=state.clients.filter(function(p){return p.isCustomer;}).length,suppliers=state.clients.filter(function(p){return p.isSupplier;}).length,carriers=state.clients.filter(function(p){return p.isCarrier;}).length;
+    var roleFilter='<div class="party-filter-row"><label>Tipo de cadastro <select class="filter-select" id="partyTypeFilter"><option value="all" '+(partyFilter==='all'?'selected':'')+'>Todos ('+total+')</option><option value="customer" '+(partyFilter==='customer'?'selected':'')+'>Clientes ('+customers+')</option><option value="supplier" '+(partyFilter==='supplier'?'selected':'')+'>Fornecedores ('+suppliers+')</option><option value="carrier" '+(partyFilter==='carrier'?'selected':'')+'>Transportadoras ('+carriers+')</option></select></label><span class="small-note">Exibindo '+rows.length+' de '+total+' cadastro(s)</span></div>';
+    return heading('Cadastro de pessoas e empresas','Cadastre clientes, fornecedores e transportadoras em um único registro, com identificação fiscal completa.','new-client','Novo cadastro')+banner()+roleFilter+tableShell('Buscar por número, nome, documento, IE ou IM...',body,rows.length,'clients');
   }
   function services(){
     var rows=state.services.filter(function(p){return matches(p,['code','name','description','lc116','nbs']);});
@@ -63,13 +78,20 @@
     return heading('Controle de estoque','Visualize saldos e registre ajustes reais da sua empresa.','new-product','Cadastrar produto')+banner()+tableShell('Buscar SKU ou descrição...',body,rows.length,'products');
   }
   function fiscal(){
-    var models=[['NF-e','Modelo 55','Venda de mercadorias e operações fiscais','receipt'],['NFC-e','Modelo 65','Venda ao consumidor e frente de caixa','cash'],['NFS-e','Padrão Nacional','Prestação de serviços / DPS','layers'],['CT-e','Modelo 57','Conhecimento de transporte eletrônico','truck'],['MDF-e','Modelo 58','Manifesto eletrônico de documentos','warehouse']];
-    return heading('Central de notas fiscais','Os cinco modelos já estão previstos na navegação do JVG.')+banner()+
-      '<section class="panel" style="margin-bottom:22px"><div class="panel-head"><div><h2>NF-e · Rascunhos em homologação</h2><p>Primeira etapa do fluxo fiscal: preparar e salvar notas sem transmitir à SEFAZ</p></div><a class="btn primary" href="/erp/nfe-drafts.html">Abrir rascunhos NF-e →</a></div><div class="panel-body"><p class="small-note">Selecione destinatários e produtos cadastrados. Os campos fiscais e tributos precisam de revisão do contador antes da futura integração de emissão.</p></div></section>'+ 
-      '<section class="panel" style="margin-bottom:22px"><div class="panel-head"><div><h2>Perfis tributários</h2><p>Cadastre e revise as regras fiscais da empresa para a futura NF-e</p></div><a class="btn primary" href="/erp/tax-profiles.html">Abrir perfis fiscais →</a></div></section>'+ 
-      '<section class="panel" style="margin-bottom:22px"><div class="panel-head"><div><h2>Tabela nacional de CFOP</h2><p>619 códigos com títulos e descrições oficiais; personalize o nome usado pela empresa</p></div><a class="btn primary" href="/erp/cfop.html">Consultar CFOP →</a></div></section>'+
-      '<div class="fiscal-grid">'+models.map(function(x){return '<article class="fiscal-card"><div class="fiscal-card-top"><div class="fiscal-icon">'+ico(x[3])+'</div><span class="badge amber">Em preparação</span></div><h3>'+x[0]+' <span class="muted" style="font-weight:400;font-size:10px">'+x[1]+'</span></h3><p>'+x[2]+'. A transmissão real será habilitada após validação fiscal e homologação do emissor.</p><div class="fiscal-bottom"><span>Credenciamento fiscal em andamento</span><span>'+ico('clock')+'</span></div></article>';}).join('')+'</div>'+
-      '<div class="section-row"><h2 class="section-title">Próximas configurações fiscais</h2></div><div class="setup-steps"><article class="setup-step"><span class="step-count">01 / DADOS</span><strong>Empresa e regime</strong><p>CNPJ real, inscrições, endereço, regime tributário e responsável fiscal.</p></article><article class="setup-step"><span class="step-count">02 / CERTIFICADO</span><strong>Certificado A1 e integração fiscal</strong><p>Cadastro seguro do emitente, credenciais por ambiente e CSC quando aplicável.</p></article><article class="setup-step"><span class="step-count">03 / HOMOLOGAÇÃO</span><strong>Regras e testes</strong><p>Conferência com contador e autorização de casos reais em ambiente de homologação.</p></article></div>';
+    var entries=[
+      ['NF-e · Mercadorias · Modelo 55','Emita e acompanhe a NF-e de mercadorias em ambiente de homologação.','receipt','/erp/nfe.html','Homologação disponível'],
+      ['NFC-e · Consumidor · Modelo 65','Acesse a área própria da NFC-e e consulte a disponibilidade deste fluxo.','receipt','/erp/nfce.html','Emissão indisponível'],
+      ['NFS-e · Serviços','Acesse o fluxo próprio de serviços e ordens de serviço.','receipt','/erp/nfse.html','Preparação técnica · sem emissão'],
+      ['NF-e emitidas','Consulte documentos autorizados, filtros, eventos e arquivos.','file','/erp/nfe-issued.html','Histórico de saídas'],
+      ['Notas de entrada','Importe XML, confira fornecedor, itens, tributos e estoque.','download','/erp/inbound-nfe.html','Entrada por XML'],
+      ['Histórico fiscal','Pesquise documentos por cliente, fornecedor, transportadora e situação.','chart','/erp/fiscal-history.html','Entradas e saídas'],
+      ['CFOP','Consulte o catálogo e organize descrições internas.','layers','/erp/cfop.html','Consulta fiscal'],
+      ['Referências tributárias','Cadastros opcionais para facilitar o preenchimento dos itens.','shield','/erp/tax-profiles.html','Configuração opcional']
+    ];
+    return heading('Central fiscal','Acesse a emissão de NF-e, os documentos recebidos e o histórico da empresa.')+banner()+
+      '<section class="fiscal-workspace"><div class="fiscal-workspace-heading"><div><span class="eyebrow">OPERAÇÃO FISCAL</span><h2>Documentos e configurações</h2><p>Os dados e arquivos são separados por empresa. A emissão conectada nesta versão é somente em homologação.</p></div><span class="fiscal-workspace-status">PRODUÇÃO BLOQUEADA</span></div><div class="fiscal-workspace-grid">'+
+      entries.map(function(x){return '<a class="fiscal-workspace-card" href="'+x[3]+'"><span class="fiscal-workspace-icon">'+ico(x[2])+'</span><span class="fiscal-workspace-copy"><strong>'+x[0]+'</strong><small>'+x[1]+'</small><em>'+x[4]+'</em></span><span class="fiscal-workspace-arrow" aria-hidden="true">'+ico('arrow')+'</span></a>';}).join('')+
+      '</div><div class="fiscal-production-note"><strong>Emissão oficial ainda indisponível</strong><p>O sistema atual está conectado ao ambiente de testes da Focus. A produção exige base e credencial próprias, além da validação do cadastro fiscal do emitente. Nenhuma nota real será enviada por esta tela.</p></div></section>';
   }
   function simpleSoon(title,subtitle,icon,features){
     return heading(title,subtitle)+banner()+'<section class="panel wide-info"><div class="panel-body">'+empty(icon,'Módulo preparado para as próximas etapas','A navegação e a arquitetura deste módulo estão previstas. Ainda não há operação real nesta primeira versão.')+'<div class="info-list">'+features.map(function(x){return '<div class="info-row"><span>'+h(x[0])+'</span><strong>'+h(x[1])+'</strong></div>';}).join('')+'</div></div></section>';
@@ -84,7 +106,7 @@
   function settings(){
     var ready=cloud.status==='ready';
     var missing=ready&&cloud.company&&Array.isArray(cloud.company.fiscal_missing)?cloud.company.fiscal_missing:[];
-    var items=[['Usuário identificado',cloud.displayName||'Aguardando verificação'],['Empresa',state.companyName||'Aguardando empresa'],['Banco de dados',ready?'Supabase conectado':cloud.status==='needs_company'?'Aguardando cadastro da empresa':'Aguardando conexão'],['Dados dos cadastros',ready?'Persistidos no Supabase':'Nenhum dado local exibido'],['Regime da empresa piloto','Simples Nacional'],['Cadastro fiscal',ready?(missing.length?missing.length+' informação(ões) pendente(s)':'Dados preenchidos · revisão fiscal necessária'):'Aguardando empresa'],['Integração fiscal','Homologação em preparação'],['Certificado A1','Credenciamento fiscal a validar'],['Emissão oficial','Bloqueada até habilitação fiscal']];
+    var items=[['Usuário identificado',cloud.displayName||'Aguardando verificação'],['Empresa',state.companyName||'Aguardando empresa'],['Banco de dados',ready?'Supabase conectado':cloud.status==='needs_company'?'Aguardando cadastro da empresa':'Aguardando conexão'],['Dados dos cadastros',ready?'Persistidos no Supabase':'Nenhum dado local exibido'],['Regime da empresa piloto','Simples Nacional'],['Cadastro fiscal',ready?(missing.length?missing.length+' informação(ões) pendente(s)':'Dados preenchidos · revisão fiscal necessária'):'Aguardando empresa'],['Integração fiscal','Focus · homologação'],['Certificado digital','Gerenciado no painel Focus; não é enviado pelo ERP'],['Emissão oficial','Bloqueada · integração de produção ainda não configurada']];
     var action=ready?'<button class="btn primary" data-action="configure-company">'+ico('edit')+' Editar empresa</button>':cloud.status==='needs_company'?'<button class="btn primary" data-action="configure-company">'+ico('plus')+' Cadastrar empresa piloto</button>':'<button class="btn" data-action="check-connection">'+ico('check')+' Verificar conexão</button>';
     return heading('Configurações','Sua conta, empresa piloto e configurações fiscais seguras.')+banner()+
       '<div class="settings-grid"><section class="panel wide-info"><div class="panel-head"><div><h2>Cadastro fiscal do emitente</h2><p>Dados da empresa para preparar a NF-e em homologação</p></div></div><div class="panel-body"><div class="info-list">'+items.map(function(x){return '<div class="info-row"><span>'+h(x[0])+'</span><strong>'+h(x[1])+'</strong></div>';}).join('')+'</div>'+
@@ -92,27 +114,95 @@
       '<div class="heading-actions" style="margin-top:24px">'+action+'<button class="btn" data-action="logout">Sair da conta</button></div>'+
       '<p class="small-note" style="margin-top:16px">Credenciais de autorização fiscal e certificado A1 não são solicitados nesta página. Os segredos técnicos devem ser configurados apenas no servidor privado.</p></div></section></div>';
   }
+  function profile(){
+    return heading('Meu perfil','Atualize seus dados de acesso e a identidade visual da empresa.')+
+      '<div class="profile-grid">'+
+      '<section class="panel"><div class="panel-head"><div><h2>Dados da conta</h2><p>Seu nome e e-mail de acesso ao sistema.</p></div></div><div class="panel-body"><form id="profileForm" class="profile-form">'+
+      field('displayName','Como devemos chamar você',profileData.displayName,'required maxlength="80" autocomplete="name"',true)+
+      field('profileEmail','E-mail de acesso',profileData.email,'type="email" required maxlength="254" autocomplete="email"',true)+
+      '<div class="profile-form-actions"><button class="btn primary" type="submit">Salvar dados da conta</button></div><p class="small-note">Para confirmar a troca, siga as mensagens de verificação enviadas pelo sistema aos endereços envolvidos.</p></form></div></section>'+
+      '<section class="panel"><div class="panel-head"><div><h2>Segurança</h2><p>Defina uma nova senha para sua conta.</p></div></div><div class="panel-body"><form id="passwordForm" class="profile-form">'+
+      field('currentPassword','Senha atual','', 'type="password" required minlength="1" maxlength="128" autocomplete="current-password"',true)+
+      field('newPassword','Nova senha','', 'type="password" required minlength="12" maxlength="128" autocomplete="new-password"',true)+
+      field('confirmPassword','Confirme a nova senha','', 'type="password" required minlength="12" maxlength="128" autocomplete="new-password"',true)+
+      '<div class="profile-form-actions"><button class="btn primary" type="submit">Atualizar senha</button></div><p class="small-note">Use pelo menos 12 caracteres. Não reutilize uma senha de outro serviço.</p></form></div></section>'+
+      '<section class="panel profile-logo-panel"><div class="panel-head"><div><h2>Logo da empresa</h2><p>Ela aparece junto à empresa ativa no painel.</p></div></div><div class="panel-body"><form id="logoForm" class="profile-logo-form"><div class="profile-logo-preview"><img id="profileLogoPreview" alt="Prévia da logo da empresa" hidden><span id="profileLogoFallback">SF</span></div><div class="profile-logo-fields"><label class="field"><span>Escolha uma imagem PNG, JPEG ou WebP</span><input id="companyLogoFile" name="logo" type="file" accept="image/png,image/jpeg,image/webp" required></label><small>Até 2 MB. A imagem ficará pública para exibição da marca; os dados da empresa continuam privados.</small><button class="btn primary" type="submit">Enviar logo da empresa</button></div></form></div></section></div>';
+  }
+  async function loadProfile(){
+    try{
+      var data=await callApi('/api/profile');
+      profileData={displayName:data.displayName||'',email:data.email||''};
+      var name=document.getElementById('f-displayName'),email=document.getElementById('f-profileEmail');
+      if(name)name.value=profileData.displayName;if(email)email.value=profileData.email;
+      var preview=document.getElementById('profileLogoPreview'),fallback=document.getElementById('profileLogoFallback');
+      if(preview){preview.onload=function(){preview.hidden=false;if(fallback)fallback.hidden=true;};preview.onerror=function(){preview.hidden=true;if(fallback)fallback.hidden=false;};preview.src='/api/company/logo?v='+Date.now();}
+    }catch(error){toast(error.message,'error');}
+  }
+  async function saveProfile(form){
+    var values=Object.fromEntries(new FormData(form).entries()),button=form.querySelector('button[type="submit"]');
+    if(button)button.disabled=true;
+    try{
+      var result=await callApi('/api/profile',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({displayName:values.displayName,email:values.profileEmail})});
+      profileData={displayName:result.displayName||values.displayName,email:result.email||values.profileEmail};
+      cloud.displayName=profileData.displayName;
+      if(result.emailChangePending)toast('Dados salvos. Confirme o novo e-mail pelo link enviado.');else toast('Dados da conta atualizados.');
+      render();
+    }catch(error){toast(error.message,'error');}
+    finally{if(button)button.disabled=false;}
+  }
+  async function savePassword(form){
+    var values=Object.fromEntries(new FormData(form).entries()),button=form.querySelector('button[type="submit"]');
+    if(values.newPassword!==values.confirmPassword){toast('As senhas informadas não coincidem.','error');return;}
+    if(button)button.disabled=true;
+    try{await callApi('/api/profile',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:values.newPassword,currentPassword:values.currentPassword})});form.reset();toast('Senha atualizada com segurança.');}
+    catch(error){toast(error.message,'error');}
+    finally{if(button)button.disabled=false;}
+  }
+  async function uploadCompanyLogo(form){
+    var button=form.querySelector('button[type="submit"]'),file=form.elements.namedItem('logo');
+    if(!file||!file.files||!file.files[0]){toast('Escolha uma imagem para enviar.','error');return;}
+    if(button){button.disabled=true;button.textContent='Enviando...';}
+    try{
+      var data=new FormData();data.append('logo',file.files[0]);
+      await callApi('/api/company/logo',{method:'POST',body:data});
+      var preview=document.getElementById('profileLogoPreview'),fallback=document.getElementById('profileLogoFallback');
+      if(preview){preview.onload=function(){preview.hidden=false;if(fallback)fallback.hidden=true;};preview.src='/api/company/logo?v='+Date.now();}
+      var avatar=document.getElementById('workspaceAvatar');if(avatar){avatar.classList.remove('has-logo');var logo=document.getElementById('workspaceLogo');if(logo){logo.onload=function(){avatar.classList.add('has-logo');};logo.src='/api/company/logo?v='+Date.now();}}
+      form.reset();toast('Logo da empresa atualizada.');
+    }catch(error){toast(error.message,'error');}
+    finally{if(button){button.disabled=false;button.textContent='Enviar logo da empresa';}}
+  }
   function render(){
     document.getElementById('breadcrumb').textContent=labels[view]||labels.dashboard;
-    var companyTitle=document.querySelector('.workspace-switch strong');if(companyTitle)companyTitle.textContent=state.companyName;
-    document.querySelectorAll('.nav-link').forEach(function(b){b.classList.toggle('active',b.dataset.view===view);});
-    var views={dashboard:dashboard,products:products,clients:clients,services:services,fiscal:fiscal,inventory:inventory,reports:reports,settings:settings};
-    if(view==='finance')content.innerHTML=simpleSoon('Financeiro','Contas, parcelas, caixa e conciliação futura.','cash',[['Contas a receber','Planejadas'],['Contas a pagar','Planejadas'],['Conciliação bancária','Planejada']]);
-    else if(view==='transport')content.innerHTML=simpleSoon('Transporte','Cadastros e operações de CT-e e MDF-e em etapas futuras.','truck',[['Transportadoras e motoristas','Planejados'],['CT-e','Planejado'],['MDF-e','Planejado']]);
-    else content.innerHTML=(views[view]||dashboard)();
+    var companyTitle=document.getElementById('workspaceName');if(companyTitle)companyTitle.textContent=state.companyName;
+    var initials=document.getElementById('workspaceInitials'),avatar=document.getElementById('workspaceAvatar'),logo=document.getElementById('workspaceLogo');
+    if(initials){var parts=String(state.companyName||'Minha empresa').trim().split(/\s+/).filter(Boolean);initials.textContent=(parts.length>1?parts[0][0]+parts[1][0]:parts[0].slice(0,2)).toUpperCase();}
+    var profileWorkspace=document.getElementById('workspaceSwitch');if(profileWorkspace){profileWorkspace.setAttribute('aria-label','Abrir menu da empresa ativa: '+state.companyName);profileWorkspace.title='Empresa ativa · '+state.companyName;}
+    var companyId=cloud.company&&cloud.company.id?String(cloud.company.id):'';
+    if(logo&&companyId!==logoCompanyId){logoCompanyId=companyId;if(avatar)avatar.classList.remove('has-logo');logo.onload=function(){if(avatar)avatar.classList.add('has-logo');};logo.onerror=function(){if(avatar)avatar.classList.remove('has-logo');};logo.src=companyId?'/api/company/logo?v='+encodeURIComponent(companyId):'';}
+    document.querySelectorAll('.sidebar .nav-link').forEach(function(b){var active=b.dataset.view===view;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+    var views={dashboard:dashboard,products:products,clients:clients,services:services,fiscal:fiscal,inventory:inventory,reports:reports,profile:profile,settings:settings};
+    var requiredScope=scopeForView(view);
+    var waiting=(requiredScope&&cloud.status==='checking')||(requiredScope&&cloud.status==='ready'&&!loadedScopes[requiredScope]&&!scopeErrors[requiredScope])||(requiredScope&&loadingScope===requiredScope);
+    content.innerHTML=waiting?loadingPanel(requiredScope||'dashboard'):(requiredScope&&scopeErrors[requiredScope]?loadingPanel(requiredScope):(views[view]||dashboard)());
     var search=document.getElementById('globalSearch');search.value=query;
+    if(view==='profile')loadProfile();
   }
-  function setView(next){if(!labels[next])return;view=next;query='';filter='all';document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');render();document.querySelector('.main-column').scrollTop=0;}
+  function setView(next){if(!labels[next])return;view=next;query='';filter=defaultFilterForView(next);if(window.location.hash!=='#'+next)history.pushState(null,'','#'+next);document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');render();loadViewData(next);document.querySelector('.main-column').scrollTop=0;}
   function field(name,label,value,extra,full,help){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+(extra||'')+'>'+(help?'<small>'+h(help)+'</small>':'')+'</div>';}
   function lookupField(name,label,value,extra,kind,full){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><div class="input-action"><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+extra+'><button class="btn ghost lookup-btn" type="button" data-action="lookup-'+kind+'">Consultar</button></div></div>';}
-  function select(name,label,options,value){return '<div class="field"><label for="f-'+h(name)+'">'+h(label)+'</label><select id="f-'+h(name)+'" name="'+h(name)+'">'+options.map(function(o){return '<option value="'+h(o[0])+'" '+(String(value)===String(o[0])?'selected':'')+'>'+h(o[1])+'</option>';}).join('')+'</select></div>';}
-  function productForm(p){return field('sku','Código interno (SKU) *',p.sku,'required maxlength="40"',false)+field('name','Descrição do produto *',p.name,'required maxlength="160"',false)+field('category','Categoria',p.category,'maxlength="80"',false)+select('unit','Unidade',[['UN','Unidade (UN)'],['KG','Quilograma (KG)'],['M','Metro (M)'],['L','Litro (L)'],['CX','Caixa (CX)'],['PAR','Par (PAR)'],['PCT','Pacote (PCT)']],p.unit||'UN')+field('ncm','NCM',p.ncm,'inputmode="numeric" maxlength="8" pattern="[0-9]{8}"',false,'8 dígitos; confira com seu contador.')+field('cest','CEST (quando aplicável)',p.cest,'maxlength="12"',false)+field('defaultCfop','CFOP sugerido (opcional)',p.defaultCfop,'maxlength="4" inputmode="numeric" pattern="[0-9]{4}" list="productCfopOptions"',false,'Sugestão para rascunhos: depende da operação, UF e regime. Consulte seu contador.')+select('taxProfileId','Perfil tributário (NF-e)',[['','Nenhum perfil selecionado']],p.taxProfileId||'')+field('gtin','EAN / GTIN',p.gtin||'SEM GTIN','maxlength="14"',false,'Informe SEM GTIN quando não houver código.')+select('origin','Origem da mercadoria',[['0','0 · Nacional'],['1','1 · Estrangeira direta'],['2','2 · Estrangeira mercado interno'],['3','3 · Nacional > 40% importação'],['4','4 · Nacional processos básicos'],['5','5 · Nacional ≤ 40% importação'],['6','6 · Estrangeira sem similar'],['7','7 · Estrangeira mercado interno sem similar'],['8','8 · Nacional > 70% importação']],p.origin||'0')+field('cost','Preço de custo (R$)',p.cost,'type="number" min="0" step="0.01"',false)+field('price','Preço de venda (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+field('stock','Saldo inicial',p.stock,'type="number" min="0" step="0.001"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
-  function clientForm(p){return field('name','Nome / razão social *',p.name,'required maxlength="160"',true)+
-    select('type','Tipo',[['PJ','Pessoa jurídica'],['PF','Pessoa física'],['EXT','Estrangeiro']],p.type||'PJ')+
-    lookupField('document','CPF / CNPJ (consulta para PJ)',p.document,'maxlength="18"','cnpj',false)+
+  function select(name,label,options,value,required){return '<div class="field"><label for="f-'+h(name)+'">'+h(label)+(required?' *':'')+'</label><select id="f-'+h(name)+'" name="'+h(name)+'" '+(required?'required':'')+'>'+options.map(function(o){return '<option value="'+h(o[0])+'" '+(String(value)===String(o[0])?'selected':'')+'>'+h(o[1])+'</option>';}).join('')+'</select>'+(name==='origin'?'<small class="field-help">Necessária para NF-e. Informe a origem real do item com a contabilidade.</small>':'')+'</div>';}
+  function productForm(p){return field('sku','Código interno (SKU) *',p.sku,'required maxlength="40"',false)+field('name','Descrição do produto *',p.name,'required maxlength="160"',false)+field('category','Categoria',p.category,'maxlength="80"',false)+select('unit','Unidade',[['UN','Unidade (UN)'],['KG','Quilograma (KG)'],['M','Metro (M)'],['L','Litro (L)'],['CX','Caixa (CX)'],['PAR','Par (PAR)'],['PCT','Pacote (PCT)']],p.unit||'UN',true)+field('ncm','NCM',p.ncm,'inputmode="numeric" maxlength="8" pattern="[0-9]{8}"',false,'8 dígitos; confira com seu contador.')+field('cest','CEST (quando aplicável)',p.cest,'maxlength="12"',false)+field('defaultCfop','CFOP sugerido (opcional)',p.defaultCfop,'maxlength="4" inputmode="numeric" pattern="[0-9]{4}" list="productCfopOptions"',false,'Sugestão para NF-e: depende da operação, UF e regime. Consulte seu contador.')+select('taxProfileId','Perfil tributário (NF-e)',[['','Nenhum perfil selecionado']],p.taxProfileId||'')+field('gtin','EAN / GTIN',p.gtin||'SEM GTIN','maxlength="14"',false,'Informe SEM GTIN quando não houver código.')+select('origin','Origem da mercadoria',[['','Selecione para NF-e'],['0','0 · Nacional'],['1','1 · Estrangeira direta'],['2','2 · Estrangeira mercado interno'],['3','3 · Nacional > 40% importação'],['4','4 · Nacional processos básicos'],['5','5 · Nacional ≤ 40% importação'],['6','6 · Estrangeira sem similar'],['7','7 · Estrangeira mercado interno sem similar'],['8','8 · Nacional > 70% importação']],p.origin||'')+field('cost','Preço de custo (R$)',p.cost,'type="number" min="0" step="0.01"',false)+field('price','Preço de venda (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+field('stock','Saldo inicial',p.stock,'type="number" min="0" step="0.001"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
+  function clientForm(p){return '<div class="field full"><strong>Classificação do cadastro *</strong><small>Uma pessoa pode exercer mais de uma função.</small><div class="party-role-options">'+[['isCustomer','Cliente',p.isCustomer!==false],['isSupplier','Fornecedor',!!p.isSupplier],['isCarrier','Transportadora',!!p.isCarrier]].map(function(x){return '<label class="party-role-option"><input type="checkbox" name="'+x[0]+'" value="true" '+(x[2]?'checked':'')+'><span>'+x[1]+'</span></label>';}).join('')+'</div></div>'+
+    field('name','Nome / nome fantasia *',p.name,'required maxlength="160"',true)+
+    field('legalName','Razão social',p.legalName,'maxlength="180"',true)+
+    select('type','Tipo de pessoa',[['PJ','Pessoa jurídica'],['PF','Pessoa física'],['EXT','Estrangeiro']],p.type||'PJ',true)+
+    lookupField('document','CPF / CNPJ (consulta para PJ)',p.document,'maxlength="18"','cnpj',false)+'<p class="lookup-note field full" data-cnpj-lookup-status role="status" aria-live="polite" hidden></p>'+
+    field('stateRegistration','Inscrição Estadual (IE)',p.stateRegistration,'maxlength="40"',false)+
+    field('municipalRegistration','Inscrição Municipal (IM)',p.municipalRegistration,'maxlength="40"',false)+
     field('email','E-mail',p.email,'type="email" maxlength="160"',false)+
     field('phone','Telefone / WhatsApp',p.phone,'maxlength="25"',false)+
-    '<div class="field full"><strong>Endereço do destinatário</strong></div>'+
+    '<div class="field full"><strong>Endereço do cadastro</strong></div>'+
     lookupField('postalCode','CEP',p.postalCode,'inputmode="numeric" maxlength="9"','cep',false)+
     field('street','Logradouro',p.street,'maxlength="160"',true)+
     field('number','Número',p.number,'maxlength="20"',false)+
@@ -122,8 +212,9 @@
     field('state','UF',p.state,'maxlength="2"',false)+
     field('cityCode','Código IBGE do município',p.cityCode,'inputmode="numeric" maxlength="7"',false)+
     select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false')+
-    '<p class="lookup-note field full">Dados públicos sugeridos por ViaCEP/BrasilAPI. Confira antes de salvar ou emitir documentos fiscais.</p>';}
-  function serviceForm(p){return field('code','Código do serviço *',p.code,'required maxlength="40"',false)+field('name','Descrição do serviço *',p.name,'required maxlength="160"',false)+field('description','Detalhamento',p.description,'maxlength="255"',true)+field('lc116','Subitem da LC 116',p.lc116,'maxlength="12"',false)+field('nbs','Código NBS',p.nbs,'maxlength="12"',false)+field('price','Valor (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
+    '<p class="lookup-note field full">A consulta de CNPJ combina a Focus com fontes cadastrais complementares. Confira os dados antes de salvar; IE e IM podem exigir confirmação direta com a empresa.</p>';}
+  function updatePartyRequirements(form){if(!form||form.dataset.kind!=='client')return;var supplier=form.querySelector('[name="isSupplier"]'),type=form.querySelector('[name="type"]'),doc=form.querySelector('[name="document"]'),label=form.querySelector('label[for="f-document"]');var required=!!(supplier&&supplier.checked&&type&&type.value!=='EXT');if(doc)doc.required=required;if(label)label.textContent='CPF / CNPJ'+(required?' *':'');}
+  function serviceForm(p){return field('code','Código do serviço *',p.code,'required maxlength="40"',false)+field('name','Descrição do serviço *',p.name,'required maxlength="160"',false)+field('description','Detalhamento',p.description,'maxlength="255"',true)+field('lc116','Subitem da LC 116',p.lc116,'maxlength="12"',false)+field('nationalTaxationCode','Código de tributação nacional ISS (6 dígitos)',p.nationalTaxationCode,'inputmode=numeric maxlength=6',false)+field('nbs','Código NBS',p.nbs,'maxlength="12"',false)+field('price','Valor (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
   async function callApi(endpoint,options){
     var controller=new AbortController(),timeout=setTimeout(function(){controller.abort();},20000);
     try{
@@ -140,8 +231,26 @@
     var target=form.querySelector('[name="'+name+'"]');
     if(target&&value!==undefined&&value!==null&&String(value).trim())target.value=String(value);
   }
+  function setLookupField(form,name,value){
+    var target=form.querySelector('[name="'+name+'"]');
+    if(target&&value!==undefined&&value!==null&&String(value).trim()&&!String(target.value||'').trim())target.value=String(value);
+  }
   function fillAddress(form,data){
     ['postalCode','street','number','complement','district','city','state','cityCode'].forEach(function(name){setFormField(form,name,data[name]);});
+  }
+  function fillLookupAddress(form,data){
+    ['postalCode','street','number','complement','district','city','state','cityCode'].forEach(function(name){setLookupField(form,name,data[name]);});
+  }
+  function showCnpjLookupStatus(form,data){
+    var status=form.querySelector('[data-cnpj-lookup-status]');if(!status)return;
+    var parts=['Fonte: '+(data.source||'consulta cadastral')+'.'];
+    if(data.registrationStatus)parts.push('Situação cadastral: '+data.registrationStatus+'.');
+    if(typeof data.simplesNational==='boolean')parts.push('Opção pelo Simples: '+(data.simplesNational?'sim':'não')+'; confirme com a contabilidade antes de usar na emissão.');
+    if(typeof data.mei==='boolean')parts.push('MEI: '+(data.mei?'sim':'não')+'.');
+    if(data.cnaeDescription)parts.push('CNAE principal: '+data.cnaeDescription+'.');
+    if(data.focusNote)parts.push(data.focusNote);
+    (data.notices||[]).forEach(function(notice){parts.push(notice);});
+    status.textContent=parts.join(' ');status.hidden=false;
   }
   async function lookupRegistration(button,kind){
     var form=button.closest('form');if(!form)return;
@@ -160,21 +269,24 @@
       if(!form.isConnected)return;
       if(kind==='cep'){fillAddress(form,data);}
       else {
-        setFormField(form,form.id==='companyForm'?'legalName':'name',data.legalName);
         if(form.id==='companyForm'){
-          setFormField(form,'tradeName',data.tradeName);
-          setFormField(form,'cnae',data.cnae);
-          setFormField(form,'fiscalEmail',data.email);
-          setFormField(form,'fiscalPhone',data.phone);
+          setLookupField(form,'legalName',data.legalName);
+          setLookupField(form,'tradeName',data.tradeName);
+          setLookupField(form,'cnae',data.cnae);
+          setLookupField(form,'fiscalEmail',data.email);
+          setLookupField(form,'fiscalPhone',data.phone);
         } else {
-          setFormField(form,'email',data.email);
-          setFormField(form,'phone',data.phone);
+          setLookupField(form,'name',data.tradeName||data.legalName);
+          setLookupField(form,'legalName',data.legalName);
+          setLookupField(form,'email',data.email);
+          setLookupField(form,'phone',data.phone);
         }
-        fillAddress(form,data);
+        fillLookupAddress(form,data);
+        showCnpjLookupStatus(form,data);
         if(data.postalCode&&/^\d{8}$/.test(data.postalCode)){
           try{
             var address=await callApi('/api/lookup?type=cep&value='+data.postalCode);
-            if(form.isConnected)fillAddress(form,address);
+            if(form.isConnected)fillLookupAddress(form,address);
           }catch(e){/* CNPJ valido mesmo que a consulta complementar do CEP falhe. */}
         }
       }
@@ -182,10 +294,24 @@
     }catch(error){if(form.isConnected)toast(error.message,'error');}
     finally{if(button.isConnected){button.disabled=false;button.textContent=label;}}
   }
-  async function refreshCloud(){
-    var data=await callApi('/api/records');
-    state={products:data.products||[],clients:data.clients||[],services:data.services||[],movements:data.movements||[],companyName:data.companyName||'Minha empresa'};
-    render();
+  async function refreshCloud(scope,invalidateDashboard){
+    scope=scope||scopeForView(view)||'dashboard';
+    loadingScope=scope;scopeErrors[scope]='';render();
+    try{
+      var endpoint='/api/records?scope='+encodeURIComponent(scope);
+      if(scope==='dashboard'&&dashboardRpcAvailable===false)endpoint+='&summary=skip';
+      var data=await callApi(endpoint);
+      if(scope==='dashboard'&&typeof data.dashboardAvailable==='boolean')dashboardRpcAvailable=data.dashboardAvailable;
+      state.companyName=data.companyName||state.companyName;
+      if(scope==='dashboard'){state.dashboard=data.dashboard||null;loadedScopes.dashboard=true;}
+      if(Object.prototype.hasOwnProperty.call(data,'products')){state.products=data.products||[];loadedScopes.products=true;}
+      if(Object.prototype.hasOwnProperty.call(data,'clients')){state.clients=data.clients||[];loadedScopes.clients=true;}
+      if(Object.prototype.hasOwnProperty.call(data,'services')){state.services=data.services||[];loadedScopes.services=true;}
+      if(Object.prototype.hasOwnProperty.call(data,'movements'))state.movements=data.movements||[];
+      if(scope==='reports'){loadedScopes.reports=true;loadedScopes.products=true;loadedScopes.clients=true;loadedScopes.services=true;}
+      if(invalidateDashboard){state.dashboard=null;loadedScopes.dashboard=false;loadedScopes.reports=false;scopeErrors.dashboard='';}
+      loadingScope='';render();
+    }catch(error){loadingScope='';scopeErrors[scope]=error.message;render();throw error;}
   }
   var checkingConnection=false;
   async function checkConnection(){
@@ -198,19 +324,34 @@
       if(!response.ok)throw new Error(status.error||'Erro de conexão.');
       if(status.status==='admin_ready'){window.location.replace('/admin');return;}
       cloud={status:status.status,displayName:status.displayName||'',company:status.company||null};
-      if(cloud.status==='ready')await refreshCloud();
-      else {state=emptyState();render();}
+      dashboardRpcAvailable=status.dashboardAvailable===true;
+      state.companyName=String((cloud.company&& (cloud.company.trade_name||cloud.company.legal_name))||state.companyName||'Minha empresa');
+      if(cloud.status==='ready'){
+        if(status.dashboard){state.dashboard=status.dashboard;loadedScopes.dashboard=true;dashboardRpcAvailable=true;}
+        var initialScope=scopeForView(view);
+        if(initialScope&&!loadedScopes[initialScope])await refreshCloud(initialScope);
+        else render();
+      }else {state=emptyState();state.companyName=String((cloud.company&& (cloud.company.trade_name||cloud.company.legal_name))||'Minha empresa');render();}
     }catch(error){cloud.status='error';state=emptyState();render();toast(error.name==='AbortError'?'O Supabase não respondeu em 12 segundos. Use Tentar novamente.':'Não foi possível verificar a conexão: '+error.message,'error');}
     finally{clearTimeout(timeout);checkingConnection=false;}
   }
-  function companyFiscalFields(company){
+  function companyFiscalFields(company,includeTaxSetup){
     var a=company.address||{};
+    var regimes=[['mei','MEI'],['simples_nacional','Simples Nacional'],['lucro_presumido','Lucro Presumido'],['lucro_real','Lucro Real'],['outro','Outro']];
+    var selectedRegime=company.tax_regime_confirmed===true?company.tax_regime:'';
+    var confirmationAvailable=company.tax_regime_confirmation_available===true;
+    var regimeOptions='<option value="">Selecione após consultar a contabilidade</option>'+regimes.map(function(item){return '<option value="'+item[0]+'" '+(selectedRegime===item[0]?'selected':'')+'>'+item[1]+'</option>';}).join('');
+    var regimeBlock='<label class="field full"><span>Regime tributário informado</span><select name="taxRegime">'+regimeOptions+'</select><small>O regime só será usado em preparação fiscal quando estiver confirmado pela contabilidade.</small></label>'+
+      '<label class="field full" style="display:flex;align-items:flex-start;gap:9px"><input type="checkbox" name="taxRegimeConfirmed" value="true" '+(company.tax_regime_confirmed===true?'checked ':'')+(!confirmationAvailable?'disabled ':'')+'style="width:auto;margin-top:3px"><span>Confirmo que este regime foi conferido com a contabilidade.</span></label>'+
+      (!confirmationAvailable?'<p class="small-note field full">A confirmação será habilitada após aplicar a migration fiscal pendente no Supabase.</p>':'');
     return '<div class="field full"><strong>Identificação e contato fiscal</strong></div>'+
+      (includeTaxSetup?'<div class="field full"><strong>Enquadramento tributário</strong></div>'+regimeBlock:'')+
       field('tradeName','Nome fantasia',company.trade_name||'','maxlength="160"',false)+
-      lookupField('cnpj','CNPJ (numérico ou alfanumérico)',company.cnpj||'','maxlength="18" placeholder="00.000.000/0000-00"','cnpj',false)+
+      lookupField('cnpj','CNPJ (numérico ou alfanumérico)',company.cnpj||'','maxlength="18" placeholder="00.000.000/0000-00"','cnpj',false)+'<p class="lookup-note field full" data-cnpj-lookup-status role="status" aria-live="polite" hidden></p>'+
+      '<p class="lookup-note field full">A consulta preenche os dados cadastrais disponíveis. Confira tudo antes de salvar; IE e IM podem precisar de confirmação manual.</p>'+
       field('stateRegistration','Inscrição Estadual (IE)',company.state_registration||'','maxlength="40"',false)+
-      field('municipalRegistration','Inscrição Municipal',company.municipal_registration||'','maxlength="40"',false)+
-      field('cnae','CNAE principal (7 dígitos)',company.cnae||'','inputmode="numeric" maxlength="10"',false)+
+      field('municipalRegistration','Inscrição Municipal',company.municipal_registration||'','maxlength="40"',false,'Se informar, preencha também o CNAE fiscal.')+
+      field('cnae','CNAE fiscal (7 dígitos)',company.cnae||'','inputmode="numeric" maxlength="10"',false,'A Focus exige o par CNAE e Inscrição Municipal quando esses dados forem enviados.')+
       field('fiscalEmail','E-mail fiscal',company.fiscal_email||'','type="email" maxlength="254"',false)+
       field('fiscalPhone','Telefone com DDD',company.fiscal_phone||'','inputmode="tel" maxlength="24"',false)+
       '<div class="field full"><strong>Endereço fiscal da empresa</strong></div>'+
@@ -222,17 +363,17 @@
       field('state','UF',a.state||'','maxlength="2" placeholder="SP"',false)+
       lookupField('postalCode','CEP (8 dígitos)',a.postalCode||'','inputmode="numeric" maxlength="9"','cep',false)+
       field('cityCode','Código IBGE do município (7 dígitos)',a.cityCode||'','inputmode="numeric" maxlength="7"',false)+
-      '<div class="field full"><strong>Numeração planejada para NF-e de homologação</strong></div>'+
-      field('nfeSeries','Série',company.nfe_series_homologacao==null?1:company.nfe_series_homologacao,'type="number" min="1" max="999"',false)+
-      field('nfeNextNumber','Próximo número',company.nfe_next_number_homologacao==null?1:company.nfe_next_number_homologacao,'type="number" min="1" max="999999999"',false);
+      (includeTaxSetup?'<div class="field full"><strong>Numeração da NF-e de homologação</strong><small>A Focus pode atribuir série e número automaticamente; o JVG não enviará esses campos por padrão.</small></div>'+
+      field('nfeSeries','Série de controle local',company.nfe_series_homologacao==null?1:company.nfe_series_homologacao,'type="number" min="1" max="999"',false)+
+      field('nfeNextNumber','Próximo número de controle local',company.nfe_next_number_homologacao==null?1:company.nfe_next_number_homologacao,'type="number" min="1" max="999999999"',false):'');
   }
   function openCompanyEditor(){
     if(!['needs_company','ready'].includes(cloud.status)){toast('Aguarde a configuração segura do servidor.','error');return;}
     var company=cloud.company||{},existing=cloud.status==='ready';
     modalRoot.innerHTML='<div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><h2 id="modalTitle">'+(existing?'Editar empresa piloto':'Cadastrar minha empresa piloto')+'</h2><p>Seus dados serão vinculados somente à sua conta.</p></div><button class="icon-btn" type="button" data-action="close-modal">'+ico('x')+'</button></div><form id="companyForm"><div class="modal-body"><div class="form-grid">'+
       field('legalName','Razão social ou nome da empresa *',company.legal_name||'','required maxlength="160"',true)+
-      (existing?companyFiscalFields(company):'')+
-      '</div><p class="small-note" style="margin-top:16px">Regime piloto: Simples Nacional. Salvar este cadastro não transmite NF-e. Confira os dados com seu contador e a numeração na autorização fiscal.</p></div><div class="modal-footer"><small>* Obrigatório</small><div class="modal-footer-actions"><button class="btn" type="button" data-action="close-modal">Cancelar</button><button class="btn primary" type="submit">Salvar empresa</button></div></div></form></div></div>';
+      companyFiscalFields(company,existing)+
+      '</div><p class="small-note" style="margin-top:16px">O sistema não considera o regime padrão como confirmação fiscal. Perfis são opcionais; os dados fiscais da nota precisam estar corretos antes do envio. Salvar este cadastro não transmite nota.</p></div><div class="modal-footer"><small>* Obrigatório</small><div class="modal-footer-actions"><button class="btn" type="button" data-action="close-modal">Cancelar</button><button class="btn primary" type="submit">Salvar empresa</button></div></div></form></div></div>';
     // O formulario permanece aberto ao clicar no fundo: somente os botoes
     // Fechar/Cancelar ou a conclusao do cadastro podem dispensa-lo.
     modalRoot.querySelector('[name]').focus();
@@ -241,6 +382,7 @@
     var values=Object.fromEntries(new FormData(form).entries()),existing=cloud.status==='ready';
     var button=form.querySelector('button[type="submit"]');if(button)button.disabled=true;
     try{
+      values.taxRegimeConfirmed=!!form.querySelector('[name="taxRegimeConfirmed"]')?.checked;
       var result=await callApi('/api/company',{method:existing?'PATCH':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(values)});
       cloud.status='ready';cloud.company=result.company;closeModal();await checkConnection();toast('Empresa piloto salva no Supabase.');
     }catch(error){toast(error.message,'error');if(button)button.disabled=false;}
@@ -256,7 +398,7 @@
       var stockField=modalRoot.querySelector('[name="stock"]');
       if(stockField){stockField.readOnly=true;stockField.title='Use Ajustar saldo no módulo Estoque';}
     }
-    if(kind==='product'){loadProductCfopOptions();loadProductProfileOptions(p.taxProfileId||'');}
+    if(kind==='product'){loadProductCfopOptions();loadProductProfileOptions(p.taxProfileId||'');}if(kind==='client')updatePartyRequirements(document.getElementById('recordForm'));
     // Evita fechamento acidental ao arrastar o mouse para selecionar texto
     // ou escolher opcoes dos campos de cadastro.
     var first=modalRoot.querySelector('[name]');if(first)first.focus();
@@ -298,10 +440,12 @@
       if(record.price<0||record.cost<0||record.stock<0){toast('Valores não podem ser negativos.','error');return;}
     }else if(kind==='client'){
       var doc=values.document.toUpperCase().replace(/[^A-Z0-9]/g,'');
-      if(doc&&((values.type==='PF'&&!/^\d{11}$/.test(doc))||(values.type==='PJ'&&!/^[A-Z0-9]{12}\d{2}$/.test(doc)))){toast('CPF/CNPJ tem formato incompatível com o tipo de pessoa.','error');return;}
-      record=Object.assign(record,{name:values.name.trim(),type:values.type,document:doc,email:values.email.trim(),phone:values.phone.trim(),street:values.street.trim(),number:values.number.trim(),complement:values.complement.trim(),district:values.district.trim(),postalCode:values.postalCode.replace(/\D/g,''),cityCode:values.cityCode.replace(/\D/g,''),city:values.city.trim(),state:values.state.trim().toUpperCase(),active:values.active==='true'});
+      if(values.isSupplier==='true'&&values.type!=='EXT'&&!doc){toast('CPF/CNPJ obrigatório para vincular fornecedor a NF-e de entrada.','error');return;}if(doc&&((values.type==='PF'&&!/^\d{11}$/.test(doc))||(values.type==='PJ'&&!/^[A-Z0-9]{12}\d{2}$/.test(doc)))){toast('CPF/CNPJ tem formato incompatível com o tipo de pessoa.','error');return;}
+      var isCustomer=values.isCustomer==='true',isSupplier=values.isSupplier==='true',isCarrier=values.isCarrier==='true';
+      if(!isCustomer&&!isSupplier&&!isCarrier){toast('Selecione pelo menos um tipo: cliente, fornecedor ou transportadora.','error');return;}
+      record=Object.assign(record,{name:values.name.trim(),legalName:values.legalName.trim(),type:values.type,document:doc,stateRegistration:values.stateRegistration.trim(),municipalRegistration:values.municipalRegistration.trim(),isCustomer:isCustomer,isSupplier:isSupplier,isCarrier:isCarrier,email:values.email.trim(),phone:values.phone.trim(),street:values.street.trim(),number:values.number.trim(),complement:values.complement.trim(),district:values.district.trim(),postalCode:values.postalCode.replace(/\D/g,''),cityCode:values.cityCode.replace(/\D/g,''),city:values.city.trim(),state:values.state.trim().toUpperCase(),active:values.active==='true'});
     }else{
-      record=Object.assign(record,{code:values.code.trim(),name:values.name.trim(),description:values.description.trim(),lc116:values.lc116.trim(),nbs:values.nbs.trim(),price:Number(values.price||0),active:values.active==='true'});
+      record=Object.assign(record,{code:values.code.trim(),name:values.name.trim(),description:values.description.trim(),lc116:values.lc116.trim(),nbs:values.nbs.trim(),nationalTaxationCode:values.nationalTaxationCode.trim(),price:Number(values.price||0),active:values.active==='true'});
       if(record.price<0){toast('Valor inválido.','error');return;}
     }
     var submit=form.querySelector('button[type="submit"]');if(submit)submit.disabled=true;
@@ -311,15 +455,15 @@
         try{await callApi('/api/stock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:saved.id,delta:record.stock,reason:'Saldo inicial do cadastro'})});}
         catch(stockError){toast('Produto salvo, mas ajuste inicial pendente: '+stockError.message,'error');}
       }
-      closeModal();await refreshCloud();toast('Cadastro salvo no Supabase.');
+      closeModal();await refreshCloud(scopeForView(view),true);toast('Cadastro salvo no Supabase.');
     }catch(error){toast(error.message,'error');if(submit)submit.disabled=false;}
   }
   async function removeRecord(kind,recordId){
     if(cloud.status!=='ready'){toast('Operação indisponível sem conexão com o banco.','error');return;}
     var list=state[kind+'s'],p=list&&list.find(function(x){return x.id===recordId;});if(!p)return;
     var name=p.name||p.sku||p.code;
-    if(!confirm('Inativar "'+name+'" no Supabase? O registro será preservado para auditoria.'))return;
-    try{await callApi('/api/records',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:kind,id:recordId})});await refreshCloud();toast('Cadastro inativado no banco.');}
+    if(!confirm('Remover "'+name+'" da lista ativa? O cadastro ficará inativo e será preservado no histórico da empresa.'))return;
+    try{await callApi('/api/records',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:kind,id:recordId})});filter='active';query='';await refreshCloud(scopeForView(view),true);toast('Cadastro removido da lista ativa. Consulte Inativos para ver o histórico.');}
     catch(error){toast(error.message,'error');}
   }
   function adjustStock(recordId){
@@ -334,25 +478,26 @@
     var data=Object.fromEntries(new FormData(form).entries()),delta=Number(data.delta);
     if(!Number.isFinite(delta)||delta===0){toast('Informe uma quantidade diferente de zero.','error');return;}
     if(Number(p.stock)+delta<0){toast('O saldo não pode ficar negativo.','error');return;}
-    try{await callApi('/api/stock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:p.id,delta:delta,reason:data.reason})});closeModal();await refreshCloud();toast('Estoque atualizado no Supabase.');}
+    try{await callApi('/api/stock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:p.id,delta:delta,reason:data.reason})});closeModal();await refreshCloud(scopeForView(view),true);toast('Estoque atualizado no Supabase.');}
     catch(error){toast(error.message,'error');}
   }
   function exportCsv(kind){
     if(cloud.status!=='ready'){toast('Conecte ao banco antes de exportar.','error');return;}
-    var data=state[kind],fields=kind==='products'?['sku','name','category','unit','ncm','cest','defaultCfop','gtin','origin','cost','price','stock','active']:kind==='clients'?['name','type','document','email','phone','postalCode','street','number','complement','district','city','state','cityCode','active']:['code','name','description','lc116','nbs','price','active'];
+    var data=state[kind],fields=kind==='products'?['sku','name','category','unit','ncm','cest','defaultCfop','gtin','origin','cost','price','stock','active']:kind==='clients'?['name','type','document','email','phone','postalCode','street','number','complement','district','city','state','cityCode','active']:['code','name','description','lc116','nationalTaxationCode','nbs','price','active'];
     if(!Array.isArray(data)||!data.length){toast('Não há dados para exportar.','error');return;}
     var lines=[fields.join(';')].concat(data.map(function(r){return fields.map(function(f){return '"'+String(r[f]??'').replace(/"/g,'""')+'"';}).join(';');}));
     var blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
     a.href=url;a.download='JVG_'+kind+'_cadastros.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},300);toast('CSV exportado.');
   }
   document.addEventListener('click',function(e){
-    var v=e.target.closest('[data-view]');if(v){setView(v.dataset.view);return;}
+    var v=e.target.closest('[data-view]');if(v){var workspaceMenu=document.getElementById('workspaceMenu');if(workspaceMenu&&workspaceMenu.contains(v))workspaceMenu.open=false;document.querySelectorAll('.sidebar-scroll .nav-group[open]').forEach(function(group){group.open=false;});setView(v.dataset.view);return;}
     var b=e.target.closest('[data-action]');if(!b)return;var a=b.dataset.action,recordId=b.dataset.id;
     if(a==='close-modal'){closeModal();return;}
     if(a==='lookup-cep'||a==='lookup-cnpj'){lookupRegistration(b,a.substring(7));return;}
     if(a==='configure-company'){openCompanyEditor();return;}
     if(a==='check-connection'){checkConnection();return;}
-    if(a==='logout'){window.location.assign('/logout');return;}
+    if(a==='retry-data'){var retryScope=scopeForView(view);if(retryScope){scopeErrors[retryScope]='';refreshCloud(retryScope).catch(function(error){toast(error.message,'error');});}return;}
+    if(a==='logout'){var workspaceMenu=document.getElementById('workspaceMenu');if(workspaceMenu)workspaceMenu.open=false;window.location.assign('/logout');return;}
     if(a.indexOf('new-')===0){openEditor(a.substring(4));return;}
     if(a.indexOf('edit-')===0){openEditor(a.substring(5),recordId);return;}
     if(a.indexOf('remove-')===0){removeRecord(a.substring(7),recordId);return;}
@@ -360,20 +505,27 @@
     if(a==='adjust-stock'){adjustStock(recordId);return;}
     if(a.indexOf('goto-')===0){setView(a.substring(5));return;}
   });
-  document.addEventListener('submit',function(e){if(e.target.id==='recordForm'){e.preventDefault();saveRecord(e.target);}if(e.target.id==='stockForm'){e.preventDefault();saveStock(e.target);}if(e.target.id==='companyForm'){e.preventDefault();saveCompany(e.target);}});
+  document.addEventListener('change',function(e){if(e.target.matches('[name="isSupplier"], [name="type"]'))updatePartyRequirements(e.target.form);});
+  document.addEventListener('submit',function(e){if(e.target.id==='recordForm'){e.preventDefault();saveRecord(e.target);}if(e.target.id==='stockForm'){e.preventDefault();saveStock(e.target);}if(e.target.id==='companyForm'){e.preventDefault();saveCompany(e.target);}if(e.target.id==='profileForm'){e.preventDefault();saveProfile(e.target);}if(e.target.id==='passwordForm'){e.preventDefault();savePassword(e.target);}if(e.target.id==='logoForm'){e.preventDefault();uploadCompanyLogo(e.target);}});
   document.addEventListener('input',function(e){
-    if(e.target.id==='globalSearch'){query=e.target.value;if(view==='dashboard')setView('products');else render();return;}
+    if(e.target.id==='globalSearch'){var searchText=e.target.value;if(view==='dashboard'){setView('products');query=searchText;render();}else{query=searchText;render();}return;}
     if(e.target.hasAttribute('data-search-input')){query=e.target.value;var pos=e.target.selectionStart;render();var next=document.querySelector('[data-search-input]');if(next){next.focus();next.setSelectionRange(pos,pos);}}
   });
-  document.addEventListener('change',function(e){if(e.target.hasAttribute('data-filter')){filter=e.target.value;render();}});
-  function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');}
-  document.getElementById('menuBtn').addEventListener('click',function(){document.getElementById('sidebar').classList.add('open');document.getElementById('mobileBackdrop').classList.add('active');this.setAttribute('aria-expanded','true');});
-  document.getElementById('closeMenuBtn').addEventListener('click',closeSidebar);
-  document.getElementById('mobileBackdrop').addEventListener('click',closeSidebar);
-  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSidebar();if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();document.getElementById('globalSearch').focus();}});
+  document.addEventListener('change',function(e){if(e.target.hasAttribute('data-filter')){filter=e.target.value;render();}if(e.target.id==='partyTypeFilter'){partyFilter=e.target.value;render();}});
+  function closeSidebar(restoreFocus){var sidebar=document.getElementById('sidebar');var wasOpen=sidebar.classList.contains('open');sidebar.classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');document.getElementById('menuBtn').setAttribute('aria-expanded','false');if(restoreFocus&&wasOpen)document.getElementById('menuBtn').focus();}
+  document.getElementById('menuBtn').setAttribute('aria-expanded','false');
+  document.getElementById('menuBtn').addEventListener('click',function(){document.getElementById('sidebar').classList.add('open');document.getElementById('mobileBackdrop').classList.add('active');this.setAttribute('aria-expanded','true');document.getElementById('closeMenuBtn').focus();});
+  document.getElementById('closeMenuBtn').addEventListener('click',function(){closeSidebar(true);});
+  document.getElementById('mobileBackdrop').addEventListener('click',function(){closeSidebar(true);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){var workspaceMenu=document.getElementById('workspaceMenu');if(workspaceMenu&&workspaceMenu.open){workspaceMenu.open=false;workspaceMenu.querySelector('summary')?.focus();return;}closeSidebar(true);}if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();document.getElementById('globalSearch').focus();}});
   if('scrollRestoration' in history)history.scrollRestoration='manual';
   window.scrollTo(0,0);
   document.querySelector('.main-column').scrollTop=0;
+  var initialHash=decodeURIComponent(window.location.hash.slice(1));
+  if(labels[initialHash])view=initialHash;
+  filter=defaultFilterForView(view);
+  window.addEventListener('hashchange',function(){var next=decodeURIComponent(window.location.hash.slice(1))||'dashboard';if(labels[next]&&next!==view){view=next;query='';filter=defaultFilterForView(next);closeSidebar();render();loadViewData(next);document.querySelector('.main-column').scrollTop=0;}});
+  window.addEventListener('popstate',function(){var next=decodeURIComponent(window.location.hash.slice(1))||'dashboard';if(labels[next]&&next!==view){view=next;query='';filter=defaultFilterForView(next);closeSidebar();render();loadViewData(next);document.querySelector('.main-column').scrollTop=0;}});
   render();
   checkConnection();
 })();

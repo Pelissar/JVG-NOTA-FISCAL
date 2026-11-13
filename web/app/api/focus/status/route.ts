@@ -29,7 +29,7 @@ export async function GET() {
         environment: "homologacao", emissionEnabled: false }, 403);
     }
 
-    const token = focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN");
+    const token = focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN") || focusRuntimeEnv("FOCUS_NFE_HOMOLOGACAO_TOKEN");
     if (!token) {
       return apiJson({ status: "waiting_focus_token", environment: "homologacao", emissionEnabled: false });
     }

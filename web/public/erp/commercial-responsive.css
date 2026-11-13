@@ -1,0 +1,25 @@
+/* Responsividade comercial: notebooks, monitores grandes, janelas estreitas e celulares. */
+.commercial-page{width:min(100%,1440px);margin:clamp(12px,2vw,32px) auto;padding:0 clamp(12px,2vw,28px) 32px;min-width:0}
+.commercial-page,.commercial-page *{box-sizing:border-box}
+.commercial-page .page-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.commercial-page .page-heading>div{flex:1 1 300px;min-width:0}
+.commercial-page .page-heading h1{font-size:clamp(22px,2.3vw,34px);overflow-wrap:anywhere}
+.commercial-page .page-heading p{max-width:75ch;overflow-wrap:anywhere}
+.commercial-page .panel{min-width:0;padding:clamp(14px,2vw,24px);margin-bottom:20px}
+.commercial-page .commercial-table{width:100%;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.commercial-page .commercial-table table{width:100%;min-width:680px;border-collapse:collapse}
+.commercial-page .commercial-table th,.commercial-page .commercial-table td{padding:11px 12px;text-align:left;border-bottom:1px solid #e5edf2;vertical-align:middle;white-space:nowrap}
+.commercial-page .commercial-table td:last-child{white-space:normal;min-width:180px}
+.commercial-page .commercial-table .btn{margin:3px;max-width:100%;white-space:normal}
+.commercial-page .quote-form{display:grid;gap:16px;min-width:0}
+.commercial-page .quote-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(180px,1fr);gap:12px}
+.commercial-page .quote-row{display:grid;grid-template-columns:minmax(0,2fr) minmax(100px,.8fr) minmax(120px,1fr) auto;gap:10px;align-items:end;margin-bottom:12px}
+.commercial-page label{display:grid;gap:6px;min-width:0}
+.commercial-page input,.commercial-page select,.commercial-page textarea{width:100%;max-width:100%;min-width:0;min-height:40px;padding:8px;border:1px solid #cbd8e1;border-radius:8px;background:#fff}
+.commercial-page textarea{resize:vertical}
+.commercial-page .quote-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.commercial-page .sales-pagination{max-width:100%}
+@media(max-width:900px){.commercial-page .quote-row{grid-template-columns:minmax(0,2fr) minmax(95px,1fr) minmax(115px,1fr)}.commercial-page .quote-row>.remove{grid-column:1/-1;justify-self:end}}
+@media(max-width:760px){.commercial-page .page-heading{gap:12px}.commercial-page .page-heading>div{flex:0 1 auto}}
+@media(max-width:640px){.commercial-page{padding:0 12px 24px}.commercial-page .quote-grid,.commercial-page .quote-row{grid-template-columns:minmax(0,1fr)}.commercial-page .quote-row>.remove{grid-column:auto;justify-self:stretch}.commercial-page .page-heading>.btn{width:100%;text-align:center}.commercial-page .quote-actions>.btn{width:100%}.commercial-page .commercial-table table{min-width:620px}}
+@media(max-height:650px){.commercial-page{margin-top:10px}.commercial-page .panel{padding:12px}}

@@ -3,50 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0f2334">
-  <meta name="description" content="Rascunhos de NF-e em homologação no JVG Nota Fiscal.">
-  <title>Rascunhos NF-e · JVG Nota Fiscal</title>
-  <link rel="stylesheet" href="./nfe-drafts.css">
-  <script defer src="./nfe-drafts.js"></script>
-<style>
-.draft-inspect{margin-top:10px;border:1px solid #138b75;border-radius:9px;background:#e9f9f3;color:#086f5d;font-weight:700;cursor:pointer;padding:9px 12px;font:inherit;font-size:12px;text-align:left}
-.draft-inspect:hover{background:#d4f2e7}.draft-details{padding:20px;overflow-wrap:anywhere}.draft-details h3,.draft-details h4{margin:10px 0}.draft-details p,.draft-details li{font-size:13px;line-height:1.6}.draft-details ul{padding-left:22px}.draft-details[hidden]{display:none}
-</style>
+  <meta http-equiv="refresh" content="0;url=/erp/nfe.html">
+  <title>NF-e · SigmaFiscal</title>
 </head>
 <body>
-  <header class="topbar">
-    <a href="/erp/index.html" class="brand" aria-label="Voltar ao painel JVG"><span class="brand-mark">J.</span><span><strong>JVG Nota Fiscal</strong><small>ERP · Central fiscal</small></span></a>
-    <div class="header-actions"><span class="environment">HOMOLOGAÇÃO · SEM EMISSÃO</span><a class="back-button" href="/erp/index.html">← Voltar ao painel</a></div>
-  </header>
-  <main class="layout">
-    <div class="page-title"><div><div class="eyebrow">CENTRAL FISCAL / NF-e MODELO 55</div><h1>Rascunhos de NF-e</h1><p>Prepare itens, revise dados cadastrais e confira pendências antes dos testes de homologação.</p></div><span class="phase">Etapa de preparação</span></div>
-    <div id="status" class="notice" role="status">Conectando ao Supabase e carregando seus cadastros...</div>
-    <div class="grid">
-      <section class="panel">
-        <div class="panel-head"><div><h2>Novo rascunho</h2><p>Todos os dados são registrados na empresa autenticada.</p></div><span class="step-tag">01 / PREENCHIMENTO</span></div>
-        <form id="draftForm">
-          <div class="panel-body">
-            <div class="field-grid">
-              <label class="field"><span>Natureza da operação *</span><input name="nature" maxlength="100" minlength="3" placeholder="Ex.: Venda de mercadoria" required></label>
-              <label class="field"><span>Destinatário *</span><select id="recipientId" name="recipientId" required><option value="">Carregando clientes...</option></select></label>
-            </div>
-            <div class="items-heading"><div><h3>Produtos</h3><p>Até 20 itens, com quantidade e preço unitário.</p></div><button type="button" class="add-button" id="addItem">+ Adicionar produto</button></div>
-            <div id="items" class="items" aria-live="polite"></div>
-            <datalist id="cfopOptions"></datalist>
-            <p class="hint"><a href="/erp/tax-profiles.html" style="color:#0a9574;font-weight:800;text-decoration:underline">Cadastrar perfis tributários da empresa</a>. A classificação vinculada ao produto é registrada no rascunho e comparada aos códigos informados; divergências e falta de revisão geram pendências. Não há cálculo automático de tributos.</p>
-            <p class="hint">O CFOP sugerido pelo produto é preenchido apenas para facilitar o rascunho e pode ser alterado. Confira a operação, a UF e o regime com seu contador. <a href="/erp/cfop.html" style="color:#0a9574;font-weight:800;text-decoration:underline">Consultar tabela oficial CFOP</a>.</p>
-            <div class="summary"><span>Valor comercial estimado</span><strong id="total">R$ 0,00</strong></div>
-          </div>
-          <div class="form-footer"><p>O rascunho oferece um checklist interno de preparação. <b>Não</b> gera XML, DANFE ou nota autorizada.</p><button class="save-button" id="saveButton" disabled type="submit">Salvar rascunho NF-e</button></div>
-        </form>
-      </section>
-      <aside class="side">
-        <section class="panel history"><div class="panel-head"><div><h2>Rascunhos salvos</h2><p>Somente desta empresa e em homologação.</p></div><span class="step-tag">02 / HISTÓRICO</span></div><div class="panel-body"><div id="history" class="history-list"><p>Carregando...</p></div></div></section>
-        <section class="panel draft-details" id="draftDetails" hidden aria-live="polite" aria-label="Detalhes do rascunho"></section>
-        <section class="next-panel"><div class="next-icon">✓</div><h3>Uma etapa de cada vez.</h3><p>Os rascunhos usam seus cadastros atuais. O cálculo tributário, a transmissão fiscal, o retorno da SEFAZ e os arquivos fiscais serão implementados e validados nas próximas fases.</p><span>Transmissão desativada por segurança</span></section>
-      </aside>
-    </div>
-  </main>
-  <footer>© 2026 JVG Nota Fiscal · Homologação em preparação. Todos os valores exibidos são comerciais e não representam apuração de tributos.</footer>
+  <p>A tela de emissão mudou de endereço. <a id="newRoute" href="/erp/nfe.html">Abrir emissão de NF-e</a>.</p>
+  <script>window.location.replace('/erp/nfe.html'+window.location.search+window.location.hash);</script>
 </body>
 </html>

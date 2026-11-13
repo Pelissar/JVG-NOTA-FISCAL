@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f4f6f8"><meta name="description" content="Recebimento e conferência de NF-e de fornecedores.">
+<title>Notas de entrada · SigmaFiscal</title>
+<link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
+<link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css">
+<link rel="stylesheet" href="/erp/inbound-nfe.css?v=20261113-2">
+<script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261113-2"></script><script defer src="/erp/inbound-nfe.js?v=20261113-3"></script>
+</head>
+<body>
+<div id="erpGlobalNav"></div><button type="button" class="theme-toggle" data-theme-toggle aria-label="Alternar tema">◐ Modo escuro</button>
+<main class="inbound-shell">
+  <header class="inbound-heading">
+    <div><div class="eyebrow">FISCAL / DOCUMENTOS RECEBIDOS</div><h1>Notas de entrada</h1><p>Importe o XML do fornecedor, confira os itens e registre a entrada no estoque.</p></div>
+    <a class="back-link" href="/erp/index.html#fiscal">Voltar à central fiscal</a>
+  </header>
+  <section class="inbound-notice" role="note"><strong>Entrada controlada, sem escrituração fiscal.</strong><span>O lançamento organiza o recebimento e o estoque. Ele não calcula tributos, contas a pagar nem valida assinatura digital junto à SEFAZ.</span></section>
+  <section class="inbound-notice" role="note" aria-label="Revisão fiscal de compras interestaduais"><strong>Compra de fora do estado: confira a classificação fiscal.</strong><span>Confirme com a contabilidade se a mercadoria, na UF da JVG, está sujeita à substituição tributária ou à tributação aplicável. O CST/CSOSN do fornecedor no XML não preenche automaticamente a regra de venda da JVG.</span></section>
+  <div class="inbound-grid">
+    <section class="inbound-card upload-card">
+      <div class="card-heading"><div class="step-number">01</div><div><h2>Importar arquivo XML</h2><p>Use o XML processado da NF-e, com protocolo de autorização.</p></div></div>
+      <form id="uploadForm">
+        <label class="file-drop" for="xmlFile"><span class="file-symbol">XML</span><strong>Selecione o XML da nota</strong><small>Um arquivo por vez · até 2 MB · NF-e modelo 55</small><input id="xmlFile" name="xml" type="file" accept=".xml,application/xml,text/xml" required></label>
+        <button class="primary-button" id="uploadButton" type="submit">Analisar e importar XML</button>
+      </form>
+      <p class="upload-status" id="uploadStatus" role="status" aria-live="polite">A importação valida estrutura, chave, protocolo e destinatário. A assinatura deve ser conferida na consulta oficial antes do recebimento.</p>
+      <div class="pdf-note"><strong>Tem apenas PDF/DANFE?</strong><span>Use-o para conferência visual e peça ao fornecedor o XML original. Este lançamento aceita XML; não converte PDF em nota nem oferece digitação manual nesta tela.</span></div>
+    </section>
+    <section class="inbound-card flow-card">
+      <div class="card-heading"><div class="step-number">02</div><div><h2>Como funciona o recebimento</h2><p>O estoque só muda depois da sua confirmação.</p></div></div>
+      <ol class="flow-list"><li><b>Importar</b><span>O sistema lê o XML e procura fornecedor e produtos por CNPJ/CPF e GTIN.</span></li><li><b>Conferir</b><span>Associe os itens sem correspondência e marque quais controlam estoque.</span></li><li><b>Receber</b><span>Confirme que verificou a chave e a autorização no portal oficial da NF-e.</span></li></ol>
+      <p class="flow-footnote">O recebimento cria movimentos de compra vinculados à chave da NF-e e não emite nota de saída.</p>
+    </section>
+  </div>
+  <section class="inbound-card documents-card">
+    <div class="card-heading list-heading"><div><div class="step-number">03</div><div><h2>Notas importadas</h2><p>XMLs em conferência e entradas confirmadas desta empresa.</p></div></div><button class="secondary-button" id="reloadButton" type="button">Atualizar</button></div>
+    <div id="pageStatus" class="page-status" role="status" aria-live="polite">Carregando lançamentos...</div>
+    <div id="documents" class="documents-list"></div>
+  </section>
+  <section class="inbound-card review-card" id="reviewCard" hidden aria-labelledby="reviewHeading">
+    <div class="card-heading review-heading"><div><div class="step-number">04</div><div><h2 id="reviewHeading">Conferir NF-e</h2><p id="reviewSummary"></p></div></div><button class="secondary-button" id="closeReview" type="button">Fechar</button></div>
+    <form id="reviewForm"><div class="review-body">
+      <div class="review-fields"><label class="review-field"><span>Fornecedor emitente *</span><select id="supplierSelect" name="supplierId" required></select></label><div id="authorizationSummary" class="authorization-summary"></div></div>
+      <div id="fiscalDataReview" class="fiscal-data-review"><p>Carregando dados fiscais do XML...</p></div>
+      <div class="items-heading"><div><h3>Itens do XML</h3><p>GTIN só associa automaticamente quando encontra um único produto cadastrado.</p></div></div>
+      <div id="reviewItems" class="review-items"></div>
+      <section id="receiptSummary" class="receipt-summary" hidden aria-live="polite"></section>
+      <p id="reviewActionStatus" class="review-action-status" role="status" aria-live="polite" hidden></p>
+      <label class="confirmation-check"><input id="officialStatus" type="checkbox"><span>Conferi a chave e a autorização desta NF-e no portal oficial da SEFAZ. Entendo que esta tela não verifica a assinatura digital.</span></label>
+    </div>
+      <section id="cancelEntryPanel" class="cancel-entry-panel" aria-live="polite" hidden>
+        <div class="cancel-entry-notice">
+          <strong>Cancelamento somente no ERP</strong>
+          <p id="cancelEntryDescription"></p>
+        </div>
+        <label class="review-field" for="cancelEntryReason">
+          <span>Motivo do cancelamento <b aria-hidden="true">*</b></span>
+          <textarea id="cancelEntryReason" minlength="5" maxlength="500" rows="3" required placeholder="Descreva por que esta entrada está sendo cancelada"></textarea>
+        </label>
+        <div class="cancel-entry-actions">
+          <button class="danger-button" id="confirmCancelEntry" type="button">Confirmar cancelamento</button>
+          <button class="secondary-button" id="cancelEntryBack" type="button">Voltar</button>
+        </div>
+      </section>
+      <div class="review-footer"><p id="reviewFooterNote">Salvar conferência guarda os vínculos. Confirmar entrada grava movimentos. O cancelamento encerra este lançamento no ERP e preserva o XML no histórico; para lançar novamente, importe o arquivo outra vez. A NF-e do fornecedor não é cancelada na SEFAZ.</p><div class="review-footer-actions"><button class="secondary-button" id="cancelEntryButton" type="button">Cancelar lançamento no ERP</button><button class="secondary-button" id="saveReviewButton" type="submit">Salvar conferência</button><button class="primary-button" id="receiveButton" type="submit" data-receive="true">Confirmar entrada no estoque</button></div></div>
+    </form>
+  </section>
+</main>
+<footer class="inbound-footer">SigmaFiscal · Recebimento de NF-e · Não substitui validação e orientação contábil.</footer>
+</body>
+</html>

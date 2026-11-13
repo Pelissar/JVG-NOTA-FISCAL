@@ -1,0 +1,29 @@
+/* SigmaFiscal / JVG — visual unificado para telas comerciais e fiscais independentes. */
+*,*::before,*::after{box-sizing:border-box}
+:root{--surface:#14283dd9;--line:#9bc8f43b;--text:#edf6ff;--muted:#c0d3e8;--accent:#7fc1ff;color-scheme:dark}
+html{min-width:320px;scrollbar-color:#496e93 #091727}
+body:not(:has(> .app-shell)){min-width:320px;min-height:100dvh;height:auto;overflow-y:auto;background:radial-gradient(ellipse 65% 60% at 85% 5%,#2258a34a,transparent 75%),radial-gradient(ellipse 55% 60% at 10% 95%,#0e74824a,transparent 75%),linear-gradient(145deg,#07111f,#0d2038 65%,#081724);color:var(--text);background-attachment:fixed}
+body:not(:has(> .app-shell)) :is(h1,h2,h3,h4,strong,label,th){color:#f1f7ff}
+body:not(:has(> .app-shell)) :is(p,small,.eyebrow,.page-heading p,.page-title p,.stat-foot){color:var(--muted)}
+body:not(:has(> .app-shell)) :is(.commercial-page,.layout,main){min-width:0;max-width:min(100%,1680px)}
+body:not(:has(> .app-shell)) :is(.panel,.table-panel,.cfop-summary,.card,.record-card,.notice,.summary-card){background:linear-gradient(145deg,#19314cdb,#10253bbf);border:1px solid var(--line);color:var(--text);border-radius:18px;box-shadow:0 15px 42px #02091738;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+body:not(:has(> .app-shell)) :is(.topbar,header.topbar){background:#0c1d31e8;border-bottom:1px solid var(--line);color:#f1f7ff;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+body:not(:has(> .app-shell)) :is(.btn,.back-button,button){border-radius:11px}
+body:not(:has(> .app-shell)) :is(.btn.primary,button[type=submit]:not(:disabled)){background:linear-gradient(110deg,#226ed7,#379bf5);border-color:#76baff;color:white}
+body:not(:has(> .app-shell)) :is(input,select,textarea){background:#0c1e34;color:#f4f8ff;border:1px solid #86b2df65;border-radius:10px;max-width:100%;min-width:0}
+body:not(:has(> .app-shell)) :is(input,textarea)::placeholder{color:#c0d1e4;opacity:1}
+body:not(:has(> .app-shell)) :is(a,button){transition:filter .16s,background .16s}
+body:not(:has(> .app-shell)) :is(a,button):focus-visible{outline:3px solid #8ecbff;outline-offset:3px}
+body:not(:has(> .app-shell)) .brand-mark img{display:block;width:100%;height:100%;object-fit:contain}
+body:not(:has(> .app-shell)) .brand{display:flex;align-items:center;gap:12px;color:#f3f8ff}
+body:not(:has(> .app-shell)) .brand-mark{display:inline-grid;place-items:center;overflow:hidden;flex:none}
+body:not(:has(> .app-shell)) :is(.commercial-table,.table-wrap,.cfop-grid){max-width:100%;min-width:0}
+body:not(:has(> .app-shell)) :is(table,.commercial-table){color:#e7f2ff}
+body:not(:has(> .app-shell)) :is(td,th){border-color:#ffffff22}
+body:not(:has(> .app-shell)) :is(.quote-actions,.sales-pagination,.header-actions){flex-wrap:wrap;min-width:0}
+body:not(:has(> .app-shell)) :is(.quote-grid,.grid,.field-grid){min-width:0}
+body:not(:has(> .app-shell)) .draft-inspect{background:#134b58;color:#d4ffff;border-color:#4fa9bf}
+body:not(:has(> .app-shell)) .draft-inspect:hover{background:#1b5b69}
+@media(max-width:760px){body:not(:has(> .app-shell)) :is(.commercial-page,.layout,main){padding-inline:clamp(12px,3vw,22px)}body:not(:has(> .app-shell)) :is(.quote-grid,.grid,.field-grid){grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-transparency:reduce){body:not(:has(> .app-shell)) :is(.panel,.table-panel,.cfop-summary,.card,.record-card,.notice,.summary-card){backdrop-filter:none;-webkit-backdrop-filter:none;background:#12253b}}
+@media(prefers-reduced-motion:reduce){body:not(:has(> .app-shell)) :is(a,button){transition:none}}

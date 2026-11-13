@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { reviewNfePreparation } from '../lib/fiscal/nfe-preflight.ts';
 
 const address = {street:'Rua A',number:'10',district:'Centro',city:'Andradina',state:'SP',postalCode:'16900000',cityCode:'3502101'};
-const issuer = {cnpj:'12345678000195',stateRegistration:'123456789',state:'SP'};
+const issuer = {cnpj:'12345678000195',stateRegistration:'123456789',state:'SP',taxRegimeConfirmed:true};
 const recipient = {name:'Cliente',documentType:'cpf',documentNumber:'52998224725',address};
 const items = [{description:'Produto real',ncm:'85176299',unit:'UN',origin:'0'}];
 
@@ -19,6 +19,13 @@ test('CPF incorreto ou ausente é rejeitado sem bloquear armazenamento de rascun
   const result=reviewNfePreparation(issuer,{...recipient,documentNumber:'11111111111'},items);
   assert.match(result.issues.join(' '),/CPF inválido/);
   assert.equal(result.dataComplete,false);
+});
+
+test('regime não confirmado pela contabilidade gera pendência de emitente',()=>{
+  const result=reviewNfePreparation({...issuer,taxRegimeConfirmed:false},recipient,items);
+  assert.match(result.issues.join(' '),/regime tributário não confirmado/i);
+  assert.equal(result.dataComplete,false);
+  assert.equal(result.transmissionEnabled,false);
 });
 
 test('endereço incompleto e produto sem NCM, unidade ou origem geram pendências',()=>{

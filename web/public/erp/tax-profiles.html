@@ -1,27 +1,217 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0d2031"><title>Perfis fiscais | JVG Nota Fiscal</title>
-<style>
-:root{font-family:system-ui,-apple-system,sans-serif;color:#183044;background:#f3f7f9}*{box-sizing:border-box}
-body{margin:0}header{background:#102b3c;color:white;padding:18px max(20px,calc((100vw - 1160px)/2));display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap}header a{color:#8ceacb;text-decoration:none;font-weight:700}main{max-width:1160px;margin:36px auto;padding:0 20px}h1{font-size:clamp(27px,4vw,38px);margin:0 0 8px}p{line-height:1.65;color:#587280}.intro{margin-bottom:25px}.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px}.panel{background:white;border:1px solid #dbe6e8;border-radius:17px;padding:24px;min-width:0;box-shadow:0 10px 30px #15364a0a}.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}label{display:grid;gap:7px;font-size:13px;font-weight:700}label.full{grid-column:1/-1}input{font:inherit;width:100%;border:1px solid #c6d7dc;border-radius:9px;padding:12px;color:#163042}input:focus{outline:2px solid #1fba94}button{background:#008c75;color:white;border:0;border-radius:9px;padding:13px 20px;font:inherit;font-weight:700;cursor:pointer;margin-top:20px}button:disabled{opacity:.5;cursor:not-allowed}.notice{border-left:4px solid #d69b3b;background:#fff5e1;padding:13px;border-radius:8px;margin:16px 0;font-size:13px}.notice.error{border-color:#d35f5f;background:#fff1f1}.record{padding:16px 0;border-bottom:1px solid #e4edef}.record:last-child{border-bottom:none}.record strong{display:block}.record small{display:block;color:#607c8b;margin-top:7px;line-height:1.6}.tag{font-size:11px;color:#9a6b0e;background:#fff0ca;border-radius:20px;padding:4px 9px;display:inline-block;margin-top:6px}@media(max-width:800px){.grid{grid-template-columns:1fr}}@media(max-width:440px){.field-grid{grid-template-columns:1fr}label.full{grid-column:auto}.panel{padding:17px}}
-</style><script defer src="./tax-profiles.js"></script></head><body>
-<header><strong>JVG Nota Fiscal · Perfis fiscais</strong><a href="/erp/index.html">← Voltar ao painel</a></header>
-<main><div class="intro"><h1>Perfis tributários</h1><p>Organize os códigos fiscais da sua empresa, com classificação por regime e revisão antes da emissão. Inicialmente disponível para NF-e e Simples Nacional.</p></div>
-<div id="status" class="notice" role="status">Conectando ao servidor...</div><div class="grid">
-<section class="panel"><h2>Novo perfil</h2><p>Os códigos não representam cálculo automático nem aprovação fiscal.</p>
-<form id="profileForm"><div class="field-grid">
-<label class="full">Nome do perfil *<input name="name" maxlength="120" minlength="3" required placeholder="Ex.: Venda interna de mercadorias"></label>
-<label>CFOP sugerido<input name="cfop" pattern="[0-9]{4}" maxlength="4" list="cfopOptions" inputmode="numeric" placeholder="5102"></label>
-<label>CSOSN<input name="csosn" pattern="[0-9]{3}" maxlength="3" inputmode="numeric" placeholder="102"></label>
-<label>CST do PIS<input name="pisCst" pattern="[0-9]{2}" maxlength="2" inputmode="numeric"></label>
-<label>CST da Cofins<input name="cofinsCst" pattern="[0-9]{2}" maxlength="2" inputmode="numeric"></label>
-<label>CST IBS/CBS<input name="cstIbsCbs" pattern="[0-9]{3}" maxlength="3" inputmode="numeric"></label>
-<label>Classificação IBS/CBS<input name="classTrib" pattern="[0-9]{6}" maxlength="6" inputmode="numeric"></label>
-<label>PIS estimado (%)<input name="pisRate" inputmode="decimal" pattern="[0-9]{1,3}([.][0-9]{1,4})?" placeholder="Preencher com orientação fiscal"></label>
-<label>Cofins estimada (%)<input name="cofinsRate" inputmode="decimal" pattern="[0-9]{1,3}([.][0-9]{1,4})?" placeholder="Preencher com orientação fiscal"></label>
-<label>IBS estimado (%)<input name="ibsRate" inputmode="decimal" pattern="[0-9]{1,3}([.][0-9]{1,4})?" placeholder="Preencher com orientação fiscal"></label>
-<label>CBS estimada (%)<input name="cbsRate" inputmode="decimal" pattern="[0-9]{1,3}([.][0-9]{1,4})?" placeholder="Preencher com orientação fiscal"></label>
-</div><div class="notice">As alíquotas são opcionais e informadas manualmente. O sistema apenas multiplica a base comercial pelos percentuais; não considera reduções, créditos, diferimentos, exceções ou regras completas do Simples Nacional. <strong>Nunca use a estimativa para emitir notas.</strong></div><div class="notice">Confirme todas as classificações com o contador e as tabelas fiscais vigentes. O perfil será salvo como <strong>rascunho não revisado</strong>.</div>
-<button id="save" type="submit" disabled>Salvar perfil fiscal</button></form><datalist id="cfopOptions"></datalist></section>
-<section class="panel"><h2>Perfis da empresa</h2><p>Somente registros reais vinculados à empresa autenticada.</p><div id="records">Carregando...</div></section>
-</div></main></body></html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6f8">
+  <title>Perfis tributários | JVG Nota Fiscal</title>
+  <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
+  <link rel="stylesheet" href="/erp/unified-pages.css">
+  <link rel="stylesheet" href="/erp/erp-design-v2.css">
+  <link rel="stylesheet" href="/erp/tax-profiles.css?v=20261112-1">
+  <script src="/erp/theme-switch.js"></script>
+  <script defer src="/erp/erp-page-nav.js?v=20261113-2"></script>
+  <script defer src="./tax-profiles.js?v=20261112-2"></script>
+</head>
+<body class="tax-profiles-page">
+  <div id="erpGlobalNav"></div>
+  <button type="button" class="theme-toggle" data-theme-toggle aria-label="Alternar tema">◐ Modo escuro</button>
+
+  <main class="tax-page-frame">
+    <section class="page-intro" aria-labelledby="pageTitle">
+      <div>
+        <p class="eyebrow">FISCAL <span aria-hidden="true">/</span> CONFIGURAÇÃO</p>
+        <h1 id="pageTitle">Perfis tributários</h1>
+        <p class="intro-copy">Esta tela organiza referências para uma futura NF-e. O sistema não presume o regime tributário nem escolhe códigos por você. Ela não é necessária para cadastrar produtos, fazer orçamentos, pedidos ou vendas comerciais.</p>
+      </div>
+      <a class="back-link" href="/erp/index.html"><span aria-hidden="true">←</span> Voltar ao painel</a>
+    </section>
+
+    <div id="status" class="notice info status-banner" role="status" aria-live="polite">Conectando ao servidor...</div>
+
+    <section class="transition-panel" aria-labelledby="transitionTitle">
+      <div class="transition-icon" aria-hidden="true">i</div>
+      <div class="transition-copy">
+        <p class="section-kicker">REFORMA TRIBUTÁRIA · TRANSIÇÃO</p>
+        <h2 id="transitionTitle">PIS/Cofins e IBS/CBS são classificações diferentes</h2>
+        <p>O CST de PIS/Cofins tem 2 dígitos. Para IBS/CBS, a NF-e usa CST de 3 dígitos combinado com cClassTrib de 6 dígitos. Não existe conversão automática geral entre essas tabelas: use a classificação vigente para a operação, confirmada pela contabilidade.</p>
+        <p>Para optantes do Simples Nacional, não há obrigação de destacar CBS em 2026. Em 2027, o tratamento depende da opção separada pelo regime regular do IBS/CBS. A Receita Federal informa que o prazo para o primeiro semestre terminou em 30/10/2026, com efeitos a partir de 01/01/2027.</p>
+        <p class="transition-links"><a href="https://dfe-portal.svrs.rs.gov.br/DFE/ClassificacaoTributaria" target="_blank" rel="noopener noreferrer">Consultar a tabela oficial CST/cClassTrib</a><a href="https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/setembro/simples-nacional-2027-entenda-os-novos-prazos-e-faca-sua-escolha-com-consciencia-e-tranquilidade/" target="_blank" rel="noopener noreferrer">Ver prazos e opções do Simples na Receita Federal</a></p>
+        <p class="transition-footnote">Confirme com a Walquíria se a JVG optou pelo regime regular de IBS/CBS para 2027. Os exemplos e percentuais de materiais gerais não são aplicados automaticamente a esta empresa.</p>
+      </div>
+    </section>
+
+    <section class="workflow" aria-label="Etapas para usar um perfil tributário">
+      <article class="workflow-step">
+        <span class="step-number">01</span>
+        <div><strong>Confirme o regime</strong><p>Verifique com a contabilidade e registre nos dados da empresa.</p></div>
+      </article>
+      <article class="workflow-step">
+        <span class="step-number">02</span>
+        <div><strong>Cadastre as referências</strong><p>Informe os códigos orientados para a operação.</p></div>
+      </article>
+      <article class="workflow-step">
+        <span class="step-number">03</span>
+        <div><strong>Se desejar, registre uma conferência</strong><p>Esse histórico é opcional e não libera nem bloqueia a emissão.</p></div>
+      </article>
+    </section>
+
+    <div class="tax-content-grid">
+      <section class="panel form-panel" aria-labelledby="formTitle">
+        <header class="section-heading">
+          <div>
+            <p class="section-kicker">NOVO CADASTRO</p>
+            <h2 id="formTitle">Criar perfil</h2>
+            <p>Você não precisa disso para vender ou cadastrar produtos. Nome e operação identificam a regra; deixe os códigos em branco até receber orientação do contador.</p>
+          </div>
+          <span class="draft-chip">Não revisado</span>
+        </header>
+
+        <form id="profileForm">
+          <input id="profileId" name="profileId" type="hidden" value="">
+          <fieldset class="form-group">
+            <legend><span>1</span> Operação e Simples Nacional</legend>
+            <div class="field-grid">
+              <label class="field full-field">
+                <span class="field-label">Operação a configurar <b aria-hidden="true">*</b></span>
+                <select class="field-control" name="operation" required>
+                  <option value="">Selecione a operação</option>
+                  <option value="interna">Venda interna (mesma UF)</option>
+                  <option value="interestadual">Venda interestadual (UF diferente)</option>
+                </select>
+                <small class="field-help">O não revisado seleciona a regra pela UF do emitente e do destinatário. Operações de exportação continuam bloqueadas.</small>
+              </label>
+              <label class="field full-field">
+                <span class="field-label">Nome interno do perfil <b aria-hidden="true">*</b></span>
+                <input class="field-control" name="name" maxlength="120" minlength="3" required autocomplete="off" placeholder="Dê um nome para identificar a regra">
+                <small class="field-help">Serve para organizar o cadastro; não aparece na nota. De 3 a 120 caracteres.</small>
+              </label>
+              <label class="field">
+                <span class="field-label">CFOP sugerido <span class="optional-tag">Opcional</span></span>
+                <input class="field-control" name="cfop" type="text" pattern="[0-9]{4}" maxlength="4" list="cfopOptions" inputmode="numeric" autocomplete="off" placeholder="Após orientação contábil">
+                <small class="field-help">Código de 4 dígitos; precisa existir no catálogo oficial.</small>
+              </label>
+              <label class="field">
+                <span class="field-label">CSOSN <span class="optional-tag">Opcional</span></span>
+                <input class="field-control" name="csosn" type="text" pattern="[0-9]{3}" maxlength="3" inputmode="numeric" autocomplete="off" placeholder="Após orientação contábil">
+                <small id="csosnHelp" class="field-help" aria-live="polite">Use o código indicado pelo contador para a operação.</small>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-group">
+            <legend><span>2</span> Classificações fiscais</legend>
+            <div class="field-grid">
+              <label class="field">
+                <span class="field-label">CST do PIS <span class="optional-tag">Opcional</span></span>
+                <input class="field-control" name="pisCst" type="text" pattern="[0-9]{2}" maxlength="2" inputmode="numeric" autocomplete="off" placeholder="Preencher após orientação contábil">
+                <small class="field-help">Formato de 2 dígitos; o formato não confirma se o código se aplica.</small>
+              </label>
+              <label class="field">
+                <span class="field-label">CST da Cofins <span class="optional-tag">Opcional</span></span>
+                <input class="field-control" name="cofinsCst" type="text" pattern="[0-9]{2}" maxlength="2" inputmode="numeric" autocomplete="off" placeholder="Preencher após orientação contábil">
+                <small class="field-help">Formato de 2 dígitos; confirme o enquadramento com o contador.</small>
+              </label>
+              <label class="field">
+                <span class="field-label">IBS/CBS para regime regular futuro</span>
+                <input name="ibsCbsRegularRegimeEnabled" type="checkbox">
+                <small class="field-help">Flag explícita. Nunca ativa para Simples Nacional e só pode entrar no payload a partir de 01/01/2027, com regime regular confirmado.</small>
+              </label>
+              <label class="field">
+                <span class="field-label">CST IBS/CBS <span class="optional-tag">Opcional</span></span>
+                <input class="field-control" name="cstIbsCbs" type="text" pattern="[0-9]{3}" maxlength="3" inputmode="numeric" autocomplete="off" placeholder="Preencher após orientação contábil">
+                <small class="field-help">Formato de 3 dígitos; depende da regra aplicável à operação.</small>
+              </label>
+              <label class="field">
+                <span class="field-label">Classificação IBS/CBS <span class="optional-tag">Opcional</span></span>
+                <input class="field-control" name="classTrib" type="text" pattern="[0-9]{6}" maxlength="6" inputmode="numeric" autocomplete="off" placeholder="Preencher após orientação contábil">
+                <small class="field-help">Formato de 6 dígitos; valide na tabela vigente com a contabilidade.</small>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset id="focusTaxGroup" class="form-group">
+            <legend><span>3</span> Parâmetros numéricos da Focus</legend>
+            <p class="group-description">Os campos aparecem conforme os códigos desta operação e somente para grupos mapeados no ERP. IBS/CBS fica fora do envio para o Simples Nacional e antes da vigência futura.</p>
+            <div id="focusTaxGuidance" class="notice info form-notice" role="status" aria-live="polite">
+              Informe apenas valores recebidos da contabilidade. O ERP não calcula nem completa impostos; grupos sem mapeamento ficam bloqueados.
+            </div>
+            <div id="focusTaxFields" class="focus-tax-fields"></div>
+          </fieldset>
+
+          <div class="notice warning form-notice">
+            <strong>Não preencha códigos por tentativa.</strong>
+            <p>CFOP, CSOSN, CST e classificação dependem do produto, da operação, das UFs e do regime tributário. O perfil organiza os códigos por operação; o sistema não escolhe nem calcula esses tributos.</p>
+          </div>
+          <div class="notice info form-notice">
+            <strong>O que acontece ao salvar?</strong>
+            <p>O sistema guarda esta regra como não revisado da empresa. Isso não altera uma venda, não calcula imposto e não transmite NF-e. Cada produto continua vinculado ao perfil no cadastro de produtos.</p>
+          </div>
+
+          <div class="form-actions">
+            <button id="save" class="primary-action" type="submit" disabled>Salvar regra da operação</button>
+            <button id="cancelEdit" class="secondary-action" type="button" hidden>Cancelar edição</button>
+            <span id="saveHelp" class="action-help">Aguarde a confirmação do regime tributário para habilitar o cadastro.</span>
+          </div>
+        </form>
+        <datalist id="cfopOptions"></datalist>
+      </section>
+
+      <aside class="side-column">
+        <section class="panel records-panel" aria-labelledby="recordsTitle">
+          <header class="section-heading compact-heading">
+            <div>
+              <p class="section-kicker">EMPRESA ATIVA</p>
+              <h2 id="recordsTitle">Perfis cadastrados</h2>
+              <p>Registros vinculados à empresa autenticada.</p>
+            </div>
+            <span id="recordsCount" class="count-chip" aria-label="Quantidade de perfis">0</span>
+          </header>
+          <div id="records" class="records-list" aria-live="polite">Carregando perfis...</div>
+        </section>
+
+        <section class="panel explanation-panel" aria-labelledby="explanationTitle">
+          <div class="section-heading compact-heading">
+            <div>
+              <p class="section-kicker">O QUE ESTA TELA FAZ</p>
+              <h2 id="explanationTitle">Como funciona</h2>
+            </div>
+          </div>
+          <ul class="explanation-list">
+            <li><span class="explanation-mark">✓</span><span><strong>Guarda referências</strong><small>Os códigos ficam associados à empresa para organização e revisão.</small></span></li>
+            <li><span class="explanation-mark">i</span><span><strong>Não decide o imposto</strong><small>O sistema não presume nem confirma o tratamento tributário correto.</small></span></li>
+            <li><span class="explanation-mark">↗</span><span><strong>Não libera transmissão</strong><small>A emissão fiscal continua bloqueada nesta etapa.</small></span></li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+
+    <dialog id="reviewDialog" class="review-dialog" aria-labelledby="reviewDialogTitle">
+      <form id="reviewForm">
+        <input id="reviewProfileId" name="profileId" type="hidden">
+        <p class="section-kicker">REGISTRO DE REVISÃO</p>
+        <h2 id="reviewDialogTitle">Orientação da contabilidade</h2>
+        <p>Se quiser, registre quem informou os códigos deste perfil. Esta anotação é opcional e não é requisito para salvar um não revisado ou emitir NF-e.</p>
+        <label class="field">
+          <span class="field-label">Contador ou escritório <b aria-hidden="true">*</b></span>
+          <input class="field-control" name="accountantName" minlength="3" maxlength="120" required>
+        </label>
+        <label class="field">
+          <span class="field-label">CRC (opcional)</span>
+          <input class="field-control" name="accountantCrc" maxlength="30" autocomplete="off">
+        </label>
+        <label class="review-confirmation">
+          <input name="confirmed" type="checkbox" required>
+          <span>Confirmo que a contabilidade revisou as regras registradas neste perfil.</span>
+        </label>
+        <div class="notice info form-notice"><strong>Registro opcional.</strong><p>O sistema registra uma declaração do usuário da empresa, mas não autentica a identidade ou o CRC do contador. A emissão verifica diretamente os dados necessários em cada item.</p></div>
+        <p id="reviewFeedback" class="notice form-notice" role="alert" aria-live="assertive" hidden></p>
+        <div class="form-actions">
+          <button id="saveReview" class="primary-action" type="submit">Salvar conferência opcional</button>
+          <button id="cancelReview" class="secondary-action" type="button">Voltar</button>
+        </div>
+      </form>
+    </dialog>
+  </main>
+</body>
+</html>

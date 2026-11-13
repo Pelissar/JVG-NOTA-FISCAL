@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4f6f8"><meta name="description" content="Consulte e organize as NF-e emitidas pela empresa.">
+  <title>NF-e emitidas · SigmaFiscal</title>
+  <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
+  <link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css">
+  <link rel="stylesheet" href="/erp/fiscal-history.css"><link rel="stylesheet" href="/erp/nfe-issued.css"><link rel="stylesheet" href="/erp/fiscal-document-switcher.css?v=20261113-2">
+  <script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261113-2"></script><script defer src="/erp/nfe-issued.js"></script>
+</head>
+<body>
+  <div id="erpGlobalNav"></div>
+  <main class="history-shell issued-shell">
+    <nav class="fiscal-document-switcher" aria-label="Tipo de documento fiscal">
+      <a href="/erp/nfe.html" aria-current="page"><strong>NF-e</strong><small>Mercadorias · Modelo 55</small></a>
+      <a href="/erp/nfce.html"><strong>NFC-e</strong><small>Consumidor · Modelo 65</small></a>
+      <a href="/erp/nfse.html"><strong>NFS-e</strong><small>Serviços</small></a>
+    </nav>
+    <header class="history-heading issued-heading">
+      <div><div class="eyebrow">FISCAL / DOCUMENTOS DE SAÍDA</div><h1>NF-e emitidas</h1><p>Consulte notas autorizadas, filtre os registros e importe XML já emitido para formar o histórico da empresa.</p></div>
+      <div class="heading-actions">
+        <a class="secondary-button" href="/erp/nfe.html">Emitir NF-e</a>
+        <button class="primary-button" id="openImport" type="button">Importar XML autorizado</button>
+      </div>
+    </header>
+
+    <section class="issued-toolbar" aria-label="Ações fiscais">
+      <button class="issued-toolbar-button" id="toggleFilters" type="button" aria-expanded="false" aria-controls="issuedFilters">⌕ <span>Filtros</span></button>
+      <button class="issued-toolbar-button danger-outline" id="openInutilization" type="button">⊘ <span>Inutilizar numeração</span></button>
+      <button class="issued-toolbar-button" id="refreshIssued" type="button">↻ <span>Atualizar</span></button>
+      <p>Ambiente de produção aparece apenas no histórico de XML importado. Ações na Focus permanecem limitadas à homologação.</p>
+    </section>
+
+    <section class="history-card filter-card issued-filter-card" id="issuedFilters" hidden aria-label="Filtros de NF-e emitidas">
+      <div class="filter-heading"><div><h2>Filtrar NF-e</h2><p>Os filtros pesquisam somente documentos modelo 55 desta empresa.</p></div><button class="text-button" id="clearIssuedFilters" type="button">Limpar filtros</button></div>
+      <form id="issuedFilterForm" class="issued-filters">
+        <label><span>Número da nota</span><input name="number" inputmode="numeric" maxlength="9" placeholder="Ex.: 142719"></label>
+        <label><span>Cliente</span><input name="customer" maxlength="80" placeholder="Nome do destinatário"></label>
+        <label><span>CFOP</span><input name="cfop" inputmode="numeric" maxlength="4" placeholder="4 dígitos"></label>
+        <label><span>Data inicial</span><input name="from" type="date"></label>
+        <label><span>Data final</span><input name="to" type="date"></label>
+        <label><span>Status</span><select name="status"><option value="">Todos</option><option value="authorized">Autorizada</option><option value="processing">Processando</option><option value="rejected">Rejeitada</option><option value="cancelled">Cancelada</option><option value="denied">Denegada</option><option value="draft">Em preparação</option></select></label>
+        <label><span>Ambiente</span><select name="environment"><option value="">Todos</option><option value="producao">Produção</option><option value="homologacao">Homologação</option></select></label>
+        <button class="primary-button filter-submit" type="submit">Aplicar filtros</button>
+      </form>
+    </section>
+
+    <section class="history-card issued-results-card" aria-labelledby="issuedResultsTitle">
+      <div class="results-heading issued-results-heading">
+        <div><h2 id="issuedResultsTitle">Documentos fiscais</h2><p id="issuedStatus" role="status" aria-live="polite">Carregando NF-e…</p></div>
+        <div class="page-controls"><button class="secondary-button" id="previousIssuedPage" type="button" disabled>Anterior</button><span id="issuedPageNumber">Página 1</span><button class="secondary-button" id="nextIssuedPage" type="button" disabled>Próxima</button></div>
+      </div>
+      <div class="issued-selection-bar" id="selectionBar" hidden>
+        <span id="selectionCount">0 selecionadas</span>
+        <div class="issued-bulk-menu">
+          <button class="secondary-button" id="bulkActionsToggle" type="button" aria-expanded="false" aria-controls="bulkActions">Ações <span aria-hidden="true">⌄</span></button>
+          <div id="bulkActions" class="issued-action-menu" hidden>
+            <button type="button" id="viewSelected">Ver detalhes da selecionada</button>
+            <button type="button" id="downloadSelectedXml">Baixar XML da selecionada</button>
+            <button type="button" id="exportSelected">Exportar selecionadas (CSV)</button>
+            <button type="button" id="clearSelection">Limpar seleção</button>
+          </div>
+        </div>
+      </div>
+      <div class="issued-table-wrap">
+        <table class="issued-table">
+          <thead><tr>
+            <th class="issued-check-cell"><input id="selectIssuedPage" type="checkbox" aria-label="Selecionar todas as NF-e desta página"><span class="sr-only">Selecionar página</span></th>
+            <th>Número da nota</th><th>Cliente</th><th>CFOP</th><th>Data de emissão</th><th>Status</th><th>Total</th><th>Ações</th>
+          </tr></thead>
+          <tbody id="issuedRows"><tr><td colspan="8" class="issued-empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="history-card detail-card" id="issuedDetail" hidden aria-labelledby="issuedDetailHeading">
+      <div class="detail-heading"><div><div class="eyebrow">DOCUMENTO / DADOS FISCAIS</div><h2 id="issuedDetailHeading">Detalhes da NF-e</h2><p id="issuedDetailSummary"></p></div><button class="secondary-button" id="closeIssuedDetail" type="button">Fechar detalhes</button></div>
+      <div id="issuedDetailContent" class="detail-content"></div>
+    </section>
+
+    <p class="history-footnote">Importar XML arquiva no SigmaFiscal uma NF-e autorizada anteriormente e não transmite nem importa o documento para a Focus. O sistema valida os dados estruturados e pede confirmação manual no portal oficial da SEFAZ; não valida a assinatura digital do arquivo.</p>
+  </main>
+
+  <dialog class="issued-dialog" id="importDialog" aria-labelledby="importDialogTitle">
+    <form id="importForm" class="issued-dialog-card">
+      <div class="dialog-heading"><div><span class="eyebrow">ARQUIVO AUTORIZADO</span><h2 id="importDialogTitle">Importar XML de NF-e</h2></div><button class="dialog-close" type="button" data-close-dialog="importDialog" aria-label="Fechar">×</button></div>
+      <p>O arquivo será guardado no histórico desta empresa. O emitente precisa ser a empresa ativa e a nota deve ser modelo 55, autorizada e de produção.</p>
+      <label class="dialog-field"><span>Arquivo XML original</span><input id="authorizedXmlFile" name="xml" type="file" accept=".xml,application/xml,text/xml" required></label>
+      <label class="issued-check-label"><input id="confirmSeFazImport" type="checkbox" required><span>Conferi a chave e a autorização desta NF-e no portal oficial da SEFAZ. Entendo que o sistema não verifica a assinatura digital.</span></label>
+      <p class="dialog-result" id="importResult" role="status" aria-live="polite"></p>
+      <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog="importDialog">Voltar</button><button class="primary-button" id="submitImport" type="submit">Validar e importar XML</button></div>
+    </form>
+  </dialog>
+
+  <dialog class="issued-dialog" id="inutilizationDialog" aria-labelledby="inutilizationTitle">
+    <form id="inutilizationForm" class="issued-dialog-card">
+      <div class="dialog-heading"><div><span class="eyebrow">SOMENTE HOMOLOGAÇÃO</span><h2 id="inutilizationTitle">Inutilizar numeração</h2></div><button class="dialog-close" type="button" data-close-dialog="inutilizationDialog" aria-label="Fechar">×</button></div>
+      <p>A Focus informa que a inutilização costuma ser desnecessária porque controla a numeração. Só continue com uma faixa que a contabilidade confirmou que ficou sem uso.</p>
+      <div class="inutilization-fields">
+        <label class="dialog-field"><span>Série</span><input name="series" inputmode="numeric" maxlength="3" required placeholder="Ex.: 1"></label>
+        <label class="dialog-field"><span>Número inicial</span><input name="numberStart" type="number" min="1" max="999999999" required></label>
+        <label class="dialog-field"><span>Número final</span><input name="numberEnd" type="number" min="1" max="999999999" required></label>
+      </div>
+      <label class="dialog-field"><span>Justificativa (mínimo 15 caracteres)</span><textarea name="justification" minlength="15" maxlength="255" rows="3" required></textarea></label>
+      <label class="issued-check-label"><input id="confirmHomologation" type="checkbox" required><span>Confirmo que esta inutilização é somente no ambiente de HOMOLOGAÇÃO e que a série e a faixa estão corretas.</span></label>
+      <p class="dialog-warning">Esta tela não chama nem altera a numeração de produção. Se a Focus não confirmar a resposta, a faixa ficará bloqueada para nova tentativa até consulta manual.</p>
+      <p class="dialog-result" id="inutilizationResult" role="status" aria-live="polite"></p>
+      <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog="inutilizationDialog">Voltar</button><button class="primary-button danger-button" id="submitInutilization" type="submit">Confirmar inutilização em homologação</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
