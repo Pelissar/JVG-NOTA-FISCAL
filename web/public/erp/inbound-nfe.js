@@ -112,6 +112,32 @@
     var transportSummary=packageRows.filter(function(row){return Object.keys(xmlObject(row)).length;}).map(function(row){row=xmlObject(row);return [xmlValue(row,'qVol')&&('Volumes: '+xmlValue(row,'qVol')),xmlValue(row,'esp')&&('Espécie: '+xmlValue(row,'esp')),xmlValue(row,'marca')&&('Marca: '+xmlValue(row,'marca')),xmlValue(row,'nVol')&&('Identificação: '+xmlValue(row,'nVol')),xmlValue(row,'pesoB')&&('Peso bruto: '+xmlValue(row,'pesoB')+' kg'),xmlValue(row,'pesoL')&&('Peso líquido: '+xmlValue(row,'pesoL')+' kg')].filter(Boolean).join(' · ');}).filter(Boolean).join(' | ');
     root.innerHTML='<div class="fiscal-data-heading"><strong>Conferência completa da nota e das partes</strong><span>Dados copiados do XML autorizado. O ERP exibe os valores informados pelo fornecedor e não recalcula impostos. O XML original pode ser baixado na lista de notas.</span></div>'+summary+parts+'<section class="invoice-totals"><div class="fiscal-data-heading"><strong>Impostos e totais da NF-e</strong><span>Valores declarados no documento, sem cálculo ou ajuste pelo ERP.</span></div>'+totalRowsMarkup('ICMS, PIS, Cofins e totais dos produtos',icmsTotals)+totalRowsMarkup('IBS e CBS informados',xmlObject(totals.IBSCBSTot))+totalRowsMarkup('Imposto Seletivo, quando informado',xmlObject(totals.ISTot))+totalRowsMarkup('ISSQN, quando informado',issTotals)+(transportSummary?'<section class="invoice-tax-total"><h4>Volumes e transporte</h4><p>'+escapeHtml(transportSummary)+'</p></section>':'')+'</section><p class="tax-source-note">Impostos detalhados em '+detailedCount+' de '+items.length+' item(ns). Os valores e descrições são transcritos do XML e não representam recálculo fiscal.</p>';
   }
+  function renderReceiptSummary(doc){
+    var root=$('receiptSummary');
+    if(!root)return;
+    var movements=Array.isArray(doc.stockMovements)?doc.stockMovements:[];
+    var received=doc.status==='received';
+    root.hidden=!received;
+    if(!received){root.replaceChildren();return;}
+    if(!Array.isArray(doc.stockMovements)){root.hidden=true;return;}
+    if(!movements.length){
+      root.innerHTML='<div class="receipt-summary-warning"><strong>Entrada sem movimentos localizados</strong><p>A nota aparece como recebida, mas o sistema n&atilde;o encontrou os lan&ccedil;amentos de estoque. Revise os itens e use a op&ccedil;&atilde;o de corrigir entrada antes de continuar.</p></div>';
+      return;
+    }
+    var receivedAt=doc.receivedAt?new Date(doc.receivedAt):null;
+    var when=receivedAt&&!Number.isNaN(receivedAt.getTime())?receivedAt.toLocaleString('pt-BR'):'data de confirma\u00e7\u00e3o n\u00e3o informada';
+    var rows=movements.map(function(movement){
+      var item=(doc.items||[]).find(function(line){return Number(line.lineNumber)===Number(movement.lineNumber);});
+      var product=products.find(function(candidate){return candidate.id===movement.productId;});
+      var label=product&&product.name||item&&item.description||'Produto do item '+String(movement.lineNumber||'');
+      var sku=product&&product.sku?'<small>SKU '+escapeHtml(product.sku)+'</small>':'';
+      var unit=product&&product.unit||item&&item.unit||'';
+      var quantity=Math.abs(Number(movement.quantity||0)).toLocaleString('pt-BR',{maximumFractionDigits:4});
+      var balance=product?'<small>Saldo atual: '+escapeHtml(Number(product.stock||0).toLocaleString('pt-BR'))+' '+escapeHtml(product.unit||'un.')+'</small>':'';
+      return '<li><div><strong>'+escapeHtml(label)+'</strong>'+sku+balance+'</div><div class="receipt-quantity"><small>Quantidade lançada</small><b>'+escapeHtml(quantity+' '+unit)+'</b></div></li>';
+    }).join('');
+    root.innerHTML='<div class="receipt-summary-heading"><div><span class="receipt-check" aria-hidden="true">&#10003;</span><div><strong>Entrada confirmada no estoque</strong><small>Registrada em '+escapeHtml(when)+' &#183; '+movements.length+' movimento(s) de estoque</small></div></div></div><ul>'+rows+'</ul><p>As quantidades acima foram lidas dos movimentos gravados para esta NF-e. Os campos est&atilde;o bloqueados para edi&ccedil;&atilde;o; use o bot&atilde;o de estorno se precisar reverter a entrada.</p>';
+  }
   function applyReviewState(doc){
     var received=doc.status==='received';
     if(doc.status==='cancelled'){$('reviewCard').hidden=true;setStatus('Este lançamento está cancelado e bloqueado. Importe o XML novamente para iniciar outro lançamento.',true);return;}
@@ -119,9 +145,13 @@
     $('reviewHeading').textContent=recoverable?'Corrigir entrada da NF-e '+doc.invoiceNumber:'Conferir NF-e '+doc.invoiceNumber;
     $('authorizationSummary').textContent=recoverable?'Esta nota foi marcada como recebida, mas ainda não gerou movimento de estoque. Associe o produto e conclua a entrada.':'O XML informa: '+(doc.authorizationReason||'uso autorizado').replace(/^\d+\s*[-–—:]?\s*/,'')+'. Confira a chave e a autorização no portal oficial da SEFAZ; esta tela não valida a assinatura digital.';
     $('authorizationSummary').classList.toggle('recovery',recoverable);$('officialStatus').disabled=locked;$('supplierSelect').disabled=locked;
-    $('reviewItems').querySelectorAll('select,input').forEach(function(input){input.disabled=input.disabled||locked;});
+    $('reviewItems').querySelectorAll('select,input,button').forEach(function(control){control.disabled=control.disabled||locked;});
     $('saveReviewButton').hidden=locked;$('receiveButton').hidden=locked;
     $('saveReviewButton').textContent=recoverable?'Reabrir e salvar conferência':'Salvar conferência';$('receiveButton').textContent=recoverable?'Reabrir e concluir entrada':'Confirmar entrada no estoque';
+    var confirmationLabel=$('officialStatus').closest('label');if(confirmationLabel)confirmationLabel.hidden=received;
+    $('reviewCard').classList.toggle('is-received',locked);
+    $('reviewFooterNote').textContent=received?'Entrada registrada. Os movimentos e as quantidades aparecem acima. Para reverter, use Estornar entrada no estoque.':'Salvar confer\u00eancia guarda os v\u00ednculos; confirmar entrada registra os movimentos no estoque.';
+    renderReceiptSummary(doc);
     $('cancelEntryButton').textContent=received?'Estornar entrada no estoque':'Cancelar lançamento no ERP';
     $('cancelEntryDescription').textContent=received?'Será criado um movimento inverso mantendo os movimentos originais e o XML. O estorno depende do saldo atual e não cancela a nota na SEFAZ.':'O lançamento será cancelado no ERP e o XML continuará no histórico. Nenhum movimento de estoque será criado.';
   }
@@ -164,6 +194,7 @@
   }
   async function openReview(id){
     selectedDoc=docs.find(function(doc){return doc.id===id;});
+    setReviewActionStatus('');
     if(!selectedDoc||selectedDoc.status==='cancelled')return;
     $('reviewSummary').textContent=selectedDoc.issuerName+' · '+date(selectedDoc.issuedAt)+' · '+money(selectedDoc.total);
     $('supplierSelect').innerHTML=supplierOptions(selectedDoc.supplierId,selectedDoc);
@@ -365,42 +396,72 @@
     finally{button.disabled=false;}
   });
   $('closeReview').addEventListener('click',function(){ $('reviewCard').hidden=true; });
-  $('reviewForm').addEventListener('submit',async function(event){
-    event.preventDefault();
+  function setReviewActionStatus(message,error){
+    var status=$('reviewActionStatus');
+    if(!status)return;
+    status.hidden=!message;
+    status.textContent=message||'';
+    status.classList.toggle('error',!!error);
+    status.classList.toggle('success',!!message&&!error);
+  }
+  async function saveOrConfirmReview(receive){
     if(!selectedDoc||selectedDoc.status==='cancelled')return;
-    var receive=event.submitter&&event.submitter.dataset.receive==='true';
+    var documentId=selectedDoc.id;
     var items=collectReviewItems();
+    if(!$('supplierSelect').value){
+      setReviewActionStatus('Selecione o fornecedor emitente antes de salvar ou confirmar a entrada.',true);
+      $('supplierSelect').focus();
+      return;
+    }
     if(receive&&!items.some(function(item){return item.trackStock;})){
-      setStatus('Para confirmar a entrada, selecione o produto e marque “Lançar no estoque” em pelo menos um item.',true);
+      setReviewActionStatus('Marque Incluir no estoque em pelo menos um item que esteja vinculado a um produto.',true);
       return;
     }
     if(receive&&items.some(function(item){return item.trackStock&&!item.productId;})){
-      setStatus('Associe um produto cadastrado a cada item marcado para movimentar o estoque.',true);
+      setReviewActionStatus('Vincule cada item marcado para estoque a um produto cadastrado.',true);
+      return;
+    }
+    if(receive&&!$('officialStatus').checked){
+      setReviewActionStatus('Antes de confirmar, marque que conferiu a chave e a autoriza\u00e7\u00e3o no portal oficial da SEFAZ.',true);
+      $('officialStatus').focus();
       return;
     }
     var buttons=[$('saveReviewButton'),$('receiveButton')];
     buttons.forEach(function(button){button.disabled=true;});
+    setReviewActionStatus(receive?'Registrando a entrada e atualizando o estoque...':'Salvando a confer\u00eancia...',false);
     try{
       if(selectedDoc.receivedWithoutStock===true){
-        await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'reopen-empty',id:selectedDoc.id})});
+        await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'reopen-empty',id:documentId})});
         selectedDoc.status='draft';
         selectedDoc.receivedWithoutStock=false;
       }
       await persistReviewDraft(items);
-      if(receive&&!$('officialStatus').checked){
-        setStatus('Vínculos salvos na conferência. Marque a confirmação da consulta oficial da SEFAZ para lançar a quantidade no estoque.',true);
-        return;
-      }
       if(receive){
-        var confirmation=await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'confirm',id:selectedDoc.id,checkedOfficialStatus:true})});
-        var stockLines=confirmation.result&&Number(confirmation.result.stockLines||0);
-        $('uploadStatus').textContent='NF-e recebida. '+stockLines+' item(ns) geraram movimentos de estoque vinculados à chave.';
-      }else $('uploadStatus').textContent='Conferência salva sem movimentar estoque.';
-      $('reviewCard').hidden=true;
-      selectedDoc=null;
-      await load();
-    }catch(error){setStatus(error.message,true);}
-    finally{buttons.forEach(function(button){button.disabled=false;});}
-  });
-    load();
+        var confirmation=await api('/api/inbound-nfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'confirm',id:documentId,checkedOfficialStatus:true})});
+        await load();
+        await openReview(documentId);
+        var movements=selectedDoc&&Array.isArray(selectedDoc.stockMovements)?selectedDoc.stockMovements:[];
+        if(selectedDoc&&selectedDoc.status==='received'&&movements.length){
+          var reported=confirmation.result&&Number(confirmation.result.stockLines||0);
+          setReviewActionStatus('Entrada confirmada: '+movements.length+' movimento(s) de estoque gravados'+(reported?' ('+reported+' item(ns) informado(s) pelo servidor).':'.'),false);
+          setStatus('Entrada da NF-e '+(selectedDoc.invoiceNumber||'')+' confirmada; '+movements.length+' movimento(s) de estoque registrados.',false);
+        }else{
+          setReviewActionStatus('O servidor aceitou a confirma\u00e7\u00e3o, mas n\u00e3o foi poss\u00edvel recarregar os movimentos. Atualize a tela e confira o hist\u00f3rico antes de repetir.',true);
+          setStatus('Entrada enviada; confira os movimentos no hist\u00f3rico antes de tentar novamente.',true);
+        }
+      }else{
+        setReviewActionStatus('Confer\u00eancia salva. Nenhum movimento de estoque foi criado.',false);
+        setStatus('Confer\u00eancia da NF-e salva sem movimentar estoque.',false);
+      }
+    }catch(error){
+      setReviewActionStatus(error.message||'N\u00e3o foi poss\u00edvel concluir a opera\u00e7\u00e3o.',true);
+      setStatus(error.message||'N\u00e3o foi poss\u00edvel concluir a opera\u00e7\u00e3o.',true);
+    }finally{buttons.forEach(function(button){button.disabled=false;});}
+  }
+  $('saveReviewButton').type='button';
+  $('receiveButton').type='button';
+  $('saveReviewButton').addEventListener('click',function(){saveOrConfirmReview(false);});
+  $('receiveButton').addEventListener('click',function(){saveOrConfirmReview(true);});
+  $('reviewForm').addEventListener('submit',function(event){event.preventDefault();saveOrConfirmReview(false);});
+  load();
 })();

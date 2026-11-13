@@ -180,6 +180,12 @@ export async function GET(request: Request) {
         const saved = savedByLine.get(item.lineNumber);
         return { ...item, productId: saved?.productId || null, trackStock: saved?.trackStock === true };
       });
+      const stockMovements = row.status === "received"
+        ? await dbRequest<Row[]>(
+          "/rest/v1/jvg_inventory_movements?" + scope(account) + "&inbound_nfe_id=" + filterEq(id) +
+          "&select=product_id,quantity_delta,inbound_nfe_item_number,created_at&order=created_at.asc",
+        )
+        : [];
       return apiJson({ document: {
         id: row.id, status: row.status, accessKey: row.access_key, invoiceNumber: row.invoice_number,
         series: row.series || "", issuedAt: row.issued_at, issuerDocument: row.issuer_document,
@@ -188,7 +194,12 @@ export async function GET(request: Request) {
         total: Number(row.total_amount), supplierId: row.supplier_party_id || "",
         carrierId: row.carrier_party_id || "", carrierDocument: row.carrier_document || "",
         carrierName: row.carrier_name || "", fiscalData, items,
-        receivedWithoutStock: row.status === "received" && !hasStockItems(items),
+        receivedWithoutStock: row.status === "received" && stockMovements.length === 0,
+        stockMovements: stockMovements.map(movement => ({
+          productId: movement.product_id, quantity: Number(movement.quantity_delta),
+          lineNumber: movement.inbound_nfe_item_number == null ? null : Number(movement.inbound_nfe_item_number),
+          createdAt: movement.created_at,
+        })),
         createdAt: row.created_at, receivedAt: row.received_at,
         cancelledAt: row.cancelled_at || null, cancellationReason: row.cancellation_reason || "",
       } });
@@ -327,8 +338,8 @@ export async function POST(request: Request) {
     if (data.action === "reopen-empty") {
       const id = validId(data.id, "Identificador");
       const doc = await readDocument(account, id);
-      if (doc.status !== "received" || hasStockItems(doc.items))
-        throw new JvgBackendError("A correção só está disponível para NF-e recebida sem itens lançados no estoque.", 409);
+      if (doc.status !== "received")
+        throw new JvgBackendError("A correção só está disponível para NF-e recebida.", 409);
       const result = await dbRequest<Row>("/rest/v1/rpc/jvg_reopen_empty_inbound_nfe", {
         method: "POST",
         body: JSON.stringify({

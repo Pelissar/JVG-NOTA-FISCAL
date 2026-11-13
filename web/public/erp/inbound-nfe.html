@@ -6,8 +6,8 @@
 <title>Notas de entrada · SigmaFiscal</title>
 <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
 <link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css">
-<link rel="stylesheet" href="/erp/inbound-nfe.css?v=20261112-2">
-<script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261113-2"></script><script defer src="/erp/inbound-nfe.js?v=20261112-2"></script>
+<link rel="stylesheet" href="/erp/inbound-nfe.css?v=20261113-2">
+<script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261113-2"></script><script defer src="/erp/inbound-nfe.js?v=20261113-2"></script>
 </head>
 <body>
 <div id="erpGlobalNav"></div><button type="button" class="theme-toggle" data-theme-toggle aria-label="Alternar tema">◐ Modo escuro</button>
@@ -46,6 +46,8 @@
       <div id="fiscalDataReview" class="fiscal-data-review"><p>Carregando dados fiscais do XML...</p></div>
       <div class="items-heading"><div><h3>Itens do XML</h3><p>GTIN só associa automaticamente quando encontra um único produto cadastrado.</p></div></div>
       <div id="reviewItems" class="review-items"></div>
+      <section id="receiptSummary" class="receipt-summary" hidden aria-live="polite"></section>
+      <p id="reviewActionStatus" class="review-action-status" role="status" aria-live="polite" hidden></p>
       <label class="confirmation-check"><input id="officialStatus" type="checkbox"><span>Conferi a chave e a autorização desta NF-e no portal oficial da SEFAZ. Entendo que esta tela não verifica a assinatura digital.</span></label>
     </div>
       <section id="cancelEntryPanel" class="cancel-entry-panel" aria-live="polite" hidden>
@@ -62,7 +64,7 @@
           <button class="secondary-button" id="cancelEntryBack" type="button">Voltar</button>
         </div>
       </section>
-      <div class="review-footer"><p>Salvar conferência guarda os vínculos. Confirmar entrada grava movimentos. O cancelamento encerra este lançamento no ERP e preserva o XML no histórico; para lançar novamente, importe o arquivo outra vez. A NF-e do fornecedor não é cancelada na SEFAZ.</p><div class="review-footer-actions"><button class="secondary-button" id="cancelEntryButton" type="button">Cancelar lançamento no ERP</button><button class="secondary-button" id="saveReviewButton" type="submit">Salvar conferência</button><button class="primary-button" id="receiveButton" type="submit" data-receive="true">Confirmar entrada no estoque</button></div></div>
+      <div class="review-footer"><p id="reviewFooterNote">Salvar conferência guarda os vínculos. Confirmar entrada grava movimentos. O cancelamento encerra este lançamento no ERP e preserva o XML no histórico; para lançar novamente, importe o arquivo outra vez. A NF-e do fornecedor não é cancelada na SEFAZ.</p><div class="review-footer-actions"><button class="secondary-button" id="cancelEntryButton" type="button">Cancelar lançamento no ERP</button><button class="secondary-button" id="saveReviewButton" type="submit">Salvar conferência</button><button class="primary-button" id="receiveButton" type="submit" data-receive="true">Confirmar entrada no estoque</button></div></div>
     </form>
   </section>
 </main>

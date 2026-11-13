@@ -17,8 +17,10 @@
     ['review', 'Conferência', 'Revise os dados e escolha como concluir a nota.'],
   ];
   var currentStep = 0;
+  var unlockedThrough = 0;
   var paymentsRoot;
   var totalsRoot;
+  var validationSummary;
 
   function localDateTimeValue(date) {
     function pad(value) { return String(value).padStart(2, '0'); }
@@ -84,7 +86,15 @@
     var formPanel = form.closest('.panel');
     formPanel.classList.add('nfe-form-panel');
     var formBody = form.querySelector('.panel-body');
-    if (formBody) formBody.classList.add('nfe-step-content');
+    if (formBody) {
+      formBody.classList.add('nfe-step-content');
+      validationSummary = document.createElement('div');
+      validationSummary.className = 'wizard-validation-summary';
+      validationSummary.setAttribute('role', 'alert');
+      validationSummary.setAttribute('aria-live', 'assertive');
+      validationSummary.hidden = true;
+      formBody.prepend(validationSummary);
+    }
     var formFooter = form.querySelector('.form-footer');
     if (formFooter) formFooter.classList.add('wizard-footer');
     var panelHeading = formPanel.querySelector('.panel-head');
@@ -143,7 +153,9 @@
       tab.setAttribute('aria-controls', 'nfe-step-' + key);
       tab.classList.toggle('selected', index === 0);
       stepNav.append(tab);
-      tab.addEventListener('click', function () { goToStep(index, false); });
+      tab.addEventListener('click', function () {
+        if (index <= unlockedThrough) goToStep(index, false);
+      });
     });
 
     var sections = {};
@@ -322,20 +334,22 @@
     if (footer) footer.replaceChildren(cancel, controls);
     cancel.addEventListener('click', function () { window.location.assign('/erp/index.html#fiscal'); });
     previous.addEventListener('click', function () { goToStep(currentStep - 1, false); });
-    next.addEventListener('click', function () { goToStep(currentStep + 1, true); });
+    next.addEventListener('click', function () { advanceToStep(currentStep + 1, true); });
     document.addEventListener('keydown', function (event) {
       var target = event.target;
       if (target && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName)) return;
       if (event.key === 'F4') { event.preventDefault(); goToStep(currentStep - 1, false); }
-      if (event.key === 'F5') { event.preventDefault(); goToStep(currentStep + 1, true); }
+      if (event.key === 'F5') { event.preventDefault(); advanceToStep(currentStep + 1, true); }
       if (event.key === 'F1') { event.preventDefault(); window.location.assign('/erp/index.html#fiscal'); }
     });
 
-    form.addEventListener('input', refreshComputed);
-    form.addEventListener('change', refreshComputed);
+    form.addEventListener('input', onFormEdited);
+    form.addEventListener('change', onFormEdited);
     document.getElementById('recipientId').addEventListener('change', renderRecipient);
     renderRecipient();
     refreshComputed();
+    updateRequiredMarkers();
+    syncStepAccess();
     goToStep(0, false);
   }
 
@@ -391,8 +405,429 @@
     return false;
   }
 
+  function requiredControl(control, required) {
+    if (!control) return;
+    control.required = Boolean(required);
+    if (required) control.setAttribute('aria-required', 'true');
+    else control.removeAttribute('aria-required');
+    var wrapper = control.closest('.field');
+    var caption = wrapper && wrapper.querySelector('span');
+    if (!caption) return;
+    if (!caption.dataset.baseLabel) caption.dataset.baseLabel = caption.textContent.replace(/\s*\*$/, '');
+    caption.textContent = caption.dataset.baseLabel + (required ? ' *' : '');
+  }
+
+  function updateRequiredMarkers() {
+    ['nature', 'issueAt', 'consumerFinal', 'buyerPresence', 'recipientId', 'recipientIeIndicator',
+      'transportMode', 'intermediaryIndicator'].forEach(function (name) {
+      requiredControl(form.elements.namedItem(name), true);
+    });
+    Array.from(document.querySelectorAll('#items .item-row')).forEach(function (row) {
+      ['.product', '.quantity', '.price', '.cfop', '.csosn', '.pis-cst', '.cofins-cst', '.item-ncm', '.item-origin']
+        .forEach(function (selector) { requiredControl(row.querySelector(selector), true); });
+      var csosn = row.querySelector('.csosn').value.trim();
+      requiredControl(row.querySelector('.item-cest'), ['201', '202', '203', '500'].includes(csosn));
+      var fields = Array.from(row.querySelectorAll('.focus-tax-field'));
+      fields.forEach(function (field) { requiredControl(field, false); });
+      var byName = Object.fromEntries(fields.map(function (field) { return [field.dataset.field, field]; }));
+      var csosnGroups = {
+        basic: ['icms_modalidade_base_calculo', 'icms_base_calculo', 'icms_reducao_base_calculo', 'icms_aliquota', 'icms_valor'],
+        st: ['icms_modalidade_base_calculo_st', 'icms_margem_valor_adicionado_st', 'icms_reducao_base_calculo_st', 'icms_base_calculo_st', 'icms_aliquota_st', 'icms_valor_st'],
+        credit: ['icms_aliquota_credito_simples', 'icms_valor_credito_simples'],
+        retained: ['icms_base_calculo_retido_st', 'icms_valor_retido_st', 'icms_aliquota_final', 'icms_valor_substituto'],
+      };
+      var markGroup = function (names) { names.forEach(function (name) { requiredControl(byName[name], true); }); };
+      var hasAny = function (names) { return names.some(function (name) { return byName[name] && byName[name].value.trim() !== ''; }); };
+      if (csosn === '101') markGroup(csosnGroups.credit);
+      if (csosn === '201') { markGroup(csosnGroups.st); markGroup(csosnGroups.credit); }
+      if (csosn === '202' || csosn === '203') markGroup(csosnGroups.st);
+      if (csosn === '900') {
+        if (hasAny(csosnGroups.basic)) markGroup(csosnGroups.basic);
+        if (hasAny(csosnGroups.st)) markGroup(csosnGroups.st);
+        if (hasAny(csosnGroups.credit)) markGroup(csosnGroups.credit);
+      }
+      if (csosn === '500' && hasAny(csosnGroups.retained)) markGroup(csosnGroups.retained);
+      [['pis', row.querySelector('.pis-cst').value.trim()], ['cofins', row.querySelector('.cofins-cst').value.trim()]]
+        .forEach(function (entry) {
+          var prefix = entry[0], cst = entry[1];
+          if (cst === '01' || cst === '02') markGroup([prefix + '_base_calculo', prefix + '_aliquota_porcentual', prefix + '_valor']);
+          if (cst === '03') markGroup([prefix + '_quantidade_vendida', prefix + '_aliquota_valor', prefix + '_valor']);
+          if (cst === '05') markGroup([prefix + '_base_calculo_st', prefix + '_aliquota_porcentual_st', prefix + '_valor_st']);
+          if (cst === '49' || cst === '99') {
+            var percentage = [prefix + '_base_calculo', prefix + '_aliquota_porcentual', prefix + '_valor'];
+            var quantity = [prefix + '_quantidade_vendida', prefix + '_aliquota_valor', prefix + '_valor'];
+            if (hasAny(percentage)) markGroup(percentage);
+            if (hasAny(quantity)) markGroup(quantity);
+          }
+        });
+    });
+    var intermediary = form.elements.namedItem('intermediaryIndicator').value === '1';
+    requiredControl(form.elements.namedItem('intermediaryCnpj'), intermediary);
+    requiredControl(form.elements.namedItem('intermediaryId'), intermediary);
+    Array.from(document.querySelectorAll('#payments .payment-row')).forEach(function (row) {
+      ['paymentIndicator', 'paymentMethod', 'paymentAmount'].forEach(function (name) {
+        requiredControl(row.querySelector('[name="' + name + '"]'), true);
+      });
+      var method = row.querySelector('[name="paymentMethod"]').value;
+      requiredControl(row.querySelector('[name="paymentDescription"]'), method === '99');
+      var integratedCard = ['03', '04', '05'].includes(method) && row.querySelector('[name="paymentIntegration"]').value === '1';
+      requiredControl(row.querySelector('[name="paymentIntegration"]'), ['03', '04', '05'].includes(method));
+      requiredControl(row.querySelector('[name="paymentAcquirerCnpj"]'), integratedCard);
+      requiredControl(row.querySelector('[name="paymentAuthorization"]'), integratedCard);
+    });
+  }
+
+  function value(name) {
+    var control = form.elements.namedItem(name);
+    return control ? String(control.value || '').trim() : '';
+  }
+
+  function partyAddress(party) {
+    var nested = party && party.address && typeof party.address === 'object' ? party.address : {};
+    return {
+      street: nested.street || party && party.street || '', number: nested.number || party && party.number || '',
+      complement: nested.complement || party && party.complement || '', district: nested.district || party && party.district || '',
+      postalCode: nested.postalCode || party && party.postalCode || '', cityCode: nested.cityCode || party && party.cityCode || '',
+      city: nested.city || party && party.city || '', state: nested.state || party && party.state || '',
+    };
+  }
+
+  function partyDocumentType(party) {
+    var type = String(party && (party.documentType || party.type) || '').toLowerCase();
+    return type === 'pf' ? 'cpf' : type === 'pj' ? 'cnpj' : type;
+  }
+
+  function cpfIsValid(raw) {
+    var digits = String(raw || '').replace(/\D/g, '');
+    if (!/^\d{11}$/.test(digits) || /^(\d)\1{10}$/.test(digits)) return false;
+    for (var length = 9; length <= 10; length += 1) {
+      var sum = 0;
+      for (var index = 0; index < length; index += 1) sum += Number(digits[index]) * (length + 1 - index);
+      var remainder = (sum * 10) % 11;
+      if (Number(digits[length]) !== (remainder === 10 ? 0 : remainder)) return false;
+    }
+    return true;
+  }
+
+  function cnpjIsValid(raw) {
+    var digits = String(raw || '').replace(/\D/g, '');
+    if (!/^\d{14}$/.test(digits) || /^(\d)\1{13}$/.test(digits)) return false;
+    function digit(base, weights) {
+      var sum = base.split('').reduce(function (total, char, index) { return total + Number(char) * weights[index]; }, 0);
+      var remainder = sum % 11;
+      return remainder < 2 ? 0 : 11 - remainder;
+    }
+    return Number(digits[12]) === digit(digits.slice(0, 12), [5,4,3,2,9,8,7,6,5,4,3,2]) &&
+      Number(digits[13]) === digit(digits.slice(0, 13), [6,5,4,3,2,9,8,7,6,5,4,3,2]);
+  }
+
+  function addStepError(errors, control, message) {
+    errors.push({ control: control || null, message: message });
+  }
+
+  function validateRecipientStep(errors) {
+    var select = form.elements.namedItem('recipientId');
+    var indicator = value('recipientIeIndicator');
+    if (!select.value) addStepError(errors, select, 'Selecione o destinatário.');
+    if (!['1', '2', '9'].includes(indicator))
+      addStepError(errors, form.elements.namedItem('recipientIeIndicator'), 'Informe o indicador de inscrição estadual conforme esta operação.');
+    if (!select.value) return;
+    var client = typeof window.jvgNfeGetRecipient === 'function' ? window.jvgNfeGetRecipient(select.value) : null;
+    if (!client) {
+      addStepError(errors, select, 'Não foi possível carregar o cadastro deste destinatário. Atualize a página e selecione novamente.');
+      return;
+    }
+    var documentType = partyDocumentType(client);
+    var document = String(client.document || client.documentNumber || '').replace(/\D/g, '');
+    if (!((documentType === 'cpf' && cpfIsValid(document)) || (documentType === 'cnpj' && cnpjIsValid(document))))
+      addStepError(errors, select, 'Complete o CPF/CNPJ do destinatário em Cadastros > Pessoas antes de continuar.');
+    var name = String(client.legalName || client.name || client.displayName || '').trim();
+    if (name.length < 2 || name.length > 60)
+      addStepError(errors, select, 'Complete o nome ou razão social do destinatário (2 a 60 caracteres) em Cadastros > Pessoas.');
+    if (indicator === '1' && !String(client.stateRegistration || '').trim())
+      addStepError(errors, select, 'O destinatário foi marcado como contribuinte de ICMS, mas o cadastro não tem inscrição estadual.');
+    var address = partyAddress(client);
+    var missingAddress = [];
+    if (!String(address.street || '').trim()) missingAddress.push('logradouro');
+    if (!String(address.number || '').trim()) missingAddress.push('número');
+    if (!String(address.district || '').trim()) missingAddress.push('bairro');
+    if (!/^\d{7}$/.test(String(address.cityCode || '').replace(/\D/g, ''))) missingAddress.push('código IBGE do município');
+    if (!String(address.city || '').trim()) missingAddress.push('município');
+    if (!/^[A-Za-z]{2}$/.test(String(address.state || '').trim())) missingAddress.push('UF');
+    if (missingAddress.length)
+      addStepError(errors, select, 'Complete o endereço do destinatário em Cadastros > Pessoas: ' + missingAddress.join(', ') + '.');
+  }
+
+  function validateTaxGroups(row, errors, label) {
+    var inputs = Array.from(row.querySelectorAll('.focus-tax-field'));
+    var byName = Object.fromEntries(inputs.map(function (input) { return [input.dataset.field, input]; }));
+    var hasAny = function (names) { return names.some(function (name) { return byName[name] && byName[name].value.trim() !== ''; }); };
+    var hasAll = function (names) { return names.every(function (name) { return byName[name] && byName[name].value.trim() !== '' && Number.isFinite(Number(byName[name].value)) && Number(byName[name].value) >= 0; }); };
+    var need = function (names, text) {
+      if (hasAll(names)) return;
+      var control = names.map(function (name) { return byName[name]; }).find(function (input) { return input && !input.value.trim(); }) || byName[names[0]];
+      addStepError(errors, control, label + ': ' + text);
+    };
+    var basic = ['icms_modalidade_base_calculo', 'icms_base_calculo', 'icms_reducao_base_calculo', 'icms_aliquota', 'icms_valor'];
+    var st = ['icms_modalidade_base_calculo_st', 'icms_margem_valor_adicionado_st', 'icms_reducao_base_calculo_st', 'icms_base_calculo_st', 'icms_aliquota_st', 'icms_valor_st'];
+    var credit = ['icms_aliquota_credito_simples', 'icms_valor_credito_simples'];
+    var retained = ['icms_base_calculo_retido_st', 'icms_valor_retido_st', 'icms_aliquota_final', 'icms_valor_substituto'];
+    var csosn = row.querySelector('.csosn').value.trim();
+    if (csosn === '101') need(credit, 'preencha alíquota e valor do crédito do Simples orientados para este item.');
+    if (csosn === '201') { need(st, 'preencha os campos de ICMS-ST indicados para este CSOSN.'); need(credit, 'preencha alíquota e valor do crédito do Simples orientados para este item.'); }
+    if (csosn === '202' || csosn === '203') need(st, 'preencha os campos de ICMS-ST indicados para este CSOSN.');
+    if (csosn === '900') {
+      var basicUsed = hasAny(basic), stUsed = hasAny(st);
+      if (basicUsed === stUsed) addStepError(errors, row.querySelector('.csosn'), label + ': CSOSN 900 requer exatamente um grupo preenchido, ICMS ou ICMS-ST.');
+      if (basicUsed) need(basic, 'complete todos os campos do grupo ICMS iniciado.');
+      if (stUsed) need(st, 'complete todos os campos do grupo ICMS-ST iniciado.');
+      if (hasAny(credit)) need(credit, 'complete o grupo de crédito do Simples iniciado.');
+    }
+    if (csosn === '500' && hasAny(retained)) need(retained, 'complete os campos de ICMS-ST retido que foram iniciados.');
+    [['pis', row.querySelector('.pis-cst').value.trim()], ['cofins', row.querySelector('.cofins-cst').value.trim()]]
+      .forEach(function (entry) {
+        var prefix = entry[0], cst = entry[1];
+        if (cst === '01' || cst === '02') need([prefix + '_base_calculo', prefix + '_aliquota_porcentual', prefix + '_valor'], 'preencha base, alíquota e valor conforme orientação fiscal para o CST ' + cst + '.');
+        if (cst === '03') need([prefix + '_quantidade_vendida', prefix + '_aliquota_valor', prefix + '_valor'], 'preencha quantidade tributável, alíquota por unidade e valor conforme orientação fiscal para o CST 03.');
+        if (cst === '05') need([prefix + '_base_calculo_st', prefix + '_aliquota_porcentual_st', prefix + '_valor_st'], 'preencha base, alíquota e valor de substituição conforme orientação fiscal para o CST 05.');
+        if (cst === '49' || cst === '99') {
+          var percentage = [prefix + '_base_calculo', prefix + '_aliquota_porcentual', prefix + '_valor'];
+          var quantity = [prefix + '_quantidade_vendida', prefix + '_aliquota_valor', prefix + '_valor'];
+          var percentageStarted = hasAny(percentage), quantityStarted = hasAny(quantity);
+          if (percentageStarted && quantityStarted)
+            addStepError(errors, byName[percentage[0]], label + ': informe somente o grupo percentual ou o grupo por quantidade para CST ' + cst + '.');
+          else if (percentageStarted) need(percentage, 'complete o grupo percentual iniciado para CST ' + cst + '.');
+          else if (quantityStarted) need(quantity, 'complete o grupo por quantidade iniciado para CST ' + cst + '.');
+          else addStepError(errors, byName[percentage[0]] || row.querySelector('.' + prefix + '-cst'), label + ': informe um grupo percentual ou por quantidade com os valores orientados para CST ' + cst + '.');
+        }
+      });
+    inputs.forEach(function (input) {
+      if (input.value.trim() && (!Number.isFinite(Number(input.value)) || Number(input.value) < 0))
+        addStepError(errors, input, label + ': corrija o valor numérico inválido em ' + input.closest('.field').querySelector('span').textContent.replace(/\s*\*$/, '') + '.');
+    });
+  }
+
+  function validateItemsStep(errors) {
+    var rows = Array.from(document.querySelectorAll('#items .item-row'));
+    if (!rows.length) {
+      addStepError(errors, document.getElementById('addItem'), 'Adicione pelo menos um produto à NF-e.');
+      return;
+    }
+    var supportedCsosn = ['101', '102', '103', '201', '202', '203', '300', '400', '500', '900'];
+    var supportedCst = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '49', '99'];
+    rows.forEach(function (row, index) {
+      var label = 'Item ' + (index + 1);
+      var product = row.querySelector('.product');
+      var quantity = row.querySelector('.quantity');
+      var price = row.querySelector('.price');
+      var cfop = row.querySelector('.cfop');
+      var csosn = row.querySelector('.csosn');
+      var pis = row.querySelector('.pis-cst');
+      var cofins = row.querySelector('.cofins-cst');
+      var ncm = row.querySelector('.item-ncm');
+      var cest = row.querySelector('.item-cest');
+      var origin = row.querySelector('.item-origin');
+      if (!product.value) addStepError(errors, product, label + ': selecione um produto cadastrado.');
+      if (!Number.isFinite(Number(quantity.value)) || Number(quantity.value) <= 0) addStepError(errors, quantity, label + ': informe quantidade maior que zero.');
+      if (!price.value || !Number.isFinite(Number(price.value)) || Number(price.value) < 0) addStepError(errors, price, label + ': informe um preço unitário válido.');
+      if (!/^\d{4}$/.test(cfop.value.trim())) addStepError(errors, cfop, label + ': informe o CFOP de 4 dígitos aplicável a este item.');
+      if (!supportedCsosn.includes(csosn.value.trim())) addStepError(errors, csosn, label + ': informe um CSOSN válido para o regime confirmado.');
+      if (!supportedCst.includes(pis.value.trim())) addStepError(errors, pis, label + ': informe o CST do PIS de 2 dígitos aplicável.');
+      if (!supportedCst.includes(cofins.value.trim())) addStepError(errors, cofins, label + ': informe o CST da Cofins de 2 dígitos aplicável.');
+      if (!/^\d{8}$/.test(ncm.value.trim())) addStepError(errors, ncm, label + ': informe o NCM de 8 dígitos.');
+      if (!/^[0-8]$/.test(origin.value)) addStepError(errors, origin, label + ': selecione a origem real da mercadoria.');
+      var cestDigits = cest.value.trim().replace(/\D/g, '');
+      if (cest.value.trim() && !/^\d{7}$/.test(cestDigits)) addStepError(errors, cest, label + ': CEST deve ter 7 dígitos.');
+      if (['201', '202', '203', '500'].includes(csosn.value.trim()) && !/^\d{7}$/.test(cestDigits))
+        addStepError(errors, cest, label + ': informe o CEST de 7 dígitos exigido para este CSOSN.');
+      validateTaxGroups(row, errors, label);
+    });
+  }
+
+  function validateStep(index) {
+    var errors = [];
+    var key = steps[index] && steps[index][0];
+    if (key === 'general') {
+      var nature = value('nature');
+      if (nature.length < 3 || nature.length > 60) addStepError(errors, form.elements.namedItem('nature'), 'Informe uma natureza da operação entre 3 e 60 caracteres.');
+      var issueAt = value('issueAt');
+      if (!issueAt || !Number.isFinite(new Date(issueAt).getTime())) addStepError(errors, form.elements.namedItem('issueAt'), 'Informe data e hora válidas; o campo é preenchido automaticamente e pode ser alterado.');
+      if (!['0', '1'].includes(value('consumerFinal'))) addStepError(errors, form.elements.namedItem('consumerFinal'), 'Indique se esta operação é destinada a consumidor final.');
+      if (!['0', '1', '2', '3', '4', '5', '9'].includes(value('buyerPresence'))) addStepError(errors, form.elements.namedItem('buyerPresence'), 'Indique a presença ou o canal real da operação.');
+    }
+    if (key === 'recipient') validateRecipientStep(errors);
+    if (key === 'items') validateItemsStep(errors);
+    if (key === 'totals') {
+      ['freight', 'insurance', 'discount', 'expenses'].forEach(function (name) {
+        var control = form.elements.namedItem(name);
+        if (control.value && (!Number.isFinite(Number(control.value)) || Number(control.value) < 0))
+          addStepError(errors, control, 'Informe valor não negativo para ' + name + '.');
+      });
+      if (commercialCents() < 0) addStepError(errors, form.elements.namedItem('discount'), 'O desconto não pode deixar o total comercial negativo.');
+    }
+    if (key === 'billing') {
+      Array.from(document.querySelectorAll('#payments .payment-row')).forEach(function (row, index) {
+        var indicator = row.querySelector('[name="paymentIndicator"]');
+        var method = row.querySelector('[name="paymentMethod"]');
+        var amount = row.querySelector('[name="paymentAmount"]');
+        if (!['0', '1'].includes(indicator.value)) addStepError(errors, indicator, 'Pagamento ' + (index + 1) + ': selecione à vista ou a prazo.');
+        if (!method.value) addStepError(errors, method, 'Pagamento ' + (index + 1) + ': selecione a forma de pagamento.');
+        if (!amount.value || !Number.isFinite(Number(amount.value)) || Number(amount.value) < 0) addStepError(errors, amount, 'Pagamento ' + (index + 1) + ': informe um valor válido.');
+        if (method.value === '99' && row.querySelector('[name="paymentDescription"]').value.trim().length < 2)
+          addStepError(errors, row.querySelector('[name="paymentDescription"]'), 'Informe a descrição da forma de pagamento Outros (99).');
+        if (['03', '04', '05'].includes(method.value)) {
+          var integration = row.querySelector('[name="paymentIntegration"]');
+          if (!['1', '2'].includes(integration.value)) addStepError(errors, integration, 'Informe se a operação de cartão foi integrada.');
+          if (integration.value === '1') {
+            if (!cnpjIsValid(row.querySelector('[name="paymentAcquirerCnpj"]').value))
+              addStepError(errors, row.querySelector('[name="paymentAcquirerCnpj"]'), 'Informe o CNPJ de 14 dígitos da credenciadora.');
+            if (!row.querySelector('[name="paymentAuthorization"]').value.trim())
+              addStepError(errors, row.querySelector('[name="paymentAuthorization"]'), 'Informe o número de autorização do cartão.');
+          }
+        }
+      });
+    }
+    if (key === 'transport') {
+      if (!['0', '1', '2', '3', '4', '9'].includes(value('transportMode')))
+        addStepError(errors, form.elements.namedItem('transportMode'), 'Selecione a modalidade de frete real da operação.');
+      var carrierId = value('carrierId');
+      if (carrierId) {
+        var carrier = typeof window.jvgNfeGetRecipient === 'function' ? window.jvgNfeGetRecipient(carrierId) : null;
+        if (!carrier) addStepError(errors, form.elements.namedItem('carrierId'), 'Não foi possível carregar os dados da transportadora.');
+        else {
+          var carrierName = String(carrier.legalName || carrier.name || '').trim();
+          var carrierDocument = String(carrier.document || carrier.documentNumber || '').replace(/\D/g, '');
+          var carrierType = partyDocumentType(carrier);
+          var carrierDocumentValid = (carrierType === 'cpf' && cpfIsValid(carrierDocument)) ||
+            (carrierType === 'cnpj' && cnpjIsValid(carrierDocument));
+          if (carrierName.length < 2 || carrierName.length > 60 || !carrierDocumentValid)
+            addStepError(errors, form.elements.namedItem('carrierId'), 'Complete nome e CPF/CNPJ da transportadora em Cadastros > Pessoas.');
+        }
+      }
+      var plate = value('vehiclePlate'), vehicleUf = value('vehicleState');
+      if ((plate || vehicleUf || value('vehicleRntc')) && !/^[A-Za-z0-9]{7}$/.test(plate))
+        addStepError(errors, form.elements.namedItem('vehiclePlate'), 'Se informar dados do veículo, preencha uma placa com 7 caracteres.');
+      if (vehicleUf && !/^[A-Za-z]{2}$/.test(vehicleUf)) addStepError(errors, form.elements.namedItem('vehicleState'), 'Informe a UF do veículo com 2 letras.');
+      var volumeNames = ['volumeQuantity', 'volumeSpecies', 'volumeBrand', 'volumeNumber', 'volumeNetWeight', 'volumeGrossWeight'];
+      var hasVolume = volumeNames.some(function (name) { return value(name) !== ''; });
+      if (hasVolume && (!/^\d+$/.test(value('volumeQuantity')) || Number(value('volumeQuantity')) < 1))
+        addStepError(errors, form.elements.namedItem('volumeQuantity'), 'Ao informar volumes, indique uma quantidade inteira positiva.');
+      ['volumeNetWeight', 'volumeGrossWeight'].forEach(function (name) {
+        var control = form.elements.namedItem(name);
+        if (control.value && (!Number.isFinite(Number(control.value)) || Number(control.value) <= 0 || Math.round(Number(control.value) * 1000) / 1000 !== Number(control.value)))
+          addStepError(errors, control, 'Informe peso positivo com até 3 casas decimais.');
+      });
+      if (Number(value('volumeNetWeight')) > Number(value('volumeGrossWeight')) && value('volumeGrossWeight'))
+        addStepError(errors, form.elements.namedItem('volumeNetWeight'), 'O peso líquido não pode superar o peso bruto.');
+    }
+    if (key === 'intermediary' && !['0', '1'].includes(value('intermediaryIndicator')))
+      addStepError(errors, form.elements.namedItem('intermediaryIndicator'), 'Indique se a venda ocorreu sem intermediador ou por plataforma de terceiros.');
+    if (key === 'intermediary' && value('intermediaryIndicator') === '1') {
+      if (!cnpjIsValid(value('intermediaryCnpj')))
+        addStepError(errors, form.elements.namedItem('intermediaryCnpj'), 'Informe o CNPJ de 14 dígitos da plataforma intermediadora.');
+      if (value('intermediaryId').length < 2 || value('intermediaryId').length > 60)
+        addStepError(errors, form.elements.namedItem('intermediaryId'), 'Informe o identificador da plataforma, entre 2 e 60 caracteres.');
+    }
+    return { ok: errors.length === 0, errors: errors };
+  }
+
+  function clearStepErrors() {
+    Array.from(form.querySelectorAll('[aria-invalid="true"]')).forEach(function (control) { control.removeAttribute('aria-invalid'); });
+    if (validationSummary) { validationSummary.hidden = true; validationSummary.replaceChildren(); }
+  }
+
+  function showStepErrors(result, focus) {
+    if (!validationSummary) return;
+    Array.from(form.querySelectorAll('[aria-invalid="true"]')).forEach(function (control) { control.removeAttribute('aria-invalid'); });
+    validationSummary.replaceChildren();
+    var title = document.createElement('strong');
+    title.textContent = 'Para avançar, corrija os campos obrigatórios desta etapa:';
+    var list = document.createElement('ul');
+    result.errors.forEach(function (error) {
+      var item = document.createElement('li');
+      item.textContent = error.message;
+      if (error.control) error.control.setAttribute('aria-invalid', 'true');
+      list.append(item);
+    });
+    validationSummary.append(title, list);
+    validationSummary.hidden = false;
+    var first = result.errors.find(function (error) { return error.control; });
+    if (focus && first) {
+      var details = first.control.closest('details');
+      if (details) details.open = true;
+      first.control.focus({ preventScroll: true });
+      first.control.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function updateStepButtons() {
+    Array.from(stepNav.querySelectorAll('[data-fiscal-tab]')).forEach(function (tab, index) {
+      var locked = index > unlockedThrough;
+      tab.disabled = locked;
+      tab.dataset.locked = locked ? 'true' : 'false';
+      tab.title = locked ? 'Conclua a etapa anterior para liberar esta.' : 'Abrir etapa ' + (index + 1) + ': ' + steps[index][1];
+      var badge = tab.querySelector('span:first-child');
+      if (badge) badge.textContent = index < unlockedThrough ? '✓' : String(index + 1).padStart(2, '0');
+      tab.classList.toggle('is-complete', index < unlockedThrough);
+      tab.setAttribute('aria-label', (index + 1) + '. ' + steps[index][1] + (locked ? ', bloqueada até concluir a etapa anterior' : index < unlockedThrough ? ', concluída' : ', liberada'));
+    });
+  }
+
+  function syncStepAccess() {
+    for (var index = 0; index < unlockedThrough; index += 1) {
+      if (!validateStep(index).ok) { unlockedThrough = index; break; }
+    }
+    updateStepButtons();
+    if (currentStep > unlockedThrough) goToStep(unlockedThrough, false);
+  }
+
+  function onFormEdited() {
+    updateRequiredMarkers();
+    refreshComputed();
+    syncStepAccess();
+    if (validationSummary && !validationSummary.hidden) {
+      var result = validateStep(currentStep);
+      if (result.ok) clearStepErrors();
+      else showStepErrors(result, false);
+    }
+  }
+
+  function advanceToStep(destination, scroll) {
+    var target = Math.max(0, Math.min(steps.length - 1, destination));
+    if (target <= currentStep) { goToStep(target, scroll); return true; }
+    for (var index = currentStep; index < target; index += 1) {
+      clearStepErrors();
+      var result = validateStep(index);
+      if (!result.ok) {
+        unlockedThrough = Math.min(unlockedThrough, index);
+        updateStepButtons();
+        showStepErrors(result, true);
+        return false;
+      }
+      unlockedThrough = Math.max(unlockedThrough, index + 1);
+      updateStepButtons();
+    }
+    goToStep(target, scroll);
+    return true;
+  }
+
+  function validateAllStages() {
+    for (var index = 0; index < steps.length - 1; index += 1) {
+      var result = validateStep(index);
+      if (!result.ok) {
+        unlockedThrough = Math.min(unlockedThrough, index);
+        updateStepButtons();
+        goToStep(index, true);
+        showStepErrors(result, true);
+        return false;
+      }
+    }
+    return true;
+  }
+
   function goToStep(index, scroll) {
     var destination = Math.max(0, Math.min(steps.length - 1, index));
+    if (destination !== currentStep) clearStepErrors();
     if (destination === steps.length - 1) setDefaultIssueAt(false);
     currentStep = destination;
     var key = steps[currentStep][0];
@@ -403,6 +838,8 @@
       var active = tab.dataset.fiscalTab === key;
       tab.classList.toggle('selected', active);
       tab.setAttribute('aria-selected', active ? 'true' : 'false');
+      if (active) tab.setAttribute('aria-current', 'step');
+      else tab.removeAttribute('aria-current');
       tab.classList.toggle('is-complete', tabIndex < currentStep);
     });
     var heading = document.getElementById('stepHeading');
@@ -411,6 +848,7 @@
     if (heading) heading.textContent = steps[currentStep][1];
     if (description) description.textContent = steps[currentStep][2];
     if (counter) counter.textContent = String(currentStep + 1).padStart(2, '0') + ' / ' + String(steps.length).padStart(2, '0');
+    updateStepButtons();
     var prev = document.getElementById('wizardPrev');
     var next = document.getElementById('wizardNext');
     var save = document.getElementById('saveButton');
@@ -562,7 +1000,7 @@
     var heading = document.createElement('strong');
     heading.textContent = client ? client.name || client.legalName || select.selectedOptions[0].textContent : select.selectedOptions[0].textContent;
     card.append(heading);
-    var address = client && client.address && typeof client.address === 'object' ? client.address : {};
+    var address = partyAddress(client);
     var values = [
       ['CPF/CNPJ', client && (client.document || client.documentNumber)],
       ['Inscrição estadual', client && client.stateRegistration],
@@ -590,16 +1028,22 @@
       additionalInfo: value('additionalInfo'),
     };
   };
-  window.jvgNfeWizardRefresh = refreshComputed;
+  window.jvgNfeWizardRefresh = function () {
+    updateRequiredMarkers();
+    refreshComputed();
+    syncStepAccess();
+  };
   window.jvgNfeWizardCanSave = function () {
     if (currentStep !== steps.length - 1) {
       warn('Vá até a etapa Conferência para escolher como concluir a NF-e.');
       return false;
     }
     setDefaultIssueAt(false);
-    return true;
+    return validateAllStages();
   };
   window.jvgNfeWizardValidateFinalization = function (mode) {
+    if (mode === 'discard') return true;
+    if (!validateAllStages()) return false;
     var nature = form.elements.namedItem('nature').value.trim();
     if (nature.length < 3 || nature.length > 60) {
       goToStep(0, true);
@@ -629,6 +1073,8 @@
     return true;
   };
   window.jvgNfeWizardLoad = function (data) {
+    unlockedThrough = 0;
+    clearStepErrors();
     data = data && typeof data === 'object' ? data : {};
     function set(name, value) {
       var field = form.elements.namedItem(name);
@@ -696,17 +1142,20 @@
       if (integration) integration.dispatchEvent(new Event('change', { bubbles: true }));
     });
     renderRecipient();
+    updateRequiredMarkers();
     refreshComputed();
     goToStep(0, false);
   };
   window.jvgNfeWizardReset = function () {
+    unlockedThrough = 0;
+    clearStepErrors();
     var payments = document.getElementById('payments');
     if (payments) payments.replaceChildren();
     var issueAt = form.elements.namedItem('issueAt');
     if (issueAt) issueAt.dataset.userEdited = 'false';
     setDefaultIssueAt(true);
     if (steps[currentStep] && steps[currentStep][0] !== 'general') goToStep(0, false);
-    renderRecipient(); refreshComputed();
+    renderRecipient(); updateRequiredMarkers(); refreshComputed(); syncStepAccess();
   };
 
   prepareWizard();

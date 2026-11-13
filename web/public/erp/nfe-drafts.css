@@ -66,6 +66,10 @@ body{min-width:320px}
 .nfe-wizard>.fiscal-steps button:hover{background:var(--surface-soft,#f4f7fa);color:var(--ink,#183347)}
 .nfe-wizard>.fiscal-steps button.selected{border-color:var(--accent,#1769d2);background:var(--accent-soft,#eaf2ff);color:var(--accent-strong,#084a9e)}
 .nfe-wizard>.fiscal-steps button.selected>span:first-child,.nfe-wizard>.fiscal-steps button.is-complete>span:first-child{border-color:var(--accent,#1769d2);background:var(--accent,#1769d2);color:#fff}
+.nfe-wizard>.fiscal-steps button[data-locked="true"]{cursor:not-allowed;opacity:.58}
+.nfe-wizard>.fiscal-steps button[data-locked="true"]:hover{background:transparent;color:var(--muted,#61798a)}
+.nfe-wizard>.fiscal-steps button[data-locked="true"]::after{grid-column:2;color:var(--muted,#72869a);content:"Bloqueada · conclua a etapa anterior";font-size:9px;font-weight:600;line-height:1.3}
+.nfe-wizard>.fiscal-steps button.is-complete:not(.selected){color:var(--accent-strong,#084a9e)}
 .nfe-grid{grid-column:2;grid-row:1;grid-template-columns:minmax(0,1.55fr) minmax(250px,.78fr);gap:16px}
 .nfe-form-panel,.nfe-grid .side>.panel,.nfe-grid .side>.next-panel{background:var(--surface,#fff);border:1px solid var(--line,#dce5eb);border-radius:14px;color:var(--ink,#183347);box-shadow:0 7px 24px #1833470b}
 .nfe-form-panel .panel-head{padding:20px 22px;border-color:var(--line,#e5ebf1)}
@@ -83,6 +87,12 @@ body{min-width:320px}
 .nfe-step-content .field small{color:var(--muted,#687f90);font-size:10px;line-height:1.5}
 .nfe-step-content .field input:focus,.nfe-step-content .field select:focus,.nfe-step-content .field textarea:focus{border-color:var(--accent,#1769d2);outline:3px solid var(--accent-soft,#eaf2ff)}
 .nfe-step-content .field b{color:var(--warning-strong,#ab5c12)}
+.nfe-step-content .field input[aria-invalid="true"],.nfe-step-content .field select[aria-invalid="true"],.nfe-step-content .field textarea[aria-invalid="true"]{border-color:var(--danger,#c53030)!important;outline:2px solid color-mix(in srgb,var(--danger,#c53030) 20%,transparent)}
+.wizard-validation-summary{margin:0 0 18px;padding:14px 16px;border:1px solid color-mix(in srgb,var(--danger,#c53030) 35%,var(--line,#dce5eb));border-radius:10px;background:color-mix(in srgb,var(--danger,#c53030) 7%,var(--surface,#fff));color:var(--ink,#183347);font-size:12px;line-height:1.55}
+.wizard-validation-summary[hidden]{display:none!important}
+.wizard-validation-summary strong{display:block;margin-bottom:5px;color:var(--danger,#a52828)}
+.wizard-validation-summary ul{margin:0;padding-left:20px}
+.wizard-validation-summary li+li{margin-top:3px}
 .source-order-notice{grid-column:1/-1}
 .items-heading{margin:0 0 17px;padding:0;border:0}
 .items-heading h3{color:var(--ink,#183347);font-size:17px}
