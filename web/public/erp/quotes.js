@@ -42,7 +42,7 @@ async function history(nextPage=page){
   renderHistory();notice(historyError);
  }finally{historyBusy=false;$('quotePrev').disabled=page<=1;$('quoteNext').disabled=!hasMore;}
 }
-const statusLabels={draft:'Rascunho',sent:'Enviado',accepted:'Aceito',rejected:'Recusado',expired:'Expirado',cancelled:'Cancelado'};
+const statusLabels={draft:'Em elaboração',sent:'Enviado',accepted:'Aceito',rejected:'Recusado',expired:'Expirado',cancelled:'Cancelado'};
 const statusClasses={draft:'is-draft',sent:'is-sent',accepted:'is-accepted',rejected:'is-rejected',expired:'is-expired',cancelled:'is-cancelled'};
 const quoteNumber=q=>q.quote_number?'ORC-'+String(q.quote_number).padStart(6,'0'):'ORC-'+String(q.id||'').slice(0,8).toUpperCase();
 function renderHistory(){
@@ -137,7 +137,7 @@ $('quoteForm').addEventListener('submit',async event=>{
  try{
   const result=await api('/api/quotes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerId:$('quoteCustomer').value||null,validUntil:$('quoteValidity').value||null,notes:$('quoteNotes').value,items})});
   $('quoteItems').replaceChildren();$('quoteNotes').value='';$('quoteValidity').value='';await history(1);
-  notice('Orçamento '+(result.quoteNumber?'ORC-'+String(result.quoteNumber).padStart(6,'0'):'ORC-'+String(result.id||'').slice(0,8).toUpperCase())+' salvo como rascunho.');
+  notice('Orçamento '+(result.quoteNumber?'ORC-'+String(result.quoteNumber).padStart(6,'0'):'ORC-'+String(result.id||'').slice(0,8).toUpperCase())+' salvo como proposta em elaboração.');
  }catch(error){notice(error.message);}
  finally{busy=false;if(!rows().length)addRow();update();}
 });

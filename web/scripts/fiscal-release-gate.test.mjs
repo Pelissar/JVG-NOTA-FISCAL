@@ -58,7 +58,7 @@ test('Focus nunca usa URL de produção nem expõe token no cliente',()=>{
 });
 
 test('diagnóstico Focus é somente leitura e não mostra token',()=>{
- const html=read('../public/erp/nfe-drafts.html');
+ const html=read('../public/erp/nfe.html');
  const ui=read('../public/erp/focus-diagnostic.js');
  assert.match(html,/id="focusCheck"/);
  assert.match(html,/focus-diagnostic\.js/);
@@ -69,11 +69,11 @@ test('diagnóstico Focus é somente leitura e não mostra token',()=>{
 });
 
 test('diagnóstico Focus tem contraste nos dois temas e informa que não emite',()=>{
- const html=read('../public/erp/nfe-drafts.html');
+ const html=read('../public/erp/nfe.html');
  const css=read('../public/erp/focus-diagnostic.css');
  assert.match(html,/focus-diagnostic\.css/);
  assert.match(html,/focus-panel-heading/);
- assert.match(html,/A verificação não transmite, autoriza ou cancela NF-e/);
+ assert.match(html,/verificação não transmite, autoriza ou cancela NF-e/);
  assert.match(css,/html\[data-theme=light\]/);
  assert.match(css,/focus-visible/);
  assert.match(css,/@media\(max-width:560px\)/);

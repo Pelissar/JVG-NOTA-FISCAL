@@ -52,6 +52,28 @@ async function readDocument(account: SiteAccount, id: string) {
   return rows[0];
 }
 
+async function ensurePrimaryLocation(account: SiteAccount) {
+  const path = "/rest/v1/jvg_locations?" + scope(account) + "&code=" + filterEq("PRINCIPAL") + "&select=id,active&limit=1";
+  const rows = await dbRequest<Row[]>(path);
+  if (rows[0]?.active === true) return;
+  if (rows[0]) {
+    await dbRequest("/rest/v1/jvg_locations?" + scope(account) + "&id=" + filterEq(String(rows[0].id)), {
+      method: "PATCH", body: JSON.stringify({ active: true }),
+    });
+    return;
+  }
+  try {
+    await dbRequest("/rest/v1/jvg_locations", {
+      method: "POST",
+      body: JSON.stringify({ tenant_id: account.tenant_id, company_id: account.company_id,
+        code: "PRINCIPAL", name: "Estoque principal", active: true }),
+    });
+  } catch {
+    const retry = await dbRequest<Row[]>(path);
+    if (retry[0]?.active !== true) throw new JvgBackendError("Não foi possível preparar o depósito principal do estoque.", 409);
+  }
+}
+
 function hasStockItems(value: unknown): boolean {
   return Array.isArray(value) && value.some(item => !!item && typeof item === "object" && (item as InboundNfeItem).trackStock === true);
 }
@@ -151,12 +173,13 @@ export async function GET(request: Request) {
       if (!row) throw new JvgBackendError("NF-e de entrada não encontrada nesta empresa.", 404);
       let fiscalData = row.fiscal_data && typeof row.fiscal_data === "object" ? row.fiscal_data : {};
       let items = Array.isArray(row.items) ? row.items as InboundNfeItem[] : [];
-      if (!Object.keys(fiscalData as Row).length) {
-        const parsed = parseAuthorizedInboundNfe(String(row.xml_content || ""), String(row.destination_document || ""));
-        fiscalData = parsed.fiscalData;
-        const savedByLine = new Map(items.map(item => [Number(item.lineNumber), item]));
-        items = parsed.items.map(item => ({ ...item, ...(savedByLine.get(item.lineNumber) || {}) }));
-      }
+      const parsed = parseAuthorizedInboundNfe(String(row.xml_content || ""), String(row.destination_document || ""));
+      if (!Object.keys(fiscalData as Row).length) fiscalData = parsed.fiscalData;
+      const savedByLine = new Map(items.map(item => [Number(item.lineNumber), item]));
+      items = parsed.items.map(item => {
+        const saved = savedByLine.get(item.lineNumber);
+        return { ...item, productId: saved?.productId || null, trackStock: saved?.trackStock === true };
+      });
       return apiJson({ document: {
         id: row.id, status: row.status, accessKey: row.access_key, invoiceNumber: row.invoice_number,
         series: row.series || "", issuedAt: row.issued_at, issuerDocument: row.issuer_document,
@@ -329,6 +352,7 @@ export async function POST(request: Request) {
     if (items.some(item => item.trackStock && !item.productId))
       throw new JvgBackendError("Associe um produto a todos os itens que vão movimentar o estoque.", 400);
 
+    await ensurePrimaryLocation(account);
     const result = await dbRequest<Row>("/rest/v1/rpc/jvg_confirm_inbound_nfe", {
       method: "POST",
       body: JSON.stringify({

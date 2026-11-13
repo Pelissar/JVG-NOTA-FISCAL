@@ -140,8 +140,8 @@ export async function GET(request: Request) {
       !company ? "Cadastro fiscal do emitente não encontrado." : "",
       !companyRegimeConfirmed ? "Confirmação do regime tributário indisponível ou pendente nos dados da empresa." : "",
       company && !companyIsSimple ? "Esta etapa atende somente empresa confirmada no Simples Nacional." : "",
-      !sequence.available ? "A migration fiscal ainda não disponibilizou a sequência de NFS-e; informe série e número confirmados para este rascunho." : "",
-      !serviceCatalog.nationalTaxationCodeColumnAvailable ? "O código nacional ISS ainda não está salvo no catálogo; o código informado abaixo ficará somente neste rascunho." : "",
+      !sequence.available ? "A migration fiscal ainda não disponibilizou a sequência de NFS-e; informe série e número confirmados para esta preparação." : "",
+      !serviceCatalog.nationalTaxationCodeColumnAvailable ? "O código nacional ISS ainda não está salvo no catálogo; o código informado abaixo ficará somente nesta preparação." : "",
       order.status !== "delivered" ? "A OS precisa estar entregue." : "",
       order.customer_approved !== true ? "A aprovação do cliente para a OS está pendente." : "",
       !customer ? "A OS precisa ter um cliente ativo com CPF/CNPJ vinculado nesta empresa." : "",
@@ -177,9 +177,9 @@ export async function POST(request: Request) {
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {
     const account = await accountForRequest();
-    if (account.role === "viewer") throw new JvgBackendError("Seu perfil não pode criar rascunhos fiscais.", 403);
+    if (account.role === "viewer") throw new JvgBackendError("Seu perfil não pode preparar NFS-e.", 403);
     const raw = await request.text();
-    if (raw.length > 24_000) throw new JvgBackendError("Rascunho muito grande.", 413);
+    if (raw.length > 24_000) throw new JvgBackendError("Os dados da preparação excedem o limite permitido.", 413);
     let parsed: unknown;
     try { parsed = JSON.parse(raw); } catch { throw new JvgBackendError("Envie um JSON válido.", 400); }
     const input = object(parsed);
@@ -250,7 +250,7 @@ export async function POST(request: Request) {
     const idempotencyKey = `nfse-os-${serviceOrderId}`;
     const existing = await existingDraft(account, serviceOrderId);
     if (existing && existing.status !== "draft")
-      throw new JvgBackendError("Esta OS já possui um documento fiscal que não está em rascunho. Não é possível substituí-lo nesta tela.", 409);
+      throw new JvgBackendError("Esta OS já possui um documento fiscal transmitido. Esta tela não pode substituí-lo.", 409);
     const draftId = existing?.id && uuidPattern.test(String(existing.id)) ? String(existing.id) : documentId;
     const reference = existing?.focus_reference && /^[A-Za-z0-9]{1,50}$/.test(String(existing.focus_reference))
       ? String(existing.focus_reference) : mapped.reference;
@@ -295,7 +295,7 @@ export async function POST(request: Request) {
     return apiJson({
       ok: true, draft: { id: persistedId, status: "draft", focusReference: reference, preview: payload.preview },
       transmissionEnabled: false,
-      message: mapped.issues.length ? "Rascunho salvo com pendências. Corrija os dados e obtenha a revisão fiscal antes de qualquer futura emissão." : "Prévia mapeada; o rascunho não foi transmitido.",
+      message: mapped.issues.length ? "Preparação salva com pendências. Corrija os dados e confira as regras fiscais antes de qualquer emissão futura." : "Prévia mapeada; nenhum documento foi transmitido.",
     }, existing ? 200 : 201);
   } catch (error) { return safeError(error); }
 }

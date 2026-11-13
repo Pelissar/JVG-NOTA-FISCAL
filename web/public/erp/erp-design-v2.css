@@ -350,6 +350,199 @@ body:not(:has(> .app-shell)) :is(.quote-grid, .field-grid) { min-width: 0; }
   .toolbar-search { min-width: 0; width: 100%; }
   table { min-width: 680px; }
 }
+
+/* 2026 workspace refresh: one navigation, clearer contrast and calmer surfaces. */
+:root {
+  --canvas: #f3f6fb;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-soft: #f7f9fc;
+  --surface-hover: #edf4ff;
+  --ink: #14283e;
+  --ink-soft: #354b64;
+  --muted: #5d7188;
+  --muted-soft: #71849a;
+  --line: #dce5ef;
+  --line-strong: #c5d2e0;
+  --accent: #1769d2;
+  --accent-strong: #0e4f9f;
+  --accent-contrast: #ffffff;
+  --accent-soft: #eaf3ff;
+  --blue: #1769d2;
+  --blue-soft: #eaf3ff;
+  --success: #19734b;
+  --success-soft: #eaf7ef;
+  --warning: #8a5b0b;
+  --warning-soft: #fff5df;
+  --danger: #a63b36;
+  --danger-soft: #fff0ef;
+  --shadow-sm: 0 2px 8px #1736530a;
+  --shadow-md: 0 12px 32px #17365312;
+  --shadow-pop: 0 22px 56px #14283e24;
+}
+html[data-theme="dark"] {
+  --canvas: #101923;
+  --surface: #182431;
+  --surface-raised: #202e3c;
+  --surface-soft: #1d2a37;
+  --surface-hover: #26384b;
+  --ink: #f0f5fb;
+  --ink-soft: #d4dfeb;
+  --muted: #b0bfd0;
+  --muted-soft: #91a3b7;
+  --line: #344454;
+  --line-strong: #4b5f72;
+  --accent: #67b2ff;
+  --accent-strong: #acd6ff;
+  --accent-contrast: #092441;
+  --accent-soft: #173653;
+  --blue: #9acaff;
+  --blue-soft: #223a57;
+  --success: #83d6a8;
+  --success-soft: #1d3a2c;
+  --warning: #f0c36e;
+  --warning-soft: #40351f;
+  --danger: #ffaaa4;
+  --danger-soft: #472b2b;
+  --shadow-sm: 0 2px 9px #00000020;
+  --shadow-md: 0 14px 36px #0000002b;
+  --shadow-pop: 0 24px 60px #00000058;
+}
+
+/* The main module bar already contains these routes; remove duplicate submenus. */
+.commercial-switcher,
+.fiscal-module-nav { display: none !important; }
+.erp-global-nav {
+  min-height: 66px;
+  padding-inline: clamp(14px, 2.5vw, 38px);
+  border-color: var(--line) !important;
+  background: color-mix(in srgb, var(--surface) 96%, transparent) !important;
+  box-shadow: 0 4px 18px #102a4309 !important;
+  backdrop-filter: blur(16px);
+}
+.erp-global-brand img { border-radius: 11px; }
+.erp-global-links > a,
+.erp-global-links summary {
+  min-height: 40px;
+  border: 1px solid transparent;
+  transition: color .16s ease, background-color .16s ease, border-color .16s ease;
+}
+.erp-global-links > a:hover,
+.erp-global-links summary:hover,
+.erp-global-links details[open] summary,
+.erp-global-links details.has-active summary {
+  border-color: var(--line);
+  background: var(--surface-soft) !important;
+  color: var(--accent-strong) !important;
+}
+.erp-global-links details > div {
+  border-color: var(--line) !important;
+  background: var(--surface) !important;
+  box-shadow: var(--shadow-pop) !important;
+}
+.erp-global-actions .erp-workspace-switch {
+  min-height: 42px;
+  border-color: var(--line) !important;
+  border-radius: 12px !important;
+  background: var(--surface-soft) !important;
+  color: var(--ink) !important;
+}
+.erp-global-actions .erp-workspace-switch:hover { background: var(--surface-hover) !important; }
+.erp-workspace-popover {
+  border-color: var(--line) !important;
+  background: var(--surface) !important;
+  box-shadow: var(--shadow-pop) !important;
+}
+.erp-global-actions .theme-toggle {
+  min-height: 40px;
+  border-radius: 10px !important;
+  background: var(--surface) !important;
+  color: var(--ink-soft) !important;
+}
+
+body:not(:has(> .app-shell)) {
+  background: var(--canvas) !important;
+  background-image: radial-gradient(ellipse 60% 32% at 92% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 78%) !important;
+  background-attachment: scroll !important;
+  color: var(--ink) !important;
+}
+body:not(:has(> .app-shell)) :is(.commercial-page, .layout) {
+  width: min(100% - 40px, 1500px);
+  padding-block: clamp(24px, 3vw, 42px) 56px;
+}
+body:not(:has(> .app-shell)) :is(.panel, .table-panel, .cfop-summary, .card, .record-card, .notice, .summary-card) {
+  border-color: var(--line) !important;
+  border-radius: 16px !important;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  box-shadow: var(--shadow-sm) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+body:not(:has(> .app-shell)) :is(.page-heading, .page-title) { margin-bottom: 24px; }
+body:not(:has(> .app-shell)) :is(.page-heading h1, .page-title h1) { letter-spacing: -.7px !important; }
+body:not(:has(> .app-shell)) :is(.summary-tile, .workflow-strip, .sales-section, .sales-tip) {
+  border-color: var(--line) !important;
+  border-radius: 14px !important;
+  background: var(--surface) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+body:not(:has(> .app-shell)) :is(.summary-tile, .workflow-strip) { color: var(--ink) !important; }
+body:not(:has(> .app-shell)) :is(input, select, textarea) {
+  min-height: 42px;
+  border-color: var(--line-strong) !important;
+  border-radius: 10px !important;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+}
+body:not(:has(> .app-shell)) textarea { min-height: 96px; }
+body:not(:has(> .app-shell)) :is(.btn, .back-button, button) {
+  min-height: 40px;
+  border-radius: 10px;
+  transition: border-color .16s ease, background-color .16s ease, color .16s ease, transform .16s ease;
+}
+body:not(:has(> .app-shell)) :is(.btn.primary, button[type=submit]:not(:disabled)) {
+  border-color: var(--accent) !important;
+  background: var(--accent) !important;
+  color: var(--accent-contrast) !important;
+}
+body:not(:has(> .app-shell)) :is(.btn.primary, button[type=submit]):hover:not(:disabled) {
+  background: var(--accent-strong) !important;
+  color: var(--accent-contrast) !important;
+  transform: translateY(-1px);
+}
+body:not(:has(> .app-shell)) :is(.commercial-table, .table-wrap, .cfop-grid) {
+  overflow-x: auto;
+  border-radius: 12px;
+  scrollbar-width: thin;
+}
+body:not(:has(> .app-shell)) :is(table, .commercial-table) { background: var(--surface) !important; color: var(--ink) !important; }
+body:not(:has(> .app-shell)) :is(td, th) { border-color: var(--line) !important; }
+body:not(:has(> .app-shell)) tbody tr:nth-child(even) { background: var(--surface-soft); }
+body:not(:has(> .app-shell)) tbody tr:hover { background: var(--surface-hover); }
+body:not(:has(> .app-shell)) :is(dialog, .record-dialog) {
+  max-width: min(760px, calc(100vw - 28px));
+  max-height: min(88dvh, 900px);
+  overflow: auto;
+  border: 1px solid var(--line) !important;
+  border-radius: 18px !important;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  box-shadow: var(--shadow-pop) !important;
+}
+body:not(:has(> .app-shell)) dialog::backdrop { background: #0b1723a8; backdrop-filter: blur(5px); }
+@media (max-width: 760px) {
+  .erp-global-nav { gap: 8px; padding: 7px 12px; }
+  .erp-global-brand img { width: 34px; height: 34px; }
+  .erp-global-actions { gap: 5px; }
+  .erp-global-actions .erp-workspace-name { display: none; }
+  body:not(:has(> .app-shell)) :is(.commercial-page, .layout) { width: min(100% - 24px, 1500px); padding-block: 20px 36px; }
+  body:not(:has(> .app-shell)) :is(.summary-grid, .sales-kpis) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body:not(:has(> .app-shell)) :is(.quote-grid, .field-grid, .sales-layout, .grid) { grid-template-columns: minmax(0, 1fr) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
 @media (max-width: 420px) {
   .erp-global-brand small { display: none; }
   .erp-global-actions .theme-toggle { min-width: 39px; width: 39px; overflow: hidden; padding: 0; font-size: 0; }
@@ -606,6 +799,7 @@ html[data-theme] body :is(.sales-section-title small, .sales-form-footer small, 
 .erp-workspace-popover .erp-workspace-logout { margin-top: 3px; border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; color: var(--danger); }
 .erp-workspace-popover .erp-workspace-logout:hover { background: var(--danger-soft); color: var(--danger); }
 .erp-workspace-menu .erp-nav-icon { width: 17px; height: 17px; }
+.erp-environment-status { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border: 1px solid color-mix(in srgb, var(--warning) 34%, var(--line)); border-radius: 999px; background: var(--warning-soft); color: var(--warning); font-size: 9px; font-weight: 850; letter-spacing: .45px; white-space: nowrap; }
 
 .workspace-menu { position: relative; z-index: 5; margin: 0 6px 28px; }
 .workspace-menu > .workspace-switch { width: 100%; max-width: none; margin: 0 !important; list-style: none; }
@@ -627,6 +821,7 @@ html[data-theme] body :is(.sales-section-title small, .sales-form-footer small, 
   .erp-workspace-avatar { width: 28px; height: 28px; flex-basis: 28px; }
   .erp-workspace-name strong { max-width: 76px; font-size: 10px; }
   .erp-workspace-name small { display: none; }
+  .erp-environment-status { display: none; }
 }
 @media (max-width: 420px) {
   .erp-global-nav { gap: 6px; padding-right: 9px; padding-left: 9px; }
@@ -660,3 +855,24 @@ html[data-theme] body :is(.sales-section-title small, .sales-form-footer small, 
   .erp-global-brand small { display: none; }
   .erp-global-actions { gap: 5px; }
 }
+
+/* Fiscal hub: action-first layout with clear environment state. */
+.fiscal-workspace { margin-top: 22px; padding: clamp(18px, 2.6vw, 30px); border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow-card); }
+.fiscal-workspace-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+.fiscal-workspace-heading h2 { margin: 6px 0; color: var(--ink); font-size: clamp(20px, 2.2vw, 28px); letter-spacing: -.035em; }
+.fiscal-workspace-heading p { max-width: 720px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.fiscal-workspace-status { display: inline-flex; flex: 0 0 auto; align-items: center; min-height: 34px; padding: 0 12px; border: 1px solid color-mix(in srgb, var(--warning) 32%, var(--line)); border-radius: 999px; background: var(--warning-soft); color: var(--warning); font-size: 10px; font-weight: 850; letter-spacing: .045em; }
+.fiscal-workspace-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 22px 0; }
+.fiscal-workspace-card { display: grid; grid-template-columns: 42px minmax(0, 1fr) 18px; align-items: center; gap: 13px; min-height: 108px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-soft); color: var(--ink); text-decoration: none; transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease, background-color .16s ease; }
+.fiscal-workspace-card:hover, .fiscal-workspace-card:focus-visible { outline: none; border-color: color-mix(in srgb, var(--accent) 48%, var(--line)); background: var(--surface); box-shadow: var(--shadow-pop); transform: translateY(-2px); }
+.fiscal-workspace-icon { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 12px; background: var(--accent-soft); color: var(--accent-strong); }
+.fiscal-workspace-icon svg, .fiscal-workspace-arrow svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.fiscal-workspace-copy { display: grid; min-width: 0; gap: 5px; }
+.fiscal-workspace-copy strong { color: var(--ink); font-size: 14px; }
+.fiscal-workspace-copy small { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.fiscal-workspace-copy em { color: var(--accent-strong); font-size: 10px; font-style: normal; font-weight: 750; }
+.fiscal-workspace-arrow { color: var(--muted); }
+.fiscal-production-note { padding: 16px 18px; border: 1px solid color-mix(in srgb, var(--warning) 26%, var(--line)); border-radius: 13px; background: var(--warning-soft); }
+.fiscal-production-note strong { color: var(--ink); font-size: 13px; }
+.fiscal-production-note p { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+@media (max-width: 680px) { .fiscal-workspace-grid { grid-template-columns: 1fr; } .fiscal-workspace-heading { flex-direction: column; } .fiscal-workspace { padding: 16px; } }

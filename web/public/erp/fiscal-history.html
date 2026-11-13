@@ -7,17 +7,17 @@
   <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
   <link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css">
   <link rel="stylesheet" href="/erp/fiscal-history.css">
-  <script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js"></script><script defer src="/erp/fiscal-history.js"></script>
+  <script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261113-2"></script><script defer src="/erp/fiscal-history.js"></script>
 </head>
 <body>
-  <div id="erpGlobalNav"></div><button type="button" class="theme-toggle" data-theme-toggle aria-label="Alternar tema">◐ Modo escuro</button>
+  <div id="erpGlobalNav"></div>
   <main class="history-shell">
     <header class="history-heading">
       <div><div class="eyebrow">FISCAL / DOCUMENTOS DA EMPRESA</div><h1>Histórico fiscal</h1><p>Consulte NF-e emitidas e notas recebidas, com pesquisa por cliente, fornecedor e transportadora.</p></div>
-      <div class="heading-actions"><a class="secondary-button" href="/erp/nfe-drafts.html">Preparar NF-e</a><button class="primary-button" id="refreshHistory" type="button">Atualizar histórico</button></div>
+      <div class="heading-actions"><a class="secondary-button" href="/erp/nfe.html">Emitir NF-e</a><button class="primary-button" id="refreshHistory" type="button">Atualizar histórico</button></div>
     </header>
     <section class="history-summary" aria-label="Como consultar">
-      <div><span class="summary-icon">↗</span><div><strong>Saídas</strong><small>Notas emitidas, rascunhos e situação de autorização.</small></div></div>
+      <div><span class="summary-icon">↗</span><div><strong>Saídas</strong><small>Notas emitidas, documentos em preparação e situação de autorização.</small></div></div>
       <div><span class="summary-icon">↙</span><div><strong>Entradas</strong><small>XML importado, conferência e registro no estoque.</small></div></div>
       <div><span class="summary-icon">⌕</span><div><strong>Por pessoa</strong><small>Filtre pelo mesmo cadastro de cliente, fornecedor ou transportadora.</small></div></div>
     </section>
@@ -26,7 +26,7 @@
       <form id="historyFilters" class="history-filters">
         <label><span>Movimento</span><select name="kind"><option value="all">Entradas e saídas</option><option value="outgoing">Notas de saída</option><option value="incoming">Notas de entrada</option></select></label>
         <label><span>Cliente, fornecedor ou transportadora</span><select name="partyId"><option value="">Todas as pessoas</option></select></label>
-        <label><span>Situação</span><select name="status"><option value="">Todas as situações</option><option value="draft">Rascunho / pendente</option><option value="received">Recebida no estoque</option><option value="queued">Na fila</option><option value="processing">Em processamento</option><option value="authorized">Autorizada</option><option value="rejected">Rejeitada</option><option value="cancelled">Cancelada</option><option value="denied">Denegada</option><option value="contingency">Contingência</option></select></label>
+        <label><span>Situação</span><select name="status"><option value="">Todas as situações</option><option value="draft">Em preparação / pendente</option><option value="received">Recebida no estoque</option><option value="queued">Na fila</option><option value="processing">Em processamento</option><option value="authorized">Autorizada</option><option value="rejected">Rejeitada</option><option value="cancelled">Cancelada</option><option value="denied">Denegada</option><option value="contingency">Contingência</option></select></label>
         <label><span>De</span><input name="from" type="date"></label><label><span>Até</span><input name="to" type="date"></label>
         <button class="primary-button filter-submit" type="submit">Aplicar filtros</button>
       </form>
@@ -39,7 +39,7 @@
       <div class="detail-heading"><div><div class="eyebrow">DOCUMENTO / DADOS ORIGINAIS</div><h2 id="detailHeading">Detalhes fiscais</h2><p id="detailSummary"></p></div><button class="secondary-button" id="closeDetail" type="button">Fechar detalhes</button></div>
       <div id="detailContent" class="detail-content"></div>
     </section>
-    <p class="history-footnote">Os dados tributários são exibidos como registrados no XML ou no rascunho. O SigmaFiscal não recalcula tributos nesta tela. NF-e em rascunho não foi transmitida nem autorizada.</p>
+    <p class="history-footnote">Os dados tributários são exibidos como registrados no XML ou no documento em preparação. O SigmaFiscal não recalcula tributos nesta tela. NF-e em preparação não foi transmitida nem autorizada.</p>
   </main>
 </body>
 </html>

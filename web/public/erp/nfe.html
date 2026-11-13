@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0f2334">
+  <meta name="description" content="Emissão e acompanhamento de NF-e no SigmaFiscal.">
+  <title>Emitir NF-e · SigmaFiscal</title>
+  <link rel="stylesheet" href="./nfe-drafts.css?v=20261112-10">
+  <link rel="stylesheet" href="./fiscal-workspace.css">
+  <link rel="stylesheet" href="./fiscal-document-switcher.css?v=20261113-2">
+  <link rel="stylesheet" href="./focus-diagnostic.css">
+  <link rel="stylesheet" href="/erp/fiscal-theme.css">
+  <script defer src="./nfe-tax-suggestion.js?v=20261112-2"></script>
+  <script defer src="./nfe-drafts.js?v=20261113-11"></script>
+  <script defer src="./nfe-wizard-ui.js?v=20261112-8"></script>
+  <script defer src="./fiscal-workspace.js"></script>
+<style>
+.draft-inspect{margin-top:10px;border:1px solid var(--accent,#075ec7);border-radius:9px;background:var(--accent-soft,#eaf2ff);color:var(--accent-strong,#084a9e);font-weight:700;cursor:pointer;padding:9px 12px;font:inherit;font-size:12px;text-align:left}
+.draft-inspect:hover{background:var(--blue-soft,#eaf2ff)}.draft-details{padding:20px;overflow-wrap:anywhere}.draft-details h3,.draft-details h4{margin:10px 0}.draft-details p,.draft-details li{font-size:13px;line-height:1.6}.draft-details ul{padding-left:22px}.draft-details[hidden]{display:none}.source-order-notice{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:14px 0;padding:14px 16px;border:1px solid var(--accent);border-radius:12px;background:var(--accent-soft);color:var(--ink)}.source-order-notice p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}.source-order-notice[hidden]{display:none}@media(max-width:620px){.source-order-notice{align-items:stretch;flex-direction:column}}
+.focus-json-preview{max-height:320px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:12px;border:1px solid var(--line,#cbd5e1);border-radius:10px;background:var(--surface,#fff);color:var(--ink,#0f172a);font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}.draft-details summary{cursor:pointer;font-weight:700;padding:8px 0}</style>
+<link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg"><link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css"><link rel="stylesheet" href="./nfe-finalization.css?v=20261112-3"><script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261113-2"></script></head>
+<body><div id="erpGlobalNav"></div>
+  <main class="layout">
+    <nav class="fiscal-document-switcher" aria-label="Tipo de documento fiscal">
+      <a href="/erp/nfe.html" aria-current="page"><strong>NF-e</strong><small>Mercadorias · Modelo 55</small></a>
+      <a href="/erp/nfce.html"><strong>NFC-e</strong><small>Consumidor · Modelo 65</small></a>
+      <a href="/erp/nfse.html"><strong>NFS-e</strong><small>Serviços</small></a>
+    </nav>
+    <div class="page-title"><div><div class="eyebrow">FISCAL / SAÍDA DE MERCADORIAS</div><h1>Emitir NF-e</h1><p>Preencha a operação, revise os dados fiscais de cada item e acompanhe o retorno da Focus.</p></div><span class="phase">Produção bloqueada</span></div>
+    <div id="status" class="notice" role="status">Conectando ao Supabase e carregando seus cadastros...</div>
+    <section class="panel readiness-panel" aria-labelledby="readiness-heading"><div class="panel-head"><div><span class="focus-eyebrow">STATUS DO AMBIENTE</span><h2 id="readiness-heading">Produção bloqueada · Homologação disponível</h2><p>A emissão oficial exige integração de produção, credencial própria e validação fiscal concluída.</p></div><span class="readiness-badge" id="readinessSummary">Verificando</span></div><div class="panel-body"><div class="readiness-grid" id="homologationReadiness" aria-live="polite"><p>Conferindo conexão e cadastros...</p></div><div class="readiness-links"><a href="/erp/index.html#settings">Dados fiscais da empresa</a><a href="/erp/index.html#products">Produtos</a><a href="/erp/tax-profiles.html">Regras tributárias opcionais</a></div><p class="readiness-note">A integração atual envia somente para homologação. A Focus usa URL e token específicos para produção; esta tela não transmite documentos fiscais reais.</p></div></section>
+<section class="panel focus-panel" aria-labelledby="focus-heading"><div class="focus-panel-heading"><div><span class="focus-eyebrow">INTEGRAÇÃO</span><h2 id="focus-heading">Conexão Focus NFe</h2></div></div><div class="panel-body"><p>Confira a credencial de homologação. Esta verificação não transmite, autoriza ou cancela NF-e.</p><div class="focus-actions"><button id="focusCheck" class="secondary-button" type="button">Verificar conexão Focus NFe</button><span class="focus-subtext">A consulta não emite nota fiscal.</span></div><p id="focusResult" class="focus-result" role="status" aria-live="polite">Conexão ainda não verificada.</p></div></section>
+<div class="fiscal-steps" role="tablist" aria-label="Etapas de preenchimento da NF-e">
+<button type="button" role="tab" class="selected" data-fiscal-tab="general" aria-selected="true">01 · Dados gerais</button>
+<button type="button" role="tab" data-fiscal-tab="recipient" aria-selected="false">02 · Destinatário</button>
+<button type="button" role="tab" data-fiscal-tab="items" aria-selected="false">03 · Produtos e impostos</button>
+<button type="button" role="tab" data-fiscal-tab="transport" aria-selected="false">04 · Transporte</button>
+<button type="button" role="tab" data-fiscal-tab="payment" aria-selected="false">05 · Pagamento</button>
+<button type="button" role="tab" data-fiscal-tab="review" aria-selected="false">06 · Conferência</button>
+</div>
+<div class="grid">
+      <section class="panel">
+        <div class="panel-head"><div><h2>Dados da NF-e</h2><p>Documento vinculado à empresa ativa e ao seu histórico fiscal.</p></div><span class="step-tag">01 / EMISSÃO</span></div>
+        <form id="draftForm">
+          <div class="panel-body">
+            <div class="field-grid" data-fiscal-section="general">
+              <label class="field"><span>Natureza da operação *</span><input name="nature" maxlength="60" minlength="3" placeholder="Ex.: Venda de mercadoria" required></label>
+              <div class="field document-type-field"><span>Documento fiscal</span><strong>NF-e normal · Modelo 55</strong><small>Esta tela emite somente NF-e de mercadorias.</small><input name="purpose" type="hidden" value="1"></div>
+              <label class="field"><span>Data e hora de emissão *</span><input name="issueAt" type="datetime-local" required><small>Preenchida automaticamente com a data e hora local. Altere se a operação ocorreu em outro horário.</small></label>
+              <label class="field"><span>Operação com consumidor final?</span><select name="consumerFinal"><option value="">Selecione conforme a operação</option><option value="0">Não · operação normal</option><option value="1">Sim · consumidor final</option></select></label>
+              <label class="field"><span>Presença do comprador</span><select name="buyerPresence"><option value="">Selecione conforme a operação</option><option value="0">0 · Não se aplica</option><option value="1">1 · Presencial</option><option value="2">2 · Internet</option><option value="3">3 · Teleatendimento</option><option value="5">5 · Presencial fora do estabelecimento</option><option value="9">9 · Não presencial, outros</option></select></label>
+              </div><section class="source-order-notice" id="sourceOrderNotice" hidden role="status" aria-live="polite"><div><strong>Pedido vinculado: <span id="sourceOrderLabel"></span></strong><p>Produtos, quantidades e preços foram copiados do pedido e ficam bloqueados para preservar a origem. Revise natureza e tributos antes de salvar.</p></div><button type="button" class="add-button" id="unlinkSourceOrder">Desvincular e editar itens</button></section><div class="field-grid" data-fiscal-section="recipient" hidden><label class="field"><span>Destinatário *</span><select id="recipientId" name="recipientId" required><option value="">Carregando clientes...</option></select></label>
+            </div>
+            <div data-fiscal-section="items" hidden><div class="items-heading"><div><h3>Produtos</h3><p>Até 20 itens, com quantidade e preço unitário.</p></div><button type="button" class="add-button" id="addItem">+ Adicionar produto</button></div>
+            <div id="items" class="items" aria-live="polite"></div>
+            <datalist id="cfopOptions"></datalist>
+            <p class="hint">Perfis tributários são opcionais. Se houver uma referência, ela pode sugerir dados; o que você informar diretamente neste item prevalece. Não há cálculo automático de tributos. <a href="/erp/tax-profiles.html" class="fiscal-inline-link">Configurar perfis opcionais</a>.</p>
+            <p class="hint">O CFOP é preenchido por item e pode variar dentro da mesma nota. Qualquer código sugerido pode ser alterado. Considere operação, produto, situação tributária do destinatário e local de entrega. <a href="/erp/cfop.html" class="fiscal-inline-link">Consultar tabela oficial CFOP</a>.</p>
+            </div><div data-fiscal-section="transport" hidden class="fiscal-pending">
+              <h3>Transporte e volumes</h3>
+              <div class="field-grid">
+                <label class="field"><span>Modalidade do frete</span><select name="transportMode"><option value="">Selecione conforme a operação</option><option value="0">0 · Por conta do remetente</option><option value="1">1 · Por conta do destinatário</option><option value="2">2 · Por conta de terceiros</option><option value="3">3 · Transporte próprio do remetente</option><option value="4">4 · Transporte próprio do destinatário</option><option value="9">9 · Sem ocorrência de transporte</option></select></label>
+                <label class="field"><span>Transportadora (opcional)</span><select name="carrierId" id="carrierId"><option value="">Não informada</option></select><small>Vinculada ao documento e ao histórico fiscal.</small></label>
+              </div>
+              <h4>Veículo da carga (opcional)</h4>
+              <div class="field-grid">
+                <label class="field"><span>Placa</span><input name="vehiclePlate" maxlength="7" pattern="[A-Za-z0-9]{7}" autocomplete="off" placeholder="ABC1D23"><small>Se informar dados do veículo, a placa é necessária.</small></label>
+                <label class="field"><span>UF do veículo</span><input name="vehicleState" maxlength="2" pattern="[A-Za-z]{2}" autocomplete="address-level1" placeholder="SP"></label>
+                <label class="field"><span>Registro RNTC/ANTT (opcional)</span><input name="vehicleRntc" maxlength="20" autocomplete="off"></label>
+              </div>
+              <h4>Volumes transportados (opcional)</h4>
+              <div class="field-grid">
+                <label class="field"><span>Quantidade de volumes</span><input name="volumeQuantity" type="number" min="1" max="999999999999999" step="1"></label>
+                <label class="field"><span>Espécie</span><input name="volumeSpecies" maxlength="60" placeholder="Caixas"></label>
+                <label class="field"><span>Marca</span><input name="volumeBrand" maxlength="60"></label>
+                <label class="field"><span>Identificação</span><input name="volumeNumber" maxlength="60"></label>
+                <label class="field"><span>Peso líquido</span><input name="volumeNetWeight" type="number" min="0.001" step="0.001" inputmode="decimal"></label>
+                <label class="field"><span>Peso bruto</span><input name="volumeGrossWeight" type="number" min="0.001" step="0.001" inputmode="decimal"></label>
+              </div>
+              <p class="hint">Informe apenas dados reais da operação. Se preencher qualquer dado de volume, informe também a quantidade; pesos aceitam até três casas decimais.</p>
+            </div><div data-fiscal-section="payment" hidden class="fiscal-pending"><h3>Pagamentos e duplicatas</h3><p>Meios de pagamento, parcelas, vencimentos e troco ainda precisam ser integrados ao documento fiscal.</p></div><div data-fiscal-section="review" hidden><div class="fiscal-pending"><h3>Conferência da NF-e</h3><p>Confira os dados fiscais que serão enviados e corrija qualquer pendência identificada antes de transmitir. O sistema não inventa nem calcula impostos.</p></div><div class="summary"><span>Total comercial</span><strong id="total">R$ 0,00</strong></div>
+          </div></div>
+          <div class="form-footer"><p>Na conclusão, escolha transmitir para homologação ou cancelar sem criar documento.</p><button class="save-button" id="saveButton" disabled type="submit">Concluir NF-e</button></div>
+        </form>
+      </section>
+      <aside class="side">
+        <section class="panel history" id="fiscalHistory"><div class="panel-head"><div><h2>Atividade fiscal</h2><p>Acompanhe envios, retornos e documentos que aguardam correção.</p></div><a class="history-all-link" href="/erp/nfe-issued.html">Ver documentos</a></div><div class="panel-body"><div id="history" class="history-list"><p>Carregando...</p></div></div></section>
+        <section class="panel draft-details" id="draftDetails" hidden aria-live="polite" aria-label="Detalhes da NF-e"></section>
+      </aside>
+    </div>
+  </main>
+  <dialog class="finalize-dialog" id="finalizeDialog" aria-labelledby="finalizeTitle">
+    <div class="finalize-head">
+      <div><span class="focus-eyebrow">CONCLUSÃO DA NF-e</span><h2 id="finalizeTitle">O que deseja fazer com esta nota?</h2></div>
+      <button type="button" class="finalize-close" id="closeFinalize" aria-label="Fechar">×</button>
+    </div>
+    <p class="finalize-intro">Escolha se quer transmitir esta NF-e de teste ou cancelar sem criar documento.</p>
+    <fieldset class="finalize-options" aria-label="Ação para concluir">
+      <label class="finalize-option"><input type="radio" name="finalizationChoice" value="emit" checked><span><strong>Transmitir em homologação</strong><small>Envia um teste à Focus. Não gera uma nota com validade fiscal.</small></span></label>
+      <label class="finalize-option finalize-option-danger"><input type="radio" name="finalizationChoice" value="discard"><span><strong>Cancelar sem criar</strong><small>Descarta esta edição e não cria um documento para transmissão.</small></span></label>
+    </fieldset>
+    <label class="homologation-confirm finalize-confirm" id="homologationConfirmRow" hidden><input id="confirmHomologation" type="checkbox"><span>Confirmo que quero enviar esta nota somente ao ambiente de homologação.</span></label>
+    <p class="finalize-feedback" id="finalizeFeedback" role="status" aria-live="polite" hidden></p>
+    <div class="finalize-actions"><button type="button" class="secondary-button" id="backToReview">Voltar à conferência</button><button type="button" class="save-button" id="confirmFinalize">Transmitir em homologação</button></div>
+  </dialog>
+  <footer>© 2026 JVG Nota Fiscal · Homologação disponível; produção bloqueada. Valores comerciais não representam apuração de tributos.</footer>
+  <script defer src="./focus-diagnostic.js"></script>
+</body>
+</html>

@@ -41,7 +41,8 @@ function buildRow(kind: RecordKind, input: Record<string, unknown>, account: Sit
     return { ...base, sku, name, category: str(input.category, 80), unit,
       ncm: ncm || null, cest: cest || null, gtin: str(input.gtin, 20) || "SEM GTIN", origin: origin || null,
       default_cfop: defaultCfop || null, tax_profile_id: taxProfileId,
-      cost_price: positiveMoney(input.cost ?? 0), sale_price: positiveMoney(input.price ?? 0), active: input.active !== false };
+      cost_price: positiveMoney(input.cost ?? 0), sale_price: positiveMoney(input.price ?? 0), active: input.active !== false,
+      ...(typeof input.tracksStock === "boolean" ? { tracks_stock: input.tracksStock } : {}) };
   }
   if (kind === "client") {
     const displayName = str(input.name, 160), type = input.type;

@@ -59,9 +59,10 @@ export function reviewNfeDocument(value: unknown): NfeDocumentReview {
   const commercialTotal = total === null || freight === null || insurance === null || discount === null || expenses === null
     ? null : total + freight + insurance + expenses - discount;
 
-  const supportedSchema = payload.schemaVersion === 3 || payload.schemaVersion === 4 || payload.schemaVersion === 5 || payload.schemaVersion === 6;
+  const supportedSchema = payload.schemaVersion === 3 || payload.schemaVersion === 4 || payload.schemaVersion === 5 || payload.schemaVersion === 6 || payload.schemaVersion === 7;
   add("version", "Versão do rascunho", supportedSchema,
-      payload.schemaVersion === 6 ? "Estrutura interna atual" :
+      payload.schemaVersion === 7 ? "Estrutura interna atual" :
+      payload.schemaVersion === 6 ? "Estrutura anterior compatível" :
       payload.schemaVersion === 5 ? "Estrutura anterior compatível" :
       payload.schemaVersion === 4 ? "Estrutura anterior compatível" :
       payload.schemaVersion === 3 ? "Estrutura anterior compatível" : "Rascunho legado: refaça a preparação");
@@ -90,15 +91,11 @@ export function reviewNfeDocument(value: unknown): NfeDocumentReview {
       "Conferência aritmética dos subtotais e do total comercial em centavos");
   add("classifications", "Classificações dos produtos", completeClassifications,
       "NCM, CFOP e CSOSN informados; compatibilidade fiscal exige revisão");
-  const profilesReviewed = items.length > 0 && items.every(row => {
-    const profile = obj(obj(row).taxProfile);
-    return text(profile.id) !== "" && profile.reviewStatus === "reviewed";
-  });
-  add("profiles", "Perfis tributários", profilesReviewed,
-      "Todos os perfis vinculados devem ter revisão registrada");
+  add("profiles", "Perfis tributários", true,
+      "Configuração interna opcional; CFOP e demais dados fiscais são conferidos diretamente em cada item.");
   add("taxPreview", "Cálculo dos tributos",
       preview.validForEmission === true && preview.calculationMethod === "approved_rule_engine",
-      "Impostos ainda não calculados por regras aprovadas; a conferência fiscal permanece bloqueada");
+      "O ERP não calcula tributos. Os valores fiscais informados em cada item são mapeados sem completar bases, alíquotas ou impostos.");
   add("pending", "Pendências fiscais", pending.length === 0,
       pending.length ? pending.length + " pendência(s) aguardando conferência" :
       "Nenhuma pendência cadastrada; isso não representa autorização");
@@ -149,6 +146,31 @@ const focusTaxFieldNames = new Set([
   "cofins_base_calculo_st", "cofins_aliquota_porcentual_st", "cofins_quantidade_vendida_st", "cofins_aliquota_valor_st", "cofins_valor_st",
   "ibs_cbs_base_calculo", "ibs_uf_aliquota", "ibs_uf_valor", "ibs_mun_aliquota", "ibs_mun_valor", "cbs_aliquota", "cbs_valor",
 ]);
+const focusFieldLabels: Record<string, string> = {
+  icms_modalidade_base_calculo: "modalidade da base do ICMS", icms_reducao_base_calculo: "redução da base do ICMS",
+  icms_base_calculo: "base de cálculo do ICMS", icms_aliquota: "alíquota do ICMS", icms_valor: "valor do ICMS",
+  icms_modalidade_base_calculo_st: "modalidade da base do ICMS-ST", icms_margem_valor_adicionado_st: "MVA do ICMS-ST",
+  icms_reducao_base_calculo_st: "redução da base do ICMS-ST", icms_base_calculo_st: "base de cálculo do ICMS-ST",
+  icms_aliquota_st: "alíquota do ICMS-ST", icms_valor_st: "valor do ICMS-ST",
+  icms_aliquota_credito_simples: "alíquota de crédito do Simples", icms_valor_credito_simples: "valor de crédito do Simples",
+  icms_base_calculo_retido_st: "base do ICMS-ST retido", icms_valor_retido_st: "valor do ICMS-ST retido",
+  icms_valor_substituto: "valor do ICMS do substituto", icms_aliquota_final: "alíquota final do ICMS",
+  pis_base_calculo: "base de cálculo do PIS", pis_aliquota_porcentual: "alíquota percentual do PIS",
+  pis_quantidade_vendida: "quantidade tributável do PIS", pis_aliquota_valor: "alíquota do PIS por unidade",
+  pis_valor: "valor do PIS", pis_base_calculo_st: "base do PIS-ST", pis_aliquota_porcentual_st: "alíquota do PIS-ST",
+  pis_quantidade_vendida_st: "quantidade tributável do PIS-ST", pis_aliquota_valor_st: "alíquota do PIS-ST por unidade",
+  pis_valor_st: "valor do PIS-ST", cofins_base_calculo: "base de cálculo da Cofins",
+  cofins_aliquota_porcentual: "alíquota percentual da Cofins", cofins_quantidade_vendida: "quantidade tributável da Cofins",
+  cofins_aliquota_valor: "alíquota da Cofins por unidade", cofins_valor: "valor da Cofins",
+  cofins_base_calculo_st: "base da Cofins-ST", cofins_aliquota_porcentual_st: "alíquota da Cofins-ST",
+  cofins_quantidade_vendida_st: "quantidade tributável da Cofins-ST", cofins_aliquota_valor_st: "alíquota da Cofins-ST por unidade",
+  cofins_valor_st: "valor da Cofins-ST", ibs_cbs_base_calculo: "base de cálculo IBS/CBS",
+  ibs_uf_aliquota: "alíquota do IBS estadual", ibs_uf_valor: "valor do IBS estadual",
+  ibs_mun_aliquota: "alíquota do IBS municipal", ibs_mun_valor: "valor do IBS municipal",
+  cbs_aliquota: "alíquota da CBS", cbs_valor: "valor da CBS",
+};
+const focusFieldLabel = (field: string): string => focusFieldLabels[field] || field;
+const focusFieldList = (fields: string[]): string => fields.map(focusFieldLabel).join(", ");
 const supportedCsosn = new Set(["101", "102", "103", "201", "202", "203", "300", "400", "500", "900"]);
 
 function missingTaxFields(fields: string[], focusFields: Json): string[] {
@@ -356,9 +378,11 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
   let ibsCbsEnabledCount = 0;
   sourceItems.forEach((raw, index) => {
     const item = obj(raw), row: Json = { numero_item: index + 1 };
+    const itemName = text(item.description) || text(item.sku) || "produto";
+    const itemLabel = `Item ${index + 1} (${itemName})`;
     const put = (key: string, valid: boolean, mapped: unknown) => {
       if (valid && mapped !== undefined && mapped !== null && mapped !== "") row[key] = mapped;
-      else itemBasicMissing.push("Item " + (index + 1) + " " + key);
+      else itemBasicMissing.push(`${itemLabel}: campo ${key === "codigo_ncm" ? "NCM" : key === "cfop" ? "CFOP" : key.replaceAll("_", " ")} ausente ou inválido; corrija este campo na etapa Produtos da nota.`);
     };
     const productCode = text(item.sku), description = text(item.description);
     const ncm = text(item.ncm), cfop = text(item.cfop), unit = text(item.unit);
@@ -381,11 +405,11 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
     const taxRuleReview = reviewFocusTaxRule({ ...rules, csosn }, { includeIbsCbs: ibsCbsEnabled });
     const focusFields = taxRuleReview.focusFields;
     if (/^\d{3}$/.test(csosn) && supportedCsosn.has(csosn)) row.icms_situacao_tributaria = csosn;
-    else itemCodeMissing.push("Item " + (index + 1) + " CSOSN/ICMS");
+    else itemCodeMissing.push(`${itemLabel}: informe um CSOSN compatível com o CRT no campo CSOSN do ICMS deste item.`);
     if (/^\d{2}$/.test(pis)) row.pis_situacao_tributaria = pis;
-    else itemCodeMissing.push("Item " + (index + 1) + " CST PIS");
+    else itemCodeMissing.push(`${itemLabel}: informe o CST do PIS no próprio item da nota.`);
     if (/^\d{2}$/.test(cofins)) row.cofins_situacao_tributaria = cofins;
-    else itemCodeMissing.push("Item " + (index + 1) + " CST COFINS");
+    else itemCodeMissing.push(`${itemLabel}: informe o CST da Cofins no próprio item da nota.`);
     const cstIbs = text(rules.cstIbsCbs), classTrib = text(rules.classTrib);
     if (ibsCbsEnabled) {
       if (/^\d{3}$/.test(cstIbs) && /^\d{6}$/.test(classTrib)) {
@@ -405,13 +429,13 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
       else if (issue.startsWith("CST PIS") || issue.startsWith("CST COFINS")) itemPisCofinsMissing.push(`Item ${index + 1}: ${issue}`);
       else itemIbsDetailsMissing.push(`Item ${index + 1}: ${issue}`);
     }
-    if (missingIcms.length) itemIcmsMissing.push(`Item ${index + 1}: ${missingIcms.join(", ")}`);
+    if (missingIcms.length) itemIcmsMissing.push(`${itemLabel}: faltam ${focusFieldList(missingIcms)}. Abra “Valores tributários numéricos (avançado)” neste item e informe os valores orientados para o CSOSN selecionado.`);
     if (taxRuleReview.invalidFields.length)
-      itemFocusFieldIssues.push(`Item ${index + 1}: ${taxRuleReview.invalidFields.join(", ")}`);
+      itemFocusFieldIssues.push(`${itemLabel}: valores inválidos em ${focusFieldList(taxRuleReview.invalidFields)}. Corrija esses campos avançados neste item.`);
     for (const [prefix, cst] of [["pis", pis], ["cofins", cofins]] as const) {
       const expectedFields = conditionalPisCofinsFields(cst, prefix);
       const missing = missingTaxFields(expectedFields, focusFields);
-      if (missing.length) itemPisCofinsMissing.push(`Item ${index + 1}: ${missing.join(", ")}`);
+      if (missing.length) itemPisCofinsMissing.push(`${itemLabel}: CST ${cst} de ${prefix.toUpperCase()} requer ${focusFieldList(missing)}. Preencha esses campos na seção avançada deste item.`);
       if (cst && !expectedFields.length && !["04", "06", "07", "08", "09"].includes(cst))
         itemPisCofinsMissing.push(`Item ${index + 1}: revisar o grupo condicional do ${prefix.toUpperCase()} para CST ${cst} com a tabela Focus e a contabilidade`);
     }
@@ -422,8 +446,8 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
     const cest = rawCest.replace(/\D/g, "");
     const cestRequired = ["201", "202", "203", "500"].includes(csosn);
     if (rawCest && /^\d{7}$/.test(cest)) row.cest = cest;
-    else if (rawCest) itemCestIssues.push(`Item ${index + 1}: CEST informado deve conter exatamente 7 dígitos.`);
-    if (cestRequired && !rawCest) itemCestIssues.push(`Item ${index + 1}: CEST obrigatório para CSOSN ${csosn} (Substituição Tributária).`);
+    else if (rawCest) itemCestIssues.push(`${itemLabel}: CEST deve conter exatamente 7 dígitos; corrija o campo CEST deste item.`);
+    if (cestRequired && !rawCest) itemCestIssues.push(`${itemLabel}: CEST obrigatório para CSOSN ${csosn} (Substituição Tributária). Preencha o campo CEST deste item.`);
     const gtin = textDigits(item.gtin);
     if (/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/.test(gtin)) row.codigo_barras_comercial = gtin;
     mappedItems.push(row);
@@ -646,17 +670,4 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
   const totalsMatch = sourceItems.length > 0 && Number.isSafeInteger(productCents) && productCents >= 0 &&
     headerTotalCents !== null && productCents === headerTotalCents;
   add("valor_produtos", "Totalização de produtos", totalsMatch,
-      "A soma comercial dos itens precisa corresponder ao rascunho; frete, seguro, desconto e despesas são mapeados separadamente.");
-  add("valor_total", "Total fiscal da NF-e", totalsMatch,
-      "A Focus calcula o total do cabeçalho a partir dos itens e dos valores fiscais informados; nenhum imposto estimado pelo ERP é enviado.");
-  return {
-    environment: "homologacao",
-    endpoint: "POST /v2/nfe?ref",
-    requestPreview,
-    checks,
-    missingCount: checks.filter(check => !check.ok).length,
-    autoAssignedFields: ["ref (ID fiscal interno)", "serie e numero (Focus, se a numeração automática estiver configurada)"],
-    transmissionEnabled: false,
-    canSend: false,
-  };
-}
+      "A soma comercial d

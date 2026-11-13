@@ -10,8 +10,8 @@
   <link rel="stylesheet" href="/erp/erp-design-v2.css">
   <link rel="stylesheet" href="/erp/tax-profiles.css?v=20261112-1">
   <script src="/erp/theme-switch.js"></script>
-  <script defer src="/erp/erp-page-nav.js"></script>
-  <script defer src="./tax-profiles.js?v=20261112-1"></script>
+  <script defer src="/erp/erp-page-nav.js?v=20261113-2"></script>
+  <script defer src="./tax-profiles.js?v=20261112-2"></script>
 </head>
 <body class="tax-profiles-page">
   <div id="erpGlobalNav"></div>
@@ -52,7 +52,7 @@
       </article>
       <article class="workflow-step">
         <span class="step-number">03</span>
-        <div><strong>Peça revisão contábil</strong><p>O perfil começa como rascunho e não autoriza emissão.</p></div>
+        <div><strong>Se desejar, registre uma conferência</strong><p>Esse histórico é opcional e não libera nem bloqueia a emissão.</p></div>
       </article>
     </section>
 
@@ -64,7 +64,7 @@
             <h2 id="formTitle">Criar perfil</h2>
             <p>Você não precisa disso para vender ou cadastrar produtos. Nome e operação identificam a regra; deixe os códigos em branco até receber orientação do contador.</p>
           </div>
-          <span class="draft-chip">Rascunho</span>
+          <span class="draft-chip">Não revisado</span>
         </header>
 
         <form id="profileForm">
@@ -79,7 +79,7 @@
                   <option value="interna">Venda interna (mesma UF)</option>
                   <option value="interestadual">Venda interestadual (UF diferente)</option>
                 </select>
-                <small class="field-help">O rascunho seleciona a regra pela UF do emitente e do destinatário. Operações de exportação continuam bloqueadas.</small>
+                <small class="field-help">O não revisado seleciona a regra pela UF do emitente e do destinatário. Operações de exportação continuam bloqueadas.</small>
               </label>
               <label class="field full-field">
                 <span class="field-label">Nome interno do perfil <b aria-hidden="true">*</b></span>
@@ -145,7 +145,7 @@
           </div>
           <div class="notice info form-notice">
             <strong>O que acontece ao salvar?</strong>
-            <p>O sistema guarda esta regra como rascunho da empresa. Isso não altera uma venda, não calcula imposto e não transmite NF-e. Cada produto continua vinculado ao perfil no cadastro de produtos.</p>
+            <p>O sistema guarda esta regra como não revisado da empresa. Isso não altera uma venda, não calcula imposto e não transmite NF-e. Cada produto continua vinculado ao perfil no cadastro de produtos.</p>
           </div>
 
           <div class="form-actions">
@@ -191,7 +191,7 @@
         <input id="reviewProfileId" name="profileId" type="hidden">
         <p class="section-kicker">REGISTRO DE REVISÃO</p>
         <h2 id="reviewDialogTitle">Orientação da contabilidade</h2>
-        <p>Informe quem orientou as regras deste perfil e confirme que os códigos cadastrados correspondem a essa orientação.</p>
+        <p>Se quiser, registre quem informou os códigos deste perfil. Esta anotação é opcional e não é requisito para salvar um não revisado ou emitir NF-e.</p>
         <label class="field">
           <span class="field-label">Contador ou escritório <b aria-hidden="true">*</b></span>
           <input class="field-control" name="accountantName" minlength="3" maxlength="120" required>
@@ -204,9 +204,10 @@
           <input name="confirmed" type="checkbox" required>
           <span>Confirmo que a contabilidade revisou as regras registradas neste perfil.</span>
         </label>
-        <div class="notice warning form-notice"><strong>Este registro não libera emissão.</strong><p>O sistema registra a declaração do usuário da empresa, mas não autentica a identidade ou o CRC do contador. A prévia continua bloqueada se houver campos fiscais pendentes.</p></div>
+        <div class="notice info form-notice"><strong>Registro opcional.</strong><p>O sistema registra uma declaração do usuário da empresa, mas não autentica a identidade ou o CRC do contador. A emissão verifica diretamente os dados necessários em cada item.</p></div>
+        <p id="reviewFeedback" class="notice form-notice" role="alert" aria-live="assertive" hidden></p>
         <div class="form-actions">
-          <button class="primary-action" type="submit">Registrar revisão</button>
+          <button id="saveReview" class="primary-action" type="submit">Salvar conferência opcional</button>
           <button id="cancelReview" class="secondary-action" type="button">Voltar</button>
         </div>
       </form>

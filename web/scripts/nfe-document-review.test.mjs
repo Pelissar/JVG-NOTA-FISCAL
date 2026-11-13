@@ -36,11 +36,13 @@ test('regime sem confirmação contábil não passa na revisão do emitente', ()
   const payload=valid();payload.issuer.taxRegimeConfirmed=false;
   assert.equal(check(reviewNfeDocument(payload),'issuer').ok,false);
 });
-test('pendências e perfis não revisados são exibidos', () => {
+test('pendências bloqueiam, mas perfil ausente ou não revisado não é exigido', () => {
   const payload=valid();payload.pending=['Revisão fiscal'];payload.items[0].taxProfile.reviewStatus='draft';
   const result=reviewNfeDocument(payload);
   assert.equal(check(result,'pending').ok,false);
-  assert.equal(check(result,'profiles').ok,false);
+  assert.equal(check(result,'profiles').ok,true);
+  delete payload.items[0].taxProfile;
+  assert.equal(check(reviewNfeDocument(payload),'profiles').ok,true);
 });
 test('rascunho antigo ou sem dados não causa erro e não autoriza transmissão', () => {
   const result=reviewNfeDocument({});
@@ -83,6 +85,17 @@ test('prévia mapeia códigos e somente valores Focus permitidos, sem inventar t
   assert.equal(result.transmissionEnabled,false);
 });
 
+test('prévia usa NCM, CEST, origem e CFOP editados no item', () => {
+  const payload=focusPayload();
+  Object.assign(payload.items[0], {ncm:'85258919',cest:'1234567',origin:'2',cfop:'6108'});
+  const result=reviewFocusNfePayload(payload);
+  const item=result.requestPreview.items[0];
+  assert.equal(item.codigo_ncm,'85258919');
+  assert.equal(item.cest,'1234567');
+  assert.equal(item.icms_origem,2);
+  assert.equal(item.cfop,'6108');
+});
+
 test('IBS/CBS só entra com flag explícita, regime regular confirmado e vigência futura',()=>{
   const payload=focusPayload();
   payload.issueAt='2027-01-01T00:00:00-03:00';
@@ -103,6 +116,7 @@ test('CEST é limpo no payload e obrigatório para CSOSN com ICMS-ST',()=>{
   let result=reviewFocusNfePayload(payload);
   assert.equal(check(result,'cest').ok,false);
   assert.match(check(result,'cest').detail,/CEST obrigatório para CSOSN 201/);
+  assert.match(check(result,'cest').detail,/campo CEST deste item/);
   payload.items[0].cest='12.345.67';
   result=reviewFocusNfePayload(payload);
   assert.equal(check(result,'cest').ok,true);
@@ -147,8 +161,8 @@ test('prévia aponta os campos ICMS exigidos por CSOSN sem completar valores', (
   const result=reviewFocusNfePayload(payload);
   const check=result.checks.find(row=>row.key==='icms_campos_condicionais');
   assert.equal(check.ok,false);
-  assert.match(check.detail,/icms_aliquota_credito_simples/);
-  assert.match(check.detail,/icms_valor_credito_simples/);
+  assert.match(check.detail,/alíquota de crédito do Simples/);
+  assert.match(check.detail,/valor de crédito do Simples/);
   assert.equal(result.canSend,false);
 });
 

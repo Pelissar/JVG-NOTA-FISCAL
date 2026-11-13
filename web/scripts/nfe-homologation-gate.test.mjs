@@ -3,7 +3,7 @@ import test from 'node:test';
 import { reviewApprovedTaxProfile, reviewNfeHomologationGate } from '../lib/fiscal/nfe-homologation-gate.ts';
 
 const completeDraft = () => ({
-  schemaVersion: 5,
+  schemaVersion: 7,
   nature: 'Venda de mercadoria',
   purpose: 1,
   issueAt: '2026-11-11T10:00:00-03:00',
@@ -58,7 +58,7 @@ test('Simples Nacional omite IBS/CBS e estimativas nao substituem valores exigid
   assert.equal('ibs_cbs_situacao_tributaria' in gate.focusRequestPreview.items[0], false);
 });
 
-test('pendências fiscais, perfil não revisado ou regra de outra operação bloqueiam', () => {
+test('pendências fiscais bloqueiam mas perfil ausente ou não revisado é opcional', () => {
   const draft = completeDraft();
   draft.pending = ['CFOP precisa de confirmação contábil'];
   draft.items[0].taxProfile.reviewStatus = 'draft';
@@ -67,9 +67,11 @@ test('pendências fiscais, perfil não revisado ou regra de outra operação blo
   const gate = reviewNfeHomologationGate(draft);
   assert.equal(gate.ready, false);
   assert.ok(gate.issues.some(issue => issue.includes('CFOP precisa de confirmação contábil')));
-  assert.ok(gate.issues.some(issue => issue.includes('regra fiscal não está revisada')));
-  assert.ok(gate.issues.some(issue => issue.includes('regra aprovada para a operação')));
-  assert.ok(gate.issues.some(issue => issue.includes('declaração de revisão contábil')));
+  assert.equal(gate.issues.some(issue => issue.includes('perfil tributário')), false);
+  assert.equal(gate.issues.some(issue => issue.includes('declaração de revisão contábil')), false);
+  const noProfile = completeDraft();
+  delete noProfile.items[0].taxProfile;
+  assert.equal(reviewNfeHomologationGate(noProfile).ready, true);
 });
 
 test('perfil exige declaração registrada de revisão contábil consistente', () => {

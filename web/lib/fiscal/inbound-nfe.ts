@@ -12,6 +12,14 @@ export type InboundNfeItem = {
   quantity: number;
   unitPrice: number;
   total: number;
+  taxUnit: string;
+  taxQuantity: number | null;
+  taxUnitPrice: number | null;
+  discount: number;
+  freight: number;
+  insurance: number;
+  otherAmount: number;
+  origin: string;
   /** Grupo imposto como veio no XML. Não é recalculado pelo ERP. */
   taxes: XmlObject | null;
   productId: string | null;
@@ -55,6 +63,16 @@ function object(value: unknown): XmlObject {
 function value(parent: unknown, key: string): string {
   const item = object(parent)[key];
   if (typeof item === "string" || typeof item === "number") return String(item).trim();
+  return "";
+}
+
+function findValue(parent: unknown, key: string): string {
+  const source = object(parent);
+  if (typeof source[key] === "string" || typeof source[key] === "number") return String(source[key]).trim();
+  for (const child of Object.values(source)) {
+    const found = findValue(child, key);
+    if (found) return found;
+  }
   return "";
 }
 
@@ -156,6 +174,9 @@ export function parseAuthorizedInboundNfe(xml: string, companyTaxId: string): Pa
     if (lineNumbers.has(lineNumber)) throw new Error("O XML contém número de item repetido.");
     lineNumbers.add(lineNumber);
     const quantity = numeric(value(product, "qCom"), "quantidade", false);
+    const taxes = line.imposto ? object(line.imposto) : null;
+    const taxQuantityText = value(product, "qTrib");
+    const taxUnitPriceText = value(product, "vUnTrib");
     return {
       lineNumber,
       supplierCode: value(product, "cProd").slice(0, 60),
@@ -168,7 +189,15 @@ export function parseAuthorizedInboundNfe(xml: string, companyTaxId: string): Pa
       quantity,
       unitPrice: numeric(value(product, "vUnCom"), "valor unitário"),
       total: numeric(value(product, "vProd"), "total do item"),
-      taxes: line.imposto ? object(line.imposto) : null,
+      taxUnit: value(product, "uTrib").slice(0, 8),
+      taxQuantity: taxQuantityText ? numeric(taxQuantityText, "quantidade tributavel") : null,
+      taxUnitPrice: taxUnitPriceText ? numeric(taxUnitPriceText, "valor unitario tributavel") : null,
+      discount: numeric(value(product, "vDesc") || "0", "desconto do item"),
+      freight: numeric(value(product, "vFrete") || "0", "frete do item"),
+      insurance: numeric(value(product, "vSeg") || "0", "seguro do item"),
+      otherAmount: numeric(value(product, "vOutro") || "0", "outras despesas do item"),
+      origin: findValue(taxes && taxes.ICMS, "orig").slice(0, 1),
+      taxes,
       productId: null,
       trackStock: false,
     };

@@ -9,6 +9,8 @@ export type NfeHomologationGate = {
   reviewCount: number;
 };
 
+// Optional profile administration check. This helper is not called by the
+// NF-e draft or transmission gates; profile review never authorizes emission.
 export function reviewApprovedTaxProfile(value: unknown): { ready: boolean; issue: string | null } {
   const profile = obj(value);
   const rules = obj(profile.rules);
@@ -28,7 +30,8 @@ const obj = (value: unknown): Json =>
 
 /**
  * Gate de preparação para uma transmissão explicitamente confirmada em
- * homologação. Não trata estimativas como imposto e não habilita produção.
+ * homologação. Não exige perfil tributário nem declaração de contador.
+ * Não trata estimativas como imposto e não habilita produção.
  */
 export function reviewNfeHomologationGate(value: unknown): NfeHomologationGate {
   const payload = obj(value);
@@ -37,8 +40,11 @@ export function reviewNfeHomologationGate(value: unknown): NfeHomologationGate {
   const issues: string[] = [];
   const add = (message: string) => { if (message && !issues.includes(message)) issues.push(message); };
 
+  if (payload.schemaVersion !== 7)
+    add("Este rascunho foi criado com uma estrutura fiscal anterior. Crie um novo rascunho para transmitir em homologação.");
+
   // A estimativa interna não é enviada à Focus; os valores fiscais enviados
-  // devem vir das regras da operação revisadas e passar no mapa estrutural.
+  // devem vir do próprio item e passar no mapa estrutural.
   for (const check of documentReview.checks) {
     if (!check.ok && check.key !== "taxPreview" && check.key !== "transmission")
       add(`${check.label}: ${check.detail}`);
@@ -49,17 +55,6 @@ export function reviewNfeHomologationGate(value: unknown): NfeHomologationGate {
 
   const pending = Array.isArray(payload.pending) ? payload.pending : [];
   for (const item of pending) if (typeof item === "string" && item.trim()) add(item.trim());
-
-  const items = Array.isArray(payload.items) ? payload.items : [];
-  items.forEach((raw, index) => {
-    const item = obj(raw);
-    const profile = obj(item.taxProfile);
-    if (profile.reviewStatus !== "reviewed") add(`Item ${index + 1}: regra fiscal não está revisada.`);
-    if (profile.operationRuleConfigured !== true) add(`Item ${index + 1}: falta uma regra aprovada para a operação deste rascunho.`);
-    if (profile.accountantReviewDeclared !== true) add(`Item ${index + 1}: registre a declaração de revisão contábil do perfil fiscal.`);
-    if (!item.taxRules || typeof item.taxRules !== "object" || Array.isArray(item.taxRules))
-      add(`Item ${index + 1}: os campos fiscais da regra não estão disponíveis.`);
-  });
 
   return {
     ready: issues.length === 0,

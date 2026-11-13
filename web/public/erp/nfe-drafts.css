@@ -60,12 +60,12 @@ body{min-width:320px}
 .fiscal-support-content>.panel{margin:0;border-color:var(--line,#dbe4ed);background:var(--surface,#fff);color:var(--ink,#183347)}
 .fiscal-support-content>.panel .panel-head h2,.fiscal-support-content>.panel .panel-body{color:var(--ink,#183347)}
 .nfe-wizard{display:grid;grid-template-columns:minmax(185px,225px) minmax(0,1fr);align-items:start;gap:16px;margin-top:18px}
-.fiscal-steps{grid-column:1;grid-row:1;display:grid;gap:7px;position:sticky;top:92px;padding:12px;border:1px solid var(--line,#dce5eb);border-radius:14px;background:var(--surface,#fff);box-shadow:0 7px 22px #1833470b}
-.fiscal-steps button{display:grid;grid-template-columns:32px minmax(0,1fr);align-items:center;gap:10px;min-height:48px;padding:8px 10px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted,#61798a);font-size:11px;font-weight:700;text-align:left;line-height:1.4}
-.fiscal-steps button>span:first-child{display:grid;place-items:center;width:28px;height:28px;border:1px solid var(--line,#dce5eb);border-radius:50%;background:var(--surface-soft,#f4f7fa);color:var(--muted,#62798a);font-size:10px;font-weight:800}
-.fiscal-steps button:hover{background:var(--surface-soft,#f4f7fa);color:var(--ink,#183347)}
-.fiscal-steps button.selected{border-color:var(--accent,#1769d2);background:var(--accent-soft,#eaf2ff);color:var(--accent-strong,#084a9e)}
-.fiscal-steps button.selected>span:first-child,.fiscal-steps button.is-complete>span:first-child{border-color:var(--accent,#1769d2);background:var(--accent,#1769d2);color:#fff}
+.nfe-wizard>.fiscal-steps{grid-column:1;grid-row:1;display:grid;align-content:start;gap:7px;position:sticky;top:92px;min-width:0;width:100%;max-height:calc(100vh - 112px);overflow-y:auto;overflow-x:hidden;box-sizing:border-box;padding:12px;border:1px solid var(--line,#dce5eb);border-radius:14px;background:var(--surface,#fff);box-shadow:0 7px 22px #1833470b}
+.nfe-wizard>.fiscal-steps button{display:grid;flex:none;width:100%;min-width:0;grid-template-columns:32px minmax(0,1fr);align-items:center;gap:10px;min-height:48px;padding:8px 10px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted,#61798a);font-size:11px;font-weight:700;text-align:left;line-height:1.4;white-space:normal;box-sizing:border-box}
+.nfe-wizard>.fiscal-steps button>span:first-child{display:grid;place-items:center;width:28px;height:28px;border:1px solid var(--line,#dce5eb);border-radius:50%;background:var(--surface-soft,#f4f7fa);color:var(--muted,#62798a);font-size:10px;font-weight:800}
+.nfe-wizard>.fiscal-steps button:hover{background:var(--surface-soft,#f4f7fa);color:var(--ink,#183347)}
+.nfe-wizard>.fiscal-steps button.selected{border-color:var(--accent,#1769d2);background:var(--accent-soft,#eaf2ff);color:var(--accent-strong,#084a9e)}
+.nfe-wizard>.fiscal-steps button.selected>span:first-child,.nfe-wizard>.fiscal-steps button.is-complete>span:first-child{border-color:var(--accent,#1769d2);background:var(--accent,#1769d2);color:#fff}
 .nfe-grid{grid-column:2;grid-row:1;grid-template-columns:minmax(0,1.55fr) minmax(250px,.78fr);gap:16px}
 .nfe-form-panel,.nfe-grid .side>.panel,.nfe-grid .side>.next-panel{background:var(--surface,#fff);border:1px solid var(--line,#dce5eb);border-radius:14px;color:var(--ink,#183347);box-shadow:0 7px 24px #1833470b}
 .nfe-form-panel .panel-head{padding:20px 22px;border-color:var(--line,#e5ebf1)}
@@ -90,6 +90,19 @@ body{min-width:320px}
 .item-row{background:var(--surface-soft,#f6f8fb);border-color:var(--line,#dce5eb);border-radius:12px}
 .product-fiscal-details{grid-column:1/-1;border-top:1px solid var(--line,#dce5eb);padding-top:8px;color:var(--ink,#183347)}
 .product-fiscal-details summary{cursor:pointer;color:var(--accent-strong,#084a9e);font-size:10px;font-weight:750}
+.advanced-tax-help{margin:8px 0;color:var(--muted,#62798a);font-size:10px;line-height:1.5}
+.advanced-tax-groups{display:grid;gap:14px;margin-top:10px}
+.advanced-tax-group{padding:12px;border:1px solid var(--line,#dce5eb);border-radius:10px;background:var(--surface,#fff)}
+.advanced-tax-group h5{margin:0 0 10px;color:var(--ink,#183347);font-size:11px}
+.advanced-tax-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.advanced-tax-grid .field input{min-height:36px;font-size:10px}
+.item-row .inline-suggestion{display:inline-flex;align-items:center;min-height:28px;margin:5px 0 0;padding:4px 9px;border:1px solid var(--accent,#1769d2);border-radius:8px;background:var(--accent-soft,#eaf3ff);color:var(--accent-strong,#084a9e);font:inherit;font-size:11px;font-weight:750;cursor:pointer}
+.item-row .inline-suggestion:hover{filter:brightness(.97)}
+.profile-suggestion-note{display:block;margin:6px 0;color:var(--muted,#62798a);font-size:10px;line-height:1.45}
+.item-fiscal-fields{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:11px;border:1px solid var(--line,#dce5eb);border-radius:9px;background:var(--surface,#fff)}
+.item-fiscal-fields .field>span{color:var(--ink,#20384a)}
+.item-fiscal-fields input,.item-fiscal-fields select{background:var(--surface-soft,#f7f9fb);color:var(--ink,#20384a)}
+.item-fiscal-fields input::placeholder{color:var(--muted,#738a98)}
 .product-fiscal-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
 .product-fiscal-facts>div{display:grid;gap:4px;min-width:0;padding:9px;border:1px solid var(--line,#dce5eb);border-radius:8px;background:var(--surface,#fff)}
 .product-fiscal-facts span{color:var(--muted,#62798a);font-size:9px}
@@ -138,5 +151,6 @@ body{min-width:320px}
 html[data-theme="dark"] .utility-details,.theme-dark .utility-details{background:var(--surface,#172331);color:var(--ink,#e5edf5)}
 html[data-theme="dark"] .totals-cards article.grand-total,.theme-dark .totals-cards article.grand-total{background:var(--accent-soft,#1c3550)}
 @media(max-width:1180px){.nfe-grid{grid-template-columns:minmax(0,1fr)}.nfe-grid .side{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:850px){.nfe-wizard{grid-template-columns:minmax(0,1fr)}.fiscal-steps{position:relative;top:auto;grid-column:1;grid-row:1;display:flex;overflow-x:auto;scroll-snap-type:x proximity;padding:8px}.fiscal-steps button{flex:0 0 175px;scroll-snap-align:start}.nfe-grid{grid-column:1;grid-row:2}.nfe-grid .side{grid-template-columns:1fr}}
+@media(max-width:850px){.nfe-wizard{grid-template-columns:minmax(0,1fr)}.nfe-wizard>.fiscal-steps{position:relative;top:auto;grid-column:1;grid-row:1;display:flex;align-content:initial;max-height:none;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;padding:8px}.nfe-wizard>.fiscal-steps button{flex:0 0 175px;width:175px;scroll-snap-align:start}.nfe-grid{grid-column:1;grid-row:2}.nfe-grid .side{grid-template-columns:1fr}}
 @media(max-width:620px){.nfe-layout{padding:18px 12px 38px}.page-title{display:block}.page-title .phase{display:inline-flex;margin-top:12px}.nfe-step-content{padding:17px;min-height:360px}.nfe-step-content .field-grid,.totals-cards,.recipient-facts,.review-summary,.product-fiscal-facts{grid-template-columns:1fr}.payment-row,.payment-row .payment-card-fields{grid-template-columns:1fr}.payment-row .payment-card-fields{grid-column:1}.wizard-footer{align-items:stretch;flex-direction:column}.wizard-footer>button{width:100%}.wizard-controls{display:grid;grid-template-columns:1fr 1fr}.wizard-controls .save-button{grid-column:1/-1}.source-order-notice{align-items:stretch;flex-direction:column}}
+@media(max-width:620px){.item-fiscal-fields{grid-template-columns:1fr}.item-fiscal-fields .field{grid-column:1}}

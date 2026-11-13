@@ -36,6 +36,21 @@ test('valida formatos fiscais sem escolher tributação automaticamente', () => 
   assert.equal(pending.items[0].csosn, '');
 });
 
+test('preserva dados fiscais editáveis por item e aceita emissão sem perfil fiscal', () => {
+  const result = parseNfeDraftInput({ ...draft(), items: [{
+    ...draft().items[0], cfop: '6108', ncm: '8525.89.19', cest: '12.345.67', origin: '2', csosn: '102',
+  }] });
+  assert.equal(result.items[0].cfop, '6108');
+  assert.equal(result.items[0].ncm, '85258919');
+  assert.equal(result.items[0].cest, '1234567');
+  assert.equal(result.items[0].origin, '2');
+  assert.equal(result.items[0].csosn, '102');
+  assert.equal('taxProfileId' in result.items[0], false);
+  assert.throws(() => parseNfeDraftInput({ ...draft(), items: [{ ...draft().items[0], ncm: '123' }] }), /NCM do item/i);
+  assert.throws(() => parseNfeDraftInput({ ...draft(), items: [{ ...draft().items[0], cest: '123' }] }), /CEST do item/i);
+  assert.throws(() => parseNfeDraftInput({ ...draft(), items: [{ ...draft().items[0], origin: '9' }] }), /Origem da mercadoria/i);
+});
+
 test('impede excesso de itens', () => {
   assert.throws(() => parseNfeDraftInput({ ...draft(), items: Array.from({ length: 21 }, () => draft().items[0]) }), /20 produtos/i);
 });

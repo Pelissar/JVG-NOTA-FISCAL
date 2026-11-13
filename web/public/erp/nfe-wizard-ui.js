@@ -9,16 +9,28 @@
   var steps = [
     ['general', 'Natureza', 'Defina o tipo de operação e as datas reais.'],
     ['recipient', 'Destinatário', 'Confira identificação, inscrição estadual e endereço.'],
-    ['items', 'Produtos e regras fiscais', 'Revise os produtos e os códigos fiscais por operação.'],
+    ['items', 'Produtos e dados fiscais', 'Informe os códigos fiscais diretamente em cada item; o perfil é opcional.'],
     ['totals', 'Totais da NF-e', 'Informe frete, seguro, desconto e despesas quando existirem.'],
     ['billing', 'Faturamento', 'Registre as formas e condições de pagamento reais.'],
     ['transport', 'Transportador', 'Preencha transporte e volumes quando aplicáveis.'],
     ['intermediary', 'Intermediador', 'Informe se uma plataforma de terceiros participou da venda.'],
-    ['review', 'Conferência', 'Revise o resumo antes de salvar o rascunho.'],
+    ['review', 'Conferência', 'Revise os dados e escolha como concluir a nota.'],
   ];
   var currentStep = 0;
   var paymentsRoot;
   var totalsRoot;
+
+  function localDateTimeValue(date) {
+    function pad(value) { return String(value).padStart(2, '0'); }
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) +
+      'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+  }
+
+  function setDefaultIssueAt(force) {
+    var issueAt = form.elements.namedItem('issueAt');
+    if (issueAt && (force || !issueAt.value || issueAt.dataset.userEdited !== 'true'))
+      issueAt.value = localDateTimeValue(new Date());
+  }
 
   function makeField(label, name, type, attrs) {
     var wrapper = document.createElement('label');
@@ -55,6 +67,18 @@
 
   function prepareWizard() {
     form.noValidate = true;
+    var issueAtField = form.elements.namedItem('issueAt');
+    if (issueAtField) {
+      issueAtField.required = true;
+      var issueAtWrapper = issueAtField.closest('.field');
+      var issueAtLabel = issueAtWrapper && issueAtWrapper.querySelector('span');
+      if (issueAtLabel) issueAtLabel.textContent = 'Data e hora de emissão *';
+      var issueAtHint = issueAtWrapper && issueAtWrapper.querySelector('small');
+      if (issueAtHint) issueAtHint.textContent = 'Preenchida automaticamente com a data e hora locais. Você pode alterar antes de salvar.';
+      issueAtField.addEventListener('input', function () { issueAtField.dataset.userEdited = 'true'; });
+      issueAtField.addEventListener('change', function () { issueAtField.dataset.userEdited = 'true'; });
+    }
+    setDefaultIssueAt();
     var layout = document.querySelector('main.layout');
     if (layout) layout.classList.add('nfe-layout');
     var formPanel = form.closest('.panel');
@@ -146,7 +170,7 @@
     natureSearch.wrapper.id = 'natureCfopSearchField';
     var natureHint = document.createElement('small');
     natureHint.id = 'natureCfopHint';
-    natureHint.textContent = 'Cat\u00e1logo oficial e apelido da empresa, se houver. Ao escolher, o CFOP vira sugest\u00e3o para os itens; confirme cada um com a contabilidade.';
+    natureHint.textContent = 'Cat\u00e1logo oficial e apelido da empresa, se houver. Ao escolher, o CFOP vira sugest\u00e3o para os itens; confira produto, opera\u00e7\u00e3o, destinat\u00e1rio e local de entrega.';
     natureSearch.wrapper.append(natureHint);
     var natureOptions = document.createElement('datalist');
     natureOptions.id = 'natureCfopOptions';
@@ -205,7 +229,7 @@
     });
     var taxNote = document.createElement('p');
     taxNote.className = 'fiscal-callout';
-    taxNote.innerHTML = '<strong>Tributos não calculados.</strong> O total é soma comercial dos produtos, frete, seguro e despesas, menos desconto. Bases e impostos dependem das regras aprovadas para cada item.';
+    taxNote.innerHTML = '<strong>Tributos não calculados.</strong> O total é soma comercial dos produtos, frete, seguro e despesas, menos desconto. Informe nos itens os campos exigidos por cada CST/CSOSN; perfil tributário é opcional.';
     totalsRoot.append(totalsHeading, totalCards, totalsFields, taxNote);
 
     paymentsRoot = sections.billing;
@@ -265,7 +289,7 @@
     var review = sections.review;
     review.replaceChildren();
     var reviewHeading = document.createElement('h3');
-    reviewHeading.textContent = 'Conferência antes de salvar';
+    reviewHeading.textContent = 'Escolha como concluir';
     var reviewSummary = document.createElement('div');
     reviewSummary.id = 'reviewSummary';
     reviewSummary.className = 'review-summary';
@@ -274,7 +298,7 @@
     summary.innerHTML = '<span>Total comercial do documento</span><strong id="reviewTotal">R$ 0,00</strong>';
     var finalNote = document.createElement('p');
     finalNote.className = 'fiscal-callout';
-    finalNote.innerHTML = '<strong>Este fluxo salva somente um rascunho.</strong> Não gera XML ou DANFE e não transmite NF-e. O teste de homologação depende da aprovação fiscal; a emissão em produção segue bloqueada.';
+    finalNote.innerHTML = '<strong>Revise os dados e escolha a ação.</strong> Você poderá enviar para homologação ou cancelar sem criar documento. A emissão em produção continua bloqueada.';
     review.append(reviewHeading, reviewSummary, summary, finalNote);
     var legacyTotal = document.createElement('strong');
     legacyTotal.id = 'total';
@@ -283,28 +307,27 @@
 
     var footer = form.querySelector('.form-footer');
     var footerNote = footer && footer.querySelector('p');
-    if (footerNote) footerNote.textContent = 'Rascunho sem validade fiscal. Não transmite nem altera a numeração de produção.';
+    if (footerNote) footerNote.textContent = 'Na etapa final, escolha entre enviar para homologação ou cancelar sem criar documento.';
     var controls = document.createElement('div');
     controls.className = 'wizard-controls';
     var cancel = document.createElement('button');
-    cancel.type = 'button'; cancel.id = 'cancelDraft'; cancel.className = 'secondary-button'; cancel.textContent = 'Cancelar';
+    cancel.type = 'button'; cancel.id = 'cancelDraft'; cancel.className = 'secondary-button'; cancel.textContent = 'Sair sem salvar';
     var previous = document.createElement('button');
     previous.type = 'button'; previous.id = 'wizardPrev'; previous.className = 'secondary-button'; previous.textContent = 'Anterior';
     var next = document.createElement('button');
     next.type = 'button'; next.id = 'wizardNext'; next.className = 'next-button'; next.textContent = 'Próximo';
     var save = document.getElementById('saveButton');
+    if (save) save.textContent = 'Concluir nota';
     controls.append(previous, next, save);
     if (footer) footer.replaceChildren(cancel, controls);
     cancel.addEventListener('click', function () { window.location.assign('/erp/index.html#fiscal'); });
     previous.addEventListener('click', function () { goToStep(currentStep - 1, false); });
-    next.addEventListener('click', function () {
-      if (validateStep(currentStep)) goToStep(currentStep + 1, true);
-    });
+    next.addEventListener('click', function () { goToStep(currentStep + 1, true); });
     document.addEventListener('keydown', function (event) {
       var target = event.target;
       if (target && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName)) return;
       if (event.key === 'F4') { event.preventDefault(); goToStep(currentStep - 1, false); }
-      if (event.key === 'F5') { event.preventDefault(); if (validateStep(currentStep)) goToStep(currentStep + 1, true); }
+      if (event.key === 'F5') { event.preventDefault(); goToStep(currentStep + 1, true); }
       if (event.key === 'F1') { event.preventDefault(); window.location.assign('/erp/index.html#fiscal'); }
     });
 
@@ -361,24 +384,6 @@
     refreshComputed();
   }
 
-  function validateStep(index) {
-    var key = steps[index] && steps[index][0];
-    if (key === 'general') {
-      var nature = form.elements.namedItem('nature').value.trim();
-      if (nature.length < 3) return warn('Informe a natureza da operação com pelo menos 3 caracteres.');
-    }
-    if (key === 'recipient' && !form.elements.namedItem('recipientId').value)
-      return warn('Selecione o destinatário antes de avançar.');
-    if (key === 'items') {
-      var rows = Array.from(document.querySelectorAll('#items .item-row'));
-      if (!rows.length || rows.some(function (row) {
-        var quantity = Number(row.querySelector('.quantity').value), price = Number(row.querySelector('.price').value);
-        return !row.querySelector('.product').value || !Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(price) || price < 0;
-      })) return warn('Revise os produtos, quantidades e preços antes de avançar.');
-    }
-    return true;
-  }
-
   function warn(message) {
     var status = document.getElementById('status');
     status.textContent = message;
@@ -387,7 +392,9 @@
   }
 
   function goToStep(index, scroll) {
-    currentStep = Math.max(0, Math.min(steps.length - 1, index));
+    var destination = Math.max(0, Math.min(steps.length - 1, index));
+    if (destination === steps.length - 1) setDefaultIssueAt(false);
+    currentStep = destination;
     var key = steps[currentStep][0];
     Array.from(form.querySelectorAll('[data-fiscal-section]')).forEach(function (section) {
       section.hidden = section.dataset.fiscalSection !== key;
@@ -519,7 +526,7 @@
       .map(function (name) { return money.format(Number(fieldValue(name) || 0)); }).join(' · '));
     addReviewLine(target, 'Total de produtos', money.format(productCents() / 100));
     addReviewLine(target, 'Total comercial', money.format(commercialCents() / 100));
-    addReviewLine(target, 'Situação fiscal', 'Rascunho; revisão Focus e aprovação fiscal ainda necessárias');
+    addReviewLine(target, 'Situação fiscal', 'Perfil opcional; confira os campos fiscais antes de transmitir');
     var summary = document.getElementById('reviewTotal');
     if (summary) summary.textContent = money.format(commercialCents() / 100);
     var rows = Array.from(document.querySelectorAll('#items .item-row'));
@@ -584,12 +591,104 @@
     };
   };
   window.jvgNfeWizardRefresh = refreshComputed;
-  window.jvgNfeWizardReset = function () {
-    var payments = document.getElementById('payments');
-    if (payments) payments.replaceChildren();
-    if (steps[currentStep] && steps[currentStep][0] !== 'general') goToStep(0, false);
-    renderRecipient(); refreshComputed();
+  window.jvgNfeWizardCanSave = function () {
+    if (currentStep !== steps.length - 1) {
+      warn('Vá até a etapa Conferência para escolher como concluir a NF-e.');
+      return false;
+    }
+    setDefaultIssueAt(false);
+    return true;
   };
+  window.jvgNfeWizardValidateFinalization = function (mode) {
+    var nature = form.elements.namedItem('nature').value.trim();
+    if (nature.length < 3 || nature.length > 60) {
+      goToStep(0, true);
+      return warn('Para concluir, informe a natureza da operação com 3 a 60 caracteres.');
+    }
+    if (!form.elements.namedItem('recipientId').value) {
+      goToStep(1, true);
+      return warn('Para concluir, selecione o destinatário cadastrado.');
+    }
+    var rows = Array.from(document.querySelectorAll('#items .item-row'));
+    if (!rows.length || rows.some(function (row) {
+      var quantity = Number(row.querySelector('.quantity').value);
+      var price = Number(row.querySelector('.price').value);
+      return !row.querySelector('.product').value || !Number.isFinite(quantity) || quantity <= 0 ||
+        !Number.isFinite(price) || price < 0;
+    })) {
+      goToStep(2, true);
+      return warn('Cada item precisa de produto, quantidade positiva e preço válido.');
+    }
+    if (mode === 'emit') {
+      var issueAt = form.elements.namedItem('issueAt').value;
+      if (!issueAt || !Number.isFinite(new Date(issueAt).getTime())) {
+        goToStep(0, true);
+        return warn('A data e hora de emissão precisa ser válida. O sistema preenche automaticamente e permite ajuste.');
+      }
+    }
+    return true;
+  };
+  window.jvgNfeWizardLoad = function (data) {
+    data = data && typeof data === 'object' ? data : {};
+    function set(name, value) {
+      var field = form.elements.namedItem(name);
+      if (field) field.value = value == null ? '' : String(value);
+    }
+    function localDateTime(value) {
+      if (!value) return '';
+      var date = new Date(value);
+      return Number.isFinite(date.getTime()) ? localDateTimeValue(date) : '';
+    }
+    set('purpose', data.purpose);
+    set('issueAt', localDateTime(data.issueAt));
+    set('exitAt', localDateTime(data.exitAt));
+    var issueAt = form.elements.namedItem('issueAt');
+    if (issueAt) issueAt.dataset.userEdited = issueAt.value ? 'true' : 'false';
+    set('consumerFinal', data.consumerFinal == null ? '' : data.consumerFinal ? '1' : '0');
+    set('buyerPresence', data.buyerPresence);
+    set('recipientIeIndicator', data.recipientIeIndicator);
+    set('transportMode', data.transportMode);
+    set('carrierId', data.carrier && data.carrier.id);
+    set('vehiclePlate', data.vehicle && data.vehicle.plate);
+    set('vehicleState', data.vehicle && data.vehicle.state);
+    set('vehicleRntc', data.vehicle && data.vehicle.rntc);
+    var volumes = Array.isArray(data.volumes) ? data.volumes : [];
+    var volume = volumes[0] || {};
+    set('volumeQuantity', volume.quantity);
+    set('volumeSpecies', volume.species);
+    set('volumeBrand', volume.brand);
+    set('volumeNumber', volume.number);
+    set('volumeNetWeight', volume.netWeightMilli == null ? '' : Number(volume.netWeightMilli) / 1000);
+    set('volumeGrossWeight', volume.grossWeightMilli == null ? '' : Number(volume.grossWeightMilli) / 1000);
+    var totals = data.additionalTotals || {};
+    [['freight', totals.freightCents], ['insurance', totals.insuranceCents],
+      ['discount', totals.discountCents], ['expenses', totals.expensesCents]].forEach(function (entry) {
+      set(entry[0], entry[1] == null ? '' : (Number(entry[1]) / 100).toFixed(2));
+    });
+    set('additionalInfo', data.additionalInfo);
+    var intermediary = data.intermediary || {};
+    set('intermediaryIndicator', intermediary.indicator);
+    set('intermediaryCnpj', intermediary.cnpj);
+    set('intermediaryId', intermediary.id);
+    var showIntermediary = String(intermediary.indicator) === '1';
+    form.querySelectorAll('.intermediary-extra').forEach(function (field) { field.hidden = !showIntermediary; });
 
-  prepareWizard();
-})();
+    var paymentList = paymentsRoot && paymentsRoot.querySelector('#payments');
+    if (paymentList) paymentList.replaceChildren();
+    (Array.isArray(data.payments) ? data.payments : []).forEach(function (payment) {
+      createPaymentRow();
+      var row = paymentList.lastElementChild;
+      function paymentSet(name, value) {
+        var field = row.querySelector('[name="' + name + '"]');
+        if (field) field.value = value == null ? '' : String(value);
+      }
+      paymentSet('paymentIndicator', payment.indicator);
+      paymentSet('paymentMethod', payment.method);
+      paymentSet('paymentAmount', payment.amountCents == null ? '' : (Number(payment.amountCents) / 100).toFixed(2));
+      paymentSet('paymentDate', payment.paymentDate);
+      paymentSet('paymentDescription', payment.description);
+      paymentSet('paymentIntegration', payment.integration);
+      paymentSet('paymentAcquirerCnpj', payment.acquirerCnpj);
+      paymentSet('paymentAuthorization', payment.authorizationNumber);
+      var method = row.querySelector('[name="paymentMethod"]');
+      if (method) method.dispatchEvent(new Event('change', { bubbles: true }));

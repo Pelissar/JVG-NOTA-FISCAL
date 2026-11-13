@@ -23,6 +23,7 @@ export type FocusTaxRuleReview = {
 const allowedFocusFields = new Set<string>(focusTaxFieldNames);
 const supportedCsosn = new Set(["101", "102", "103", "201", "202", "203", "300", "400", "500", "900"]);
 const supportedPisCofinsCst = new Set(["01", "02", "03", "04", "05", "06", "07", "08", "09"]);
+const supportedOtherPisCofinsCst = new Set(["49", "99"]);
 const icmsStFields = [
   "icms_modalidade_base_calculo_st", "icms_margem_valor_adicionado_st", "icms_reducao_base_calculo_st",
   "icms_base_calculo_st", "icms_aliquota_st", "icms_valor_st",
@@ -154,6 +155,25 @@ export function reviewFocusTaxRule(
   }
   for (const [prefix, rawCst] of [["pis", rule.pisCst], ["cofins", rule.cofinsCst]] as const) {
     const cst = typeof rawCst === "string" ? rawCst.trim() : "";
+    if (supportedOtherPisCofinsCst.has(cst)) {
+      const percentageFields = [`${prefix}_base_calculo`, `${prefix}_aliquota_porcentual`];
+      const quantityFields = [`${prefix}_quantidade_vendida`, `${prefix}_aliquota_valor`];
+      const valueField = `${prefix}_valor`;
+      const hasPercentageGroup = percentageFields.every(field => focusFields[field] !== undefined) && focusFields[valueField] !== undefined;
+      const hasQuantityGroup = quantityFields.every(field => focusFields[field] !== undefined) && focusFields[valueField] !== undefined;
+      const percentageStarted = percentageFields.some(field => focusFields[field] !== undefined);
+      const quantityStarted = quantityFields.some(field => focusFields[field] !== undefined);
+      if (percentageStarted && quantityStarted) {
+        result.pisCofinsMissing.push(`${prefix.toUpperCase()} CST ${cst}: informe somente o grupo percentual ou o grupo por quantidade.`);
+      } else if (percentageStarted) {
+        if (!hasPercentageGroup) result.pisCofinsMissing.push(...missing([...percentageFields, valueField], focusFields));
+      } else if (quantityStarted) {
+        if (!hasQuantityGroup) result.pisCofinsMissing.push(...missing([...quantityFields, valueField], focusFields));
+      } else {
+        result.pisCofinsMissing.push(`${prefix.toUpperCase()} CST ${cst}: informe o grupo percentual ou o grupo por quantidade, com o valor do tributo aprovado.`);
+      }
+      continue;
+    }
     const fields = pisCofinsFields(cst, prefix);
     if (fields === null) result.unsupported.push(`CST ${prefix.toUpperCase()} ${cst || "(vazio)"} ainda não tem grupo Focus mapeado.`);
     else result.pisCofinsMissing.push(...missing(fields, focusFields));

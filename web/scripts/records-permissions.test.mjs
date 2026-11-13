@@ -57,7 +57,7 @@ test('salvar rascunho NF-e usa idempotência existente no banco', () => {
   assert.match(nfeDrafts, /stableJson\(existing\[0\]\.fiscal_payload\) !== stableJson\(payload\)/);
   assert.match(baseMigration, /unique \(company_id, idempotency_key\)/);
   assert.match(nfeDraftUi, /'Idempotency-Key': idempotencyKey/);
-  assert.match(nfeDraftUi, /Rascunho salvo com sucesso, mas não foi possível atualizar o histórico/);
+  assert.match(nfeDraftUi, /catch \{ result\.historyRefreshFailed = true; \}/);
 });
 
 test('origem usa Host público no proxy Netlify sem liberar domínios externos', () => {

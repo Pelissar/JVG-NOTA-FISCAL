@@ -1,13 +1,21 @@
+import { parseFocusTaxFields, type FocusTaxFields } from "./focus-tax-fields.ts";
+
 export const MAX_NFE_DRAFT_ITEMS = 20;
 
 export type NfeDraftItemInput = {
   productId: string;
+  ncm?: string;
+  cest?: string;
+  origin?: string;
   quantity: number;
   quantityMilli: number;
   unitPriceCents: number;
   subtotalCents: number;
   cfop: string;
   csosn: string;
+  pisCst: string;
+  cofinsCst: string;
+  focusFields: FocusTaxFields;
 };
 
 export type NfeDraftVehicleInput = {
@@ -264,14 +272,29 @@ export function parseNfeDraftInput(raw: unknown): NfeDraftInput {
     if (Math.abs(quantityMilli - quantity * 1000) > 0.000001) throw new Error("Quantidade aceita até 3 casas decimais.");
     if (Math.abs(unitPriceCents - unitPrice * 100) > 0.000001) throw new Error("Preço aceito até 2 casas decimais.");
     const cfop = typeof p.cfop === "string" ? p.cfop.trim() : "";
+    const ncm = Object.hasOwn(p, "ncm") ? (typeof p.ncm === "string" ? p.ncm.replace(/\D/g, "") : "") : undefined;
+    const cest = Object.hasOwn(p, "cest") ? (typeof p.cest === "string" ? p.cest.replace(/\D/g, "") : "") : undefined;
+    const origin = Object.hasOwn(p, "origin") ? (typeof p.origin === "string" ? p.origin.trim() : "") : undefined;
     const csosn = typeof p.csosn === "string" ? p.csosn.trim() : "";
+    const pisCst = typeof p.pisCst === "string" ? p.pisCst.trim() : "";
+    const cofinsCst = typeof p.cofinsCst === "string" ? p.cofinsCst.trim() : "";
     if (cfop && !/^[1-7][0-9]{3}$/.test(cfop)) throw new Error("CFOP deve ter quatro dígitos.");
+    if (ncm !== undefined && ncm && !/^\d{8}$/.test(ncm)) throw new Error("NCM do item deve conter oito dígitos.");
+    if (cest !== undefined && cest && !/^\d{7}$/.test(cest)) throw new Error("CEST do item deve conter sete dígitos.");
+    if (origin !== undefined && origin && !/^[0-8]$/.test(origin)) throw new Error("Origem da mercadoria deve ser um código de 0 a 8.");
     if (csosn && !csosnCodes.has(csosn)) throw new Error("CSOSN inválido para o Simples Nacional.");
+    if (pisCst && !/^\d{2}$/.test(pisCst)) throw new Error("CST do PIS deve ter dois dígitos.");
+    if (cofinsCst && !/^\d{2}$/.test(cofinsCst)) throw new Error("CST da Cofins deve ter dois dígitos.");
+    let focusFields: FocusTaxFields;
+    try { focusFields = parseFocusTaxFields(p.focusFields); }
+    catch (error) { throw new Error(error instanceof Error ? error.message : "Campos fiscais do item inválidos."); }
     const subtotalCents = Math.round(quantityMilli * unitPriceCents / 1000);
     totalCents += subtotalCents;
     if (!Number.isSafeInteger(totalCents) || totalCents > 100_000_000_000)
       throw new Error("Valor total acima do limite para rascunho.");
-    return { productId: p.productId, quantity, quantityMilli, unitPriceCents, subtotalCents, cfop, csosn };
+    return { productId: p.productId, ...(ncm !== undefined ? { ncm } : {}), ...(cest !== undefined ? { cest } : {}),
+      ...(origin !== undefined ? { origin } : {}), quantity, quantityMilli, unitPriceCents, subtotalCents,
+      cfop, csosn, pisCst, cofinsCst, focusFields };
   });
 
   const grossCommercialCents = totalCents + additionalTotals.freightCents + additionalTotals.insuranceCents + additionalTotals.expensesCents;

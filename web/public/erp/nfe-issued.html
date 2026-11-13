@@ -6,16 +6,21 @@
   <title>NF-e emitidas · SigmaFiscal</title>
   <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
   <link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css">
-  <link rel="stylesheet" href="/erp/fiscal-history.css"><link rel="stylesheet" href="/erp/nfe-issued.css">
-  <script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js"></script><script defer src="/erp/nfe-issued.js"></script>
+  <link rel="stylesheet" href="/erp/fiscal-history.css"><link rel="stylesheet" href="/erp/nfe-issued.css"><link rel="stylesheet" href="/erp/fiscal-document-switcher.css?v=20261113-2">
+  <script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261113-2"></script><script defer src="/erp/nfe-issued.js"></script>
 </head>
 <body>
-  <div id="erpGlobalNav"></div><button type="button" class="theme-toggle" data-theme-toggle aria-label="Alternar tema">◐ Modo escuro</button>
+  <div id="erpGlobalNav"></div>
   <main class="history-shell issued-shell">
+    <nav class="fiscal-document-switcher" aria-label="Tipo de documento fiscal">
+      <a href="/erp/nfe.html" aria-current="page"><strong>NF-e</strong><small>Mercadorias · Modelo 55</small></a>
+      <a href="/erp/nfce.html"><strong>NFC-e</strong><small>Consumidor · Modelo 65</small></a>
+      <a href="/erp/nfse.html"><strong>NFS-e</strong><small>Serviços</small></a>
+    </nav>
     <header class="history-heading issued-heading">
       <div><div class="eyebrow">FISCAL / DOCUMENTOS DE SAÍDA</div><h1>NF-e emitidas</h1><p>Consulte notas autorizadas, filtre os registros e importe XML já emitido para formar o histórico da empresa.</p></div>
       <div class="heading-actions">
-        <a class="secondary-button" href="/erp/nfe-drafts.html">Preparar NF-e</a>
+        <a class="secondary-button" href="/erp/nfe.html">Emitir NF-e</a>
         <button class="primary-button" id="openImport" type="button">Importar XML autorizado</button>
       </div>
     </header>
@@ -35,7 +40,7 @@
         <label><span>CFOP</span><input name="cfop" inputmode="numeric" maxlength="4" placeholder="4 dígitos"></label>
         <label><span>Data inicial</span><input name="from" type="date"></label>
         <label><span>Data final</span><input name="to" type="date"></label>
-        <label><span>Status</span><select name="status"><option value="">Todos</option><option value="authorized">Autorizada</option><option value="processing">Processando</option><option value="rejected">Rejeitada</option><option value="cancelled">Cancelada</option><option value="denied">Denegada</option><option value="draft">Rascunho</option></select></label>
+        <label><span>Status</span><select name="status"><option value="">Todos</option><option value="authorized">Autorizada</option><option value="processing">Processando</option><option value="rejected">Rejeitada</option><option value="cancelled">Cancelada</option><option value="denied">Denegada</option><option value="draft">Em preparação</option></select></label>
         <label><span>Ambiente</span><select name="environment"><option value="">Todos</option><option value="producao">Produção</option><option value="homologacao">Homologação</option></select></label>
         <button class="primary-button filter-submit" type="submit">Aplicar filtros</button>
       </form>

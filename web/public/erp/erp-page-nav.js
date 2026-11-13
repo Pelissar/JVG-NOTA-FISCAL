@@ -38,11 +38,25 @@
     element.appendChild(document.createTextNode(label));
   }
   var groups = [
-    { label: 'Comercial', icon: 'briefcase', links: [['Vendas', '/erp/sales.html', 'chart'], ['Orçamentos', '/erp/quotes.html', 'file'], ['Pedidos', '/erp/orders.html', 'box']] },
+    { label: 'Comercial', icon: 'briefcase', links: [
+      ['Orçamentos', '/erp/quotes.html', 'file'], ['Pedidos', '/erp/orders.html', 'box'],
+      ['Vendas', '/erp/sales.html', 'chart']
+    ] },
     { label: 'Assistência', icon: 'wrench', links: [['Ordens de serviço', '/erp/service-orders.html', 'wrench']] },
     { label: 'Cadastros', icon: 'users', links: [['Pessoas e clientes', '/erp/index.html#clients', 'users'], ['Produtos', '/erp/index.html#products', 'box'], ['Serviços', '/erp/index.html#services', 'wrench']] },
     { label: 'Operação', icon: 'warehouse', links: [['Estoque', '/erp/index.html#inventory', 'box'], ['Relatórios', '/erp/index.html#reports', 'chart']] },
-    { label: 'Fiscal', icon: 'receipt', links: [['Central fiscal', '/erp/index.html#fiscal', 'receipt'], ['NF-e emitidas', '/erp/nfe-issued.html', 'file'], ['Rascunhos NF-e', '/erp/nfe-drafts.html', 'file'], ['Preparar NFS-e', '/erp/nfse-drafts.html', 'file'], ['Histórico fiscal', '/erp/fiscal-history.html', 'file'], ['Notas de entrada · XML', '/erp/inbound-nfe.html', 'file'], ['Naturezas e CFOP', '/erp/cfop.html', 'hash'], ['Perfis tributários', '/erp/tax-profiles.html', 'sliders']] },
+    { label: 'Fiscal', icon: 'receipt', links: [
+      ['NF-e · Mercadorias · Modelo 55', '/erp/nfe.html', 'receipt'],
+      ['NFC-e · Consumidor · Modelo 65', '/erp/nfce.html', 'receipt'],
+      ['NFS-e · Serviços', '/erp/nfse.html', 'receipt'],
+      ['NF-e emitidas', '/erp/nfe-issued.html', 'file'],
+      ['Notas de entrada · XML', '/erp/inbound-nfe.html', 'file'],
+      ['Histórico fiscal', '/erp/fiscal-history.html', 'file'],
+      ['Central fiscal', '/erp/index.html#fiscal', 'receipt'],
+      ['Naturezas e CFOP', '/erp/cfop.html', 'hash'],
+      ['Perfis fiscais opcionais', '/erp/tax-profiles.html', 'sliders']
+    ] },
+    { label: 'Conta', icon: 'settings', links: [['Empresa e sistema', '/erp/index.html#settings', 'building'], ['Meu perfil', '/erp/index.html#profile', 'user']] },
   ];
 
   var currentPath = window.location.pathname.replace(/\/$/, '/index.html');
@@ -121,6 +135,13 @@
   workspaceMenu.appendChild(workspacePopover);
   workspaceMenu.addEventListener('toggle', function () { if (workspaceMenu.open) closeOpenGroups(); });
   actions.appendChild(workspaceMenu);
+
+  var environmentStatus = document.createElement('span');
+  environmentStatus.className = 'erp-environment-status';
+  environmentStatus.textContent = 'PRODU\u00c7\u00c3O BLOQUEADA';
+  environmentStatus.title = 'A emiss\u00e3o oficial permanece desativada nesta integra\u00e7\u00e3o.';
+  environmentStatus.setAttribute('aria-label', 'Emiss\u00e3o em produ\u00e7\u00e3o bloqueada; homologa\u00e7\u00e3o dispon\u00edvel conforme valida\u00e7\u00e3o fiscal');
+  actions.appendChild(environmentStatus);
 
   var theme = document.querySelector('[data-theme-toggle]');
   if (!theme) {

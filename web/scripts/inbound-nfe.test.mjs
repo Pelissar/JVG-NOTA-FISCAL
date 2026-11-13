@@ -92,16 +92,16 @@ test("confirmação vazia é bloqueada e uma NF-e recebida sem movimentos pode s
   assert.match(route, /reopen-empty/);
   assert.match(route, /!hasStockItems\(items\)/);
   assert.match(script, /receivedWithoutStock/);
-  assert.match(script, /Reabrir e lançar no estoque/);
-  assert.match(script, /Cadastrar produto deste XML/);
+  assert.match(script, /Corrigir estoque/);
+  assert.match(script, /Cadastrar produto com dados desta nota/);
   assert.match(script, /kind:'product'/);
   assert.ok(script.includes(String.raw`var ncm=/^\d{8}$/`));
   assert.ok(script.includes(String.raw`var cest=/^\d{7}$/`));
-  assert.match(script, /cost:Number\(item\.unitPrice\|\|0\)/);
+  assert.ok(script.includes("Number(item.unitPrice||0).toFixed(4)"));
   assert.match(script, /price:Number\(salePrice\.value\)/);
-  assert.match(script, /CFOP e perfil fiscal não serão presumidos/);
-  assert.ok(script.includes("Preencher NCM/CEST disponíveis no XML"));
-  assert.ok(script.includes("NCM/CEST ausentes preenchidos com os valores do XML"));
+  assert.match(script, /classification-source-note/);
+  assert.ok(script.includes("Preencher dados fiscais ausentes com o XML"));
+  assert.ok(script.includes("Dados fiscais ausentes preenchidos com valores do XML"));
   assert.match(script, /data-fill-classification/);
   assert.match(script, /Para confirmar a entrada, selecione o produto e marque “Lançar no estoque” em pelo menos um item/);
   assert.match(page, /Confirmar entrada grava movimentos/);
@@ -111,8 +111,8 @@ test("vínculo de produto criado é salvo antes da confirmação de estoque", ()
   const script = readFileSync(new URL("../public/erp/inbound-nfe.js", import.meta.url), "utf8");
   assert.match(script, /async function persistReviewDraft/);
   assert.match(script, /await persistReviewDraft\(\)/);
-  assert.match(script, /Vínculo do produto e seleção de estoque salvos no rascunho/);
-  assert.match(script, /Vínculos salvos no rascunho/);
+  assert.match(script, /Vínculo do produto e seleção de estoque salvos na conferência/);
+  assert.match(script, /Vínculos salvos na conferência/);
 });
 
 test("cancelamento encerra o lancamento, preserva auditoria e permite reimportar a chave", () => {
@@ -154,7 +154,8 @@ test("importação localiza ou cria fornecedor por documento e guarda tributos e
   assert.match(route, /supplier_party_id: supplier\.id/);
   assert.match(route, /carrier_party_id: carrier\.id/);
   assert.match(route, /fiscal_data: parsed\.fiscalData/);
-  assert.match(parser, /taxes: line\.imposto/);
+  assert.match(parser, /const taxes = line\.imposto \? object\(line\.imposto\) : null/);
+  assert.match(parser, /taxes,/);
   assert.match(migration, /insert into public\.jvg_parties[\s\S]*on conflict \(company_id, document_type, document_number\)/i);
   assert.match(migration, /set supplier_party_id = p\.id/i);
   assert.match(migration, /references public\.jvg_parties\(tenant_id, company_id, id\)/i);

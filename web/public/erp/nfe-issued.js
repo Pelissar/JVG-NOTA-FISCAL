@@ -7,7 +7,7 @@
   var hasMore = false;
   var money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
   var statusLabels = {
-    draft: 'Rascunho', waiting_certificate: 'Aguardando certificado', queued: 'Na fila',
+    draft: 'Em preparação', waiting_certificate: 'Aguardando certificado', queued: 'Na fila',
     processing: 'Processando', authorized: 'Autorizada', rejected: 'Rejeitada',
     cancelled: 'Cancelada', denied: 'Denegada', contingency: 'Contingência'
   };

@@ -8,9 +8,8 @@ import {
   queryFocusNfeHomologacao,
 } from "../../../../../lib/focus/client";
 import { focusRuntimeEnv } from "../../../../../lib/focus/runtime-env";
-import { reviewApprovedTaxProfile, reviewNfeHomologationGate } from "../../../../../lib/fiscal/nfe-homologation-gate";
-import { reviewNfeOperation, reviewProfileConsistency } from "../../../../../lib/fiscal/operation-review";
-import { isIbsCbsEnabledForNfe } from "../../../../../lib/fiscal/focus-tax-fields";
+import { reviewNfeHomologationGate } from "../../../../../lib/fiscal/nfe-homologation-gate";
+import { isOfficialCfopCode } from "../../../../../lib/fiscal/cfop";
 
 export const dynamic = "force-dynamic";
 
@@ -197,7 +196,7 @@ async function currentSnapshotIssues(context: FocusContext, payload: Json): Prom
     taxRegime: company.tax_regime ?? null, taxRegimeConfirmed: company.tax_regime_confirmed === true,
   };
   if (stableJson(projection(issuer, issuerFields)) !== stableJson(projection(currentIssuer, issuerFields)))
-    add("Os dados fiscais do emitente mudaram após a criação do rascunho. Crie um novo rascunho para revisar o snapshot atual.");
+    add("Os dados fiscais do emitente mudaram. Reinicie a preparação da NF-e para revisar o cadastro atual.");
 
   const recipient = obj(payload.recipient);
   const recipientId = text(recipient.id);
@@ -222,30 +221,20 @@ async function currentSnapshotIssues(context: FocusContext, payload: Json): Prom
       address: currentRecipient.address ?? null, state: recipientAddress.state ?? null,
     };
     if (stableJson(projection(recipient, recipientFields)) !== stableJson(projection(currentRecipientSnapshot, recipientFields)))
-      add("Os dados do destinatário mudaram após a criação do rascunho. Crie um novo rascunho para revisar o snapshot atual.");
+      add("Os dados do destinatário mudaram. Reinicie a preparação da NF-e para revisar o cadastro atual.");
   }
 
   const items = Array.isArray(payload.items) ? payload.items.map(obj) : [];
   const productIds = [...new Set(items.map(item => text(item.productId)))];
   if (!productIds.length || productIds.some(id => !uuidPattern.test(id))) {
-    add("Um ou mais produtos do rascunho não têm identificador válido.");
+    add("Um ou mais produtos da NF-e não têm identificador válido.");
     return issues;
   }
   const productRows = await dbRequest<DbRow[]>(
-    `/rest/v1/jvg_products?${scope(account)}&id=in.(${productIds.join(",")})&active=eq.true&select=id,sku,name,unit,ncm,cest,gtin,origin,tax_profile_id`,
+    `/rest/v1/jvg_products?${scope(account)}&id=in.(${productIds.join(",")})&active=eq.true&select=id,sku,name,unit,ncm,cest,gtin,origin`,
   );
   const products = new Map(productRows.map(product => [String(product.id), product]));
-  if (products.size !== productIds.length) add("Um ou mais produtos do rascunho estão inativos ou não pertencem à empresa.");
-
-  const profileIds = [...new Set(productRows.map(product => text(product.tax_profile_id)).filter(Boolean))];
-  if (profileIds.some(id => !uuidPattern.test(id))) add("Um produto está vinculado a um perfil tributário inválido.");
-  const safeProfileIds = profileIds.filter(id => uuidPattern.test(id));
-  const profileRows = safeProfileIds.length ? await dbRequest<DbRow[]>(
-    `/rest/v1/jvg_tax_profiles?${scope(account)}&id=in.(${safeProfileIds.join(",")})&document_type=eq.nfe&select=id,name,rules,review_status,reviewed_by`,
-  ) : [];
-  const profiles = new Map(profileRows.map(profile => [String(profile.id), profile]));
-  const currentIssuerUf = text(address.state).toUpperCase();
-  const recipientUf = text(obj(currentRecipient?.address).state).toUpperCase();
+  if (products.size !== productIds.length) add("Um ou mais produtos da NF-e estão inativos ou não pertencem à empresa.");
 
   items.forEach((item, index) => {
     const product = products.get(text(item.productId));
@@ -254,36 +243,15 @@ async function currentSnapshotIssues(context: FocusContext, payload: Json): Prom
       sku: product.sku ?? null, description: product.name ?? null, unit: product.unit ?? null,
       ncm: product.ncm ?? null, cest: product.cest ?? null, gtin: product.gtin ?? null, origin: product.origin ?? null,
     };
-    const snapshotProduct = projection(item, ["sku", "description", "unit", "ncm", "cest", "gtin", "origin"]);
+    const savedProductSnapshot = obj(item.productSnapshot);
+    const snapshotProduct = projection(
+      Object.keys(savedProductSnapshot).length ? savedProductSnapshot : item,
+      ["sku", "description", "unit", "ncm", "cest", "gtin", "origin"],
+    );
     if (stableJson(snapshotProduct) !== stableJson(currentProduct))
-      add(`Item ${index + 1}: os dados do produto mudaram após a criação do rascunho.`);
-
-    const snapshotProfile = obj(item.taxProfile);
-    const profileId = text(snapshotProfile.id);
-    if (!profileId || text(product.tax_profile_id) !== profileId) {
-      add(`Item ${index + 1}: o perfil tributário vinculado ao produto mudou.`);
-      return;
-    }
-    const profile = profiles.get(profileId);
-    if (!profile || profile.review_status !== "reviewed") {
-      add(`Item ${index + 1}: o perfil tributário atual não está revisado.`);
-      return;
-    }
-    const approval = reviewApprovedTaxProfile(profile);
-    if (!approval.ready) add(`Item ${index + 1}: ${approval.issue}`);
-    const operation = reviewNfeOperation(currentIssuerUf, recipientUf, text(item.cfop), index + 1).operation;
-    if (operation !== text(item.operation)) add(`Item ${index + 1}: a operação mudou após a criação do rascunho.`);
-    const rules = obj(profile.rules);
-    const operations = obj(rules.operations);
-    const selectedRules = obj(operations[operation]);
-    if (!Object.keys(selectedRules).length || stableJson(selectedRules) !== stableJson(obj(item.taxRules)))
-      add(`Item ${index + 1}: a regra fiscal aprovada mudou; crie um novo rascunho.`);
-    else reviewProfileConsistency(selectedRules, text(item.cfop), text(item.csosn), index + 1, operation,
-      isIbsCbsEnabledForNfe({
-        taxRegime: company.tax_regime,
-        taxRegimeConfirmed: company.tax_regime_confirmed === true,
-      }, selectedRules, payload.issueAt))
-      .forEach(problem => add(problem));
+      add(`Item ${index + 1}: os dados do produto mudaram desde que a NF-e foi preparada.`);
+    if (!isOfficialCfopCode(text(item.cfop)))
+      add(`Item ${index + 1}: informe um CFOP de saída existente no catálogo oficial diretamente no item da NF-e.`);
   });
 
   const sourceOrder = obj(payload.sourceOrder);
@@ -310,7 +278,7 @@ async function currentSnapshotIssues(context: FocusContext, payload: Json): Prom
         });
         const orderTotalCents = Math.round(Number(order.total) * 100);
         if (!Number.isSafeInteger(orderTotalCents) || orderTotalCents !== Number(payload.totalCents))
-          add("O total do pedido de origem mudou após a criação do rascunho.");
+          add("O total do pedido de origem mudou desde que a NF-e foi preparada.");
       }
     }
   }
@@ -347,16 +315,16 @@ function documentResponsePatch(
 }
 
 async function emit(context: FocusContext, id: string, body: Json): Promise<Response> {
-  if (body.confirmFiscalReview !== true)
-    throw new JvgBackendError("Confirme que as regras deste rascunho foram revisadas com a contabilidade e que o envio é somente para homologação.", 400);
-  if (!uuidPattern.test(id)) throw new JvgBackendError("Identificador do rascunho inválido.", 400);
+  if (body.confirmHomologation !== true)
+    throw new JvgBackendError("Confirme que você revisou os dados e que este envio será feito somente em homologação.", 400);
+  if (!uuidPattern.test(id)) throw new JvgBackendError("Identificador do documento inválido.", 400);
 
   const document = await readDocument(context.account, id);
-  if (!document) throw new JvgBackendError("Rascunho NF-e não encontrado nesta empresa.", 404);
-  if (document.status !== "draft") throw new JvgBackendError("Este rascunho já saiu da etapa de preparação. Não envie novamente; consulte o status Focus.", 409);
+  if (!document) throw new JvgBackendError("Documento NF-e não encontrado nesta empresa.", 404);
+  if (document.status !== "draft") throw new JvgBackendError("Esta NF-e já saiu da etapa de preparação. Não envie novamente; consulte o status Focus.", 409);
   const payload = obj(document.fiscal_payload);
-  if (payload.schemaVersion !== 5)
-    throw new JvgBackendError("Este rascunho é de uma estrutura antiga. Crie outro para revisar os campos fiscais atuais.", 409);
+  if (payload.schemaVersion !== 7)
+    throw new JvgBackendError("Esta NF-e usa uma estrutura fiscal anterior. Reinicie a preparação para revisar os campos atuais.", 409);
 
   const gate = reviewNfeHomologationGate(payload);
   const issues = [...gate.issues];
@@ -372,7 +340,7 @@ async function emit(context: FocusContext, id: string, body: Json): Promise<Resp
     provider_response: { operation: "focus_nfe", phase: "request_started", requestedAt: startedAt,
       requestedBy: context.userId, environment: "homologacao", reference },
   });
-  if (!reserved) throw new JvgBackendError("Outro processo atualizou este rascunho. Recarregue antes de tentar novamente.", 409);
+  if (!reserved) throw new JvgBackendError("Outro processo atualizou esta NF-e. Recarregue antes de tentar novamente.", 409);
 
   let attemptEventId: string;
   try {
@@ -425,8 +393,8 @@ async function emit(context: FocusContext, id: string, body: Json): Promise<Resp
       return apiJson({ ok: false, status: nextStatus, reference,
         providerResponse: { ...obj(obj(document.provider_response).response), ...safeBody },
         needsReconciliation: nextStatus === "processing",
-        message: providerRejected ? "A Focus rejeitou os dados. Corrija as pendências antes de criar um novo rascunho." :
-          retryableNoAcceptance ? "A Focus não aceitou a solicitação; confira a conexão e tente novamente com o mesmo rascunho." :
+        message: providerRejected ? "A Focus rejeitou os dados. Corrija as pendências e reinicie a emissão." :
+          retryableNoAcceptance ? "A Focus não aceitou a solicitação; confira a conexão e tente novamente usando a mesma referência." :
           "A resposta da Focus não permite confirmar o resultado. Consulte a referência salva antes de qualquer novo envio." },
       providerRejected ? 422 : 502);
     }
@@ -440,7 +408,7 @@ async function emit(context: FocusContext, id: string, body: Json): Promise<Resp
     await finishFocusAttemptEvent(context, attemptEventId, { documentId: id, action: "transmission", reference,
       requestedAt: startedAt, status: "outcome_unknown", eventType: "error" });
     return apiJson({ ok: false, status: "processing", reference, needsReconciliation: true,
-      message: "Não foi possível confirmar a resposta da Focus. Use Consultar Focus; não envie este rascunho novamente." }, 202);
+      message: "Não foi possível confirmar a resposta da Focus. Use Consultar Focus; não reenvie esta NF-e." }, 202);
   }
 }
 

@@ -4,7 +4,7 @@
   var cache = { ready: null, company: null, clients: [] };
   var money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
   var statusLabels = {
-    draft: 'Rascunho', sent: 'Enviado', accepted: 'Aceito', rejected: 'Recusado',
+    draft: 'Em elaboração', sent: 'Enviado', accepted: 'Aceito', rejected: 'Recusado',
     expired: 'Expirado', open: 'Em aberto', fulfilled: 'Concluído', cancelled: 'Cancelado',
     diagnosis: 'Em diagnóstico', awaiting_approval: 'Aguardando aprovação',
     awaiting_parts: 'Aguardando peça', in_progress: 'Em manutenção',

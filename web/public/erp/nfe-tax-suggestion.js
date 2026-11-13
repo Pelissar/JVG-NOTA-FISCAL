@@ -5,16 +5,16 @@
     return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {};
   }
 
-  function resolve(product, recipient, issuerState, profiles) {
-    var issuerUf = String(issuerState || '').trim().toUpperCase();
-    var recipientUf = String(recipient && recipient.state || '').trim().toUpperCase();
-    if (!product || !/^[A-Z]{2}$/.test(issuerUf) || !/^[A-Z]{2}$/.test(recipientUf))
+  function resolve(product, cfop, profiles) {
+    var code = String(cfop || '').trim();
+    var operation = code[0] === '5' ? 'interna' : code[0] === '6' ? 'interestadual' : null;
+    if (!product)
       return { rule: null, operation: null, profile: null };
-
-    var operation = issuerUf === recipientUf ? 'interna' : 'interestadual';
     var profile = (Array.isArray(profiles) ? profiles : []).find(function (entry) {
       return entry && entry.id === product.taxProfileId;
     }) || null;
+    if (!operation || !/^\d{4}$/.test(code))
+      return { rule: null, operation: null, profile: profile };
     var profileRules = object(profile && profile.rules);
     var operations = object(profileRules.operations);
     var rule = object(operations[operation]);

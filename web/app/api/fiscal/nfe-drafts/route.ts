@@ -6,11 +6,10 @@ import {
 import { focusRuntimeEnv } from "../../../../lib/focus/runtime-env";
 import { parseNfeDraftInput } from "../../../../lib/fiscal/nfe-draft";
 import { isOfficialCfopCode } from "../../../../lib/fiscal/cfop";
-import { reviewNfeOperation, reviewProfileConsistency } from "../../../../lib/fiscal/operation-review";
-import { isIbsCbsEnabledForNfe } from "../../../../lib/fiscal/focus-tax-fields";
+import { reviewNfeOperation } from "../../../../lib/fiscal/operation-review";
 import { reviewNfePreparation } from "../../../../lib/fiscal/nfe-preflight";
 import { reviewNfeDocument, reviewFocusNfePayload } from "../../../../lib/fiscal/nfe-document-review";
-import { reviewApprovedTaxProfile, reviewNfeHomologationGate } from "../../../../lib/fiscal/nfe-homologation-gate";
+import { reviewNfeHomologationGate } from "../../../../lib/fiscal/nfe-homologation-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -119,7 +118,7 @@ export async function GET(request: Request) {
     const setup = await homologationSetup(account);
     if (requestedId !== null) {
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedId))
-        throw new JvgBackendError("Identificador do rascunho inválido.", 400);
+        throw new JvgBackendError("Identificador do documento inválido.", 400);
       // Filtro por empresa, tipo e ambiente aplicado também na consulta individual.
       const selected = await dbRequest<DbRow[]>(
         `/rest/v1/jvg_fiscal_documents?${scope(account)}&id=${filterEq(requestedId)}&document_type=eq.nfe&environment=eq.homologacao&select=id,status,focus_reference,access_key,series,document_number,provider_response,fiscal_payload,created_at,updated_at,authorized_at&limit=1`,
@@ -184,26 +183,20 @@ export async function POST(request: Request) {
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {
     const account = await currentAccount();
-    if (account.role === "viewer") throw new JvgBackendError("Sem permissão para criar rascunhos fiscais.", 403);
+    if (account.role === "viewer") throw new JvgBackendError("Sem permissão para emitir NF-e.", 403);
     const idempotencyKey = request.headers.get("idempotency-key")?.trim() || "";
     if (!uuidPattern.test(idempotencyKey))
       throw new JvgBackendError("Identificador seguro da solicitação ausente ou inválido. Recarregue a página e tente novamente.", 400);
     const raw = await request.text();
-    if (raw.length > 32_000) throw new JvgBackendError("Rascunho muito grande.", 413);
+    if (raw.length > 32_000) throw new JvgBackendError("Os dados da NF-e excedem o limite permitido.", 413);
     let data: unknown;
     try { data = JSON.parse(raw); } catch { throw new JvgBackendError("Envie um JSON válido.", 400); }
     let draft;
     try { draft = parseNfeDraftInput(data); }
-    catch (error) { throw new JvgBackendError(error instanceof Error ? error.message : "Rascunho inválido.", 400); }
+    catch (error) { throw new JvgBackendError(error instanceof Error ? error.message : "Dados da NF-e inválidos.", 400); }
 
     const company = await getCompany(account);
     if (!company) throw new JvgBackendError("Empresa não encontrada.", 404);
-    if (company.tax_regime_confirmation_available !== true)
-      throw new JvgBackendError("Aplique a migration fiscal pendente no Supabase antes de preparar rascunhos de NF-e.", 409);
-    if (company.tax_regime_confirmed !== true)
-      throw new JvgBackendError("Confirme o regime tributário com a contabilidade nos dados da empresa antes de preparar NF-e.", 409);
-    if (company.tax_regime !== "simples_nacional")
-      throw new JvgBackendError("Esta versão do rascunho NF-e está disponível apenas para o Simples Nacional.", 400);
 
     const scoped = scope(account);
     let sourceOrder: DbRow | null = null;
@@ -214,16 +207,16 @@ export async function POST(request: Request) {
       sourceOrder = orders[0] ?? null;
       if (!sourceOrder) throw new JvgBackendError("Pedido de origem não encontrado nesta empresa.", 404);
       if (sourceOrder.status !== "open" && sourceOrder.status !== "fulfilled")
-        throw new JvgBackendError("Somente pedidos em aberto ou concluídos podem originar rascunho NF-e.", 409);
+        throw new JvgBackendError("Somente pedidos em aberto ou concluídos podem originar uma NF-e.", 409);
       if (!sourceOrder.customer_id || String(sourceOrder.customer_id) !== draft.recipientId)
-        throw new JvgBackendError("O destinatário do rascunho precisa ser o mesmo do pedido.", 400);
+        throw new JvgBackendError("O destinatário da NF-e precisa ser o mesmo do pedido.", 400);
       const orderItems = Array.isArray(sourceOrder.items) ? sourceOrder.items as DbRow[] : [];
       if (orderItems.length !== draft.items.length)
-        throw new JvgBackendError("Os itens do rascunho precisam corresponder ao pedido de origem.", 400);
+        throw new JvgBackendError("Os itens da NF-e precisam corresponder ao pedido de origem.", 400);
       orderItems.forEach((orderItem, index) => {
         const productId = typeof orderItem.productId === "string" ? orderItem.productId : "";
         if (!productId || orderItem.serviceId)
-          throw new JvgBackendError("Este pedido contém serviço ou item sem produto vinculado; o rascunho NF-e aceita somente mercadorias.", 400);
+          throw new JvgBackendError("Este pedido contém serviço ou item sem produto vinculado; a emissão de NF-e aceita somente mercadorias.", 400);
         const quantityMilli = Math.round(Number(orderItem.quantity) * 1000);
         const unitPriceCents = Math.round(Number(orderItem.unitPrice) * 100);
         if (productId !== draft.items[index].productId ||
@@ -233,7 +226,7 @@ export async function POST(request: Request) {
       });
       const orderTotalCents = Math.round(Number(sourceOrder.total) * 100);
       if (!Number.isSafeInteger(orderTotalCents) || orderTotalCents !== draft.totalCents)
-        throw new JvgBackendError("O total do rascunho não corresponde ao total do pedido.", 400);
+        throw new JvgBackendError("O total da NF-e não corresponde ao total do pedido.", 400);
     }
     const [recipientRows, products, carrierRows] = await Promise.all([
       dbRequest<DbRow[]>(`/rest/v1/jvg_parties?${scoped}&id=${filterEq(draft.recipientId)}&is_customer=eq.true&active=eq.true&select=id,display_name,legal_name,document_type,document_number,state_registration,municipal_registration,email,phone,address&limit=1`),
@@ -255,6 +248,12 @@ export async function POST(request: Request) {
     const byProfile = new Map(profiles.map(profile => [String(profile.id), profile]));
     const pending: string[] = [];
     if (company.fiscal_missing.length) pending.push("Conferir dados fiscais do emitente");
+    if (company.tax_regime_confirmation_available !== true)
+      pending.push("Regime tributário ainda não está disponível para conferência no cadastro da empresa; a preparação pode continuar, mas a transmissão fica bloqueada.");
+    else if (company.tax_regime_confirmed !== true)
+      pending.push("Regime tributário não confirmado; a preparação pode continuar, mas a transmissão fica bloqueada até a confirmação.");
+    else if (company.tax_regime !== "simples_nacional")
+      pending.push("O fluxo fiscal atual de homologação atende ao Simples Nacional; confirme o regime e a configuração antes de transmitir.");
     if (!recipient.document_number) pending.push("Documento CPF/CNPJ do destinatário não informado");
     const issuerAddress = company.address && typeof company.address === "object" ? company.address as DbRow : {};
     const recipientAddress = recipient.address && typeof recipient.address === "object" ? recipient.address as DbRow : {};
@@ -262,42 +261,37 @@ export async function POST(request: Request) {
     const recipientUf = recipientAddress.state;
     const items = draft.items.map((input, index) => {
       const product = byId.get(input.productId)!;
-      if (!/^[0-9]{8}$/.test(String(product.ncm || ""))) pending.push(`Item ${index + 1}: NCM pendente`);
-      if (!input.cfop) pending.push(`Item ${index + 1}: CFOP pendente`);
-      else if (!isOfficialCfopCode(input.cfop)) pending.push(`Item ${index + 1}: CFOP não consta da tabela oficial`);
-      if (!input.csosn) pending.push(`Item ${index + 1}: CSOSN pendente`);
+      const itemNcm = input.ncm ?? String(product.ncm || "").replace(/\D/g, "");
+      const itemCest = input.cest ?? String(product.cest || "").replace(/\D/g, "");
+      const itemOrigin = input.origin ?? String(product.origin || "");
+      if (!/^[0-9]{8}$/.test(itemNcm)) pending.push(`Item ${index + 1} (${product.name}): NCM ausente ou inválido. Preencha o campo NCM neste item com 8 dígitos.`);
+      if (!input.cfop) pending.push(`Item ${index + 1}: CFOP pendente. Informe o CFOP aplicável no campo CFOP deste item, considerando a operação e o local de entrega.`);
+      else if (!isOfficialCfopCode(input.cfop)) pending.push(`Item ${index + 1}: CFOP ${input.cfop} não consta da tabela oficial. Corrija o código no campo CFOP deste item.`);
+      // O 102 é uma sugestão editável apresentada pela interface apenas para
+      // a empresa piloto. Um campo vazio enviado pelo usuário deve continuar vazio.
+      const itemCsosn = input.csosn;
+      if (!itemCsosn) pending.push(`Item ${index + 1}: CSOSN do ICMS pendente. Informe o código indicado para este produto e operação no próprio item da NF-e.`);
       const review = reviewNfeOperation(issuerUf, recipientUf, input.cfop, index + 1);
-      pending.push(...review.pending);
       const profile = product.tax_profile_id ? byProfile.get(String(product.tax_profile_id)) : undefined;
-      if (!profile) pending.push(`Item ${index + 1}: perfil tributário não associado ou indisponível`);
-      else {
-        if (profile.review_status !== 'reviewed') pending.push(`Item ${index + 1}: perfil tributário ainda não revisado`);
-      }
-      const rules = profile?.rules && typeof profile.rules === "object" && !Array.isArray(profile.rules) ? profile.rules as DbRow : {};
-      const operationRules = rules.operations && typeof rules.operations === "object" && !Array.isArray(rules.operations)
-        ? rules.operations as DbRow : {};
-      const selectedRules = operationRules[review.operation] && typeof operationRules[review.operation] === "object" && !Array.isArray(operationRules[review.operation])
-        ? operationRules[review.operation] as DbRow : undefined;
-      const hasOperationRule = Boolean(selectedRules && review.operation !== "indeterminada");
-      const ibsCbsEnabled = isIbsCbsEnabledForNfe(
-        { taxRegime: company.tax_regime, taxRegimeConfirmed: company.tax_regime_confirmed === true },
-        selectedRules || {}, draft.issueAt,
-      );
-      pending.push(...reviewProfileConsistency(selectedRules, input.cfop, input.csosn, index + 1, review.operation, ibsCbsEnabled));
-      if (rules.operations && !hasOperationRule)
-        pending.push(`Item ${index + 1}: cadastre e aprove uma regra fiscal específica para a operação ${review.operation}`);
-      if (!rules.operations && profile)
-        pending.push(`Item ${index + 1}: regra fiscal antiga sem separação por operação; revise antes de usar`);
+      const rules = {
+        csosn: itemCsosn,
+        pisCst: input.pisCst,
+        cofinsCst: input.cofinsCst,
+        focusFields: input.focusFields,
+      };
+      if (!input.pisCst) pending.push(`Item ${index + 1}: CST do PIS pendente. Informe no próprio item o código aplicável ao produto e à operação; não é necessário cadastrar perfil tributário.`);
+      if (!input.cofinsCst) pending.push(`Item ${index + 1}: CST da Cofins pendente. Informe no próprio item o código aplicável ao produto e à operação; não é necessário cadastrar perfil tributário.`);
       const taxPreview = { lines: [], sumOfEstimatesCents: 0, provisional: true, validForEmission: false, calculationMethod: "not_calculated" };
       return {
         productId: product.id, sku: product.sku, description: product.name,
-        unit: product.unit, ncm: product.ncm, cest: product.cest, gtin: product.gtin, origin: product.origin,
+        unit: product.unit, ncm: itemNcm, cest: itemCest, gtin: product.gtin, origin: itemOrigin,
+        productSnapshot: { sku: product.sku, description: product.name, unit: product.unit,
+          ncm: product.ncm ?? null, cest: product.cest ?? null, gtin: product.gtin ?? null, origin: product.origin ?? null },
         quantity: input.quantity, unitPriceCents: input.unitPriceCents,
-        subtotalCents: input.subtotalCents, cfop: input.cfop, csosn: input.csosn,
+        subtotalCents: input.subtotalCents, cfop: input.cfop, csosn: itemCsosn,
         operation: review.operation, taxPreview,
-        taxRules: hasOperationRule ? selectedRules : null,
-        taxProfile: profile ? { id: profile.id, name: profile.name, reviewStatus: profile.review_status,
-          operationRuleConfigured: hasOperationRule, accountantReviewDeclared: reviewApprovedTaxProfile(profile).ready } : null,
+        taxRules: rules,
+        taxProfile: profile ? { id: profile.id, name: profile.name, reviewStatus: profile.review_status } : null,
       };
     });
     const issuer = {
@@ -328,8 +322,6 @@ export async function POST(request: Request) {
     } : null;
     const preflight = reviewNfePreparation(issuer, recipientSnapshot, items);
     pending.push(...preflight.issues);
-    if (items.some(item => item.taxProfile?.reviewStatus !== "reviewed"))
-      pending.push("Registre a revisão das regras cadastradas com a contabilidade antes de prosseguir.");
     if (draft.purpose === null) pending.push("Informe explicitamente a finalidade da NF-e.");
     else if (draft.purpose !== 1) pending.push("Este fluxo prepara apenas NF-e normal; outras finalidades exigem dados de referência ainda não capturados.");
     if (!draft.issueAt) pending.push("Informe data e hora de emissão com fuso horário.");
@@ -344,7 +336,7 @@ export async function POST(request: Request) {
     const commercialTotalCents = draft.totalCents + draft.additionalTotals.freightCents + draft.additionalTotals.insuranceCents +
       draft.additionalTotals.expensesCents - draft.additionalTotals.discountCents;
     const payload = {
-      schemaVersion: 6, nature: draft.nature, purpose: draft.purpose, issueAt: draft.issueAt, exitAt: draft.exitAt,
+      schemaVersion: 7, nature: draft.nature, purpose: draft.purpose, issueAt: draft.issueAt, exitAt: draft.exitAt,
       consumerFinal: draft.consumerFinal, buyerPresence: draft.buyerPresence,
       recipientIeIndicator: draft.recipientIeIndicator,
       transport: { mode: draft.transportMode, carrier: carrierSnapshot, vehicle: draft.vehicle, volumes: draft.volumes },
@@ -358,6 +350,27 @@ export async function POST(request: Request) {
       issuer, recipient: recipientSnapshot,
       items, totalCents: draft.totalCents, commercialTotalCents, taxPreview, preflight, pending, readyToTransmit: false,
     };
+
+    const documentId = typeof (data as DbRow).documentId === "string" ? String((data as DbRow).documentId).trim() : "";
+    if (documentId) {
+      if (!uuidPattern.test(documentId)) throw new JvgBackendError("Identificador do documento inválido.", 400);
+      const editable = await dbRequest<Array<{ id: string }>>(
+        `/rest/v1/jvg_fiscal_documents?${scope(account)}&id=${filterEq(documentId)}&document_type=eq.nfe&environment=eq.homologacao&status=eq.draft&focus_reference=is.null&select=id&limit=1`,
+      );
+      if (!editable[0]) throw new JvgBackendError("Este documento já foi enviado ou não pertence a esta empresa; somente documentos ainda não transmitidos em homologação podem ser editados.", 409);
+      const updated = await dbRequest<Array<{ id: string }>>(
+        `/rest/v1/jvg_fiscal_documents?${scope(account)}&id=${filterEq(documentId)}&document_type=eq.nfe&environment=eq.homologacao&status=eq.draft&focus_reference=is.null&select=id`,
+        { method: "PATCH", body: JSON.stringify({
+          recipient_party_id: recipient.id, recipient_document: recipient.document_number || null,
+          carrier_party_id: carrier?.id || null, carrier_document: carrier?.document_number || null,
+          carrier_name: carrier?.display_name || null, fiscal_payload: payload,
+          updated_at: new Date().toISOString(),
+        }) },
+      );
+      if (!updated[0]) throw new JvgBackendError("A NF-e mudou de estado durante a edição. Atualize o histórico antes de tentar novamente.", 409);
+      return apiJson({ ok: true, id: documentId, status: "draft", totalCents: draft.totalCents,
+        commercialTotalCents, pending, sourceOrderId: draft.sourceOrderId, transmissionEnabled: false }, 200);
+    }
 
     const existing = await dbRequest<Array<{ id: string; status: string; fiscal_payload: unknown }>>(
       `/rest/v1/jvg_fiscal_documents?${scope(account)}&document_type=eq.nfe&environment=eq.homologacao&idempotency_key=${filterEq(idempotencyKey)}&select=id,status,fiscal_payload&limit=1`,
@@ -379,7 +392,7 @@ export async function POST(request: Request) {
         idempotency_key: idempotencyKey, fiscal_payload: payload,
       }),
     });
-    if (!created[0]?.id) throw new JvgBackendError("Não foi possível salvar o rascunho.", 502);
+    if (!created[0]?.id) throw new JvgBackendError("Não foi possível salvar a NF-e.", 502);
     return apiJson({ ok: true, id: created[0].id, status: "draft",
       totalCents: draft.totalCents, commercialTotalCents, pending, sourceOrderId: draft.sourceOrderId, transmissionEnabled: false }, 201);
   } catch (error) { return safeError(error); }

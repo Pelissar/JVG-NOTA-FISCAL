@@ -136,7 +136,6 @@ export async function PATCH(request: Request) {
   try {
     const { user, account: a } = await account();
     if (!canEdit(a)) throw new JvgBackendError("Sua conta não pode alterar perfis fiscais.", 403);
-    const company = await confirmedCompany(a);
     const input = await readBody(request);
     const id = typeof input.id === "string" ? input.id : "";
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))
@@ -154,36 +153,6 @@ export async function PATCH(request: Request) {
       if (accountantName.length < 3 || accountantName.length > 120)
         throw new JvgBackendError("Informe o nome do contador ou escritório (3 a 120 caracteres).", 400);
       const rules = object(profile.rules);
-      const configuredOperations = object(rules.operations);
-      const configuredEntries = Object.entries(configuredOperations);
-      if (!configuredEntries.length)
-        throw new JvgBackendError("Cadastre ao menos uma regra por operação antes de registrar a revisão.", 409);
-      const incomplete = configuredEntries.some(([key, rawRule]) => {
-        if (!operations.has(key as Operation)) return true;
-        const rule = object(rawRule);
-        const ibsCbsRequired = company.tax_regime !== "simples_nacional" && rule.ibsCbsRegularRegimeEnabled === true;
-        return !isOfficialCfopCode(String(rule.cfop || "")) || !csosn.has(String(rule.csosn || "")) ||
-          !/^\d{2}$/.test(String(rule.pisCst || "")) || !/^\d{2}$/.test(String(rule.cofinsCst || "")) ||
-          (ibsCbsRequired && (!/^\d{3}$/.test(String(rule.cstIbsCbs || "")) || !/^\d{6}$/.test(String(rule.classTrib || ""))));
-      });
-      if (incomplete)
-        throw new JvgBackendError("Cada operação precisa ter CFOP, CSOSN e CST de PIS/Cofins. CST/classificação IBS-CBS só são exigidos quando a flag futura está ativa para regime regular.", 409);
-      const focusIssues = configuredEntries.flatMap(([key, rawRule]) => {
-        const rule = object(rawRule);
-        const review = reviewFocusTaxRule(rule, {
-          includeIbsCbs: company.tax_regime !== "simples_nacional" && rule.ibsCbsRegularRegimeEnabled === true,
-        });
-        const issues = [
-          ...review.icmsMissing.map(field => `ICMS ${field}`),
-          ...review.pisCofinsMissing.map(field => `PIS/Cofins ${field}`),
-          ...review.ibsCbsMissing.map(field => `IBS/CBS ${field}`),
-          ...review.invalidFields.map(field => `campo inválido ${field}`),
-          ...review.unsupported,
-        ];
-        return issues.map(issue => `${key}: ${issue}`);
-      });
-      if (focusIssues.length)
-        throw new JvgBackendError(`Há campos Focus obrigatórios pendentes ou combinações ainda não mapeadas: ${focusIssues.slice(0, 8).join("; ")}.`, 409);
       const reviewedRules = {
         ...rules,
         accountantReview: { name: accountantName, crc: accountantCrc, declaredBy: user.userId, declaredAt: new Date().toISOString() },
@@ -194,9 +163,10 @@ export async function PATCH(request: Request) {
         { method: "PATCH", body: JSON.stringify({ rules: reviewedRules, review_status: "reviewed", reviewed_by: user.userId }) },
       );
       return apiJson({ ok: true, id: updated[0]?.id || id, reviewStatus: "reviewed", transmissionEnabled: false,
-        note: "A revisão é uma declaração registrada pelo usuário; o sistema não autentica o contador nem libera emissão." });
+        note: "Registro opcional de conferência interna. O sistema não autentica o contador nem usa esta declaração para liberar emissão." });
     }
 
+    const company = await confirmedCompany(a);
     const parsed = profileFields(input);
     const rules = withoutLegacyFields(object(profile.rules));
     const configured = object(rules.operations);

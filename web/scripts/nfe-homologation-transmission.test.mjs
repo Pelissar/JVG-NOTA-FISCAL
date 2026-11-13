@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 const route = readFileSync(new URL('../app/api/fiscal/nfe-drafts/transmit/route.ts', import.meta.url), 'utf8');
 const focus = readFileSync(new URL('../lib/focus/client.ts', import.meta.url), 'utf8');
 const detailApi = readFileSync(new URL('../app/api/fiscal/nfe-drafts/route.ts', import.meta.url), 'utf8');
+const draftsApi = detailApi;
 const ui = readFileSync(new URL('../public/erp/nfe-drafts.js', import.meta.url), 'utf8');
 
 test('emissão de teste exige same-origin, administrador, empresa piloto e credencial de homologação', () => {
@@ -16,13 +17,26 @@ test('emissão de teste exige same-origin, administrador, empresa piloto e crede
   assert.match(route, /fiscal_missing\.length/);
 });
 
-test('envio exige confirmação, gate fiscal, snapshot atual e reserva atômica do rascunho', () => {
-  assert.match(route, /confirmFiscalReview !== true/);
+test('envio exige confirmação de homologação, gate fiscal, snapshot atual e reserva atômica do rascunho', () => {
+  assert.match(route, /confirmHomologation !== true/);
+  assert.doesNotMatch(route, /confirmFiscalReview/);
+  assert.doesNotMatch(route, /taxProfile\.reviewStatus|accountantReviewDeclared/);
   assert.match(route, /reviewNfeHomologationGate\(payload\)/);
   assert.match(route, /currentSnapshotIssues\(context, payload\)/);
   assert.match(route, /patchDocument\(context\.account, id, "draft", \{/);
   assert.match(route, /status: "processing", focus_reference: reference/);
   assert.match(route, /emitFocusNfeHomologacao\(context\.token, reference/);
+  assert.match(route, /savedProductSnapshot/);
+});
+
+test('rascunho mapeia edição fiscal por item, sem perfil obrigatório, e mantém snapshot do cadastro', () => {
+  assert.match(draftsApi, /input\.ncm \?\?/);
+  assert.match(draftsApi, /input\.cest \?\?/);
+  assert.match(draftsApi, /input\.origin \?\?/);
+  assert.match(draftsApi, /productSnapshot:/);
+  assert.match(ui, /ncm: row\.querySelector\('\.item-ncm'\)/);
+  assert.match(ui, /cest: row\.querySelector\('\.item-cest'\)/);
+  assert.match(ui, /origin: row\.querySelector\('\.item-origin'\)/);
 });
 
 test('referência persistida permite reconciliar resposta incerta sem POST duplicado', () => {
@@ -53,7 +67,7 @@ test('cliente Focus usa somente o host de homologação e status retorna pela AP
 test('interface só oferece envio quando o servidor libera e exige confirmação explícita', () => {
   assert.match(ui, /draft\.canSubmitHomologation === true/);
   assert.match(ui, /check\.type = 'checkbox'/);
-  assert.match(ui, /confirmFiscalReview: action === 'emit'/);
+  assert.match(ui, /confirmHomologation: action === 'emit'/);
   assert.match(ui, /Consultar status na Focus/);
   assert.doesNotMatch(ui, /A prévia é incompleta e não pode ser enviada/);
 });

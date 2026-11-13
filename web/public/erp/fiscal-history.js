@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   var form=document.getElementById('historyFilters'), rows=[], page=1, hasMore=false, parties=[];
-  var statusLabels={draft:'Rascunho / pendente',waiting_certificate:'Aguardando certificado',queued:'Na fila',processing:'Em processamento',authorized:'Autorizada',rejected:'Rejeitada',cancelled:'Cancelada',denied:'Denegada',contingency:'Contingência',received:'Recebida no estoque'};
+  var statusLabels={draft:'Em preparação / pendente',waiting_certificate:'Aguardando certificado',queued:'Na fila',processing:'Em processamento',authorized:'Autorizada',rejected:'Rejeitada',cancelled:'Cancelada',denied:'Denegada',contingency:'Contingência',received:'Recebida no estoque'};
   var money=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
   var $=function(id){return document.getElementById(id);};
   function node(tag,className,text){var el=document.createElement(tag);if(className)el.className=className;if(text!=null)el.textContent=String(text);return el;}
@@ -32,7 +32,7 @@
   async function load(){
     $('historyStatus').textContent='Buscando notas emitidas e recebidas desta empresa...';$('historyStatus').classList.remove('history-error');
     $('refreshHistory').disabled=true;
-    try{var data=await api('/api/fiscal/history?'+params().toString());rows=Array.isArray(data.documents)?data.documents:[];hasMore=data.hasMore===true;$('historyStatus').textContent=rows.length+' documento(s) nesta página. Os rascunhos são identificados e não contam como autorizados.';render();}
+    try{var data=await api('/api/fiscal/history?'+params().toString());rows=Array.isArray(data.documents)?data.documents:[];hasMore=data.hasMore===true;$('historyStatus').textContent=rows.length+' documento(s) nesta página. Os documentos em preparação são identificados e não contam como autorizados.';render();}
     catch(error){rows=[];hasMore=false;render();$('historyStatus').textContent=error.message+' Se a migration de histórico ainda não foi aplicada, aplique supabase/migrations/20261110_jvg_fiscal_document_history.sql no Supabase.';$('historyStatus').classList.add('history-error');}
     finally{$('refreshHistory').disabled=false;}
   }

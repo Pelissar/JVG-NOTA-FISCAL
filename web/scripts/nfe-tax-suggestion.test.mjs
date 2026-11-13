@@ -5,47 +5,34 @@ import "../public/erp/nfe-tax-suggestion.js";
 const resolve = globalThis.JvgNfeTaxSuggestion.resolve;
 const profile = {
   id: "profile-1",
-  name: "Regra revisada pela empresa",
-  review_status: "reviewed",
+  name: "Regra opcional da empresa",
   rules: {
     operations: {
-      interna: { cfop: "CFOP_INTERNO_TESTE", csosn: "CSOSN_INTERNO_TESTE" },
-      interestadual: { cfop: "CFOP_INTERESTADUAL_TESTE", csosn: "CSOSN_INTERESTADUAL_TESTE" },
+      interna: { cfop: "5102", csosn: "102" },
+      interestadual: { cfop: "6102", csosn: "102" },
     },
   },
 };
 const product = { taxProfileId: "profile-1" };
 
-test("seleciona a regra interna quando emitente e cliente estão na mesma UF", () => {
-  const result = resolve(product, { state: "sp" }, "SP", [profile]);
+test("usa o CFOP escolhido no item para localizar apenas uma referencia interna", () => {
+  const result = resolve(product, "5102", [profile]);
   assert.equal(result.operation, "interna");
   assert.deepEqual(result.rule, profile.rules.operations.interna);
   assert.equal(result.profile, profile);
 });
 
-test("seleciona a regra interestadual quando as UFs são diferentes", () => {
-  const result = resolve(product, { state: "RJ" }, "SP", [profile]);
+test("usa o CFOP escolhido no item para localizar apenas uma referencia interestadual", () => {
+  const result = resolve(product, "6102", [profile]);
   assert.equal(result.operation, "interestadual");
   assert.deepEqual(result.rule, profile.rules.operations.interestadual);
 });
 
-test("não reutiliza a regra de outra operação quando a escolhida não existe", () => {
+test("nao escolhe regra sem CFOP do item nem decide pela UF do destinatario", () => {
+  assert.deepEqual(resolve(product, "", [profile]), { rule: null, operation: null, profile });
+});
+
+test("nao reutiliza regra de outro grupo de CFOP", () => {
   const internalOnly = { ...profile, rules: { operations: { interna: profile.rules.operations.interna } } };
-  const result = resolve(product, { state: "RJ" }, "SP", [internalOnly]);
-  assert.equal(result.operation, "interestadual");
-  assert.equal(result.rule, null);
-});
-
-test("não escolhe operação sem UF válida do emitente e do destinatário", () => {
-  const result = resolve(product, { state: "" }, "SP", [profile]);
-  assert.equal(result.operation, null);
-  assert.equal(result.rule, null);
-  assert.equal(result.profile, null);
-});
-
-test("mantém a regra de rascunho identificada como não revisada", () => {
-  const draft = { ...profile, review_status: "draft" };
-  const result = resolve(product, { state: "SP" }, "SP", [draft]);
-  assert.equal(result.rule.csosn, "CSOSN_INTERNO_TESTE");
-  assert.equal(result.profile.review_status, "draft");
+  assert.deepEqual(resolve(product, "6102", [internalOnly]), { rule: null, operation: "interestadual", profile: internalOnly });
 });

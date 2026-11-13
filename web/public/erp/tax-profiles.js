@@ -102,7 +102,7 @@
       saveHelp.textContent = 'Esta versão só permite configurar perfis para empresas com Simples Nacional confirmado.';
     } else {
       saveHelp.textContent = form.elements.profileId.value
-        ? 'Salvar altera a regra selecionada e retorna o perfil para rascunho.'
+        ? 'Salvar altera a regra selecionada e retorna o perfil para não revisado.'
         : 'Salve uma operação por vez. As regras do perfil podem ser reutilizadas nos produtos vinculados.';
     }
   }
@@ -321,6 +321,9 @@
 
   function openReview(record) {
     reviewForm.reset();
+    const feedback = document.getElementById('reviewFeedback');
+    feedback.hidden = true;
+    feedback.textContent = '';
     document.getElementById('reviewProfileId').value = record.id;
     if (typeof reviewDialog.showModal === 'function') reviewDialog.showModal();
   }
@@ -344,7 +347,7 @@
       name.textContent = record.name || 'Perfil sem nome';
       const tag = document.createElement('span');
       tag.className = `tag${record.review_status === 'reviewed' ? ' reviewed-tag' : ''}`;
-      tag.textContent = record.review_status === 'reviewed' ? 'Revisão registrada' : 'Aguardando revisão';
+      tag.textContent = record.review_status === 'reviewed' ? 'Conferência registrada · opcional' : 'Não revisado · conferência opcional';
       heading.append(name, tag);
 
       const rootRules = record.rules && typeof record.rules === 'object' ? record.rules : {};
@@ -366,15 +369,15 @@
         button.type = 'button';
         button.className = 'secondary-action compact-action';
         button.textContent = `${variants[operation] ? 'Editar' : 'Configurar'} ${operation === 'interna' ? 'interna' : 'interestadual'}`;
-        button.disabled = !canEdit || !profileCreationAllowed;
+        button.disabled = !canEdit;
         button.addEventListener('click', () => editProfile(record, operation));
         actions.append(button);
       }
-      if (canEdit && profileCreationAllowed) {
+      if (canEdit) {
         const review = document.createElement('button');
         review.type = 'button';
         review.className = 'secondary-action compact-action review-action';
-        review.textContent = record.review_status === 'reviewed' ? 'Atualizar registro da revisão' : 'Registrar revisão contábil';
+        review.textContent = record.review_status === 'reviewed' ? 'Atualizar conferência opcional' : 'Registrar conferência opcional';
         review.addEventListener('click', () => openReview(record));
         actions.append(review);
       }
@@ -406,7 +409,7 @@
     event.preventDefault();
     if (!canEdit || !profileCreationAllowed) return;
     save.disabled = true;
-    show('Salvando a regra como rascunho...', 'info');
+    show('Salvando a regra como não revisado...', 'info');
     try {
       const values = Object.fromEntries(new FormData(form).entries());
       const visibleFocusFields = readFocusFields();
@@ -424,7 +427,7 @@
       });
       resetForm();
       await refresh();
-      show('Regra salva como rascunho. A prévia vai selecioná-la pela operação, mas continuará bloqueada até revisar os grupos fiscais pendentes.', 'success');
+      show('Regra salva como referência opcional. A emissão confere os códigos informados em cada item e não exige revisão deste perfil.', 'success');
     } catch (error) {
       show(error.message, 'error');
     } finally {
@@ -436,11 +439,17 @@
   document.getElementById('cancelReview').addEventListener('click', () => reviewDialog.close());
   reviewForm.addEventListener('submit', async event => {
     event.preventDefault();
+    const submit = document.getElementById('saveReview');
+    const feedback = document.getElementById('reviewFeedback');
     const values = Object.fromEntries(new FormData(reviewForm).entries());
     const profileId = String(values.profileId || '');
     const confirmed = values.confirmed === 'on';
     delete values.profileId;
     delete values.confirmed;
+    submit.disabled = true;
+    submit.textContent = 'Salvando conferência...';
+    feedback.hidden = true;
+    feedback.textContent = '';
     try {
       await api('/api/fiscal/tax-profiles', {
         method: 'PATCH',
@@ -448,10 +457,15 @@
         body: JSON.stringify({ ...values, id: profileId, action: 'register-accountant-review', confirmed })
       });
       reviewDialog.close();
-      await refresh();
-      show('Declaração da revisão registrada. A emissão continua bloqueada e depende de todos os campos exigidos.', 'success');
+      show('Conferência opcional registrada. Ela não autentica o contador, não altera os itens já lançados e não é exigida para salvar ou emitir NF-e.', 'success');
+      refresh().catch(() => show('A conferência foi salva, mas a lista de perfis não atualizou. Recarregue esta página para conferir.', 'warning'));
     } catch (error) {
-      show(error.message, 'error');
+      feedback.hidden = false;
+      feedback.className = 'notice error form-notice';
+      feedback.textContent = error.message || 'Não foi possível salvar a conferência. Tente novamente.';
+    } finally {
+      submit.disabled = false;
+      submit.textContent = 'Salvar conferência opcional';
     }
   });
 

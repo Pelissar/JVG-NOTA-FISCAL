@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const api = readFileSync(new URL('../app/api/fiscal/nfe-drafts/route.ts', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../public/erp/nfe-drafts.js', import.meta.url), 'utf8');
-const page = readFileSync(new URL('../public/erp/nfe-drafts.html', import.meta.url), 'utf8');
+const page = readFileSync(new URL('../public/erp/nfe.html', import.meta.url), 'utf8');
 test('detalhe exige UUID e respeita empresa, tipo e ambiente em qualquer estado fiscal', () => {
   assert.match(api, /requestedId !== null/);
-  assert.match(api, /Identificador do rascunho inválido/);
+  assert.match(api, /Identificador do documento inválido/);
   assert.match(api, /scope\(account\).*id=\$\{filterEq\(requestedId\)\}.*document_type=eq\.nfe.*environment=eq\.homologacao/);
   assert.doesNotMatch(api, /requestedId\)\}.*status=eq\.draft/);
 });
@@ -37,5 +37,5 @@ test('checklist explica bloqueios de homologação sem expor credenciais', () =>
   assert.match(ui, /draft\.homologationSetup\.accessIssues/);
   assert.match(ui, /NCM pendente/);
   assert.match(ui, /Token da API Focus no servidor/);
-  assert.match(page, /certificado digital anexado no painel Focus é separado do token de API/);
+  assert.match(ui, /certificado digital anexado no painel Focus; use/);
 });
