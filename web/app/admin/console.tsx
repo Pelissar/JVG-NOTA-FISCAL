@@ -27,6 +27,14 @@ function dateLabel(value: string | null) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(value));
 }
 
+type LicensePayload = {
+  error?: string;
+  needsMigration?: boolean;
+  companies?: Company[];
+  plans?: Catalog[];
+  documents?: Catalog[];
+};
+
 export function AdminConsole({ name }: { name: string }) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [plans, setPlans] = useState<Catalog[]>([]);
@@ -38,7 +46,7 @@ export function AdminConsole({ name }: { name: string }) {
 
   async function load() {
     const response = await fetch("/api/admin/licenses", { cache: "no-store" });
-    const data = await response.json();
+    const data = await response.json() as LicensePayload;
     if (!response.ok) throw new Error(data.error || "Não foi possível carregar as licenças.");
     setNeedsMigration(Boolean(data.needsMigration));
     setCompanies(data.companies || []);
@@ -55,7 +63,7 @@ export function AdminConsole({ name }: { name: string }) {
       const response = await fetch("/api/admin/licenses", {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ companyId, ...body }),
       });
-      const data = await response.json();
+      const data = await response.json() as LicensePayload;
       if (!response.ok) throw new Error(data.error || "Não foi possível salvar.");
       await load();
       setMessage("Salvo.");
