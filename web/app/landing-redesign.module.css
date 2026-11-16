@@ -37,3 +37,30 @@
 .brandLink .brandName strong{font-size:clamp(21px,2.1vw,29px);white-space:nowrap;line-height:1.05}
 .brandLink .brandName small{font-size:10px;white-space:nowrap;letter-spacing:.14em}
 @media(max-width:700px){.brandLink{gap:7px}.brandLink .brandIcon{width:38px;height:38px}.brandLink .brandName strong{font-size:20px}.brandLink .brandName small{font-size:8px;letter-spacing:.08em}}
+
+.site{--bg:#f3eee6;--surface:#fffdf8;--line:#e5d8c8;--ink:#1c1612;--muted:#6e5f53;--blue:#c4512c;background:#f3eee6;color:#1c1612;font-family:"Avenir Next","Segoe UI",sans-serif}
+.header{background:#fffdf8cc;border-bottom:1px solid #e5d8c8}
+.navlinks a{color:#3f342c}
+.navlinks a:hover{color:#c4512c}
+.login{background:#1c1612;color:#fff8f3;border-color:#1c1612}
+.hero{background:radial-gradient(ellipse 55% 60% at 88% 0%,#f0a06a55,transparent 70%),#f3eee6}
+.hero h1,.sectionHead h2{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-weight:560}
+.hero h1 em{color:#c4512c}
+.eyebrow{color:#8d3416}
+.hero p,.sectionHead p,.points{color:#6e5f53}
+.primary{background:#c4512c;color:#fff8f3}
+.secondary{border-color:#d3c3ae;color:#1c1612}
+.showcase{background:#1c1612;border-color:#3c332c;box-shadow:0 30px 80px #1c161230}
+.showcaseHead{background:#26201b}
+.showcaseSide{background:#161310}
+.showcaseSide strong{background:#c4512c}
+.showcaseMain h3,.showcaseLogo,.showcaseStats strong{color:#fff8f3}
+.showcaseStats>div,.showcaseFlow{background:#2a241f;border-color:#4a3d33}
+.showcaseFoot{background:#161310;color:#d9cbbd}
+.light{background:#fffdf8;color:#1c1612}
+.light .card{background:#fffdf8;border-color:#e5d8c8;box-shadow:0 16px 40px #1c16110d}
+.card{background:#fffdf8;border-color:#e5d8c8}
+.number{color:#c4512c}
+.footer{border-top-color:#e5d8c8;color:#6e5f53}
+.footer a{color:#8d3416}
+.notice{color:#3f342c}

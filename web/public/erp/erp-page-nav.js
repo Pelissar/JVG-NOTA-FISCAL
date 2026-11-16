@@ -153,6 +153,30 @@
   var dashboardSearch = document.querySelector('.topbar-right .global-search');
   if (dashboardSearch) actions.insertBefore(dashboardSearch, workspaceMenu);
   if (document.querySelector('.app-shell')) document.body.classList.add('page-with-global-nav');
+  var rail = document.createElement('nav');
+  rail.className = 'erp-tab-rail';
+  rail.setAttribute('aria-label', 'Atalhos do sistema');
+  [
+    ['Início', '/erp/index.html'],
+    ['Vendas', '/erp/sales.html'],
+    ['Orçamentos', '/erp/quotes.html'],
+    ['NF-e', '/erp/nfe.html'],
+    ['Emitidas', '/erp/nfe-issued.html'],
+    ['Entrada', '/erp/inbound-nfe.html'],
+    ['Histórico', '/erp/fiscal-history.html'],
+    ['Estoque', '/erp/index.html#inventory'],
+    ['Clientes', '/erp/index.html#clients']
+  ].forEach(function (entry) {
+    var link = document.createElement('a');
+    link.href = entry[1];
+    link.textContent = entry[0];
+    var target = new URL(link.href, window.location.origin);
+    if (normalizePath(target.pathname) === normalizedCurrentPath && target.hash === window.location.hash) {
+      link.setAttribute('aria-current', 'page');
+    }
+    rail.appendChild(link);
+  });
+  nav.appendChild(rail);
   mount.replaceWith(nav);
 
   fetch('/api/company', { credentials: 'same-origin', cache: 'no-store' }).then(function (response) {

@@ -876,3 +876,160 @@ html[data-theme] body :is(.sales-section-title small, .sales-form-footer small, 
 .fiscal-production-note strong { color: var(--ink); font-size: 13px; }
 .fiscal-production-note p { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
 @media (max-width: 680px) { .fiscal-workspace-grid { grid-template-columns: 1fr; } .fiscal-workspace-heading { flex-direction: column; } .fiscal-workspace { padding: 16px; } }
+
+/* Atelier 2026: papel quente, cobre e abas em pílula. Não remove regras anteriores. */
+:root {
+  --canvas: #f3eee6;
+  --surface: #fffdf8;
+  --surface-raised: #fffdf8;
+  --surface-soft: #f6f0e6;
+  --surface-hover: #f3e4d2;
+  --ink: #1c1612;
+  --ink-soft: #3f342c;
+  --muted: #6e5f53;
+  --muted-soft: #8b7b6e;
+  --line: #e5d8c8;
+  --line-strong: #d3c3ae;
+  --accent: #c4512c;
+  --accent-strong: #8d3416;
+  --accent-contrast: #fff8f3;
+  --accent-soft: #fde7da;
+  --blue: #c4512c;
+  --blue-soft: #fde7da;
+  --focus: #e08a4a;
+  --shadow-sm: 0 1px 0 #1c161208, 0 12px 28px #1c16110c;
+  --shadow-md: 0 18px 40px #1c161114;
+  --shadow-pop: 0 28px 70px #1c161124;
+  --serif: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+  --sans: "Avenir Next", "Segoe UI", sans-serif;
+}
+html[data-theme="dark"] {
+  --canvas: #12100e;
+  --surface: #1c1916;
+  --surface-raised: #24201c;
+  --surface-soft: #29241f;
+  --surface-hover: #3a312a;
+  --ink: #f6efe6;
+  --ink-soft: #e7d9cb;
+  --muted: #c4b3a3;
+  --muted-soft: #a89484;
+  --line: #3c332c;
+  --line-strong: #56483e;
+  --accent: #f0a06a;
+  --accent-strong: #ffd7b8;
+  --accent-contrast: #2a140c;
+  --accent-soft: #3d271b;
+  --blue: #f0a06a;
+  --blue-soft: #3d271b;
+  --focus: #f0a06a;
+  --shadow-sm: 0 1px 0 #00000040;
+  --shadow-pop: 0 28px 70px #00000066;
+}
+body {
+  font-family: var(--sans) !important;
+  background:
+    radial-gradient(880px 380px at 100% -8%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 62%),
+    var(--canvas) !important;
+}
+:is(h1, h2, .page-heading h1, .page-title h1, .erp-global-brand strong, .fiscal-workspace-heading h2) {
+  font-family: var(--serif) !important;
+  font-weight: 600;
+  letter-spacing: -.03em;
+}
+.erp-global-nav {
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line) !important;
+  background: color-mix(in srgb, var(--surface) 86%, transparent) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(18px);
+}
+.erp-global-brand strong { font-size: 18px; }
+.erp-global-brand small { letter-spacing: .16em; }
+.erp-global-links > a,
+.erp-global-links summary {
+  border-radius: 999px !important;
+}
+.erp-global-links > a[aria-current="page"],
+.erp-global-links details.has-active > summary {
+  background: var(--ink) !important;
+  color: var(--canvas) !important;
+  border-color: transparent !important;
+}
+.erp-global-links details > div {
+  border-radius: 18px !important;
+  padding: 8px !important;
+}
+.erp-global-links details a {
+  min-height: 44px;
+  border-radius: 12px;
+}
+.erp-environment-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--canvas);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+.erp-tab-rail {
+  display: none;
+  flex: 1 0 100%;
+  gap: 8px;
+  margin: 0 -2px;
+  padding: 2px 2px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.erp-tab-rail::-webkit-scrollbar { display: none; }
+.erp-tab-rail a {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-soft) !important;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+}
+.erp-tab-rail a[aria-current="page"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--canvas) !important;
+}
+.nfe-wizard > .fiscal-steps button,
+.fiscal-steps button {
+  border-radius: 999px !important;
+}
+.nfe-wizard > .fiscal-steps button.selected,
+.fiscal-steps button.selected {
+  background: var(--ink) !important;
+  color: var(--canvas) !important;
+  border-color: var(--ink) !important;
+}
+.panel, .stat-card, .table-panel, .card {
+  border-radius: 18px !important;
+}
+@media (max-width: 1080px) {
+  .erp-tab-rail { display: flex; }
+  .erp-nav-toggle {
+    border-radius: 999px !important;
+    background: var(--ink) !important;
+    color: var(--canvas) !important;
+    border-color: var(--ink) !important;
+  }
+  .erp-global-links {
+    border-radius: 22px !important;
+    margin-top: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .erp-tab-rail a, .fiscal-workspace-card { transition: none; }
+}
