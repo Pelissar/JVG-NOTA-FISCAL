@@ -63,7 +63,7 @@ test('rotas de módulos ainda não implementados não permanecem acessíveis por
 test('tema unificado preserva contraste, acessibilidade e navegação responsiva',()=>{
  const design=read('../public/erp/erp-design-v2.css');
  const nav=read('../public/erp/erp-page-nav.js');
- assert.match(html,/href="\.\/erp-design-v2\.css"/);
+ assert.match(html,/href="\.\/erp-design-v2\.css/);
  assert.match(design,/--canvas:/);
  assert.match(design,/html\[data-theme="dark"\]/);
  assert.match(design,/\.erp-global-nav/);

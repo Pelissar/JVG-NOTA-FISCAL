@@ -876,3 +876,16 @@ html[data-theme] body :is(.sales-section-title small, .sales-form-footer small, 
 .fiscal-production-note strong { color: var(--ink); font-size: 13px; }
 .fiscal-production-note p { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
 @media (max-width: 680px) { .fiscal-workspace-grid { grid-template-columns: 1fr; } .fiscal-workspace-heading { flex-direction: column; } .fiscal-workspace { padding: 16px; } }
+.top-pill { display: none !important; }
+
+@media (max-width: 760px) {
+  .content { padding: 16px 12px 28px !important; }
+  .page-heading h1 { font-size: 26px !important; line-height: 1.15; }
+  .info-row { align-items: flex-start; gap: 10px; }
+  .info-row strong { max-width: 58%; text-align: right; overflow-wrap: anywhere; }
+  .heading-actions { width: 100%; }
+  .heading-actions .btn { flex: 1 1 auto; }
+}
+@media (max-width: 420px) {
+  .stats-grid, .quick-grid { grid-template-columns: minmax(0, 1fr) !important; }
+}

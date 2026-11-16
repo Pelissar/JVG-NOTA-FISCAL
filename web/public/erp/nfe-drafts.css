@@ -164,3 +164,23 @@ html[data-theme="dark"] .totals-cards article.grand-total,.theme-dark .totals-ca
 @media(max-width:850px){.nfe-wizard{grid-template-columns:minmax(0,1fr)}.nfe-wizard>.fiscal-steps{position:relative;top:auto;grid-column:1;grid-row:1;display:flex;align-content:initial;max-height:none;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;padding:8px}.nfe-wizard>.fiscal-steps button{flex:0 0 175px;width:175px;scroll-snap-align:start}.nfe-grid{grid-column:1;grid-row:2}.nfe-grid .side{grid-template-columns:1fr}}
 @media(max-width:620px){.nfe-layout{padding:18px 12px 38px}.page-title{display:block}.page-title .phase{display:inline-flex;margin-top:12px}.nfe-step-content{padding:17px;min-height:360px}.nfe-step-content .field-grid,.totals-cards,.recipient-facts,.review-summary,.product-fiscal-facts{grid-template-columns:1fr}.payment-row,.payment-row .payment-card-fields{grid-template-columns:1fr}.payment-row .payment-card-fields{grid-column:1}.wizard-footer{align-items:stretch;flex-direction:column}.wizard-footer>button{width:100%}.wizard-controls{display:grid;grid-template-columns:1fr 1fr}.wizard-controls .save-button{grid-column:1/-1}.source-order-notice{align-items:stretch;flex-direction:column}}
 @media(max-width:620px){.item-fiscal-fields{grid-template-columns:1fr}.item-fiscal-fields .field{grid-column:1}}
+
+@media (max-width: 760px) {
+  html, body { overflow-x: hidden; }
+  .layout { width: 100% !important; max-width: 100% !important; padding: 12px 12px 28px !important; box-sizing: border-box; }
+  .fiscal-document-switcher { margin-bottom: 12px; }
+  .fiscal-document-switcher a small { display: none; }
+  .fiscal-document-switcher a { flex: 1 1 0; min-width: 0; padding: 0 8px; }
+  .page-title { margin-bottom: 12px; }
+  .page-title h1 { font-size: 28px; line-height: 1.1; }
+  .page-title p { font-size: 13px; line-height: 1.45; }
+  .nfe-wizard > .fiscal-steps { padding: 6px; gap: 6px; }
+  .nfe-wizard > .fiscal-steps button { flex-basis: 142px; width: 142px; min-height: 44px; }
+  .nfe-wizard > .fiscal-steps button[data-locked="true"]::after { content: none; }
+  .nfe-step-content { min-height: 0; padding: 14px; }
+  .fiscal-step-actions { position: sticky; bottom: 8px; z-index: 30; margin-top: 12px; border: 1px solid var(--line, #dce5eb); border-radius: 14px; background: var(--surface, #fff); box-shadow: 0 10px 28px #18334724; }
+  .readiness-panel, .focus-panel { margin-top: 14px; }
+  .readiness-links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .readiness-links a { flex: 1 1 140px; justify-content: center; }
+}
+

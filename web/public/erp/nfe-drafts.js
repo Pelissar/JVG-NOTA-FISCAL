@@ -1168,14 +1168,19 @@
       state.clients = Array.isArray(data.clients) ? data.clients : [];
       state.issuerState = String(companyData.company && companyData.company.state || '').trim().toUpperCase();
       state.taxProfiles = Array.isArray(profileData.records) ? profileData.records : [];
-      renderHomologationReadiness();
       fillRecipients();
       fillCarriers();
       addItem();
       // Sugestões oficiais não podem impedir a emissão se o catálogo falhar.
       var auxiliary = await Promise.all([
         api('/api/fiscal/cfop').catch(function () { return { records: [] }; }),
-        refreshHistory().catch(function () { return null; }),
+        refreshHistory().catch(function () {
+          var target = document.getElementById('homologationReadiness');
+          var summary = document.getElementById('readinessSummary');
+          if (summary) summary.textContent = 'Indisponível';
+          if (target) target.textContent = 'Não foi possível conferir os cadastros. Atualize a página.';
+          return null;
+        }),
       ]);
       try {
         var cfops = auxiliary[0];
