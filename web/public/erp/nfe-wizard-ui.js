@@ -297,9 +297,7 @@
       intermediaryGrid.hidden = notApplicable;
       indicator.input.disabled = notApplicable;
       intermediaryHint.textContent = notApplicable
-        ? (indicator.input.value === '1'
-          ? 'A presença 0 não combina com uma plataforma de terceiros. Corrija a presença conforme a operação real; a SEFAZ rejeita o indicador nesta combinação.'
-          : 'Presença 0 (não se aplica): o indicador e os dados de intermediador serão omitidos conforme a regra da SEFAZ.')
+        ? 'Esta emissão é uma NF-e normal: presença 0 (não se aplica) não é aceita. Escolha como a operação realmente ocorreu antes de avançar.'
         : 'CNPJ e identificador são exigidos somente quando houver intermediador.';
     }
     indicator.input.addEventListener('change', function () {
@@ -663,6 +661,7 @@
       if (!issueAt || !Number.isFinite(new Date(issueAt).getTime())) addStepError(errors, form.elements.namedItem('issueAt'), 'Informe data e hora válidas; o campo é preenchido automaticamente e pode ser alterado.');
       if (!['0', '1'].includes(value('consumerFinal'))) addStepError(errors, form.elements.namedItem('consumerFinal'), 'Indique se esta operação é destinada a consumidor final.');
       if (!['0', '1', '2', '3', '4', '5', '9'].includes(value('buyerPresence'))) addStepError(errors, form.elements.namedItem('buyerPresence'), 'Indique a presença ou o canal real da operação.');
+      if (value('buyerPresence') === '0') addStepError(errors, form.elements.namedItem('buyerPresence'), 'Esta emissão é uma NF-e normal. Escolha a condição real da operação (presencial, internet, teleatendimento, fora do estabelecimento ou outro); “não se aplica” é usado em situações como nota complementar ou de ajuste.');
     }
     if (key === 'recipient') validateRecipientStep(errors);
     if (key === 'items') validateItemsStep(errors);
@@ -729,8 +728,8 @@
       if (Number(value('volumeNetWeight')) > Number(value('volumeGrossWeight')) && value('volumeGrossWeight'))
         addStepError(errors, form.elements.namedItem('volumeNetWeight'), 'O peso líquido não pode superar o peso bruto.');
     }
-    if (key === 'intermediary' && value('buyerPresence') === '0' && value('intermediaryIndicator') === '1')
-      addStepError(errors, form.elements.namedItem('buyerPresence'), 'A presença 0 não permite plataforma intermediadora. Se a venda ocorreu por marketplace, selecione o canal real da operação.');
+    if (key === 'intermediary' && value('buyerPresence') === '0')
+      addStepError(errors, form.elements.namedItem('buyerPresence'), 'Esta emissão é uma NF-e normal; presença 0 não se aplica. Escolha a condição real da operação antes de enviar.');
     if (key === 'intermediary' && value('buyerPresence') !== '0' && !['0', '1'].includes(value('intermediaryIndicator')))
       addStepError(errors, form.elements.namedItem('intermediaryIndicator'), 'Indique se a venda ocorreu sem intermediador ou por plataforma de terceiros.');
     if (key === 'intermediary' && value('buyerPresence') !== '0' && value('intermediaryIndicator') === '1') {
@@ -961,7 +960,7 @@
     addReviewLine(target, 'Frete', transportMode && transportMode.selectedOptions[0] ? transportMode.selectedOptions[0].textContent : 'Pendente de confirmação');
     var intermediary = fieldValue('intermediaryIndicator');
     addReviewLine(target, 'Intermediador', fieldValue('buyerPresence') === '0'
-      ? (intermediary === '1' ? 'Incompatível com presença 0; corrija a operação' : 'Não se aplica; campo omitido')
+      ? 'Emissão bloqueada: presença 0 não se aplica a esta NF-e normal'
       : intermediary === '1' ? 'Plataforma de terceiros' : 'Sem intermediador (padrão Focus: 0)');
     var payments = Array.from(document.querySelectorAll('#payments .payment-row')).map(function (row) {
       var method = row.querySelector('[name="paymentMethod"]');
@@ -1183,3 +1182,4 @@
 
   prepareWizard();
 })();
+
