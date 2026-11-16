@@ -33,7 +33,7 @@ test('Focus homologação exige autorização por empresa e mantém emissão des
  assert.match(status,/getSiteAccount\(user\)/);
  assert.match(status,/account\.role === "viewer"/);
  assert.doesNotMatch(status,/platform_admin/);
- assert.match(status,/JVG_FOCUS_PILOT_COMPANY_ID/);
+ assert.doesNotMatch(status,/JVG_FOCUS_PILOT_COMPANY_ID/);
  assert.match(status,/JVG_FOCUS_HOMOLOGACAO_TOKEN/);
  assert.match(status,/FOCUS_NFE_HOMOLOGACAO_TOKEN/);
  assert.match(status,/emissionEnabled: false/);
@@ -54,7 +54,7 @@ test('Focus nunca usa URL de produção nem expõe token no cliente',()=>{
  assert.doesNotMatch(client,/https:\/\/api\.focusnfe\.com\.br/);
  assert.match(client,/AbortSignal\.timeout\(8000\)/);
  assert.match(status,/getSiteAccount\(user\)/);
- assert.match(status,/pilotCompany !== account\.company_id/);
+ assert.doesNotMatch(status,/pilotCompany !== account\.company_id/);
  assert.match(runtime,/process\.env/);
  assert.doesNotMatch(status,/NEXT_PUBLIC_FOCUS/);
 });

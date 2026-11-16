@@ -146,10 +146,6 @@ async function focusContext(): Promise<FocusContext> {
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   if (account.role === "viewer") throw new JvgBackendError("Seu perfil não pode transmitir documentos fiscais.", 403);
 
-  const pilotCompanyId = focusRuntimeEnv("JVG_FOCUS_PILOT_COMPANY_ID");
-  if (!pilotCompanyId) throw new JvgBackendError("A empresa piloto da Focus não está configurada no servidor.", 409);
-  if (pilotCompanyId !== account.company_id)
-    throw new JvgBackendError("A transmissão em homologação está habilitada somente para a empresa piloto JVG.", 403);
   const token = focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN") || focusRuntimeEnv("FOCUS_NFE_HOMOLOGACAO_TOKEN");
   if (!token) throw new JvgBackendError("Configure a credencial Focus de homologação no servidor antes do envio.", 409);
   const company = await getCompany(account);

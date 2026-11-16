@@ -72,18 +72,14 @@ function scope(account: SiteAccount): string {
 }
 
 async function homologationSetup(account: SiteAccount) {
-  const pilotCompanyId = focusRuntimeEnv("JVG_FOCUS_PILOT_COMPANY_ID");
   const focusTokenConfigured = Boolean(focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN") || focusRuntimeEnv("FOCUS_NFE_HOMOLOGACAO_TOKEN"));
   const company = await getCompany(account);
-  const pilotCompanyMatches = Boolean(pilotCompanyId && pilotCompanyId === account.company_id);
   const accountCanSubmit = account.role !== "viewer";
   const taxRegimeConfirmed = company?.tax_regime_confirmation_available === true && company.tax_regime_confirmed === true;
   const supportedTaxRegime = company?.tax_regime === "simples_nacional";
   const issuerMissing = company ? company.fiscal_missing.slice(0, 30) : ["Cadastro fiscal do emitente não encontrado"];
   const accessIssues: string[] = [];
   if (!accountCanSubmit) accessIssues.push("Seu perfil nesta empresa não tem permissão para transmitir documentos fiscais.");
-  if (!pilotCompanyId) accessIssues.push("A empresa piloto ainda não está vinculada à configuração do ambiente de homologação.");
-  else if (!pilotCompanyMatches) accessIssues.push("Este ambiente está vinculado a outra empresa piloto; o envio de teste é exclusivo da JVG.");
   if (!focusTokenConfigured) accessIssues.push("A credencial de homologação da Focus não está configurada no servidor.");
   if (!company) accessIssues.push("Não foi possível localizar o cadastro fiscal do emitente.");
   if (!taxRegimeConfirmed) accessIssues.push("O regime tributário precisa estar disponível e confirmado com a contabilidade nos dados da empresa.");
@@ -92,8 +88,6 @@ async function homologationSetup(account: SiteAccount) {
   return {
     environment: "homologacao",
     accountCanSubmit,
-    pilotCompanyConfigured: Boolean(pilotCompanyId),
-    pilotCompanyMatches,
     focusTokenConfigured,
     issuerFound: Boolean(company),
     issuerMissing,

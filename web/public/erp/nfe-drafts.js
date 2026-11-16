@@ -101,13 +101,13 @@
     var missingNcm = activeProducts.filter(function (product) { return !/^\d{8}$/.test(String(product.ncm || '')); }).length;
     var missingOrigin = activeProducts.filter(function (product) { return !/^[0-8]$/.test(String(product.origin || '')); }).length;
     var productReady = readyProducts > 0;
-    var environmentAccessReady = setup.accountCanSubmit && setup.pilotCompanyConfigured && setup.pilotCompanyMatches;
+    var environmentAccessReady = setup.accountCanSubmit && setup.focusTokenConfigured;
     var regimeReady = setup.taxRegimeConfirmationAvailable && setup.taxRegimeConfirmed && setup.supportedTaxRegime;
     var issuerReady = setup.issuerFound && Array.isArray(setup.issuerMissing) && setup.issuerMissing.length === 0;
     var checks = [
-      [environmentAccessReady, 'Acesso ao piloto JVG', setup.pilotCompanyMatches
-        ? (setup.accountCanSubmit ? 'A empresa piloto está vinculada. Quem opera a empresa pode enviar o teste de homologação.' : 'A empresa piloto está vinculada, mas este perfil só consulta.')
-        : 'O envio de teste está restrito à empresa piloto JVG e depende da configuração do ambiente.'],
+      [environmentAccessReady, 'Empresa do login', setup.accountCanSubmit
+        ? 'A homologação usa a empresa em que você está logado.'
+        : 'Este perfil só consulta e não transmite.'],
       [setup.focusTokenConfigured, 'Token da API Focus no servidor', setup.focusTokenConfigured
         ? 'O token está configurado. Ele é diferente do certificado digital anexado no painel Focus; use “Verificar conexão Focus NFe” para validar o acesso à API.'
         : 'O token de API de homologação não está configurado no servidor do ERP. Ele é separado do certificado digital anexado na Focus.'],
@@ -1000,7 +1000,7 @@
     var response = await api('/api/fiscal/nfe-drafts');
     state.drafts = Array.isArray(response.drafts) ? response.drafts : [];
     state.homologationSetup = response.homologationSetup || null;
-    state.isJvgPilot = Boolean(state.homologationSetup && state.homologationSetup.pilotCompanyMatches === true);
+    state.isJvgPilot = Boolean(state.homologationSetup && state.homologationSetup.accessReady === true);
     renderHistory();
     renderHomologationReadiness();
     if (state.isJvgPilot) updateItemTaxSuggestions();

@@ -71,7 +71,7 @@ test("a lista implementa filtros, seleção individual e em lote, e inutilizaç�
   assert.match(listRoute, /documentType/);
   assert.match(listRoute, /fiscal_payload=cs/);
   assert.match(listRoute, /tenant_id=.*company_id=/);
-  assert.match(invalidateRoute, /JVG_FOCUS_PILOT_COMPANY_ID/);
+  assert.doesNotMatch(invalidateRoute, /JVG_FOCUS_PILOT_COMPANY_ID/);
   assert.match(invalidateRoute, /outcome_unknown/);
   assert.match(invalidateRoute, /number_start=lte/);
   assert.match(focus, /FOCUS_HOMOLOGACAO \+ "\/v2\/nfe\/inutilizacao"/);

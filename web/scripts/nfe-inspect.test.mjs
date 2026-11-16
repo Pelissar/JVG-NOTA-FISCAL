@@ -16,7 +16,7 @@ test('detalhe mantém a revisão de transmissão e revela elegibilidade restrita
   assert.match(api, /canSubmitHomologation: selected\[0\]\.status === "draft" && homologationGate\.ready && canUseHomologation/);
   assert.match(api, /accountCanSubmit/);
   assert.doesNotMatch(api, /platform_admin/);
-  assert.match(api, /JVG_FOCUS_PILOT_COMPANY_ID/);
+  assert.doesNotMatch(api, /JVG_FOCUS_PILOT_COMPANY_ID/);
 });
 test('tela rende dados de API usando textContent sem HTML não confiável', () => {
   assert.match(ui, /function inspectDraft\(id\)/);
@@ -28,7 +28,7 @@ test('tela rende dados de API usando textContent sem HTML não confiável', () =
 test('checklist explica bloqueios de homologação sem expor credenciais', () => {
   assert.match(api, /async function homologationSetup\(account: SiteAccount\)/);
   assert.match(api, /focusTokenConfigured = Boolean\(/);
-  assert.match(api, /pilotCompanyMatches/);
+  assert.match(api, /accountCanSubmit/);
   assert.match(api, /issuerMissing/);
   assert.match(api, /return \{[\s\S]*?focusTokenConfigured,[\s\S]*?accessIssues/);
   const setup = api.slice(api.indexOf('async function homologationSetup'), api.indexOf('export async function GET'));
