@@ -65,7 +65,7 @@ O CNPJ aceita os formatos numérico e alfanumérico em vigor desde julho de 2026
    O botão de diagnóstico e o nome do fornecedor foram retirados do painel comum e da central fiscal. Os dados de diagnóstico ficam restritos à administração; o UUID de outra empresa e o token não são revelados.
 4. Próxima fase: cadastro fiscal completo de emitente/destinatário/produtos, motor de validações e NF-e de teste com referência idempotente, depois consulta de resultado, XML, DANFE e eventos.
 
-Esse endpoint de validação não emite, cancela nem altera documentos. A emissão continuará bloqueada até os requisitos fiscais estarem conferidos. O token de homologação é exclusivo da empresa piloto; cada empresa comercial precisará de credenciais próprias e isolamento por tenant.
+Esse endpoint de validação não emite, cancela nem altera documentos. A emissão de homologação fica em POST /api/fiscal/nfe-transmit. O token é exclusivo da empresa piloto; cada empresa comercial precisará de credenciais próprias.
 
 Leia também o [README da raiz](../README.md) para o procedimento de publicação na Netlify.
 
