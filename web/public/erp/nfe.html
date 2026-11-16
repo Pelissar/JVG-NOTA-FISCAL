@@ -8,7 +8,7 @@
   <title>Emitir NF-e · SigmaFiscal</title>
   <link rel="stylesheet" href="./nfe-drafts.css?v=20261116-tax-groups">
   <link rel="stylesheet" href="./fiscal-workspace.css">
-  <link rel="stylesheet" href="./fiscal-document-switcher.css?v=20261113-2">
+  <link rel="stylesheet" href="./nfe-emission-polish.css?v=20261116-1">
   <link rel="stylesheet" href="./focus-diagnostic.css">
   <link rel="stylesheet" href="/erp/fiscal-theme.css">
   <script defer src="./nfe-tax-suggestion.js?v=20261112-2"></script>
@@ -19,14 +19,10 @@
 .draft-inspect{margin-top:10px;border:1px solid var(--accent,#075ec7);border-radius:9px;background:var(--accent-soft,#eaf2ff);color:var(--accent-strong,#084a9e);font-weight:700;cursor:pointer;padding:9px 12px;font:inherit;font-size:12px;text-align:left}
 .draft-inspect:hover{background:var(--blue-soft,#eaf2ff)}.draft-details{padding:20px;overflow-wrap:anywhere}.draft-details h3,.draft-details h4{margin:10px 0}.draft-details p,.draft-details li{font-size:13px;line-height:1.6}.draft-details ul{padding-left:22px}.draft-details[hidden]{display:none}.source-order-notice{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:14px 0;padding:14px 16px;border:1px solid var(--accent);border-radius:12px;background:var(--accent-soft);color:var(--ink)}.source-order-notice p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}.source-order-notice[hidden]{display:none}@media(max-width:620px){.source-order-notice{align-items:stretch;flex-direction:column}}
 .focus-json-preview{max-height:320px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:12px;border:1px solid var(--line,#cbd5e1);border-radius:10px;background:var(--surface,#fff);color:var(--ink,#0f172a);font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}.draft-details summary{cursor:pointer;font-weight:700;padding:8px 0}</style>
-<link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg"><link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css"><link rel="stylesheet" href="./nfe-finalization.css?v=20261112-3"><script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261113-2"></script></head>
-<body><div id="erpGlobalNav"></div>
+<link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg"><link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css"><link rel="stylesheet" href="./nfe-finalization.css?v=20261112-3"><script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261116-nfe-only"></script></head>
+<body class="nfe-emission-page"><div id="erpGlobalNav"></div>
   <main class="layout">
-    <nav class="fiscal-document-switcher" aria-label="Tipo de documento fiscal">
-      <a href="/erp/nfe.html" aria-current="page"><strong>NF-e</strong><small>Mercadorias · Modelo 55</small></a>
-      <a href="/erp/nfce.html"><strong>NFC-e</strong><small>Consumidor · Modelo 65</small></a>
-    </nav>
-    <div class="page-title"><div><div class="eyebrow">FISCAL / SAÍDA</div><h1>Emitir NF-e</h1><p>Preencha cada etapa. O botão Próximo só libera quando os campos obrigatórios estiverem completos.</p></div></div>
+    <div class="page-title"><div><div class="eyebrow">FISCAL / EMISSÃO DE MERCADORIAS · MODELO 55</div><h1>Emitir NF-e</h1><p>Preencha os dados por etapa. A conferência indica o que estiver pendente antes de transmitir em homologação.</p></div><span class="nfe-model-badge">NF-e · MODELO 55</span></div>
     <div id="status" class="notice" role="status">Carregando os cadastros da empresa...</div>
 <div class="fiscal-steps" role="tablist" aria-label="Etapas de preenchimento da NF-e">
 <button type="button" role="tab" class="selected" data-fiscal-tab="general" aria-selected="true">01 · Dados gerais</button>

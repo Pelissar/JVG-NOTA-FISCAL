@@ -6,22 +6,18 @@
   <title>NF-e emitidas · SigmaFiscal</title>
   <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
   <link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css">
-  <link rel="stylesheet" href="/erp/fiscal-history.css"><link rel="stylesheet" href="/erp/nfe-issued.css"><link rel="stylesheet" href="/erp/fiscal-document-switcher.css?v=20261113-2">
-  <script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261113-2"></script><script defer src="/erp/nfe-issued.js"></script>
+  <link rel="stylesheet" href="/erp/fiscal-history.css"><link rel="stylesheet" href="/erp/nfe-issued.css?v=20261116-history">
+  <script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261116-nfe-only"></script><script defer src="/erp/nfe-issued.js?v=20261116-history"></script>
 </head>
 <body>
   <div id="erpGlobalNav"></div>
   <main class="history-shell issued-shell">
-    <nav class="fiscal-document-switcher" aria-label="Tipo de documento fiscal">
-      <a href="/erp/nfe.html" aria-current="page"><strong>NF-e</strong><small>Mercadorias · Modelo 55</small></a>
-      <a href="/erp/nfce.html"><strong>NFC-e</strong><small>Consumidor · Modelo 65</small></a>
-    </nav>
     <header class="history-heading issued-heading">
-      <div><div class="eyebrow">FISCAL / DOCUMENTOS DE SAÍDA</div><h1>NF-e emitidas</h1><p>Consulte notas autorizadas, filtre os registros e importe XML já emitido para formar o histórico da empresa.</p></div>
+      <div><div class="eyebrow">FISCAL / NOTA FISCAL ELETRÔNICA · MODELO 55</div><h1>NF-e da empresa</h1><p>Histórico de notas autorizadas, canceladas e rejeitadas, com retorno da SEFAZ e motivo da rejeição.</p></div>
       <div class="heading-actions">
-        <a class="secondary-button" href="/erp/nfe.html">Emitir NF-e</a>
+        <a class="primary-button issue-nfe-button" href="/erp/nfe.html">＋ Emitir NF-e</a>
         <button class="secondary-button" id="openXmlCheck" type="button">Validar XML</button>
-        <button class="primary-button" id="openImport" type="button">Importar XML autorizado</button>
+        <button class="secondary-button" id="openImport" type="button">Importar NF-e autorizada</button>
       </div>
     </header>
 
@@ -32,6 +28,17 @@
       <p>Ambiente de produção aparece apenas no histórico de XML importado. Ações na Focus permanecem limitadas à homologação.</p>
     </section>
 
+    <section class="issued-overview" aria-labelledby="issuedOverviewTitle">
+      <div class="issued-overview-heading"><div><span class="eyebrow">ACOMPANHAMENTO</span><h2 id="issuedOverviewTitle">Resumo da página</h2></div><span>Os totais refletem os registros carregados nesta página e nos filtros atuais.</span></div>
+      <div class="issued-status-summary">
+        <button class="issued-stat" type="button" data-status-filter=""><span>Todas as notas</span><strong id="issuedCountAll">0</strong></button>
+        <button class="issued-stat is-authorized" type="button" data-status-filter="authorized"><span>Autorizadas</span><strong id="issuedCountAuthorized">0</strong></button>
+        <button class="issued-stat is-rejected" type="button" data-status-filter="rejected"><span>Rejeitadas</span><strong id="issuedCountRejected">0</strong></button>
+        <button class="issued-stat is-cancelled" type="button" data-status-filter="cancelled"><span>Canceladas</span><strong id="issuedCountCancelled">0</strong></button>
+        <button class="issued-stat is-pending" type="button" data-status-filter="processing"><span>Em processamento</span><strong id="issuedCountProcessing">0</strong></button>
+      </div>
+    </section>
+
     <section class="history-card filter-card issued-filter-card" id="issuedFilters" hidden aria-label="Filtros de NF-e emitidas">
       <div class="filter-heading"><div><h2>Filtrar NF-e</h2><p>Os filtros pesquisam somente documentos modelo 55 desta empresa.</p></div><button class="text-button" id="clearIssuedFilters" type="button">Limpar filtros</button></div>
       <form id="issuedFilterForm" class="issued-filters">
@@ -40,7 +47,7 @@
         <label><span>CFOP</span><input name="cfop" inputmode="numeric" maxlength="4" placeholder="4 dígitos"></label>
         <label><span>Data inicial</span><input name="from" type="date"></label>
         <label><span>Data final</span><input name="to" type="date"></label>
-        <label><span>Status</span><select name="status"><option value="">Todos</option><option value="authorized">Autorizada</option><option value="processing">Processando</option><option value="rejected">Rejeitada</option><option value="cancelled">Cancelada</option><option value="denied">Denegada</option><option value="draft">Em preparação</option></select></label>
+        <label><span>Status</span><select name="status"><option value="">Todos</option><option value="authorized">Autorizada</option><option value="waiting_certificate">Aguardando certificado</option><option value="queued">Na fila</option><option value="processing">Processando</option><option value="rejected">Rejeitada</option><option value="cancelled">Cancelada</option><option value="denied">Denegada</option><option value="contingency">Contingência</option><option value="draft">Em preparação</option></select></label>
         <label><span>Ambiente</span><select name="environment"><option value="">Todos</option><option value="producao">Produção</option><option value="homologacao">Homologação</option></select></label>
         <button class="primary-button filter-submit" type="submit">Aplicar filtros</button>
       </form>
@@ -48,7 +55,7 @@
 
     <section class="history-card issued-results-card" aria-labelledby="issuedResultsTitle">
       <div class="results-heading issued-results-heading">
-        <div><h2 id="issuedResultsTitle">Documentos fiscais</h2><p id="issuedStatus" role="status" aria-live="polite">Carregando NF-e…</p></div>
+        <div><h2 id="issuedResultsTitle">Histórico de NF-e</h2><p id="issuedStatus" role="status" aria-live="polite">Carregando NF-e…</p></div>
         <div class="page-controls"><button class="secondary-button" id="previousIssuedPage" type="button" disabled>Anterior</button><span id="issuedPageNumber">Página 1</span><button class="secondary-button" id="nextIssuedPage" type="button" disabled>Próxima</button></div>
       </div>
       <div class="issued-selection-bar" id="selectionBar" hidden>

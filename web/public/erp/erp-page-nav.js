@@ -59,6 +59,10 @@
   ];
 
   var currentPath = window.location.pathname.replace(/\/$/, '/index.html');
+  if (currentPath === '/erp/nfe.html' || currentPath === '/erp/nfe-issued.html') {
+    var fiscalGroup = groups.find(function (group) { return group.label === 'Fiscal'; });
+    if (fiscalGroup) fiscalGroup.links = fiscalGroup.links.filter(function (entry) { return entry[1] !== '/erp/nfce.html'; });
+  }
   var nav = document.createElement('header');
   nav.className = 'erp-global-nav';
   nav.innerHTML = '<a class="erp-global-brand" href="/erp/index.html"><img src="/branding/sigmafiscal-icon.svg" alt=""><span><strong>SigmaFiscal</strong><small>GESTÃO DA EMPRESA</small></span></a>' +

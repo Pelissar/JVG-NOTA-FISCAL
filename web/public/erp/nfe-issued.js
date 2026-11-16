@@ -59,6 +59,17 @@
   function selectedRows() {
     return rows.filter(function (doc) { return selected.has(doc.id); });
   }
+  function updateSummary() {
+    var count = function (statuses) { return rows.filter(function (doc) { return statuses.indexOf(doc.status) >= 0; }).length; };
+    $('issuedCountAll').textContent = String(rows.length);
+    $('issuedCountAuthorized').textContent = String(count(['authorized']));
+    $('issuedCountRejected').textContent = String(count(['rejected']));
+    $('issuedCountCancelled').textContent = String(count(['cancelled']));
+    $('issuedCountProcessing').textContent = String(count(['processing']));
+    document.querySelectorAll('[data-status-filter]').forEach(function (button) {
+      button.setAttribute('aria-pressed', String(button.getAttribute('data-status-filter') === (form.elements.namedItem('status').value || '')));
+    });
+  }
   function setStatus(message, error) {
     $('issuedStatus').textContent = message;
     $('issuedStatus').classList.toggle('history-error', !!error);
@@ -82,6 +93,7 @@
     $('issuedPageNumber').textContent = 'Página ' + page;
     $('previousIssuedPage').disabled = page <= 1;
     $('nextIssuedPage').disabled = !hasMore;
+    updateSummary();
     if (!rows.length) {
       var empty = node('tr', '');
       empty.append(node('td', 'issued-empty', 'Nenhuma NF-e encontrada com estes filtros.'));
@@ -125,6 +137,9 @@
       var statusCell = node('td', '');
       var statusClass = String(doc.status || '').toLowerCase().replace(/[^a-z_]/g, '');
       statusCell.append(node('span', 'issued-status ' + statusClass, statusLabels[doc.status] || doc.status || 'Sem status'));
+      if (doc.authorizationStatus) statusCell.append(node('small', 'issued-provider-code', 'SEFAZ ' + doc.authorizationStatus));
+      if (doc.authorizationReason) statusCell.append(node('small', 'issued-rejection-reason', doc.authorizationReason));
+      else if (doc.status === 'rejected') statusCell.append(node('small', 'issued-rejection-missing', 'Motivo não retornado; abra os detalhes e consulte a Focus.'));
       var total = node('td', 'issued-total', money(Number(doc.total || 0)));
       var actions = node('td', '');
       var actionRoot = node('div', 'issued-row-actions');
@@ -180,23 +195,71 @@
       var meta = node('div', 'detail-meta');
       meta.append(node('p', '', 'Situação: ' + (statusLabels[detail.status] || detail.status || '—')));
       meta.append(node('p', '', 'Ambiente: ' + (detail.environment || '—') + ' · Tipo: ' + (detail.documentType || 'NF-e 55')));
+      if (detail.invoiceNumber || detail.number) meta.append(node('p', '', 'Número: ' + (detail.invoiceNumber || detail.number) + (detail.series ? ' · Série ' + detail.series : '')));
+      if (detail.reference) meta.append(node('p', '', 'Referência Focus: ' + detail.reference));
       if (detail.accessKey) meta.append(node('p', '', 'Chave: ' + detail.accessKey));
       if (detail.recipientDocument) meta.append(node('p', '', 'Destinatário: ' + detail.recipientDocument));
       if (detail.carrierName) meta.append(node('p', '', 'Transportadora: ' + detail.carrierName +
         (detail.carrierDocument ? ' · ' + detail.carrierDocument : '')));
       var provider = detail.providerResponse || {};
-      if (provider.status_sefaz) meta.append(node('p', '', 'Retorno SEFAZ: ' + provider.status_sefaz));
-      if (provider.mensagem_sefaz) meta.append(node('p', '', 'Mensagem: ' + provider.mensagem_sefaz));
+      var providerCode = provider.status_sefaz || provider.codigo_status;
+      if (providerCode) meta.append(node('p', '', 'Retorno SEFAZ: ' + providerCode));
       if (provider.protocolo || provider.numero_protocolo) meta.append(node('p', '', 'Protocolo: ' + (provider.protocolo || provider.numero_protocolo)));
       content.append(meta);
+      var reason = detail.authorizationReason || provider.mensagem_sefaz || provider.mensagem || provider.erro || provider.error || provider.detalhe || '';
+      var providerErrors = Array.isArray(provider.erros) ? provider.erros : provider.errors;
+      if (!reason && Array.isArray(providerErrors)) reason = providerErrors.map(function (entry) {
+        if (typeof entry === 'string') return entry;
+        return [entry.codigo, entry.mensagem, entry.campo].filter(Boolean).join(' · ');
+      }).filter(Boolean).join('; ');
+      if (reason) {
+        var notice = node('section', 'issued-provider-message ' + (detail.status === 'rejected' ? 'is-rejected' : ''));
+        notice.append(node('strong', '', detail.status === 'rejected' ? 'Motivo da rejeição informado pela Focus/SEFAZ' : 'Mensagem da Focus/SEFAZ'));
+        notice.append(node('p', '', reason));
+        content.append(notice);
+      } else if (detail.status === 'rejected') {
+        var missingReason = node('section', 'issued-provider-message is-rejected');
+        missingReason.append(node('strong', '', 'Motivo da rejeição não está disponível neste retorno salvo.'));
+        missingReason.append(node('p', '', 'Consulte a referência da nota no painel da Focus para recuperar a resposta original.'));
+        content.append(missingReason);
+      }
+      var documentLinks = node('div', 'detail-links');
+      [['caminho_xml_nota_fiscal', 'url_xml', 'Baixar XML'], ['caminho_danfe', 'caminho_pdf_nota_fiscal', 'Abrir DANFE']].forEach(function (entry) {
+        var href = provider[entry[0]] || provider[entry[1]];
+        if (typeof href !== 'string' || !href.trim()) return;
+        try {
+          var safeUrl = new URL(href, window.location.origin);
+          if (safeUrl.protocol !== 'https:' && safeUrl.origin !== window.location.origin) return;
+          var link = node('a', 'secondary-button', entry[2]);
+          link.href = safeUrl.href;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          documentLinks.append(link);
+        } catch { /* Ignore malformed provider links. */ }
+      });
+      if (documentLinks.childElementCount) content.append(documentLinks);
+      if (Array.isArray(provider.eventos) && provider.eventos.length) {
+        var events = node('section', 'issued-events');
+        events.append(node('h3', '', 'Eventos registrados'));
+        provider.eventos.slice(0, 20).forEach(function (event) {
+          var item = event && typeof event === 'object' ? event : {};
+          var line = [item.tipo_evento || item.evento || item.status, item.status_sefaz || item.codigo_status,
+            item.mensagem_sefaz || item.mensagem || item.erro, item.data_evento || item.data].filter(Boolean).join(' · ');
+          if (line) events.append(node('p', '', line));
+        });
+        if (events.childElementCount > 1) content.append(events);
+      }
       var payload = detail.fiscalData || {};
+      var rawDetails = node('details', 'issued-technical-details');
+      rawDetails.append(node('summary', '', 'Dados fiscais e payload técnico'));
       var raw = node('pre', 'detail-data', JSON.stringify({
         itens: payload.items || [],
         totais: payload.fiscalData || {},
         autorizacao: payload.authorization || provider,
         pedidoOrigem: detail.sourceOrder || null
       }, null, 2));
-      content.append(raw);
+      rawDetails.append(raw);
+      content.append(rawDetails);
       if (detail.hasImportedXml) {
         var links = node('div', 'detail-links');
         var link = node('a', 'secondary-button', 'Baixar XML original');
@@ -266,6 +329,13 @@
   });
   form.addEventListener('submit', function (event) { event.preventDefault(); page = 1; load(); });
   $('clearIssuedFilters').addEventListener('click', function () { form.reset(); page = 1; load(); });
+  document.querySelectorAll('[data-status-filter]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      form.elements.namedItem('status').value = button.getAttribute('data-status-filter');
+      page = 1;
+      load();
+    });
+  });
   $('refreshIssued').addEventListener('click', load);
   $('previousIssuedPage').addEventListener('click', function () { if (page > 1) { page--; load(); } });
   $('nextIssuedPage').addEventListener('click', function () { if (hasMore) { page++; load(); } });

@@ -21,7 +21,7 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}
 const focusSafeFields = [
   "status", "status_sefaz", "mensagem_sefaz", "ref", "chave_nfe",
   "numero", "serie", "protocolo", "numero_protocolo", "codigo_status", "erro", "mensagem",
-  "caminho_xml_nota_fiscal", "caminho_danfe", "eventos",
+  "caminho_xml_nota_fiscal", "caminho_danfe", "eventos", "erros", "errors", "error", "detalhe", "details",
 ];
 
 const obj = (value: unknown): Json =>
@@ -51,16 +51,17 @@ function safeFocusBody(body: Json): Json {
   const result: Json = {};
   for (const key of focusSafeFields) {
     const value = body[key];
-    if (key === "eventos" && Array.isArray(value)) {
-      const events = value.slice(0, 50).flatMap(rawEvent => {
-        const event = obj(rawEvent);
+    if ((key === "eventos" || key === "erros" || key === "errors") && Array.isArray(value)) {
+      const entries = value.slice(0, key === "eventos" ? 50 : 20).flatMap(rawEntry => {
+        if (typeof rawEntry === "string") return rawEntry.length <= 1000 ? [rawEntry] : [];
+        const event = obj(rawEntry);
         const safeEvent = Object.fromEntries(Object.entries(event).filter(([name, item]) =>
           /^[a-zA-Z0-9_]{1,64}$/.test(name) &&
-          ((typeof item === "string" && item.length <= 1000) ||
+          ((typeof item === "string" && item.length <= 2000) ||
             (typeof item === "number" && Number.isFinite(item)) || typeof item === "boolean")));
         return Object.keys(safeEvent).length ? [safeEvent] : [];
       });
-      if (events.length) result.eventos = events;
+      if (entries.length) result[key] = entries;
       continue;
     }
     if ((typeof value === "string" && value.length <= 2000) ||

@@ -47,6 +47,29 @@ function parsedJson(value: unknown): Row {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Row : {};
 }
 
+function focusResponse(value: unknown): Row {
+  const stored = parsedJson(value);
+  return { ...stored, ...parsedJson(stored.response) };
+}
+
+function focusReason(value: unknown): string {
+  const response = focusResponse(value);
+  for (const key of ["mensagem_sefaz", "mensagem", "erro", "error", "detalhe", "details"]) {
+    const message = response[key];
+    if (typeof message === "string" && message.trim()) return message.trim().slice(0, 2000);
+  }
+  const errors = Array.isArray(response.erros) ? response.erros : response.errors;
+  if (Array.isArray(errors)) {
+    const messages = errors.slice(0, 20).map(error => {
+      if (typeof error === "string") return error.trim();
+      const item = parsedJson(error);
+      return [item.codigo, item.mensagem, item.campo].filter(value => typeof value === "string" && value.trim()).join(" · ");
+    }).filter(Boolean);
+    if (messages.length) return messages.join("; ").slice(0, 2000);
+  }
+  return "";
+}
+
 function safeSearch(value: string): string {
   return value.trim().slice(0, 80).replace(/[,*()%_\\]/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -93,7 +116,7 @@ export async function GET(request: Request) {
         const row = rows[0];
         if (!row) throw new JvgBackendError("Documento fiscal emitido/preparado não encontrado nesta empresa.", 404);
         const payload = parsedJson(row.fiscal_payload);
-        const providerResponse = parsedJson(row.provider_response);
+        const providerResponse = focusResponse(row.provider_response);
         const source = parsedJson(payload.source);
         return apiJson({ document: {
           id: row.id, direction: "outgoing", status: row.status, environment: row.environment,
@@ -105,7 +128,7 @@ export async function GET(request: Request) {
           transport: payload.transport || null, total: Number(payload.totalCents || 0) / 100,
           hasImportedXml: source.kind === "authorized_xml_archive",
           providerResponse: Object.fromEntries(
-            ["status", "status_sefaz", "mensagem_sefaz", "protocolo", "numero_protocolo", "caminho_xml_nota_fiscal", "caminho_danfe"]
+            ["status", "status_sefaz", "codigo_status", "mensagem_sefaz", "mensagem", "erro", "error", "erros", "errors", "detalhe", "details", "protocolo", "numero_protocolo", "numero", "serie", "ref", "chave_nfe", "chave_nfse", "chave_acesso", "caminho_xml_nota_fiscal", "caminho_danfe", "caminho_pdf_nota_fiscal", "url_xml", "url_pdf", "eventos"]
               .filter(key => providerResponse[key] !== undefined)
               .map(key => [key, providerResponse[key]]),
           ),
@@ -175,7 +198,7 @@ export async function GET(request: Request) {
     const outgoing = !includeOutbound || customerHasNoMatches ? Promise.resolve([] as Row[]) : dbRequest<Row[]>(
       "/rest/v1/jvg_fiscal_documents?" + scope(account) +
       documentTypeFilter + environmentFilter +
-      "&select=id,document_type,environment,status,series,document_number,access_key,focus_reference,recipient_party_id,recipient_document,carrier_party_id,carrier_document,carrier_name,fiscal_payload,issued_at,authorized_at,created_at" +
+      "&select=id,document_type,environment,status,series,document_number,access_key,focus_reference,recipient_party_id,recipient_document,carrier_party_id,carrier_document,carrier_name,fiscal_payload,provider_response,issued_at,authorized_at,created_at" +
       outgoingStatus + dates + documentNumberFilter + customerFilter + cfopFilter +
       partyFilter(partyId, ["recipient_party_id", "carrier_party_id"]) +
       "&order=authorized_at.desc.nullslast,issued_at.desc.nullslast,created_at.desc&limit=" + pageSize + "&offset=" + offset,
@@ -198,6 +221,7 @@ export async function GET(request: Request) {
         const carrier = parsedJson(transport.carrier);
         const source = parsedJson(payload.source);
         const items = Array.isArray(payload.items) ? payload.items.map(parsedJson) : [];
+        const providerResponse = focusResponse(row.provider_response);
         const environment = row.environment === "producao" ? "produção" : "homologação";
         const typeNames: Record<string, string> = { nfe: "NF-e 55", nfce: "NFC-e 65", nfse: "NFS-e", cte: "CT-e", mdfe: "MDF-e" };
         return {
@@ -214,7 +238,8 @@ export async function GET(request: Request) {
           carrierDocument: row.carrier_document || carrier.documentNumber || "",
           cfop: items.find(item => typeof item.cfop === "string" && item.cfop)?.cfop || "",
           hasImportedXml: source.kind === "authorized_xml_archive",
-          authorizationStatus: "",
+          authorizationStatus: providerResponse.status_sefaz || providerResponse.codigo_status || "",
+          authorizationReason: focusReason(row.provider_response),
         };
       }),
     ].sort((left, right) => Date.parse(String(right.date || "")) - Date.parse(String(left.date || "")));
