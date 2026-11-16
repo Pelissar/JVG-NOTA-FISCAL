@@ -67,17 +67,6 @@
 .fiscal { margin: 26px 0 0; color: #66778c; font-size: 11px; }
 .back:focus-visible, .switch:focus-visible, .submit:focus-visible, .theme:focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
 
-.page { background: radial-gradient(720px 320px at 100% 0%, #f0a06a44, transparent 60%), #f3eee6; color: #1c1612; font-family: "Avenir Next", "Segoe UI", sans-serif; }
-.theme { border-color: #e5d8c8; background: #fffdf8; color: #3f342c; border-radius: 999px; }
-.brand img { background: #fde7da; }
-.brand strong, .intro h1, .card h2 { color: #1c1612; font-family: "Iowan Old Style", Palatino, Georgia, serif; }
-.brand strong span, .intro h1 em, .kicker, .back, .switch { color: #c4512c; }
-.features span { border-color: #e5d8c8; background: #fffdf8; color: #3f342c; border-radius: 999px; }
-.card { border-color: #e5d8c8; border-radius: 24px; background: #fffdf8; box-shadow: 0 24px 60px #1c161114; }
-.form input { border-color: #d3c3ae; border-radius: 12px; background: #fffdf8; }
-.submit { border-color: #1c1612; border-radius: 999px; background: #1c1612; color: #fff8f3; }
-.submit:hover:not(:disabled) { background: #c4512c; border-color: #c4512c; }
-
 :global(html[data-theme="dark"]) .page { background: #121a23; color: #edf2f7; color-scheme: dark; --ring: #75c1ff; }
 :global(html[data-theme="dark"]) .theme { border-color: #3b4b5b; background: #202c38; color: #d3dce5; }
 :global(html[data-theme="dark"]) .brand img { background: #173454; }
