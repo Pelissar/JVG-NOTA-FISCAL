@@ -73,7 +73,7 @@ test('prévia mapeia códigos e somente valores Focus permitidos, sem inventar t
   assert.equal(item.icms_situacao_tributaria,'102');
   assert.equal(item.pis_situacao_tributaria,'06');
   assert.equal(item.cofins_situacao_tributaria,'06');
-  assert.equal(result.requestPreview.indicador_intermediario,0);
+  assert.equal('indicador_intermediario' in result.requestPreview, false);
   assert.equal('ibs_cbs_situacao_tributaria' in item,false);
   assert.equal('ibs_cbs_classificacao_tributaria' in item,false);
   assert.equal('ibs_uf_valor' in item,false);
@@ -347,6 +347,7 @@ test('pagamento usa o contrato Focus e nao repassa objetos internos sem validaca
 
 test('mapeia totais comerciais, saída, data de pagamento e intermediador sem calcular tributos', () => {
   const payload = focusPayload();
+  payload.buyerPresence = 2;
   payload.exitAt = '2026-11-12T12:30:00-03:00';
   payload.additionalTotals = { freightCents: 1250, insuranceCents: 300, discountCents: 500, expensesCents: 125 };
   payload.payments = [{ indicator: 0, method: '17', amountCents: 1000, paymentDate: '2026-11-12' }];
@@ -371,6 +372,7 @@ test('mapeia totais comerciais, saída, data de pagamento e intermediador sem ca
 
 test('não envia campos de intermediador se o CNPJ não for válido', () => {
   const payload = focusPayload();
+  payload.buyerPresence = 2;
   payload.intermediary = { indicator: 1, cnpj: '11111111111111', id: 'SELLER-01' };
   const result = reviewFocusNfePayload(payload);
   assert.equal(check(result, 'intermediario').ok, false);
@@ -380,32 +382,49 @@ test('não envia campos de intermediador se o CNPJ não for válido', () => {
 });
 
 test('intermediador ausente usa o padrão 0 documentado pela Focus e não bloqueia o rascunho legado', () => {
-  const result = reviewFocusNfePayload(focusPayload());
+  const payload = focusPayload();
+  payload.buyerPresence = 2;
+  const result = reviewFocusNfePayload(payload);
   assert.equal(check(result, 'intermediario').ok, true);
   assert.equal(result.requestPreview.indicador_intermediario, 0);
   assert.match(check(result, 'intermediario').detail, /valor padrão 0 documentado pela Focus/i);
 });
 
-test('normal NF-e with buyer presence 0 is blocked and omits incompatible Focus fields', () => {
+test('buyer presence 0 omits intermediary fields and stays valid even when a stale selection exists', () => {
   const payload = focusPayload();
   payload.buyerPresence = 0;
-  payload.intermediary = { indicator: 0, cnpj: '', id: '' };
+  payload.intermediary = { indicator: 1, cnpj: '12345678000195', id: 'OLD-PLATFORM' };
   const result = reviewFocusNfePayload(payload);
-  assert.equal(check(result, 'presenca_comprador').ok, false);
-  assert.match(check(result, 'presenca_comprador').detail, /NF-e normal.*cStat 435/i);
-  assert.equal('presenca_comprador' in result.requestPreview, false);
+  assert.equal(check(result, 'presenca_comprador').ok, true);
+  assert.equal(result.requestPreview.presenca_comprador, 0);
+  assert.equal(check(result, 'intermediario').ok, true);
+  assert.match(check(result, 'intermediario').detail, /omitidos para presença 0.*435/i);
   assert.equal('indicador_intermediario' in result.requestPreview, false);
   assert.equal('cnpj_intermediario' in result.requestPreview, false);
   assert.equal('id_intermediario' in result.requestPreview, false);
 });
 
-test('third-party intermediary conflicts with buyer presence 0 and blocks transmission', () => {
+test('presence values that prohibit intermediary omit the field even if the draft has a stale value', () => {
+  for (const presence of [1, 5]) {
+    const payload = focusPayload();
+    payload.buyerPresence = presence;
+    payload.intermediary = { indicator: 1, cnpj: '12345678000195', id: 'OLD-PLATFORM' };
+    const result = reviewFocusNfePayload(payload);
+    assert.equal(check(result, 'intermediario').ok, true);
+    assert.match(check(result, 'intermediario').detail, /omitidos para presença (1|5).*435/i);
+    assert.equal('indicador_intermediario' in result.requestPreview, false);
+    assert.equal('cnpj_intermediario' in result.requestPreview, false);
+    assert.equal('id_intermediario' in result.requestPreview, false);
+  }
+});
+
+test('third-party intermediary requires valid marketplace data for applicable buyer presence', () => {
   const payload = focusPayload();
-  payload.buyerPresence = 0;
-  payload.intermediary = { indicator: 1, cnpj: '12345678000195', id: 'SELLER-01' };
+  payload.buyerPresence = 2;
+  payload.intermediary = { indicator: 1, cnpj: '', id: '' };
   const result = reviewFocusNfePayload(payload);
   assert.equal(check(result, 'intermediario').ok, false);
-  assert.match(check(result, 'intermediario').detail, /presença 0.*não permite intermediador/i);
+  assert.match(check(result, 'intermediario').detail, /informe um CNPJ válido.*informe o identificador/i);
   assert.equal('indicador_intermediario' in result.requestPreview, false);
   assert.equal('cnpj_intermediario' in result.requestPreview, false);
   assert.equal('id_intermediario' in result.requestPreview, false);
