@@ -103,7 +103,8 @@ test("confirmação vazia é bloqueada e uma NF-e recebida sem movimentos pode s
   assert.ok(script.includes("Preencher dados fiscais ausentes com o XML"));
   assert.ok(script.includes("Dados fiscais ausentes preenchidos com valores do XML"));
   assert.match(script, /data-fill-classification/);
-  assert.match(script, /Para confirmar a entrada, selecione o produto e marque “Lançar no estoque” em pelo menos um item/);
+  assert.match(script, /Vincule ao menos um item a um produto ativo do catálogo/);
+  assert.match(script, /marque “Incluir no estoque ao confirmar”/);
   assert.match(page, /Confirmar entrada grava movimentos/);
 });
 
@@ -112,7 +113,6 @@ test("vínculo de produto criado é salvo antes da confirmação de estoque", ()
   assert.match(script, /async function persistReviewDraft/);
   assert.match(script, /await persistReviewDraft\(\)/);
   assert.match(script, /Vínculo do produto e seleção de estoque salvos na conferência/);
-  assert.match(script, /Vínculos salvos na conferência/);
 });
 
 test("cancelamento encerra o lancamento, preserva auditoria e permite reimportar a chave", () => {
