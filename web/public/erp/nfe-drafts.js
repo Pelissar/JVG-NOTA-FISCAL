@@ -126,7 +126,7 @@
       var price = document.createElement('b');
       price.textContent = money.format(draft.totalCents / 100);
       var badge = document.createElement('span');
-      badge.textContent = draft.status === 'draft' ? 'Rascunho · ' + draft.pendingCount + ' pendência(s)' : draft.status;
+      badge.textContent = statusLabel(draft.status);
       foot.append(price, badge);
       const preview = document.createElement('small');
       preview.textContent = draft.previewTotalCents ? 'Estimativa aritmética de tributos: ' + money.format(draft.previewTotalCents / 100) + ' · não válida para emissão' : 'Sem estimativa de tributos';
@@ -140,10 +140,48 @@
     });
   }
 
+  function statusLabel(status) {
+    return {
+      draft: 'Em digitação',
+      processing: 'Na SEFAZ',
+      authorized: 'Autorizada',
+      rejected: 'Rejeitada',
+      cancelled: 'Cancelada',
+      denied: 'Denegada',
+    }[status] || 'Em digitação';
+  }
+
   function appendLine(parent, tag, value) {
     var node = document.createElement(tag);
     node.textContent = value;
     parent.append(node);
+  }
+
+  function actionButton(label, onClick) {
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'draft-inspect';
+    button.textContent = label;
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  async function runFocus(id, action, extra) {
+    report(action === 'cancel' ? 'Cancelando na Focus...' : 'Consultando a Focus...');
+    try {
+      var result = await api('/api/fiscal/nfe-transmit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.assign({ id: id, action: action }, extra || {})),
+      });
+      await refreshHistory();
+      await inspectDraft(id);
+      var blockers = Array.isArray(result.blockers) ? result.blockers.join(' ') : '';
+      report(result.message || blockers || 'Situação atualizada.');
+    } catch (error) {
+      report(error.message, 'error');
+      await inspectDraft(id);
+    }
   }
 
   async function inspectDraft(id) {
@@ -153,32 +191,35 @@
     try {
       var response = await api('/api/fiscal/nfe-drafts?id=' + encodeURIComponent(id));
       var draft = response.draft;
-      if (!draft || draft.readyToTransmit !== false || draft.transmissionEnabled !== false)
-        throw new Error('Resposta fiscal inesperada. Consulte o suporte.');
+      if (!draft || !draft.id) throw new Error('Resposta fiscal inesperada. Consulte o suporte.');
       target.replaceChildren();
       var recipient = draft.recipient || {};
-      appendLine(target, 'h3', 'Rascunho · ' + (recipient.name || 'Destinatário'));
+      var labels = { draft: 'Em digitação', processing: 'Na SEFAZ', authorized: 'Autorizada', rejected: 'Rejeitada', cancelled: 'Cancelada', denied: 'Denegada' };
+      appendLine(target, 'h3', (labels[draft.status] || 'NF-e') + ' · ' + (recipient.name || 'Destinatário'));
+      if (draft.number) appendLine(target, 'p', 'Número ' + draft.number + (draft.series ? ' · série ' + draft.series : ''));
       appendLine(target, 'p', 'Natureza: ' + (draft.nature || 'não informada'));
       appendLine(target, 'p', 'Total comercial: ' + money.format(Number(draft.totalCents || 0) / 100));
-      if (draft.preflight) {
-        appendLine(target, 'h4', 'Pré-conferência cadastral');
-        appendLine(target, 'p', draft.preflight.dataComplete ?
-          'Dados básicos presentes. Revisão fiscal e homologação ainda obrigatórias.' :
-          'Dados cadastrais incompletos: veja as pendências abaixo.');
-        appendLine(target, 'p', 'Transmissão bloqueada. Pré-conferência não substitui validação fiscal.');
+      if (draft.accessKey) appendLine(target, 'p', 'Chave: ' + draft.accessKey);
+      if (draft.sefazMessage) appendLine(target, 'p', 'SEFAZ: ' + draft.sefazMessage);
+      appendLine(target, 'p', draft.transmissionNote || 'Homologação. Sem valor fiscal.');
+      appendLine(target, 'p', 'Na homologação a SEFAZ recebe o nome de teste obrigatório. O cadastro real do cliente permanece no sistema.');
+      var blockers = Array.isArray(draft.blockers) ? draft.blockers : [];
+      appendLine(target, 'h4', 'O que impede a transmissão');
+      if (blockers.length) {
+        var blockList = document.createElement('ul');
+        blockers.forEach(function (issue) { appendLine(blockList, 'li', String(issue)); });
+        target.append(blockList);
       } else {
-        appendLine(target, 'p', 'Rascunho antigo: pré-conferência cadastral indisponível.');
+        appendLine(target, 'p', 'Nenhum bloqueio estrutural. A nota pode ir para a Focus em homologação.');
       }
       var documentReview = draft.documentReview || {};
       if (Array.isArray(documentReview.checks)) {
-        appendLine(target, 'h4', 'Checklist de preparação da NF-e');
+        appendLine(target, 'h4', 'Checklist cadastral');
         var checkList = document.createElement('ul');
         documentReview.checks.forEach(function (check) {
-          appendLine(checkList, 'li', (check.ok ? '✓ ' : 'Pendente: ') +
-            check.label + ' — ' + check.detail);
+          appendLine(checkList, 'li', (check.ok ? 'Ok: ' : 'Pendente: ') + check.label + ' — ' + check.detail);
         });
         target.append(checkList);
-        appendLine(target, 'p', 'Checklist interno: não é XML, DANFE, validação da SEFAZ ou permissão de emissão.');
       }
       appendLine(target, 'h4', 'Itens');
       var itemList = document.createElement('ul');
@@ -188,20 +229,30 @@
           ' · ' + money.format(Number(item.subtotalCents || 0) / 100));
       });
       target.append(itemList);
-      appendLine(target, 'h4', 'Pendências de conferência');
-      var pending = Array.isArray(draft.pending) ? draft.pending : [];
-      if (pending.length) {
-        var list = document.createElement('ul');
-        pending.forEach(function (issue) { appendLine(list, 'li', String(issue)); });
-        target.append(list);
-      } else {
-        appendLine(target, 'p', 'Sem pendências registradas neste rascunho. Isso não representa aprovação fiscal.');
+      if (typeof draft.danfeUrl === 'string' && draft.danfeUrl.indexOf('https://homologacao.focusnfe.com.br/') === 0) {
+        var danfe = document.createElement('a');
+        danfe.href = draft.danfeUrl;
+        danfe.target = '_blank';
+        danfe.rel = 'noopener noreferrer';
+        danfe.className = 'draft-inspect';
+        danfe.textContent = 'Abrir DANFE de homologação';
+        target.append(danfe);
       }
-      var preview = draft.taxPreview || {};
-      appendLine(target, 'h4', 'Prévia matemática não fiscal');
-      appendLine(target, 'p', 'Estimativa total: ' + money.format(Number(preview.sumOfEstimatesCents || 0) / 100) +
-        '. Não é valor autorizado, nem apuração tributária.');
-      appendLine(target, 'p', 'Emissão e transmissão indisponíveis nesta fase.');
+      var actions = document.createElement('div');
+      actions.className = 'draft-actions';
+      if (draft.readyToTransmit) actions.append(actionButton('Transmitir em homologação', function () { runFocus(draft.id, 'transmit'); }));
+      if (draft.status === 'processing' || draft.status === 'authorized' || draft.status === 'rejected') {
+        actions.append(actionButton('Atualizar situação', function () { runFocus(draft.id, 'sync'); }));
+      }
+      if (draft.status === 'authorized') {
+        var reason = document.createElement('input');
+        reason.className = 'cancel-reason';
+        reason.maxLength = 255;
+        reason.placeholder = 'Justificativa do cancelamento (15 a 255 caracteres)';
+        actions.append(reason);
+        actions.append(actionButton('Cancelar NF-e', function () { runFocus(draft.id, 'cancel', { justificativa: reason.value }); }));
+      }
+      target.append(actions);
       target.hidden = false;
       target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } catch (error) {
@@ -237,7 +288,7 @@
         state.clients.some(function (c) { return c.active && c.type !== 'EXT'; });
       saveButton.disabled = !state.ready;
       report(state.ready ?
-        'Conectado ao Supabase. Os rascunhos serão salvos somente para esta empresa e não serão transmitidos.' :
+        'Conectado. Salve o rascunho e transmita em homologação quando não houver bloqueio. Sem valor fiscal.' :
         'Cadastre pelo menos um produto e um cliente ativos no ERP para preparar a NF-e.', state.ready ? '' : 'info');
     } catch (error) {
       report('Falha ao carregar a central fiscal: ' + error.message + ' Volte ao ERP ou recarregue esta página.', 'error');
@@ -264,8 +315,7 @@
       items.replaceChildren();
       addItem();
       await refreshHistory();
-      report('Rascunho salvo no Supabase. Restam ' + result.pending.length +
-        ' conferência(s) fiscais antes de qualquer emissão. Nenhum documento foi transmitido.');
+      report('Rascunho salvo. Abra a nota para transmitir em homologação se não houver bloqueio.');
     } catch (error) {
       report('Não foi possível salvar: ' + error.message, 'error');
     } finally {

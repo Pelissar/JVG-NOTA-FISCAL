@@ -8,7 +8,7 @@
   var content = document.getElementById('content');
   var modalRoot = document.getElementById('modalRoot');
   var toastRoot = document.getElementById('toastRoot');
-  function emptyState(){return {products:[],clients:[],services:[],movements:[],companyName:'Minha empresa'};}
+  function emptyState(){return {products:[],clients:[],services:[],movements:[],notes:[],sales:[],companyName:'Minha empresa'};}
   function h(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
   function ico(name){return '<svg aria-hidden="true"><use href="#i-'+name+'"></use></svg>';}
   function money(n){return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(n)||0);}
@@ -20,7 +20,7 @@
   function banner(){
     var ready=cloud.status==='ready',needs=cloud.status==='needs_company',pending=cloud.status==='waiting_secret',login=cloud.status==='login_required';
     var title=ready?'Supabase conectado · '+h(state.companyName):needs?'Cadastro da empresa piloto pendente':pending?'Integração segura preparada · chave privada pendente':login?'Login necessário no site publicado':cloud.status==='error'?'Servidor temporariamente indisponível':'Verificando integração do Supabase';
-    var detail=ready?'Os cadastros desta empresa são salvos no servidor. A emissão de notas continua bloqueada até a homologação fiscal.':needs?'Sua conta já está identificada. Cadastre o nome da empresa para criar o ambiente isolado no banco.':pending?'Falta configurar a chave privada do banco no servidor. Não serão exibidos nem salvos cadastros enquanto a conexão estiver indisponível.':login?'Faça login no site publicado para acessar os cadastros da sua empresa.':cloud.status==='error'?'A conexão não pôde ser validada. Nenhum cadastro de exemplo será exibido; tente novamente.':'Aguarde a verificação. Os cadastros serão carregados diretamente do banco.';
+    var detail=ready?'Cadastros no Supabase. A NF-e sai em homologação pela Focus e não tem valor fiscal.':needs?'Sua conta já está identificada. Cadastre o nome da empresa para criar o ambiente isolado no banco.':pending?'Falta configurar a chave privada do banco no servidor. Não serão exibidos nem salvos cadastros enquanto a conexão estiver indisponível.':login?'Faça login no site publicado para acessar os cadastros da sua empresa.':cloud.status==='error'?'A conexão não pôde ser validada. Nenhum cadastro de exemplo será exibido; tente novamente.':'Aguarde a verificação. Os cadastros serão carregados diretamente do banco.';
     var action=needs?'<div class="heading-actions" style="margin-top:10px"><button class="btn primary" data-action="configure-company">'+ico('plus')+' Cadastrar empresa</button></div>':pending?'<div class="heading-actions" style="margin-top:10px"><button class="btn" data-view="settings">Ver configuração</button></div>':cloud.status==='error'?'<div class="heading-actions" style="margin-top:10px"><button class="btn" data-action="check-connection">Tentar novamente</button></div>':'';
     return '<div class="banner" style="border-color:'+(ready?'#76bb9c':'#d5deea')+'"><span class="banner-icon">'+ico('shield')+'</span><div class="banner-text"><strong>'+title+'</strong><p>'+detail+'</p>'+action+'</div></div>';
   }
@@ -34,13 +34,15 @@
     var low=state.products.filter(function(p){return p.active&&Number(p.stock)<=10;}).length;
     var valuation=state.products.reduce(function(s,p){return s+Number(p.stock||0)*Number(p.cost||0);},0);
     var recent=[].concat(state.movements.map(function(m){return {title:'Estoque '+(m.delta>0?'adicionado: ':'reduzido: ')+(state.products.find(function(p){return p.id===m.productId;})||{}).name,at:m.at,icon:'warehouse'};})).sort(function(a,b){return new Date(b.at)-new Date(a.at);}).slice(0,4);
-    var quick=[['Cadastrar produto','SKU, preço e dados fiscais','box','new-product'],['Novo cliente','Dados de contato','users','new-client'],['Novo serviço','Catálogo de prestação','layers','new-service'],['Ver estoque','Saldo por produto','warehouse','goto-inventory'],['Notas fiscais','Etapa de integração','receipt','goto-fiscal'],['Relatórios','Resumo do cadastro','chart','goto-reports']];
-    var modules=[['Produtos','Cadastro e fiscal','box','products'],['Clientes','Relacionamento','users','clients'],['Estoque','Saldos e ajustes','warehouse','inventory'],['Notas fiscais','5 modelos previstos','receipt','fiscal'],['Serviços','NFS-e futuro','layers','services']];
-    return heading('Bom dia! Vamos construir seu ERP.','Acompanhe a estrutura inicial da sua empresa em um único lugar.')+banner()+
-      '<div class="stats-grid">'+stat('Produtos cadastrados',state.products.length,'box','','Itens no catálogo')+stat('Clientes cadastrados',state.clients.length,'users','blue','Pessoas e empresas')+stat('Unidades em estoque',num(totalStock),'warehouse','purple',low+' produto(s) com estoque baixo')+stat('Valor de custo em estoque',money(valuation),'cash','amber','Estimativa dos itens cadastrados')+'</div>'+
+    var quick=[['Cadastrar produto','SKU, preço e dados fiscais','box','new-product'],['Novo cliente','Dados de contato','users','new-client'],['Nova venda','Pedido com baixa de estoque','cash','goto-sales'],['Ver estoque','Saldo por produto','warehouse','goto-inventory'],['Notas fiscais','NF-e em homologação','receipt','goto-fiscal'],['Relatórios','Resumo da operação','chart','goto-reports']];
+    var modules=[['Produtos','Cadastro fiscal','box','products'],['Clientes','Destinatários','users','clients'],['Estoque','Saldos e ajustes','warehouse','inventory'],['Notas fiscais','NF-e modelo 55','receipt','fiscal'],['Vendas','Pedidos confirmados','cash','finance']];
+    var notes=(state.notes||[]);
+    var authorized=notes.filter(function(n){return n.status==='authorized';}).length;
+    return heading('Painel da empresa','Cadastros, estoque, vendas e NF-e de homologação no mesmo lugar.')+banner()+
+      '<div class="stats-grid">'+stat('Produtos',state.products.length,'box','','Itens no catálogo')+stat('Clientes',state.clients.length,'users','blue','Destinatários')+stat('NF-e',notes.length,'receipt','',authorized+' autorizada(s) em homologação')+stat('Vendas',(state.sales||[]).length,'cash','amber','Pedidos confirmados')+'</div>'+
       '<div class="panel-grid"><section class="panel"><div class="panel-head"><div><h2>Acesso rápido</h2><p>Comece pelos cadastros essenciais do sistema</p></div></div><div class="panel-body"><div class="quick-grid">'+quick.map(function(x){return '<button class="quick-card" data-action="'+x[3]+'"><span class="quick-icon">'+ico(x[2])+'</span><strong>'+x[0]+'</strong><small>'+x[1]+'</small></button>';}).join('')+'</div></div></section>'+
       '<section class="panel"><div class="panel-head"><div><h2>Atividades recentes</h2><p>Movimentações registradas no banco</p></div><button data-view="inventory">Ver estoque</button></div><div class="panel-body"><div class="timeline">'+(recent.length?recent.map(function(x){return '<div class="timeline-row"><span class="timeline-dot">'+ico(x.icon)+'</span><div class="timeline-info"><strong>'+h(x.title)+'</strong><small>'+dateStr(x.at)+'</small></div></div>';}).join(''):'<div class="empty-mini">Nenhuma movimentação registrada ainda. Cadastre ou ajuste itens para começar.</div>')+'</div></div></section></div>'+
-      '<div class="section-row"><h2 class="section-title">Módulos do sistema</h2><span class="small-note">Versão piloto · Módulos em evolução</span></div><div class="module-grid">'+modules.map(function(x){return '<button class="module-card" data-view="'+x[3]+'">'+ico(x[2])+'<strong>'+x[0]+'</strong><small>'+x[1]+'</small></button>';}).join('')+'</div>';
+      '<div class="section-row"><h2 class="section-title">Módulos</h2><span class="small-note">'+num(totalStock)+' un. em estoque · custo '+money(valuation)+'</span></div><div class="module-grid">'+modules.map(function(x){return '<button class="module-card" data-view="'+x[3]+'">'+ico(x[2])+'<strong>'+x[0]+'</strong><small>'+x[1]+'</small></button>';}).join('')+'</div>';
   }
   function products(){
     var rows=state.products.filter(function(p){return matches(p,['sku','name','category','ncm','gtin']);});
@@ -62,14 +64,21 @@
     var body=rows.length?'<div class="table-wrap"><table><thead><tr><th>Produto</th><th>SKU</th><th>Saldo</th><th>Custo un.</th><th>Valor de custo</th><th>Situação</th><th class="text-right">Ação</th></tr></thead><tbody>'+rows.map(function(p){var low=Number(p.stock)<=10;return '<tr><td><strong>'+h(p.name)+'</strong></td><td class="mono">'+h(p.sku)+'</td><td><strong>'+num(p.stock)+'</strong> '+h(p.unit)+'</td><td>'+money(p.cost)+'</td><td class="inline-price">'+money(Number(p.stock)*Number(p.cost))+'</td><td><span class="badge '+(low?'amber':'green')+'">'+(low?'Estoque baixo':'Disponível')+'</span></td><td><div class="table-actions"><button class="btn sm" data-action="adjust-stock" data-id="'+h(p.id)+'">Ajustar saldo</button></div></td></tr>';}).join('')+'</tbody></table></div>':empty('warehouse','Sem produtos em estoque','Cadastre produtos para fazer ajustes locais.','new-product','Cadastrar produto');
     return heading('Controle de estoque','Visualize saldos e registre ajustes reais da sua empresa.','new-product','Cadastrar produto')+banner()+tableShell('Buscar SKU ou descrição...',body,rows.length,'products');
   }
+  function noteLabel(status){
+    return {draft:'Em digitação',processing:'Na SEFAZ',authorized:'Autorizada',rejected:'Rejeitada',cancelled:'Cancelada',denied:'Denegada'}[status]||'Em digitação';
+  }
+  function noteBadge(status){
+    var color=status==='authorized'?'green':status==='rejected'||status==='denied'?'amber':status==='processing'?'blue':'gray';
+    return '<span class="badge '+color+'">'+h(noteLabel(status))+'</span>';
+  }
   function fiscal(){
-    var models=[['NF-e','Modelo 55','Venda de mercadorias e operações fiscais','receipt'],['NFC-e','Modelo 65','Venda ao consumidor e frente de caixa','cash'],['NFS-e','Padrão Nacional','Prestação de serviços / DPS','layers'],['CT-e','Modelo 57','Conhecimento de transporte eletrônico','truck'],['MDF-e','Modelo 58','Manifesto eletrônico de documentos','warehouse']];
-    return heading('Central de notas fiscais','Os cinco modelos já estão previstos na navegação do JVG.')+banner()+
-      '<section class="panel" style="margin-bottom:22px"><div class="panel-head"><div><h2>NF-e · Rascunhos em homologação</h2><p>Primeira etapa do fluxo fiscal: preparar e salvar notas sem transmitir à SEFAZ</p></div><a class="btn primary" href="/erp/nfe-drafts.html">Abrir rascunhos NF-e →</a></div><div class="panel-body"><p class="small-note">Selecione destinatários e produtos cadastrados. Os campos fiscais e tributos precisam de revisão do contador antes da futura integração de emissão.</p></div></section>'+ 
-      '<section class="panel" style="margin-bottom:22px"><div class="panel-head"><div><h2>Perfis tributários</h2><p>Cadastre e revise as regras fiscais da empresa para a futura NF-e</p></div><a class="btn primary" href="/erp/tax-profiles.html">Abrir perfis fiscais →</a></div></section>'+ 
-      '<section class="panel" style="margin-bottom:22px"><div class="panel-head"><div><h2>Tabela nacional de CFOP</h2><p>619 códigos com títulos e descrições oficiais; personalize o nome usado pela empresa</p></div><a class="btn primary" href="/erp/cfop.html">Consultar CFOP →</a></div></section>'+
-      '<div class="fiscal-grid">'+models.map(function(x){return '<article class="fiscal-card"><div class="fiscal-card-top"><div class="fiscal-icon">'+ico(x[3])+'</div><span class="badge amber">Em preparação</span></div><h3>'+x[0]+' <span class="muted" style="font-weight:400;font-size:10px">'+x[1]+'</span></h3><p>'+x[2]+'. A transmissão real será habilitada após validação fiscal e homologação do emissor.</p><div class="fiscal-bottom"><span>Credenciamento fiscal em andamento</span><span>'+ico('clock')+'</span></div></article>';}).join('')+'</div>'+
-      '<div class="section-row"><h2 class="section-title">Próximas configurações fiscais</h2></div><div class="setup-steps"><article class="setup-step"><span class="step-count">01 / DADOS</span><strong>Empresa e regime</strong><p>CNPJ real, inscrições, endereço, regime tributário e responsável fiscal.</p></article><article class="setup-step"><span class="step-count">02 / CERTIFICADO</span><strong>Certificado A1 e integração fiscal</strong><p>Cadastro seguro do emitente, credenciais por ambiente e CSC quando aplicável.</p></article><article class="setup-step"><span class="step-count">03 / HOMOLOGAÇÃO</span><strong>Regras e testes</strong><p>Conferência com contador e autorização de casos reais em ambiente de homologação.</p></article></div>';
+    var rows=(state.notes||[]).filter(function(n){return String(n.recipientName||'').toLowerCase().indexOf(query.toLowerCase())!==-1;});
+    var body=rows.length?'<div class="table-wrap"><table><thead><tr><th>Destinatário</th><th>Emissão</th><th>Itens</th><th>Valor</th><th>Situação</th><th class="text-right">Ação</th></tr></thead><tbody>'+rows.map(function(n){return '<tr><td><strong>'+h(n.recipientName)+'</strong></td><td>'+dateStr(n.createdAt)+'</td><td>'+h(n.itemsCount)+'</td><td class="inline-price">'+money(Number(n.totalCents||0)/100)+'</td><td>'+noteBadge(n.status)+'</td><td class="text-right"><a class="btn sm" href="/erp/nfe-drafts.html">Abrir</a></td></tr>';}).join('')+'</tbody></table></div>':empty('receipt','Nenhuma NF-e ainda','Cadastre cliente e produto, depois monte a primeira nota em homologação.','goto-fiscal','');
+    var emptyAction='<div class="empty-state"><div class="empty-icon">'+ico('receipt')+'</div><h3>Nenhuma NF-e ainda</h3><p>Cadastre cliente e produto e monte a primeira nota em homologação.</p><a class="btn primary" href="/erp/nfe-drafts.html">Nova NF-e</a></div>';
+    if(!rows.length) body=emptyAction;
+    return heading('Notas fiscais','NF-e modelo 55. A transmissão é de homologação, pela Focus, e não tem valor fiscal.')+banner()+
+      '<div class="heading-actions" style="margin:-8px 0 18px"><a class="btn primary" href="/erp/nfe-drafts.html">'+ico('plus')+' Nova NF-e</a><a class="btn" href="/erp/tax-profiles.html">Perfis tributários</a><a class="btn" href="/erp/cfop.html">Tabela CFOP</a></div>'+
+      '<section class="table-panel">'+body+'<div class="table-summary"><span>'+rows.length+' nota(s)</span><span>Homologação · sem valor fiscal</span></div></section>';
   }
   function simpleSoon(title,subtitle,icon,features){
     return heading(title,subtitle)+banner()+'<section class="panel wide-info"><div class="panel-body">'+empty(icon,'Módulo preparado para as próximas etapas','A navegação e a arquitetura deste módulo estão previstas. Ainda não há operação real nesta primeira versão.')+'<div class="info-list">'+features.map(function(x){return '<div class="info-row"><span>'+h(x[0])+'</span><strong>'+h(x[1])+'</strong></div>';}).join('')+'</div></div></section>';
@@ -79,12 +88,12 @@
     var saleValue=state.products.reduce(function(sum,p){return sum+Number(p.stock)*Number(p.price);},0);
     return heading('Relatórios','Indicadores básicos dos seus cadastros locais.')+banner()+
       '<div class="stats-grid">'+stat('Itens de produto',state.products.length,'box','','Total cadastrado')+stat('Serviços cadastrados',state.services.length,'layers','blue','No catálogo')+stat('Custo do estoque',money(stockValue),'cash','amber','Valor estimado')+stat('Preço de estoque',money(saleValue),'chart','purple','Potencial de venda teórico')+'</div>'+
-      '<section class="panel"><div class="panel-head"><div><h2>Exportar cadastros</h2><p>Planilhas CSV dos registros da empresa</p></div></div><div class="panel-body"><div class="heading-actions"><button class="btn" data-action="export-products">'+ico('download')+' Produtos</button><button class="btn" data-action="export-clients">'+ico('download')+' Clientes</button><button class="btn" data-action="export-services">'+ico('download')+' Serviços</button></div><p class="small-note" style="margin-top:18px">Relatórios financeiros, fiscais e contábeis ficam para as etapas integradas ao servidor.</p></div></section>';
+      '<section class="panel"><div class="panel-head"><div><h2>Exportar cadastros</h2><p>Planilhas CSV dos registros da empresa</p></div></div><div class="panel-body"><div class="heading-actions"><button class="btn" data-action="export-products">'+ico('download')+' Produtos</button><button class="btn" data-action="export-clients">'+ico('download')+' Clientes</button><button class="btn" data-action="export-services">'+ico('download')+' Serviços</button></div><p class="small-note" style="margin-top:18px">As vendas confirmadas também aparecem em Financeiro.</p></div></section>';
   }
   function settings(){
     var ready=cloud.status==='ready';
     var missing=ready&&cloud.company&&Array.isArray(cloud.company.fiscal_missing)?cloud.company.fiscal_missing:[];
-    var items=[['Usuário identificado',cloud.displayName||'Aguardando verificação'],['Empresa',state.companyName||'Aguardando empresa'],['Banco de dados',ready?'Supabase conectado':cloud.status==='needs_company'?'Aguardando cadastro da empresa':'Aguardando conexão'],['Dados dos cadastros',ready?'Persistidos no Supabase':'Nenhum dado local exibido'],['Regime da empresa piloto','Simples Nacional'],['Cadastro fiscal',ready?(missing.length?missing.length+' informação(ões) pendente(s)':'Dados preenchidos · revisão fiscal necessária'):'Aguardando empresa'],['Integração fiscal','Homologação em preparação'],['Certificado A1','Credenciamento fiscal a validar'],['Emissão oficial','Bloqueada até habilitação fiscal']];
+    var items=[['Usuário identificado',cloud.displayName||'Aguardando verificação'],['Empresa',state.companyName||'Aguardando empresa'],['Banco de dados',ready?'Supabase conectado':cloud.status==='needs_company'?'Aguardando cadastro da empresa':'Aguardando conexão'],['Dados dos cadastros',ready?'Persistidos no Supabase':'Nenhum dado local exibido'],['Regime','Simples Nacional'],['Cadastro fiscal',ready?(missing.length?missing.length+' pendência(s) no emitente':'Emitente preenchido'):'Aguardando empresa'],['Emissão','Homologação Focus · produção desligada'],['Certificado A1','Fica na Focus, não neste sistema'],['Valor fiscal','Nenhum em homologação']];
     var action=ready?'<button class="btn primary" data-action="configure-company">'+ico('edit')+' Editar empresa</button>':cloud.status==='needs_company'?'<button class="btn primary" data-action="configure-company">'+ico('plus')+' Cadastrar empresa piloto</button>':'<button class="btn" data-action="check-connection">'+ico('check')+' Verificar conexão</button>';
     return heading('Configurações','Sua conta, empresa piloto e configurações fiscais seguras.')+banner()+
       '<div class="settings-grid"><section class="panel wide-info"><div class="panel-head"><div><h2>Cadastro fiscal do emitente</h2><p>Dados da empresa para preparar a NF-e em homologação</p></div></div><div class="panel-body"><div class="info-list">'+items.map(function(x){return '<div class="info-row"><span>'+h(x[0])+'</span><strong>'+h(x[1])+'</strong></div>';}).join('')+'</div>'+
@@ -97,10 +106,28 @@
     var companyTitle=document.querySelector('.workspace-switch strong');if(companyTitle)companyTitle.textContent=state.companyName;
     document.querySelectorAll('.nav-link').forEach(function(b){b.classList.toggle('active',b.dataset.view===view);});
     var views={dashboard:dashboard,products:products,clients:clients,services:services,fiscal:fiscal,inventory:inventory,reports:reports,settings:settings};
-    if(view==='finance')content.innerHTML=simpleSoon('Financeiro','Contas, parcelas, caixa e conciliação futura.','cash',[['Contas a receber','Planejadas'],['Contas a pagar','Planejadas'],['Conciliação bancária','Planejada']]);
-    else if(view==='transport')content.innerHTML=simpleSoon('Transporte','Cadastros e operações de CT-e e MDF-e em etapas futuras.','truck',[['Transportadoras e motoristas','Planejados'],['CT-e','Planejado'],['MDF-e','Planejado']]);
+    if(view==='finance')content.innerHTML=finance();
+    else if(view==='transport')content.innerHTML=transport();
     else content.innerHTML=(views[view]||dashboard)();
     var search=document.getElementById('globalSearch');search.value=query;
+  }
+  function finance(){
+    var sales=state.sales||[];
+    var total=sales.reduce(function(sum,sale){return sum+Number(sale.total||0);},0);
+    var rows=sales.filter(function(sale){return String(sale.status||'').toLowerCase().indexOf(query.toLowerCase())!==-1||!query;});
+    var body=rows.length?'<div class="table-wrap"><table><thead><tr><th>Data</th><th>Situação</th><th>Total</th></tr></thead><tbody>'+rows.map(function(sale){return '<tr><td>'+dateStr(sale.created_at)+'</td><td>'+h(sale.status||'confirmada')+'</td><td class="inline-price">'+money(sale.total)+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty-state"><div class="empty-icon">'+ico('cash')+'</div><h3>Nenhuma venda confirmada</h3><p>O contas a receber desta versão nasce das vendas. Confirme um pedido para ele aparecer aqui.</p><a class="btn primary" href="/erp/sales.html">Nova venda</a></div>';
+    return heading('Financeiro','Contas a receber das vendas confirmadas. Ainda não há boleto nem conciliação.')+banner()+
+      '<div class="stats-grid">'+stat('Vendas',sales.length,'cash','','Pedidos no Supabase')+stat('Total vendido',money(total),'chart','amber','Soma dos pedidos')+'</div>'+
+      '<div class="heading-actions" style="margin-bottom:16px"><a class="btn primary" href="/erp/sales.html">'+ico('plus')+' Nova venda</a></div>'+
+      '<section class="table-panel">'+body+'</section>';
+  }
+  function transport(){
+    return heading('Transporte','Frete da NF-e. CT-e e MDF-e não são emitidos nesta versão.')+banner()+
+      '<section class="panel wide-info"><div class="panel-body"><div class="info-list">'+
+      '<div class="info-row"><span>Modalidade enviada à Focus</span><strong>9 · Sem frete</strong></div>'+
+      '<div class="info-row"><span>CT-e</span><strong>Fora desta versão</strong></div>'+
+      '<div class="info-row"><span>MDF-e</span><strong>Fora desta versão</strong></div>'+
+      '</div><p class="small-note" style="margin-top:16px">A nota de produto sai sem frete. Quando houver entrega por conta do emitente, o frete entra numa próxima versão da NF-e.</p><div class="heading-actions" style="margin-top:16px"><a class="btn primary" href="/erp/nfe-drafts.html">Abrir NF-e</a></div></div></section>';
   }
   function setView(next){if(!labels[next])return;view=next;query='';filter='all';document.getElementById('sidebar').classList.remove('open');document.getElementById('mobileBackdrop').classList.remove('active');render();document.querySelector('.main-column').scrollTop=0;}
   function field(name,label,value,extra,full,help){return '<div class="field '+(full?'full':'')+'"><label for="f-'+h(name)+'">'+h(label)+'</label><input id="f-'+h(name)+'" name="'+h(name)+'" value="'+h(value==null?'':value)+'" '+(extra||'')+'>'+(help?'<small>'+h(help)+'</small>':'')+'</div>';}
@@ -184,7 +211,10 @@
   }
   async function refreshCloud(){
     var data=await callApi('/api/records');
-    state={products:data.products||[],clients:data.clients||[],services:data.services||[],movements:data.movements||[],companyName:data.companyName||'Minha empresa'};
+    var notes=[],sales=[];
+    try{var nfe=await callApi('/api/fiscal/nfe-drafts');notes=nfe.drafts||[];}catch(e){notes=[];}
+    try{var sold=await callApi('/api/sales');sales=sold.sales||[];}catch(e){sales=[];}
+    state={products:data.products||[],clients:data.clients||[],services:data.services||[],movements:data.movements||[],notes:notes,sales:sales,companyName:data.companyName||'Minha empresa'};
     render();
   }
   var checkingConnection=false;
@@ -358,6 +388,7 @@
     if(a.indexOf('remove-')===0){removeRecord(a.substring(7),recordId);return;}
     if(a.indexOf('export-')===0){exportCsv(a.substring(7));return;}
     if(a==='adjust-stock'){adjustStock(recordId);return;}
+    if(a==='goto-sales'){window.location.assign('/erp/sales.html');return;}
     if(a.indexOf('goto-')===0){setView(a.substring(5));return;}
   });
   document.addEventListener('submit',function(e){if(e.target.id==='recordForm'){e.preventDefault();saveRecord(e.target);}if(e.target.id==='stockForm'){e.preventDefault();saveStock(e.target);}if(e.target.id==='companyForm'){e.preventDefault();saveCompany(e.target);}});

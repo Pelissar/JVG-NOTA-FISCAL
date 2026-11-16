@@ -53,9 +53,9 @@ A configuração de deploy libera **somente** as duas variáveis públicas `NEXT
 
 No painel web, vá em **Configurações → Editar empresa** para informar CNPJ, IE, IM, CNAE, contato fiscal, endereço completo com CEP/código IBGE e série/numeração planejada da NF-e de homologação. Os campos ficam em `public.jvg_companies`, com endereço em `address` (JSONB), sob autenticação e vínculo com a empresa.
 
-O CNPJ aceita os formatos numérico e alfanumérico em vigor desde julho de 2026, com validação de dígitos verificadores pela regra da Receita Federal (ASCII - 48, módulo 11). O sistema permite **rascunhos incompletos**, mas apresenta a lista de campos pendentes. Dados preenchidos não representam autorização fiscal: emissão permanece desativada até revisão do contador e credenciamento Focus/SEFAZ.
+O CNPJ aceita os formatos numérico e alfanumérico em vigor desde julho de 2026, com validação de dígitos verificadores pela regra da Receita Federal (ASCII - 48, módulo 11). O sistema permite **rascunhos incompletos**, mas a transmissão só segue quando o emitente, o destinatário e os itens passam na checagem estrutural.
 
-**Estado fiscal:** a transmissão pela Focus NFe permanece desativada. Não há emissão real de NF-e/NFS-e nesta versão.
+**Estado fiscal:** `POST /api/fiscal/nfe-transmit` envia a NF-e somente para `https://homologacao.focusnfe.com.br`, para a empresa piloto, com o token no servidor. Produção não é chamada. A resposta da Focus é gravada no Supabase.
 
 ### Focus NFe — passo de homologação
 
@@ -65,7 +65,7 @@ O CNPJ aceita os formatos numérico e alfanumérico em vigor desde julho de 2026
    O botão de diagnóstico e o nome do fornecedor foram retirados do painel comum e da central fiscal. Os dados de diagnóstico ficam restritos à administração; o UUID de outra empresa e o token não são revelados.
 4. Próxima fase: cadastro fiscal completo de emitente/destinatário/produtos, motor de validações e NF-e de teste com referência idempotente, depois consulta de resultado, XML, DANFE e eventos.
 
-Esse endpoint de validação não emite, cancela nem altera documentos. A emissão continuará bloqueada até os requisitos fiscais estarem conferidos. O token de homologação é exclusivo da empresa piloto; cada empresa comercial precisará de credenciais próprias e isolamento por tenant.
+Esse endpoint de validação não emite, cancela nem altera documentos. A emissão de homologação fica em POST /api/fiscal/nfe-transmit. O token é exclusivo da empresa piloto; cada empresa comercial precisará de credenciais próprias.
 
 Leia também o [README da raiz](../README.md) para o procedimento de publicação na Netlify.
 
