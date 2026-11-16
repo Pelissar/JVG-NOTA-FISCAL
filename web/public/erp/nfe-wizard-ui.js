@@ -292,11 +292,23 @@
     intermediaryHint.className = 'hint';
     intermediaryHint.textContent = 'CNPJ e identificador são exigidos somente quando houver intermediador.';
     intermediary.append(intermediaryHeading, intermediaryText, intermediaryGrid, intermediaryHint);
+    function syncIntermediaryAvailability() {
+      var notApplicable = form.elements.namedItem('buyerPresence').value === '0';
+      intermediaryGrid.hidden = notApplicable;
+      indicator.input.disabled = notApplicable;
+      intermediaryHint.textContent = notApplicable
+        ? (indicator.input.value === '1'
+          ? 'A presença 0 não combina com uma plataforma de terceiros. Corrija a presença conforme a operação real; a SEFAZ rejeita o indicador nesta combinação.'
+          : 'Presença 0 (não se aplica): o indicador e os dados de intermediador serão omitidos conforme a regra da SEFAZ.')
+        : 'CNPJ e identificador são exigidos somente quando houver intermediador.';
+    }
     indicator.input.addEventListener('change', function () {
       var show = indicator.input.value === '1';
       cnpj.wrapper.hidden = intermediaryId.wrapper.hidden = !show;
+      syncIntermediaryAvailability();
       renderReview();
     });
+    form.elements.namedItem('buyerPresence').addEventListener('change', syncIntermediaryAvailability);
 
     var review = sections.review;
     review.replaceChildren();
@@ -341,6 +353,7 @@
     form.addEventListener('change', onFormEdited);
     document.getElementById('recipientId').addEventListener('change', renderRecipient);
     renderRecipient();
+    syncIntermediaryAvailability();
     refreshComputed();
     updateRequiredMarkers();
     syncStepAccess();
@@ -413,9 +426,11 @@
 
   function updateRequiredMarkers() {
     ['nature', 'issueAt', 'consumerFinal', 'buyerPresence', 'recipientId', 'recipientIeIndicator',
-      'transportMode', 'intermediaryIndicator'].forEach(function (name) {
+      'transportMode'].forEach(function (name) {
       requiredControl(form.elements.namedItem(name), true);
     });
+    var buyerPresence = form.elements.namedItem('buyerPresence').value;
+    requiredControl(form.elements.namedItem('intermediaryIndicator'), buyerPresence !== '0');
     Array.from(document.querySelectorAll('#items .item-row')).forEach(function (row) {
       ['.product', '.quantity', '.price', '.cfop', '.csosn', '.pis-cst', '.cofins-cst', '.item-ncm', '.item-origin']
         .forEach(function (selector) { requiredControl(row.querySelector(selector), true); });
@@ -714,9 +729,11 @@
       if (Number(value('volumeNetWeight')) > Number(value('volumeGrossWeight')) && value('volumeGrossWeight'))
         addStepError(errors, form.elements.namedItem('volumeNetWeight'), 'O peso líquido não pode superar o peso bruto.');
     }
-    if (key === 'intermediary' && !['0', '1'].includes(value('intermediaryIndicator')))
+    if (key === 'intermediary' && value('buyerPresence') === '0' && value('intermediaryIndicator') === '1')
+      addStepError(errors, form.elements.namedItem('buyerPresence'), 'A presença 0 não permite plataforma intermediadora. Se a venda ocorreu por marketplace, selecione o canal real da operação.');
+    if (key === 'intermediary' && value('buyerPresence') !== '0' && !['0', '1'].includes(value('intermediaryIndicator')))
       addStepError(errors, form.elements.namedItem('intermediaryIndicator'), 'Indique se a venda ocorreu sem intermediador ou por plataforma de terceiros.');
-    if (key === 'intermediary' && value('intermediaryIndicator') === '1') {
+    if (key === 'intermediary' && value('buyerPresence') !== '0' && value('intermediaryIndicator') === '1') {
       if (!cnpjIsValid(value('intermediaryCnpj')))
         addStepError(errors, form.elements.namedItem('intermediaryCnpj'), 'Informe o CNPJ de 14 dígitos da plataforma intermediadora.');
       if (value('intermediaryId').length < 2 || value('intermediaryId').length > 60)
@@ -934,6 +951,8 @@
     addReviewLine(target, 'Destinatário', selectedText);
     var ie = form.elements.namedItem('recipientIeIndicator');
     addReviewLine(target, 'Indicador de IE', ie && ie.selectedOptions[0] ? ie.selectedOptions[0].textContent : 'Pendente de confirmação');
+    var buyerPresence = form.elements.namedItem('buyerPresence');
+    addReviewLine(target, 'Presença do comprador', buyerPresence && buyerPresence.selectedOptions[0] ? buyerPresence.selectedOptions[0].textContent : 'Pendente de confirmação');
     addReviewLine(target, 'Produtos', String(document.querySelectorAll('#items .item-row').length));
     addReviewLine(target, 'CFOP', document.getElementById('headerCfopSummary').value || 'Por item / revisar');
     var exitAt = fieldValue('exitAt');
@@ -941,7 +960,9 @@
     var transportMode = form.elements.namedItem('transportMode');
     addReviewLine(target, 'Frete', transportMode && transportMode.selectedOptions[0] ? transportMode.selectedOptions[0].textContent : 'Pendente de confirmação');
     var intermediary = fieldValue('intermediaryIndicator');
-    addReviewLine(target, 'Intermediador', intermediary === '1' ? 'Plataforma de terceiros' : 'Sem intermediador (padrão Focus: 0)');
+    addReviewLine(target, 'Intermediador', fieldValue('buyerPresence') === '0'
+      ? (intermediary === '1' ? 'Incompatível com presença 0; corrija a operação' : 'Não se aplica; campo omitido')
+      : intermediary === '1' ? 'Plataforma de terceiros' : 'Sem intermediador (padrão Focus: 0)');
     var payments = Array.from(document.querySelectorAll('#payments .payment-row')).map(function (row) {
       var method = row.querySelector('[name="paymentMethod"]');
       var amount = row.querySelector('[name="paymentAmount"]');
@@ -1083,6 +1104,7 @@
     if (issueAt) issueAt.dataset.userEdited = issueAt.value ? 'true' : 'false';
     set('consumerFinal', data.consumerFinal == null ? '' : data.consumerFinal ? '1' : '0');
     set('buyerPresence', data.buyerPresence);
+    form.elements.namedItem('buyerPresence').dispatchEvent(new Event('change', { bubbles: true }));
     set('recipientIeIndicator', data.recipientIeIndicator);
     set('transportMode', data.transportMode);
     set('carrierId', data.carrier && data.carrier.id);

@@ -385,3 +385,28 @@ test('intermediador ausente usa o padrão 0 documentado pela Focus e não bloque
   assert.equal(result.requestPreview.indicador_intermediario, 0);
   assert.match(check(result, 'intermediario').detail, /valor padrão 0 documentado pela Focus/i);
 });
+
+test('buyer presence 0 omits intermediary fields to avoid SEFAZ rejection 435', () => {
+  const payload = focusPayload();
+  payload.buyerPresence = 0;
+  payload.intermediary = { indicator: 0, cnpj: '', id: '' };
+  const result = reviewFocusNfePayload(payload);
+  assert.equal(result.requestPreview.presenca_comprador, 0);
+  assert.equal(check(result, 'intermediario').ok, true);
+  assert.match(check(result, 'intermediario').detail, /presença 0.*omitidos.*435/i);
+  assert.equal('indicador_intermediario' in result.requestPreview, false);
+  assert.equal('cnpj_intermediario' in result.requestPreview, false);
+  assert.equal('id_intermediario' in result.requestPreview, false);
+});
+
+test('third-party intermediary conflicts with buyer presence 0 and blocks transmission', () => {
+  const payload = focusPayload();
+  payload.buyerPresence = 0;
+  payload.intermediary = { indicator: 1, cnpj: '12345678000195', id: 'SELLER-01' };
+  const result = reviewFocusNfePayload(payload);
+  assert.equal(check(result, 'intermediario').ok, false);
+  assert.match(check(result, 'intermediario').detail, /presença 0.*não permite intermediador/i);
+  assert.equal('indicador_intermediario' in result.requestPreview, false);
+  assert.equal('cnpj_intermediario' in result.requestPreview, false);
+  assert.equal('id_intermediario' in result.requestPreview, false);
+});
