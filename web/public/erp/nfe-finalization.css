@@ -35,7 +35,7 @@
 .finalize-actions .save-button:disabled { opacity: .5; cursor: not-allowed; }
 .nfe-grid > .side > .next-panel { display: none !important; }
 .nfe-grid > .side { align-content: start; }
-.nfe-grid > .side .history { position: sticky; top: 88px; }
+.nfe-grid > .side .history { position: static; align-self: start; }
 .history-all-link { align-self: center; white-space: nowrap; color: var(--accent-strong) !important; font-size: 11px; font-weight: 750; text-decoration: none; }
 .history-all-link:hover { text-decoration: underline; }
 .fiscal-shortcuts .panel-body { display: grid; gap: 8px; }
@@ -49,4 +49,10 @@
   .finalize-actions { display: grid; grid-template-columns: 1fr; }
   .finalize-actions button { width: 100%; }
   .nfe-grid > .side .history { position: static; }
+}
+
+/* Evita painel lateral estreito ou flutuando sobre o formulário. */
+@media (max-width: 1480px) {
+  .nfe-grid { grid-template-columns: minmax(0, 1fr); }
+  .nfe-grid > .side { grid-template-columns: minmax(0, 1fr); }
 }
