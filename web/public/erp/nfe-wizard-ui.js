@@ -293,15 +293,18 @@
     intermediaryHint.textContent = 'CNPJ e identificador são exigidos somente quando houver intermediador.';
     intermediary.append(intermediaryHeading, intermediaryText, intermediaryGrid, intermediaryHint);
     function syncIntermediaryAvailability() {
-      var notApplicable = form.elements.namedItem('buyerPresence').value === '0';
-      intermediaryGrid.hidden = notApplicable;
-      indicator.input.disabled = notApplicable;
-      intermediaryHint.textContent = notApplicable
-        ? 'Esta emissão é uma NF-e normal: presença 0 (não se aplica) não é aceita. Escolha como a operação realmente ocorreu antes de avançar.'
-        : 'CNPJ e identificador são exigidos somente quando houver intermediador.';
+      var presence = form.elements.namedItem('buyerPresence').value;
+      var applicable = ['2', '3', '4', '9'].includes(presence);
+      intermediaryGrid.hidden = !applicable;
+      indicator.input.disabled = !applicable;
+      var showThirdPartyFields = applicable && indicator.input.value === '1';
+      cnpj.wrapper.hidden = intermediaryId.wrapper.hidden = !showThirdPartyFields;
+      intermediaryHint.textContent = applicable
+        ? 'Para esta forma de operação, indique se houve plataforma de terceiros. CNPJ e identificador só são pedidos quando houver intermediador.'
+        : 'Para esta presença, a SEFAZ proíbe o campo intermediador; o ERP vai omiti-lo automaticamente (regra 435).';
     }
     indicator.input.addEventListener('change', function () {
-      var show = indicator.input.value === '1';
+      var show = ['2', '3', '4', '9'].includes(form.elements.namedItem('buyerPresence').value) && indicator.input.value === '1';
       cnpj.wrapper.hidden = intermediaryId.wrapper.hidden = !show;
       syncIntermediaryAvailability();
       renderReview();
@@ -661,7 +664,6 @@
       if (!issueAt || !Number.isFinite(new Date(issueAt).getTime())) addStepError(errors, form.elements.namedItem('issueAt'), 'Informe data e hora válidas; o campo é preenchido automaticamente e pode ser alterado.');
       if (!['0', '1'].includes(value('consumerFinal'))) addStepError(errors, form.elements.namedItem('consumerFinal'), 'Indique se esta operação é destinada a consumidor final.');
       if (!['0', '1', '2', '3', '4', '5', '9'].includes(value('buyerPresence'))) addStepError(errors, form.elements.namedItem('buyerPresence'), 'Indique a presença ou o canal real da operação.');
-      if (value('buyerPresence') === '0') addStepError(errors, form.elements.namedItem('buyerPresence'), 'Esta emissão é uma NF-e normal. Escolha a condição real da operação (presencial, internet, teleatendimento, fora do estabelecimento ou outro); “não se aplica” é usado em situações como nota complementar ou de ajuste.');
     }
     if (key === 'recipient') validateRecipientStep(errors);
     if (key === 'items') validateItemsStep(errors);
@@ -728,11 +730,10 @@
       if (Number(value('volumeNetWeight')) > Number(value('volumeGrossWeight')) && value('volumeGrossWeight'))
         addStepError(errors, form.elements.namedItem('volumeNetWeight'), 'O peso líquido não pode superar o peso bruto.');
     }
-    if (key === 'intermediary' && value('buyerPresence') === '0')
-      addStepError(errors, form.elements.namedItem('buyerPresence'), 'Esta emissão é uma NF-e normal; presença 0 não se aplica. Escolha a condição real da operação antes de enviar.');
-    if (key === 'intermediary' && value('buyerPresence') !== '0' && !['0', '1'].includes(value('intermediaryIndicator')))
+    var presenceUsesIntermediary = ['2', '3', '4', '9'].includes(value('buyerPresence'));
+    if (key === 'intermediary' && presenceUsesIntermediary && !['0', '1'].includes(value('intermediaryIndicator')))
       addStepError(errors, form.elements.namedItem('intermediaryIndicator'), 'Indique se a venda ocorreu sem intermediador ou por plataforma de terceiros.');
-    if (key === 'intermediary' && value('buyerPresence') !== '0' && value('intermediaryIndicator') === '1') {
+    if (key === 'intermediary' && presenceUsesIntermediary && value('intermediaryIndicator') === '1') {
       if (!cnpjIsValid(value('intermediaryCnpj')))
         addStepError(errors, form.elements.namedItem('intermediaryCnpj'), 'Informe o CNPJ de 14 dígitos da plataforma intermediadora.');
       if (value('intermediaryId').length < 2 || value('intermediaryId').length > 60)
@@ -959,9 +960,10 @@
     var transportMode = form.elements.namedItem('transportMode');
     addReviewLine(target, 'Frete', transportMode && transportMode.selectedOptions[0] ? transportMode.selectedOptions[0].textContent : 'Pendente de confirmação');
     var intermediary = fieldValue('intermediaryIndicator');
-    addReviewLine(target, 'Intermediador', fieldValue('buyerPresence') === '0'
-      ? 'Emissão bloqueada: presença 0 não se aplica a esta NF-e normal'
-      : intermediary === '1' ? 'Plataforma de terceiros' : 'Sem intermediador (padrão Focus: 0)');
+    var buyerPresence = fieldValue('buyerPresence');
+    addReviewLine(target, 'Intermediador', ['2', '3', '4', '9'].includes(buyerPresence)
+      ? intermediary === '1' ? 'Plataforma de terceiros' : 'Sem intermediador (padrão Focus: 0)'
+      : 'Campo omitido para presença ' + (buyerPresence || 'não selecionada') + ' (regra SEFAZ 435)');
     var payments = Array.from(document.querySelectorAll('#payments .payment-row')).map(function (row) {
       var method = row.querySelector('[name="paymentMethod"]');
       var amount = row.querySelector('[name="paymentAmount"]');
