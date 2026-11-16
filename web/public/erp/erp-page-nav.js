@@ -66,7 +66,7 @@
   var nav = document.createElement('header');
   nav.className = 'erp-global-nav';
   nav.innerHTML = '<a class="erp-global-brand" href="/erp/index.html"><img src="/branding/sigmafiscal-icon.svg" alt=""><span><strong>SigmaFiscal</strong><small>GESTÃO DA EMPRESA</small></span></a>' +
-    '<button class="erp-nav-toggle" type="button" aria-expanded="false" aria-controls="erpGlobalLinks">Menu</button>' +
+    '<button class="erp-nav-toggle" type="button" aria-expanded="false" aria-controls="erpGlobalLinks"><span aria-hidden="true">☰</span><span>Módulos</span></button>' +
     '<nav class="erp-global-links" id="erpGlobalLinks" aria-label="Módulos do sistema"></nav>' +
     '<div class="erp-global-actions"></div>';
   var linksRoot = nav.querySelector('.erp-global-links');
@@ -108,6 +108,65 @@
     details.append(summary, menu);
     linksRoot.appendChild(details);
   });
+  var currentContext = null;
+  var currentHash = window.location.hash;
+  var contextGroups = [
+    { title: 'Painel', note: 'Atalhos para a operação', route: '/erp/index', hash: '', links: [
+      ['Orçamentos', '/erp/quotes.html'], ['Pedidos', '/erp/orders.html'], ['Vendas', '/erp/sales.html'],
+      ['Ordens de serviço', '/erp/service-orders.html'], ['Preparar NF-e', '/erp/nfe.html']
+    ] },
+    { title: 'Comercial', note: 'Propostas, pedidos e vendas', routes: ['/erp/quotes', '/erp/orders', '/erp/sales'], links: [
+      ['Vendas', '/erp/sales.html'], ['Orçamentos', '/erp/quotes.html'], ['Pedidos', '/erp/orders.html']
+    ] },
+    { title: 'Assistência', note: 'Atendimento técnico e manutenção', routes: ['/erp/service-orders'], links: [
+      ['Ordens de serviço', '/erp/service-orders.html'], ['Serviços', '/erp/index.html#services']
+    ] },
+    { title: 'Cadastros', note: 'Base da empresa', route: '/erp/index', hashes: ['#clients', '#products', '#services'], links: [
+      ['Pessoas e empresas', '/erp/index.html#clients'], ['Produtos', '/erp/index.html#products'], ['Serviços', '/erp/index.html#services']
+    ] },
+    { title: 'Operação', note: 'Estoque e acompanhamento', routes: ['/erp/index', '/erp/purchases'], hashes: ['#inventory', '#reports'], links: [
+      ['Estoque', '/erp/index.html#inventory'], ['Relatórios', '/erp/index.html#reports'], ['Notas de entrada', '/erp/inbound-nfe.html']
+    ] },
+    { title: 'Fiscal', note: 'Emissão, recebimentos e histórico', routes: ['/erp/nfe', '/erp/nfe-issued', '/erp/inbound-nfe', '/erp/fiscal-history', '/erp/cfop', '/erp/tax-profiles', '/erp/nfse-drafts', '/erp/nfce'], route: '/erp/index', hashes: ['#fiscal'], links: [
+      ['Emitir NF-e', '/erp/nfe.html'], ['NF-e emitidas', '/erp/nfe-issued.html'], ['Notas de entrada · XML', '/erp/inbound-nfe.html'],
+      ['Histórico fiscal', '/erp/fiscal-history.html'], ['CFOP', '/erp/cfop.html'], ['Regras fiscais', '/erp/tax-profiles.html']
+    ] },
+    { title: 'Conta', note: 'Perfil e dados da empresa', route: '/erp/index', hashes: ['#profile', '#settings'], links: [
+      ['Meu perfil', '/erp/index.html#profile'], ['Empresa e sistema', '/erp/index.html#settings']
+    ] }
+  ];
+  if (normalizedCurrentPath === '/erp/nfce') {
+    contextGroups[5].links = [['Emitir NFC-e', '/erp/nfce.html'], ['NF-e emitidas', '/erp/nfe-issued.html'], ['Histórico fiscal', '/erp/fiscal-history.html']];
+  }
+  currentContext = contextGroups.find(function (context) {
+    if (context.routes && context.routes.indexOf(normalizedCurrentPath) >= 0) return true;
+    if (context.route === normalizedCurrentPath) {
+      if (context.hashes) return context.hashes.indexOf(currentHash) >= 0;
+      return (context.hash || '') === currentHash;
+    }
+    return false;
+  }) || contextGroups[0];
+  var contextNav = document.createElement('div');
+  contextNav.className = 'erp-context-nav';
+  contextNav.setAttribute('aria-label', 'Atalhos da área atual');
+  var contextTitle = document.createElement('div');
+  contextTitle.className = 'erp-context-title';
+  contextTitle.innerHTML = '<strong>' + currentContext.title + '</strong><small>' + currentContext.note + '</small>';
+  var contextLinks = document.createElement('nav');
+  contextLinks.className = 'erp-context-links';
+  contextLinks.setAttribute('aria-label', 'Navegação da área ' + currentContext.title);
+  function targetIsCurrent(href) {
+    var target = new URL(href, window.location.origin);
+    return normalizePath(target.pathname) === normalizedCurrentPath && target.hash === currentHash;
+  }
+  currentContext.links.forEach(function (entry) {
+    var link = document.createElement('a');
+    link.href = entry[1];
+    link.textContent = entry[0];
+    if (targetIsCurrent(entry[1])) link.setAttribute('aria-current', 'page');
+    contextLinks.appendChild(link);
+  });
+  contextNav.append(contextTitle, contextLinks);
   var shortcutIcons = {
     '/erp/sales.html': 'chart',
     '/erp/quotes.html': 'file',
@@ -138,6 +197,7 @@
   workspaceMenu.appendChild(workspacePopover);
   workspaceMenu.addEventListener('toggle', function () { if (workspaceMenu.open) closeOpenGroups(); });
   actions.appendChild(workspaceMenu);
+  nav.appendChild(contextNav);
 
   var environmentStatus = document.createElement('span');
   environmentStatus.className = 'erp-environment-status';

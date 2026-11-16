@@ -110,3 +110,38 @@
   .features { gap: 6px; }
   .features span { font-size: 10px; }
 }
+
+/* SigmaFiscal 2026 — login workspace */
+.page{min-height:100dvh;padding:0;background:#f1f5fb;color:#142943}
+.layout{width:100%;max-width:none;min-height:100dvh;grid-template-columns:minmax(0,1.06fr) minmax(420px,.94fr);gap:0}
+.intro{display:flex;flex-direction:column;justify-content:center;min-height:100dvh;padding:clamp(34px,7vw,105px);background:linear-gradient(145deg,#0b2b51 0%,#1059a9 64%,#1878d4 100%);color:#fff}
+.brand{margin-bottom:clamp(38px,6vw,76px)}
+.brand img{background:#fff}
+.brand strong,.intro h1{color:#fff}
+.brand strong span,.intro h1 em{color:#9bd0ff}
+.brand small,.intro>p{color:#d4e6f8}
+.kicker{color:#a9d5ff}
+.intro h1{max-width:620px;font-size:clamp(38px,4.7vw,60px)}
+.features span{border-color:#ffffff40;background:#ffffff12;color:#f3f8ff}
+.intro .disclaimer{max-width:470px;color:#bed5ed}
+.card{width:min(100% - 48px,480px);justify-self:center;padding:clamp(26px,3.4vw,42px);border-color:#d9e4f0;border-radius:22px;background:#fff;box-shadow:0 24px 65px #173a621a}
+.card h2{color:#142943}
+.description,.fiscal{color:#657a93}
+.back,.switch{color:#1769d2}
+.form label{color:#344e6b}
+.form input{min-height:48px;border-color:#cbd8e7;background:#f9fbfe}
+.submit{min-height:49px;border-color:#1769d2;background:#1769d2;box-shadow:0 7px 18px #1769d226}
+.submit:hover:not(:disabled){background:#1057b5}
+.theme{top:18px;right:20px;border-color:#d5e1ef;background:#fff;color:#344e6b}
+:global(html[data-theme="dark"]) .page{background:#0d1725;color:#eef5fe}
+:global(html[data-theme="dark"]) .layout{background:#0d1725}
+:global(html[data-theme="dark"]) .intro{background:linear-gradient(145deg,#081d36,#0d4889 68%,#125b9f)}
+:global(html[data-theme="dark"]) .card{border-color:#2d4057;background:#142338;box-shadow:0 24px 65px #0005}
+:global(html[data-theme="dark"]) .card h2{color:#f1f6fd}
+:global(html[data-theme="dark"]) .description,:global(html[data-theme="dark"]) .fiscal{color:#aebfd3}
+:global(html[data-theme="dark"]) .form label{color:#d6e3f2}
+:global(html[data-theme="dark"]) .form input{border-color:#405873;background:#0d1a2a;color:#f1f6fd}
+:global(html[data-theme="dark"]) .theme{border-color:#354a62;background:#182a40;color:#d9e7f6}
+:global(html[data-theme="dark"]) .back,:global(html[data-theme="dark"]) .switch{color:#8dc5ff}
+@media(max-width:850px){.layout{grid-template-columns:1fr;gap:0}.intro{min-height:auto;padding:clamp(28px,7vw,54px) clamp(22px,7vw,64px)}.brand{margin-bottom:32px}.intro h1{font-size:clamp(34px,8vw,48px)}.card{width:min(100% - 32px,520px);margin:24px auto}}
+@media(max-width:480px){.intro{padding:25px 20px}.brand{margin-bottom:25px}.brand img{width:46px;height:46px}.intro h1{font-size:36px}.card{width:calc(100% - 24px);margin:14px auto 20px;padding:22px;border-radius:17px}}
