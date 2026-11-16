@@ -70,8 +70,8 @@
   }
   function services(){
     var rows=state.services.filter(function(p){return matches(p,['code','name','description','lc116','nbs']);});
-    var body=rows.length?'<div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Código</th><th>LC 116</th><th>NBS</th><th>Valor</th><th>Status</th><th class="text-right">Ações</th></tr></thead><tbody>'+rows.map(function(p){return '<tr><td><strong>'+h(p.name)+'</strong><div class="subcell">'+h((p.description||'').slice(0,65))+'</div></td><td class="mono">'+h(p.code)+'</td><td class="mono">'+h(p.lc116||'A configurar')+'</td><td class="mono">'+h(p.nbs||'—')+'</td><td class="inline-price">'+money(p.price)+'</td><td>'+badge(p.active)+'</td><td>'+rowActions('service',p.id)+'</td></tr>';}).join('')+'</tbody></table></div>':empty('layers','Nenhum serviço encontrado','Crie seus serviços para preparar a futura NFS-e.','new-service','Novo serviço');
-    return heading('Cadastro de serviços','Organize sua prestação e prepare os códigos fiscais da NFS-e.','new-service','Novo serviço')+banner()+tableShell('Buscar serviço, código ou NBS...',body,rows.length,'services');
+    var body=rows.length?'<div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Código</th><th>LC 116</th><th>NBS</th><th>Valor</th><th>Status</th><th class="text-right">Ações</th></tr></thead><tbody>'+rows.map(function(p){return '<tr><td><strong>'+h(p.name)+'</strong><div class="subcell">'+h((p.description||'').slice(0,65))+'</div></td><td class="mono">'+h(p.code)+'</td><td class="mono">'+h(p.lc116||'A configurar')+'</td><td class="mono">'+h(p.nbs||'—')+'</td><td class="inline-price">'+money(p.price)+'</td><td>'+badge(p.active)+'</td><td>'+rowActions('service',p.id)+'</td></tr>';}).join('')+'</tbody></table></div>':empty('layers','Nenhum serviço encontrado','Cadastre os serviços usados nas ordens e nos orçamentos.','new-service','Novo serviço');
+    return heading('Cadastro de serviços','Organize os serviços usados nas ordens e nos orçamentos.','new-service','Novo serviço')+banner()+tableShell('Buscar serviço, código ou NBS...',body,rows.length,'services');
   }
   function inventory(){
     var rows=state.products.filter(function(p){return matches(p,['sku','name','category']);});
@@ -82,7 +82,6 @@
     var entries=[
       ['NF-e · Mercadorias · Modelo 55','Emita e acompanhe a NF-e de mercadorias em ambiente de homologação.','receipt','/erp/nfe.html','Homologação disponível'],
       ['NFC-e · Consumidor · Modelo 65','Emita a NFC-e de teste para venda ao consumidor.','receipt','/erp/nfce.html','Homologação'],
-      ['NFS-e · Serviços','Prepare pela ordem de serviço e envie o teste de homologação.','receipt','/erp/nfse.html','Homologação'],
       ['NF-e emitidas','Consulte documentos autorizados, filtros, eventos e arquivos.','file','/erp/nfe-issued.html','Histórico de saídas'],
       ['Notas de entrada','Importe XML, confira fornecedor, itens, tributos e estoque.','download','/erp/inbound-nfe.html','Entrada por XML'],
       ['Histórico fiscal','Pesquise documentos por cliente, fornecedor, transportadora e situação.','chart','/erp/fiscal-history.html','Entradas e saídas'],

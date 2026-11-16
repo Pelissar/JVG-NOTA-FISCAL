@@ -48,7 +48,6 @@
     { label: 'Fiscal', icon: 'receipt', links: [
       ['NF-e · Mercadorias · Modelo 55', '/erp/nfe.html', 'receipt'],
       ['NFC-e · Consumidor · Modelo 65', '/erp/nfce.html', 'receipt'],
-      ['NFS-e · Serviços', '/erp/nfse.html', 'receipt'],
       ['NF-e emitidas', '/erp/nfe-issued.html', 'file'],
       ['Notas de entrada · XML', '/erp/inbound-nfe.html', 'file'],
       ['Histórico fiscal', '/erp/fiscal-history.html', 'file'],

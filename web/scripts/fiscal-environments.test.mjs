@@ -5,14 +5,15 @@ import { buildNfceHomologacaoPayload } from "../lib/fiscal/nfce-payload.ts";
 
 const client = readFileSync(new URL("../lib/focus/client.ts", import.meta.url), "utf8");
 const nfce = readFileSync(new URL("../app/api/fiscal/nfce-drafts/transmit/route.ts", import.meta.url), "utf8");
-const nfse = readFileSync(new URL("../app/api/fiscal/nfse-drafts/transmit/route.ts", import.meta.url), "utf8");
+const nfsePage = readFileSync(new URL("../public/erp/nfse.html", import.meta.url), "utf8");
 
-test("NFC-e e NFS-e só conversam com a homologação da Focus", () => {
+test("NFC-e só conversa com a homologação da Focus e a nota de serviço saiu do sistema", () => {
   assert.match(client, /FOCUS_HOMOLOGACAO \+ "\/v2\/nfce\?ref="/);
   assert.match(nfce, /confirmHomologation !== true/);
   assert.match(nfce, /document_type=eq\.nfce&environment=eq\.homologacao/);
-  assert.match(nfse, /emitFocusNfseNationalHomologacao/);
-  assert.doesNotMatch(client + nfce + nfse, /api\.focusnfe\.com\.br/);
+  assert.match(nfsePage, /somente no portal/);
+  assert.doesNotMatch(nfsePage, /Enviar teste|Preparar NFS-e/);
+  assert.doesNotMatch(client + nfce, /api\.focusnfe\.com\.br/);
 });
 
 test("a NFC-e de teste exige Simples confirmado e não inventa CFOP", () => {
