@@ -4,32 +4,36 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#f4f6f8">
-  <meta name="description" content="Área própria da NFC-e no SigmaFiscal.">
-  <title>NFC-e · SigmaFiscal</title>
+  <title>NFC-e · JVG ERP</title>
   <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
-  <link rel="stylesheet" href="/erp/unified-pages.css">
-  <link rel="stylesheet" href="/erp/erp-design-v2.css">
-  <link rel="stylesheet" href="/erp/fiscal-document-switcher.css?v=20261113-2">
+  <link rel="stylesheet" href="/erp/styles.css"><link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css"><link rel="stylesheet" href="/erp/fiscal-document-switcher.css?v=20261113-2">
   <script src="/erp/theme-switch.js"></script>
   <script defer src="/erp/erp-page-nav.js?v=20261113-2"></script>
+  <script defer src="/erp/nfce.js?v=20261116-nfce"></script>
 </head>
 <body>
   <div id="erpGlobalNav"></div>
-  <main class="fiscal-module-page">
+  <main class="commercial-page">
     <nav class="fiscal-document-switcher" aria-label="Tipo de documento fiscal">
       <a href="/erp/nfe.html"><strong>NF-e</strong><small>Mercadorias · Modelo 55</small></a>
       <a href="/erp/nfce.html" aria-current="page"><strong>NFC-e</strong><small>Consumidor · Modelo 65</small></a>
       <a href="/erp/nfse.html"><strong>NFS-e</strong><small>Serviços</small></a>
     </nav>
-    <header class="page-heading">
-      <div><div class="eyebrow">FISCAL / CONSUMIDOR</div><h1>NFC-e</h1><p>Documento próprio para venda ao consumidor final · Modelo 65.</p></div>
-      <span class="fiscal-module-status">Emissão indisponível</span>
-    </header>
-    <section class="panel fiscal-module-card">
-      <h2>Fluxo separado da NF-e</h2>
-      <p class="fiscal-module-copy">Esta área identifica a NFC-e como documento próprio. A emissão do modelo 65 ainda não está habilitada no SigmaFiscal; esta tela não salva nem transmite notas.</p>
-      <div class="fiscal-module-actions"><a class="primary-button" href="/erp/nfe.html">Abrir emissão de NF-e · Modelo 55</a><a class="secondary-button" href="/erp/index.html#fiscal">Voltar à central fiscal</a></div>
-    </section>
+    <div class="page-heading"><div><div class="eyebrow">FISCAL / HOMOLOGAÇÃO</div><h1>NFC-e</h1><p>Venda ao consumidor no ambiente de teste. Produção continua fechada.</p></div></div>
+    <p id="nfceNotice" class="sales-notice" role="status">Carregando produtos...</p>
+    <section class="panel"><form id="nfceForm" class="os-form"><div class="os-form-grid">
+      <label>Natureza da operação<input id="nfceNature" maxlength="60" required value="VENDA AO CONSUMIDOR"></label>
+      <label>Produto<select id="nfceProduct" required></select></label>
+      <label>Quantidade<input id="nfceQuantity" type="number" min="0.001" max="9999" step="0.001" value="1" required></label>
+      <label>Preço unitário (R$)<input id="nfcePrice" type="number" min="0.01" step="0.01" required></label>
+      <label>CFOP<input id="nfceCfop" inputmode="numeric" maxlength="4" placeholder="Usa o CFOP do produto"></label>
+      <label>CPF do consumidor<input id="nfceCpf" inputmode="numeric" maxlength="14" placeholder="Opcional"></label>
+      <label>Pagamento<select id="nfcePayment"><option value="01">Dinheiro</option><option value="17">Pix</option><option value="03">Cartão de crédito</option><option value="04">Cartão de débito</option><option value="99">Outro</option></select></label>
+    </div>
+    <label class="issued-check-label" style="display:flex;gap:8px;align-items:flex-start;margin:12px 0"><input id="nfceConfirm" type="checkbox"><span>Confirmo que este envio é somente no ambiente de homologação.</span></label>
+    <div class="dialog-actions"><button class="btn" type="submit">Preparar NFC-e</button><button id="nfceSend" class="btn primary" type="button" disabled>Enviar teste</button></div>
+    </form></section>
+    <section class="panel"><div class="panel-head"><div><h2>NFC-e desta empresa</h2><p>Somente homologação.</p></div></div><div id="nfceList" class="commercial-table">Carregando...</div></section>
   </main>
 </body>
 </html>

@@ -131,6 +131,35 @@ export async function inutilizeFocusNfeNumberHomologacao(
   return { httpStatus: response.status, body };
 }
 
+/** Envia NFC-e somente ao host de homologação. Produção não é chamada. */
+export function emitFocusNfceHomologacao(
+  token: string,
+  reference: string,
+  fiscalPayload: Record<string, unknown>,
+): Promise<FocusNfeApiResult> {
+  if (!focusReferencePattern.test(reference)) throw new Error("Referência Focus inválida.");
+  return fetch(FOCUS_HOMOLOGACAO + "/v2/nfce?ref=" + encodeURIComponent(reference), {
+    method: "POST",
+    headers: {
+      Authorization: focusAuthorization(token),
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(fiscalPayload),
+    cache: "no-store",
+    signal: AbortSignal.timeout(15000),
+  }).then(async (response) => {
+    const raw = await response.text();
+    let body: Record<string, unknown> = {};
+    try {
+      const parsed: unknown = raw ? JSON.parse(raw) : {};
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) body = parsed as Record<string, unknown>;
+    } catch { /* resposta não JSON fica de fora */ }
+    if (!response.ok) throw new FocusNfeApiError(response.status, body);
+    return { httpStatus: response.status, body };
+  });
+}
+
 /**
  * Verifica um token de homologacao sem emitir ou alterar documentos fiscais.
  * Segundo a Focus, GET /v2/nfe/{ref} retorna 401 sem autenticacao e 404 se

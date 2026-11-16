@@ -81,8 +81,8 @@
   function fiscal(){
     var entries=[
       ['NF-e · Mercadorias · Modelo 55','Emita e acompanhe a NF-e de mercadorias em ambiente de homologação.','receipt','/erp/nfe.html','Homologação disponível'],
-      ['NFC-e · Consumidor · Modelo 65','Acesse a área própria da NFC-e e consulte a disponibilidade deste fluxo.','receipt','/erp/nfce.html','Emissão indisponível'],
-      ['NFS-e · Serviços','Acesse o fluxo próprio de serviços e ordens de serviço.','receipt','/erp/nfse.html','Preparação técnica · sem emissão'],
+      ['NFC-e · Consumidor · Modelo 65','Emita a NFC-e de teste para venda ao consumidor.','receipt','/erp/nfce.html','Homologação'],
+      ['NFS-e · Serviços','Prepare pela ordem de serviço e envie o teste de homologação.','receipt','/erp/nfse.html','Homologação'],
       ['NF-e emitidas','Consulte documentos autorizados, filtros, eventos e arquivos.','file','/erp/nfe-issued.html','Histórico de saídas'],
       ['Notas de entrada','Importe XML, confira fornecedor, itens, tributos e estoque.','download','/erp/inbound-nfe.html','Entrada por XML'],
       ['Histórico fiscal','Pesquise documentos por cliente, fornecedor, transportadora e situação.','chart','/erp/fiscal-history.html','Entradas e saídas'],
