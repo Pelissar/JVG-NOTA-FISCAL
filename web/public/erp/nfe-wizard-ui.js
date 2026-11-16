@@ -324,17 +324,11 @@
     controls.className = 'wizard-controls';
     var cancel = document.createElement('button');
     cancel.type = 'button'; cancel.id = 'cancelDraft'; cancel.className = 'secondary-button'; cancel.textContent = 'Sair sem salvar';
-    var previous = document.createElement('button');
-    previous.type = 'button'; previous.id = 'wizardPrev'; previous.className = 'secondary-button'; previous.textContent = 'Anterior';
-    var next = document.createElement('button');
-    next.type = 'button'; next.id = 'wizardNext'; next.className = 'next-button'; next.textContent = 'Próximo';
     var save = document.getElementById('saveButton');
     if (save) save.textContent = 'Concluir nota';
-    controls.append(previous, next, save);
+    if (save) controls.append(save);
     if (footer) footer.replaceChildren(cancel, controls);
     cancel.addEventListener('click', function () { window.location.assign('/erp/index.html#fiscal'); });
-    previous.addEventListener('click', function () { goToStep(currentStep - 1, false); });
-    next.addEventListener('click', function () { advanceToStep(currentStep + 1, true); });
     document.addEventListener('keydown', function (event) {
       var target = event.target;
       if (target && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName)) return;
@@ -849,12 +843,9 @@
     if (description) description.textContent = steps[currentStep][2];
     if (counter) counter.textContent = String(currentStep + 1).padStart(2, '0') + ' / ' + String(steps.length).padStart(2, '0');
     updateStepButtons();
-    var prev = document.getElementById('wizardPrev');
-    var next = document.getElementById('wizardNext');
     var save = document.getElementById('saveButton');
-    if (prev) prev.hidden = currentStep === 0;
-    if (next) next.hidden = currentStep === steps.length - 1;
     if (save) save.hidden = currentStep !== steps.length - 1;
+    if (typeof window.jvgNfeRefreshStepNav === 'function') window.jvgNfeRefreshStepNav();
     if (key === 'review') renderReview();
     if (scroll) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -1157,6 +1148,16 @@
     if (steps[currentStep] && steps[currentStep][0] !== 'general') goToStep(0, false);
     renderRecipient(); updateRequiredMarkers(); refreshComputed(); syncStepAccess();
   };
+
+  window.jvgNfeWizardAdvance = function () { return advanceToStep(currentStep + 1, true); };
+  window.jvgNfeWizardBack = function () { goToStep(currentStep - 1, false); };
+  window.jvgNfeWizardGoTo = function (index) {
+    if (index > currentStep) return advanceToStep(index, true);
+    goToStep(index, false);
+    return true;
+  };
+  window.jvgNfeWizardCanAdvance = function () { return validateStep(currentStep).ok; };
+  window.jvgNfeWizardIsLast = function () { return currentStep === steps.length - 1; };
 
   prepareWizard();
 })();
