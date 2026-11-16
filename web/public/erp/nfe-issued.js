@@ -259,6 +259,7 @@
     $('toggleFilters').setAttribute('aria-expanded', String(expanded));
   });
   $('openImport').addEventListener('click', function () { resultText($('importResult'), '', ''); showDialog('importDialog'); });
+  $('openXmlCheck').addEventListener('click', function () { $('xmlCheckResult').textContent = ''; showDialog('xmlCheckDialog'); });
   $('openInutilization').addEventListener('click', function () { resultText($('inutilizationResult'), '', ''); showDialog('inutilizationDialog'); });
   document.querySelectorAll('[data-close-dialog]').forEach(function (button) {
     button.addEventListener('click', function () { closeDialog(button.getAttribute('data-close-dialog')); });
@@ -299,6 +300,31 @@
   $('exportSelected').addEventListener('click', exportSelected);
   $('clearSelection').addEventListener('click', function () { selected.clear(); render(); });
   $('closeIssuedDetail').addEventListener('click', function () { $('issuedDetail').hidden = true; });
+
+  $('xmlCheckForm').addEventListener('submit', async function (event) {
+    event.preventDefault();
+    var file = $('xmlCheckFile').files[0];
+    if (!file) return;
+    var button = $('submitXmlCheck');
+    button.disabled = true;
+    $('xmlCheckResult').textContent = 'Conferindo o XML…';
+    try {
+      var body = new FormData();
+      body.set('xml', file);
+      var response = await fetch('/api/fiscal/nfe-xml/validate', { method: 'POST', body: body, credentials: 'same-origin', cache: 'no-store' });
+      var data = await readResponse(response);
+      if (!response.ok) throw new Error(data.error || 'Não foi possível validar o XML.');
+      var report = data.report || {};
+      var environment = report.environment === 'homologacao' ? 'Homologação' : report.environment === 'producao' ? 'Produção' : 'Ambiente não identificado';
+      var lines = [report.ok ? 'XML conferido.' : 'XML com pendências.', environment, report.accessKey ? 'Chave ' + report.accessKey : '', report.issuerName || ''].filter(Boolean);
+      (report.issues || []).forEach(function (issue) { lines.push(issue); });
+      $('xmlCheckResult').textContent = lines.join('\n');
+    } catch (error) {
+      $('xmlCheckResult').textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
 
   $('importForm').addEventListener('submit', async function (event) {
     event.preventDefault();

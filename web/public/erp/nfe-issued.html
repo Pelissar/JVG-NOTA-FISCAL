@@ -20,6 +20,7 @@
       <div><div class="eyebrow">FISCAL / DOCUMENTOS DE SAÍDA</div><h1>NF-e emitidas</h1><p>Consulte notas autorizadas, filtre os registros e importe XML já emitido para formar o histórico da empresa.</p></div>
       <div class="heading-actions">
         <a class="secondary-button" href="/erp/nfe.html">Emitir NF-e</a>
+        <button class="secondary-button" id="openXmlCheck" type="button">Validar XML</button>
         <button class="primary-button" id="openImport" type="button">Importar XML autorizado</button>
       </div>
     </header>
@@ -80,6 +81,16 @@
 
     <p class="history-footnote">Importar XML arquiva no SigmaFiscal uma NF-e autorizada anteriormente e não transmite nem importa o documento para a Focus. O sistema valida os dados estruturados e pede confirmação manual no portal oficial da SEFAZ; não valida a assinatura digital do arquivo.</p>
   </main>
+
+  <dialog class="issued-dialog" id="xmlCheckDialog" aria-labelledby="xmlCheckTitle">
+    <form id="xmlCheckForm" class="issued-dialog-card">
+      <div class="dialog-heading"><div><span class="eyebrow">CONFERÊNCIA</span><h2 id="xmlCheckTitle">Validar XML da NF-e</h2></div><button class="dialog-close" type="button" data-close-dialog="xmlCheckDialog" aria-label="Fechar">×</button></div>
+      <p>Confere chave, ambiente, emitente, itens e protocolo. Serve para produção e homologação. Nada é gravado e a assinatura digital não é verificada.</p>
+      <label class="dialog-field"><span>Arquivo XML processado</span><input id="xmlCheckFile" name="xml" type="file" accept=".xml,application/xml,text/xml" required></label>
+      <div id="xmlCheckResult" class="dialog-result" style="white-space:pre-line" role="status" aria-live="polite"></div>
+      <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog="xmlCheckDialog">Fechar</button><button class="primary-button" id="submitXmlCheck" type="submit">Validar XML</button></div>
+    </form>
+  </dialog>
 
   <dialog class="issued-dialog" id="importDialog" aria-labelledby="importDialogTitle">
     <form id="importForm" class="issued-dialog-card">
