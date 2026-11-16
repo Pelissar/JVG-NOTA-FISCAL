@@ -386,14 +386,14 @@ test('intermediador ausente usa o padrão 0 documentado pela Focus e não bloque
   assert.match(check(result, 'intermediario').detail, /valor padrão 0 documentado pela Focus/i);
 });
 
-test('buyer presence 0 omits intermediary fields to avoid SEFAZ rejection 435', () => {
+test('normal NF-e with buyer presence 0 is blocked and omits incompatible Focus fields', () => {
   const payload = focusPayload();
   payload.buyerPresence = 0;
   payload.intermediary = { indicator: 0, cnpj: '', id: '' };
   const result = reviewFocusNfePayload(payload);
-  assert.equal(result.requestPreview.presenca_comprador, 0);
-  assert.equal(check(result, 'intermediario').ok, true);
-  assert.match(check(result, 'intermediario').detail, /presença 0.*omitidos.*435/i);
+  assert.equal(check(result, 'presenca_comprador').ok, false);
+  assert.match(check(result, 'presenca_comprador').detail, /NF-e normal.*cStat 435/i);
+  assert.equal('presenca_comprador' in result.requestPreview, false);
   assert.equal('indicador_intermediario' in result.requestPreview, false);
   assert.equal('cnpj_intermediario' in result.requestPreview, false);
   assert.equal('id_intermediario' in result.requestPreview, false);
@@ -410,3 +410,4 @@ test('third-party intermediary conflicts with buyer presence 0 and blocks transm
   assert.equal('cnpj_intermediario' in result.requestPreview, false);
   assert.equal('id_intermediario' in result.requestPreview, false);
 });
+
