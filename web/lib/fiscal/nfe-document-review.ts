@@ -265,8 +265,14 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
       finalConsumerValid ? (finalConsumer ? 1 : 0) : undefined);
   const presence = payload.buyerPresence === "" || payload.buyerPresence == null ? NaN : Number(payload.buyerPresence);
   const presenceValid = Number.isInteger(presence) && [0,1,2,3,4,5,9].includes(presence);
-  add("presenca_comprador", "Presença do comprador", presenceValid,
-      "Informe a condição real da operação; o ERP não infere presença ou canal de venda.", presenceValid ? presence : undefined);
+  const presenceValidForNormalNfe = presenceValid && !(purpose === 1 && presence === 0);
+  const presenceDetail = !presenceValid
+    ? "Informe a condição real da operação; o ERP não infere presença ou canal de venda."
+    : purpose === 1 && presence === 0
+      ? "Esta emissão é uma NF-e normal. O código 0 (não se aplica) não é válido para este fluxo; escolha como a operação ocorreu. A SEFAZ rejeita a combinação com indicador de intermediador (cStat 435)."
+      : "Informe a condição real da operação; o ERP não infere presença ou canal de venda.";
+  add("presenca_comprador", "Presença do comprador", presenceValidForNormalNfe,
+      presenceDetail, presenceValidForNormalNfe ? presence : undefined);
 
   const normalizeCnpj = (value: unknown) => text(value).toUpperCase().replace(/[.\-/\s]/g, "");
   const cnpj = normalizeCnpj(issuer.cnpj), issuerName = text(issuer.legalName || issuer.name);
@@ -689,3 +695,4 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
     canSend: false,
   };
 }
+
