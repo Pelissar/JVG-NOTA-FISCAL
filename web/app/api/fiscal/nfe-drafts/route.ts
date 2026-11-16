@@ -10,7 +10,7 @@ import { reviewNfeOperation } from "../../../../lib/fiscal/operation-review";
 import { reviewNfePreparation } from "../../../../lib/fiscal/nfe-preflight";
 import { reviewNfeDocument, reviewFocusNfePayload } from "../../../../lib/fiscal/nfe-document-review";
 import { reviewNfeHomologationGate } from "../../../../lib/fiscal/nfe-homologation-gate";
-import { filterFocusTaxFieldsForRule } from "../../../../lib/fiscal/focus-tax-fields";
+import { filterFocusTaxFieldsForRule, inspectFocusTaxFields } from "../../../../lib/fiscal/focus-tax-fields";
 import { licenseView } from "../../../../lib/licensing";
 
 export const dynamic = "force-dynamic";
@@ -292,8 +292,9 @@ export async function POST(request: Request) {
       const pisCst = profileOrInput("pisCst", defaultPisCofinsCst);
       const cofinsCst = profileOrInput("cofinsCst", defaultPisCofinsCst);
       const configuredFocusFields = asRecord(configuredRule.focusFields);
+      const storedFocusFields = inspectFocusTaxFields({ ...configuredFocusFields, ...input.focusFields }).fields;
       const focusFields = filterFocusTaxFieldsForRule(
-        { ...configuredFocusFields, ...input.focusFields },
+        storedFocusFields,
         { csosn: itemCsosn, pisCst, cofinsCst },
       );
       for (const field of manuallyEdited) {
