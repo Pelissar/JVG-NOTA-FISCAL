@@ -5,7 +5,7 @@ import {
 } from "../../../../../lib/jvg-backend";
 import {
   emitFocusNfeHomologacao, FocusNfeApiError, focusReferenceForFiscalDocument,
-  queryFocusNfeHomologacao,
+  queryFocusNfeHomologacao, cancelFocusNfeHomologacao,
 } from "../../../../../lib/focus/client";
 import { focusRuntimeEnv } from "../../../../../lib/focus/runtime-env";
 import { reviewNfeHomologationGate } from "../../../../../lib/fiscal/nfe-homologation-gate";
@@ -98,7 +98,7 @@ async function finishFocusAttemptEvent(
   context: FocusContext,
   eventId: string,
   values: { documentId: string; action: "transmission" | "consultation"; reference: string; requestedAt: string;
-    status: string; response?: Json; httpStatus?: number; error?: string; eventType?: "status_update" | "error" },
+    status: string; response?: Json; httpStatus?: number; error?: string; eventType?: "status_update" | "error" | "cancellation"; reason?: string },
 ): Promise<void> {
   const response = values.response ? safeFocusBody(values.response) : undefined;
   const protocol = values.response
@@ -117,6 +117,7 @@ async function finishFocusAttemptEvent(
         ...(response ? { response } : {}),
         ...(typeof values.httpStatus === "number" ? { httpStatus: values.httpStatus } : {}),
         ...(values.error ? { error: values.error.slice(0, 500) } : {}),
+        ...(values.reason ? { justificativa: values.reason.slice(0, 255) } : {}),
       },
     }) },
   );
@@ -457,6 +458,46 @@ async function reconcile(context: FocusContext, id: string): Promise<Response> {
   }
 }
 
+async function cancelAuthorized(context: FocusContext, id: string, body: Json): Promise<Response> {
+  if (!uuidPattern.test(id)) throw new JvgBackendError("Identificador do documento inválido.", 400);
+  const reason = text(body.justificativa).replace(/\s+/g, " ");
+  if (reason.length < 15 || reason.length > 255)
+    throw new JvgBackendError("A justificativa do cancelamento precisa ter entre 15 e 255 caracteres.", 400);
+  const document = await readDocument(context.account, id);
+  if (!document) throw new JvgBackendError("Documento NF-e não encontrado nesta empresa.", 404);
+  if (document.status !== "authorized")
+    throw new JvgBackendError("Só uma NF-e autorizada em homologação pode ser cancelada por aqui.", 409);
+  const reference = text(document.focus_reference);
+  if (!reference) throw new JvgBackendError("Este documento não tem referência Focus para cancelar.", 409);
+  const requestedAt = new Date().toISOString();
+  const attemptEventId = await createFocusAttemptEvent(context, id, "consultation", reference, requestedAt);
+  try {
+    const result = await cancelFocusNfeHomologacao(context.token, reference, reason);
+    const patch = documentResponsePatch(result.body, "authorized", reference, context.userId, document.provider_response);
+    await patchDocument(context.account, id, "authorized", patch);
+    const status = String(patch.status);
+    await finishFocusAttemptEvent(context, attemptEventId, { documentId: id, action: "consultation", reference,
+      requestedAt, status, response: result.body, eventType: status === "cancelled" ? "cancellation" : "status_update", reason });
+    if (status !== "cancelled") {
+      return apiJson({ ok: false, status, reference, needsReconciliation: true,
+        message: "A Focus recebeu o pedido, mas ainda não confirmou o cancelamento. Consulte o status antes de tentar de novo." }, 202);
+    }
+    return apiJson({ ok: true, status: "cancelled", reference, message: "NF-e cancelada na Focus em homologação. Sem valor fiscal." });
+  } catch (error) {
+    await finishFocusAttemptEvent(context, attemptEventId, { documentId: id, action: "consultation", reference,
+      requestedAt, status: "cancel_failed",
+      response: error instanceof FocusNfeApiError ? error.body : undefined,
+      httpStatus: error instanceof FocusNfeApiError ? error.httpStatus : undefined,
+      error: "A Focus não confirmou o cancelamento. A nota autorizada foi preservada.",
+      eventType: "error", reason });
+    if (error instanceof FocusNfeApiError) {
+      return apiJson({ ok: false, status: "authorized", reference,
+        message: "A Focus não cancelou esta NF-e. Confira a justificativa e o prazo da SEFAZ. A nota continua autorizada." }, 422);
+    }
+    throw error;
+  }
+}
+
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {
@@ -471,6 +512,7 @@ export async function POST(request: Request) {
     } catch { throw new JvgBackendError("Envie um JSON válido.", 400); }
     const id = text(data.id);
     if (data.action === "reconcile") return await reconcile(context, id);
+    if (data.action === "cancel") return await cancelAuthorized(context, id, data);
     if (data.action !== "emit") throw new JvgBackendError("Ação fiscal inválida.", 400);
     return await emit(context, id, data);
   } catch (error) {

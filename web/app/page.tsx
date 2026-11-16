@@ -8,7 +8,7 @@ const modules = [
   { number: "03", title: "Estoque", description: "Consulte saldos e registre movimentações dos produtos." },
   { number: "04", title: "Orçamentos", description: "Prepare propostas comerciais e acompanhe seus registros." },
   { number: "05", title: "Pedidos e vendas", description: "Organize o fluxo comercial em um único ambiente." },
-  { number: "06", title: "Preparação fiscal", description: "CFOP, perfis tributários e rascunhos de NF-e, ainda sem emissão real." },
+  { number: "06", title: "NF-e em homologação", description: "CFOP, perfis e envio de teste pela Focus. Sem valor fiscal." },
 ];
 
 export default function Home() {
@@ -28,7 +28,7 @@ export default function Home() {
         <div>
           <span className={styles.eyebrow}>SigmaFiscal · ERP Empresarial</span>
           <h1>Seu negócio.<br/><em>Mais controle.</em><br/>Menos complicação.</h1>
-          <p>Cadastros, estoque, orçamentos, pedidos e vendas em uma experiência moderna. Gestão simples para sua empresa, com clareza em cada etapa da operação.</p>
+          <p>Cadastros, estoque, vendas e NF-e de homologação no mesmo fluxo. A nota de teste sai pela Focus e não tem valor fiscal.</p>
           <div className={styles.actions}>
             <Link href="/login" className={styles.primary}>Acessar meu sistema →</Link>
             <a href="#modulos" className={styles.secondary}>Conhecer os módulos</a>
@@ -42,7 +42,7 @@ export default function Home() {
             <div className={styles.showcaseMain}>
               <span className={styles.showcaseLabel}>GESTÃO EMPRESARIAL</span><h3>Organize sua operação.</h3><p>Os módulos do seu negócio em uma experiência integrada.</p>
               <div className={styles.showcaseStats}><div><span>01</span><strong>Cadastros</strong><small>Clientes e produtos</small></div><div><span>02</span><strong>Comercial</strong><small>Pedidos e vendas</small></div><div><span>03</span><strong>Estoque</strong><small>Controle operacional</small></div></div>
-              <div className={styles.showcaseFlow}><strong>Fluxo de trabalho</strong><div><span>Cadastro</span><b>→</b><span>Orçamento</span><b>→</b><span>Pedido</span><b>→</b><span>Venda</span></div></div>
+              <div className={styles.showcaseFlow}><strong>Fluxo de trabalho</strong><div><span>Cadastro</span><b>→</b><span>Venda</span><b>→</b><span>NF-e teste</span></div></div>
             </div>
           </div>
           <div className={styles.showcaseFoot}>Ilustração dos módulos existentes · sem dados fictícios de clientes ou vendas</div>
@@ -61,9 +61,9 @@ export default function Home() {
       <div className={styles.inner}>
         <span className={styles.eyebrow}>Seu espaço de trabalho</span>
         <div className={styles.sectionHead}><div><h2>Pronto para organizar sua empresa?</h2><p>Entre no ambiente do SigmaFiscal para acessar os cadastros e ferramentas de gestão.</p></div><Link href="/login" className={styles.primary}>Entrar na plataforma →</Link></div>
-        <p className={styles.notice}>A emissão de documentos fiscais ainda está em desenvolvimento e depende de integração e homologação. O ambiente não transmite NF-e à SEFAZ.</p>
+        <p className={styles.notice}>A NF-e de teste é enviada à Focus em homologação e não tem valor fiscal. A produção continua desligada.</p>
       </div>
     </section>
-    <footer className={styles.footer}><div className={styles.footerInner}><span>© SigmaFiscal · ERP Empresarial</span><span>Gestão empresarial em desenvolvimento · Sem emissão fiscal real</span><Link href="/login">Acessar plataforma</Link></div></footer>
+    <footer className={styles.footer}><div className={styles.footerInner}><span>© SigmaFiscal · ERP Empresarial</span><span>Homologação Focus · sem valor fiscal · produção desligada</span><Link href="/login">Acessar plataforma</Link></div></footer>
   </main>;
 }

@@ -69,5 +69,10 @@ test('interface só oferece envio quando o servidor libera e exige confirmação
   assert.match(ui, /check\.type = 'checkbox'/);
   assert.match(ui, /confirmHomologation: action === 'emit'/);
   assert.match(ui, /Consultar status na Focus/);
+  assert.match(ui, /Cancelar NF-e de homologação/);
+  assert.match(ui, /Abrir DANFE de homologação/);
+  assert.match(ui, /homologacao\.focusnfe\.com\.br/);
+  assert.match(focus, /cancelFocusNfeHomologacao/);
+  assert.match(route, /A justificativa do cancelamento precisa ter entre 15 e 255 caracteres/);
   assert.doesNotMatch(ui, /A prévia é incompleta e não pode ser enviada/);
 });

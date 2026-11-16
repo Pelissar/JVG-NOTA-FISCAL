@@ -596,17 +596,40 @@
     parent.append(node);
   }
 
-  async function runFocusAction(id, action, button) {
+  function focusHomologFileUrl(value) {
+    var raw = String(value || '').trim();
+    if (raw.indexOf('https://homologacao.focusnfe.com.br/') === 0) return raw;
+    if (raw.charAt(0) === '/' && raw.indexOf('//') !== 0 && raw.indexOf('\\') === -1)
+      return 'https://homologacao.focusnfe.com.br' + raw;
+    return '';
+  }
+
+  function appendFocusFile(parent, label, value) {
+    appendLine(parent, 'p', label + ': ' + value);
+    var href = focusHomologFileUrl(value);
+    if (!href) return;
+    var link = document.createElement('a');
+    link.href = href;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.className = 'draft-inspect';
+    link.textContent = label.indexOf('DANFE') >= 0 ? 'Abrir DANFE de homologação' : 'Abrir XML de homologação';
+    parent.append(link);
+  }
+
+  async function runFocusAction(id, action, button, justificativa) {
     button.disabled = true;
     var previousLabel = button.textContent;
-    button.textContent = action === 'emit' ? 'Enviando para homologação...' : 'Consultando Focus...';
+    button.textContent = action === 'emit' ? 'Enviando para homologação...' : action === 'cancel' ? 'Cancelando na Focus...' : 'Consultando Focus...';
     try {
       var result = await api('/api/fiscal/nfe-drafts/transmit', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: id, action: action, confirmHomologation: action === 'emit' }),
+        body: JSON.stringify({ id: id, action: action, confirmHomologation: action === 'emit', justificativa: justificativa || undefined }),
       });
-      if (result.needsReconciliation) {
-        report('A solicitação foi enviada à Focus para homologação e continua em processamento. Não reenvie; consulte o status.', 'info');
+      if (result.status === 'cancelled') {
+        report(result.message || 'NF-e cancelada em homologação.', 'success');
+      } else if (result.needsReconciliation) {
+        report(result.message || 'A solicitação foi enviada à Focus para homologação e continua em processamento. Não reenvie; consulte o status.', 'info');
       } else if (result.status === 'authorized') {
         report('A Focus retornou status autorizado em homologação. Confira a chave e o protocolo nos detalhes; isso não é autorização de produção.', 'success');
       } else if (result.status === 'rejected' || result.status === 'denied') {
@@ -687,6 +710,27 @@
       query.textContent = 'Consultar status na Focus';
       query.addEventListener('click', function () { runFocusAction(draft.id, 'reconcile', query); });
       panel.append(query);
+      if (draft.status === 'authorized') {
+        var reason = document.createElement('textarea');
+        reason.className = 'cancel-reason';
+        reason.maxLength = 255;
+        reason.rows = 3;
+        reason.placeholder = 'Justificativa do cancelamento, de 15 a 255 caracteres';
+        var cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.className = 'secondary-button';
+        cancel.textContent = 'Cancelar NF-e de homologação';
+        cancel.addEventListener('click', function () {
+          var value = reason.value.replace(/\s+/g, ' ').trim();
+          if (value.length < 15) {
+            report('Escreva uma justificativa com pelo menos 15 caracteres.', 'error');
+            reason.focus();
+            return;
+          }
+          runFocusAction(draft.id, 'cancel', cancel, value);
+        });
+        panel.append(reason, cancel);
+      }
     } else {
       appendLine(panel, 'p', 'Este documento não tem uma solicitação Focus consultável. Nenhuma transmissão será repetida automaticamente.');
     }
@@ -851,9 +895,9 @@
       if (providerStatus || providerMessage)
         appendLine(target, 'p', 'Retorno Focus/SEFAZ: ' + [providerStatus, providerMessage].filter(Boolean).join(' · '));
       if (providerBody.caminho_xml_nota_fiscal)
-        appendLine(target, 'p', 'Caminho do XML na Focus: ' + providerBody.caminho_xml_nota_fiscal);
+        appendFocusFile(target, 'Caminho do XML na Focus', providerBody.caminho_xml_nota_fiscal);
       if (providerBody.caminho_danfe)
-        appendLine(target, 'p', 'Caminho do DANFE na Focus: ' + providerBody.caminho_danfe);
+        appendFocusFile(target, 'Caminho do DANFE na Focus', providerBody.caminho_danfe);
       var focusEvents = Array.isArray(providerBody.eventos) ? providerBody.eventos : [];
       if (focusEvents.length) {
         appendLine(target, 'h4', 'Eventos retornados pela Focus');

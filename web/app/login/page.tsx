@@ -90,7 +90,7 @@ export default function LoginPage() {
           </form>
           {message && <p role="status" className={styles.message}>{message}</p>}
           <button type="button" className={styles.switch} onClick={()=>{setMode(mode==="login"?"signup":"login");setMessage("");}}>{mode==="login"?"Primeiro acesso? Criar conta":"Já tenho conta. Fazer login"}</button>
-          <p className={styles.fiscal}>Ambiente piloto · Sem emissão fiscal real</p>
+          <p className={styles.fiscal}>Homologação Focus · sem valor fiscal</p>
         </section>
       </div>
     </main>

@@ -43,7 +43,8 @@ async function focusNfeRequest(
   query = "",
 ): Promise<FocusNfeApiResult> {
   if (!focusReferencePattern.test(reference)) throw new Error("Referência Focus inválida.");
-  const url = init.method === "POST"
+  const method = (init.method || "GET").toUpperCase();
+  const url = method === "POST"
     ? `${FOCUS_HOMOLOGACAO}/v2/nfe?ref=${encodeURIComponent(reference)}`
     : `${FOCUS_HOMOLOGACAO}/v2/nfe/${encodeURIComponent(reference)}${query}`;
   const headers = new Headers(init.headers);
@@ -75,6 +76,18 @@ export function emitFocusNfeHomologacao(
   return focusNfeRequest(token, reference, {
     method: "POST",
     body: JSON.stringify(fiscalPayload),
+  });
+}
+
+/** Cancela uma NF-e já autorizada, somente no host de homologação. */
+export function cancelFocusNfeHomologacao(
+  token: string,
+  reference: string,
+  justificativa: string,
+): Promise<FocusNfeApiResult> {
+  return focusNfeRequest(token, reference, {
+    method: "DELETE",
+    body: JSON.stringify({ justificativa }),
   });
 }
 
