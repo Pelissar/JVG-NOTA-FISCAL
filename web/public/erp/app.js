@@ -69,8 +69,8 @@
     return heading('Cadastro de pessoas e empresas','Cadastre clientes, fornecedores e transportadoras em um único registro, com identificação fiscal completa.','new-client','Novo cadastro')+banner()+roleFilter+tableShell('Buscar por número, nome, documento, IE ou IM...',body,rows.length,'clients');
   }
   function services(){
-    var rows=state.services.filter(function(p){return matches(p,['code','name','description','lc116','nbs']);});
-    var body=rows.length?'<div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Código</th><th>LC 116</th><th>NBS</th><th>Valor</th><th>Status</th><th class="text-right">Ações</th></tr></thead><tbody>'+rows.map(function(p){return '<tr><td><strong>'+h(p.name)+'</strong><div class="subcell">'+h((p.description||'').slice(0,65))+'</div></td><td class="mono">'+h(p.code)+'</td><td class="mono">'+h(p.lc116||'A configurar')+'</td><td class="mono">'+h(p.nbs||'—')+'</td><td class="inline-price">'+money(p.price)+'</td><td>'+badge(p.active)+'</td><td>'+rowActions('service',p.id)+'</td></tr>';}).join('')+'</tbody></table></div>':empty('layers','Nenhum serviço encontrado','Cadastre os serviços usados nas ordens e nos orçamentos.','new-service','Novo serviço');
+    var rows=state.services.filter(function(p){return matches(p,['code','name','description']);});
+    var body=rows.length?'<div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Código</th><th>Valor</th><th>Status</th><th class="text-right">Ações</th></tr></thead><tbody>'+rows.map(function(p){return '<tr><td><strong>'+h(p.name)+'</strong><div class="subcell">'+h((p.description||'').slice(0,65))+'</div></td><td class="mono">'+h(p.code)+'</td><td class="inline-price">'+money(p.price)+'</td><td>'+badge(p.active)+'</td><td>'+rowActions('service',p.id)+'</td></tr>';}).join('')+'</tbody></table></div>':empty('layers','Nenhum serviço encontrado','Cadastre os serviços usados nas ordens e nos orçamentos.','new-service','Novo serviço');
     return heading('Cadastro de serviços','Organize os serviços usados nas ordens e nos orçamentos.','new-service','Novo serviço')+banner()+tableShell('Buscar serviço, código ou NBS...',body,rows.length,'services');
   }
   function inventory(){
@@ -224,7 +224,7 @@
     select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false')+
     '<p class="lookup-note field full">A consulta de CNPJ combina a Focus com fontes cadastrais complementares. Confira os dados antes de salvar; IE e IM podem exigir confirmação direta com a empresa.</p>';}
   function updatePartyRequirements(form){if(!form||form.dataset.kind!=='client')return;var supplier=form.querySelector('[name="isSupplier"]'),type=form.querySelector('[name="type"]'),doc=form.querySelector('[name="document"]'),label=form.querySelector('label[for="f-document"]');var required=!!(supplier&&supplier.checked&&type&&type.value!=='EXT');if(doc)doc.required=required;if(label)label.textContent='CPF / CNPJ'+(required?' *':'');}
-  function serviceForm(p){return field('code','Código do serviço *',p.code,'required maxlength="40"',false)+field('name','Descrição do serviço *',p.name,'required maxlength="160"',false)+field('description','Detalhamento',p.description,'maxlength="255"',true)+field('lc116','Subitem da LC 116',p.lc116,'maxlength="12"',false)+field('nationalTaxationCode','Código de tributação nacional ISS (6 dígitos)',p.nationalTaxationCode,'inputmode=numeric maxlength=6',false)+field('nbs','Código NBS',p.nbs,'maxlength="12"',false)+field('price','Valor (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
+  function serviceForm(p){return field('code','Código do serviço *',p.code,'required maxlength="40"',false)+field('name','Descrição do serviço *',p.name,'required maxlength="160"',false)+field('description','Detalhamento',p.description,'maxlength="255"',true)+field('price','Valor (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
   async function callApi(endpoint,options){
     var controller=new AbortController(),timeout=setTimeout(function(){controller.abort();},20000);
     try{
@@ -360,8 +360,8 @@
       lookupField('cnpj','CNPJ (numérico ou alfanumérico)',company.cnpj||'','maxlength="18" placeholder="00.000.000/0000-00"','cnpj',false)+'<p class="lookup-note field full" data-cnpj-lookup-status role="status" aria-live="polite" hidden></p>'+
       '<p class="lookup-note field full">A consulta preenche os dados cadastrais disponíveis. Confira tudo antes de salvar; IE e IM podem precisar de confirmação manual.</p>'+
       field('stateRegistration','Inscrição Estadual (IE)',company.state_registration||'','maxlength="40"',false)+
-      field('municipalRegistration','Inscrição Municipal',company.municipal_registration||'','maxlength="40"',false,'Se informar, preencha também o CNAE fiscal.')+
-      field('cnae','CNAE fiscal (7 dígitos)',company.cnae||'','inputmode="numeric" maxlength="10"',false,'A Focus exige o par CNAE e Inscrição Municipal quando esses dados forem enviados.')+
+      field('municipalRegistration','Inscrição Municipal',company.municipal_registration||'','maxlength="40"',false,'Opcional. Use se a prefeitura exigir no cadastro da empresa.')+
+      field('cnae','CNAE fiscal (7 dígitos)',company.cnae||'','inputmode="numeric" maxlength="10"',false,'CNAE principal da empresa.')+
       field('fiscalEmail','E-mail fiscal',company.fiscal_email||'','type="email" maxlength="254"',false)+
       field('fiscalPhone','Telefone com DDD',company.fiscal_phone||'','inputmode="tel" maxlength="24"',false)+
       '<div class="field full"><strong>Endereço fiscal da empresa</strong></div>'+
@@ -455,7 +455,8 @@
       if(!isCustomer&&!isSupplier&&!isCarrier){toast('Selecione pelo menos um tipo: cliente, fornecedor ou transportadora.','error');return;}
       record=Object.assign(record,{name:values.name.trim(),legalName:values.legalName.trim(),type:values.type,document:doc,stateRegistration:values.stateRegistration.trim(),municipalRegistration:values.municipalRegistration.trim(),isCustomer:isCustomer,isSupplier:isSupplier,isCarrier:isCarrier,email:values.email.trim(),phone:values.phone.trim(),street:values.street.trim(),number:values.number.trim(),complement:values.complement.trim(),district:values.district.trim(),postalCode:values.postalCode.replace(/\D/g,''),cityCode:values.cityCode.replace(/\D/g,''),city:values.city.trim(),state:values.state.trim().toUpperCase(),active:values.active==='true'});
     }else{
-      record=Object.assign(record,{code:values.code.trim(),name:values.name.trim(),description:values.description.trim(),lc116:values.lc116.trim(),nbs:values.nbs.trim(),nationalTaxationCode:values.nationalTaxationCode.trim(),price:Number(values.price||0),active:values.active==='true'});
+      var current=recordId?list.find(function(x){return x.id===recordId;}):null;
+      record=Object.assign(record,{code:values.code.trim(),name:values.name.trim(),description:values.description.trim(),lc116:current&&current.lc116||'',nbs:current&&current.nbs||'',nationalTaxationCode:current&&current.nationalTaxationCode||'',price:Number(values.price||0),active:values.active==='true'});
       if(record.price<0){toast('Valor inválido.','error');return;}
     }
     var submit=form.querySelector('button[type="submit"]');if(submit)submit.disabled=true;
@@ -493,7 +494,7 @@
   }
   function exportCsv(kind){
     if(cloud.status!=='ready'){toast('Conecte ao banco antes de exportar.','error');return;}
-    var data=state[kind],fields=kind==='products'?['sku','name','category','unit','ncm','cest','defaultCfop','gtin','origin','cost','price','stock','active']:kind==='clients'?['name','type','document','email','phone','postalCode','street','number','complement','district','city','state','cityCode','active']:['code','name','description','lc116','nationalTaxationCode','nbs','price','active'];
+    var data=state[kind],fields=kind==='products'?['sku','name','category','unit','ncm','cest','defaultCfop','gtin','origin','cost','price','stock','active']:kind==='clients'?['name','type','document','email','phone','postalCode','street','number','complement','district','city','state','cityCode','active']:['code','name','description','price','active'];
     if(!Array.isArray(data)||!data.length){toast('Não há dados para exportar.','error');return;}
     var lines=[fields.join(';')].concat(data.map(function(r){return fields.map(function(f){return '"'+String(r[f]??'').replace(/"/g,'""')+'"';}).join(';');}));
     var blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
