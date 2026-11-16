@@ -2,6 +2,7 @@ import { getJvgUser } from "../../../jvg-auth";
 import { apiJson, getSiteAccount, isConfigured, safeError } from "../../../../lib/jvg-backend";
 import { checkFocusHomologacaoToken } from "../../../../lib/focus/client";
 import { focusRuntimeEnv } from "../../../../lib/focus/runtime-env";
+import { homologationToken } from "../../../../lib/licensing";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,8 @@ export async function GET() {
     if (!account) return apiJson({ status: "needs_company" }, 403);
     if (account.role === "viewer") return apiJson({ error: "Seu perfil não consulta a Focus." }, 403);
 
-    const token = focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN") || focusRuntimeEnv("FOCUS_NFE_HOMOLOGACAO_TOKEN");
+    const siteToken = focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN") || focusRuntimeEnv("FOCUS_NFE_HOMOLOGACAO_TOKEN");
+    const token = await homologationToken(account, siteToken).catch(() => "");
     if (!token) {
       return apiJson({ status: "waiting_focus_token", environment: "homologacao", emissionEnabled: false });
     }

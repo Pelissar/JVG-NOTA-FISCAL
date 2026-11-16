@@ -8,6 +8,7 @@ import {
   queryFocusNfeHomologacao, cancelFocusNfeHomologacao,
 } from "../../../../../lib/focus/client";
 import { focusRuntimeEnv } from "../../../../../lib/focus/runtime-env";
+import { homologationToken, licenseView } from "../../../../../lib/licensing";
 import { reviewNfeHomologationGate } from "../../../../../lib/fiscal/nfe-homologation-gate";
 import { isOfficialCfopCode } from "../../../../../lib/fiscal/cfop";
 
@@ -146,8 +147,10 @@ async function focusContext(): Promise<FocusContext> {
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   if (account.role === "viewer") throw new JvgBackendError("Seu perfil não pode transmitir documentos fiscais.", 403);
 
-  const token = focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN") || focusRuntimeEnv("FOCUS_NFE_HOMOLOGACAO_TOKEN");
-  if (!token) throw new JvgBackendError("Configure a credencial Focus de homologação no servidor antes do envio.", 409);
+  const siteToken = focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN") || focusRuntimeEnv("FOCUS_NFE_HOMOLOGACAO_TOKEN");
+  const license = await licenseView(account);
+  if (license.schemaReady && license.issues.length) throw new JvgBackendError(license.issues[0], 403);
+  const token = await homologationToken(account, siteToken);
   const company = await getCompany(account);
   if (!company) throw new JvgBackendError("Empresa emitente não encontrada.", 404);
   if (company.tax_regime_confirmation_available !== true || company.tax_regime_confirmed !== true || company.tax_regime !== "simples_nacional")

@@ -10,6 +10,7 @@ import { reviewNfeOperation } from "../../../../lib/fiscal/operation-review";
 import { reviewNfePreparation } from "../../../../lib/fiscal/nfe-preflight";
 import { reviewNfeDocument, reviewFocusNfePayload } from "../../../../lib/fiscal/nfe-document-review";
 import { reviewNfeHomologationGate } from "../../../../lib/fiscal/nfe-homologation-gate";
+import { licenseView } from "../../../../lib/licensing";
 
 export const dynamic = "force-dynamic";
 
@@ -72,8 +73,9 @@ function scope(account: SiteAccount): string {
 }
 
 async function homologationSetup(account: SiteAccount) {
-  const focusTokenConfigured = Boolean(focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN") || focusRuntimeEnv("FOCUS_NFE_HOMOLOGACAO_TOKEN"));
   const company = await getCompany(account);
+  const license = await licenseView(account);
+  const focusTokenConfigured = Boolean(license.focusConfigured || focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN") || focusRuntimeEnv("FOCUS_NFE_HOMOLOGACAO_TOKEN"));
   const accountCanSubmit = account.role !== "viewer";
   const taxRegimeConfirmed = company?.tax_regime_confirmation_available === true && company.tax_regime_confirmed === true;
   const supportedTaxRegime = company?.tax_regime === "simples_nacional";
@@ -81,6 +83,7 @@ async function homologationSetup(account: SiteAccount) {
   const accessIssues: string[] = [];
   if (!accountCanSubmit) accessIssues.push("Seu perfil nesta empresa não tem permissão para transmitir documentos fiscais.");
   if (!focusTokenConfigured) accessIssues.push("A credencial de homologação da Focus não está configurada no servidor.");
+  if (license.schemaReady) accessIssues.push(...license.issues);
   if (!company) accessIssues.push("Não foi possível localizar o cadastro fiscal do emitente.");
   if (!taxRegimeConfirmed) accessIssues.push("O regime tributário precisa estar disponível e confirmado com a contabilidade nos dados da empresa.");
   if (company && !supportedTaxRegime) accessIssues.push("O fluxo atual de NF-e em homologação atende somente empresas confirmadas no Simples Nacional.");
