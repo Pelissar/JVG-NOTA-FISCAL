@@ -248,7 +248,7 @@
       if (cst === '01' || cst === '02') fields = [`${prefix}_base_calculo`, `${prefix}_aliquota_porcentual`, `${prefix}_valor`];
       else if (cst === '03') fields = [`${prefix}_quantidade_vendida`, `${prefix}_aliquota_valor`, `${prefix}_valor`];
       else if (cst === '05') fields = [`${prefix}_base_calculo_st`, `${prefix}_aliquota_porcentual_st`, `${prefix}_valor_st`];
-      else if (!['04', '06', '07', '08', '09'].includes(cst)) {
+      else if (!['04', '06', '07', '08', '09', '49'].includes(cst)) {
         unsupported.push(`CST ${prefix.toUpperCase()} ${cst}: grupo condicional ainda não mapeado.`);
         return;
       }

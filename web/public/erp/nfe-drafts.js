@@ -11,51 +11,45 @@
   var confirmFinalizeButton = document.getElementById('confirmFinalize');
   var finalizeFeedback = document.getElementById('finalizeFeedback');
   var money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-  var focusTaxFieldGroups = [
-    { title: 'ICMS / ICMS-ST', fields: [
-      ['icms_modalidade_base_calculo', 'Modalidade da base do ICMS', '1'],
-      ['icms_reducao_base_calculo', 'Redução da base do ICMS (%)', '0.0000'],
-      ['icms_base_calculo', 'Base do ICMS (R$)', '0.00'],
-      ['icms_aliquota', 'Alíquota do ICMS (%)', '0.0000'],
-      ['icms_valor', 'Valor do ICMS (R$)', '0.00'],
-      ['icms_modalidade_base_calculo_st', 'Modalidade da base do ICMS-ST', '1'],
-      ['icms_margem_valor_adicionado_st', 'Margem de valor agregado ST (%)', '0.0000'],
-      ['icms_reducao_base_calculo_st', 'Redução da base do ICMS-ST (%)', '0.0000'],
-      ['icms_base_calculo_st', 'Base do ICMS-ST (R$)', '0.00'],
-      ['icms_aliquota_st', 'Alíquota do ICMS-ST (%)', '0.0000'],
-      ['icms_valor_st', 'Valor do ICMS-ST (R$)', '0.00'],
-      ['icms_aliquota_credito_simples', 'Alíquota de crédito do Simples (%)', '0.0000'],
-      ['icms_valor_credito_simples', 'Valor de crédito do Simples (R$)', '0.00'],
-      ['icms_base_calculo_retido_st', 'Base de ICMS-ST retido (R$)', '0.00'],
-      ['icms_valor_retido_st', 'ICMS-ST retido anteriormente (R$)', '0.00'],
-      ['icms_valor_substituto', 'ICMS do substituto (R$)', '0.00'],
-      ['icms_aliquota_final', 'Alíquota final do ICMS (%)', '0.0000']
-    ]},
-    { title: 'PIS', fields: [
-      ['pis_base_calculo', 'Base de cálculo do PIS (R$)', '0.00'],
-      ['pis_aliquota_porcentual', 'Alíquota percentual do PIS (%)', '0.0000'],
-      ['pis_quantidade_vendida', 'Quantidade tributável do PIS', '0.0000'],
-      ['pis_aliquota_valor', 'Alíquota do PIS por unidade (R$)', '0.0000'],
-      ['pis_valor', 'Valor do PIS (R$)', '0.00'],
-      ['pis_base_calculo_st', 'Base de cálculo do PIS-ST (R$)', '0.00'],
-      ['pis_aliquota_porcentual_st', 'Alíquota percentual do PIS-ST (%)', '0.0000'],
-      ['pis_quantidade_vendida_st', 'Quantidade tributável do PIS-ST', '0.0000'],
-      ['pis_aliquota_valor_st', 'Alíquota do PIS-ST por unidade (R$)', '0.0000'],
-      ['pis_valor_st', 'Valor do PIS-ST (R$)', '0.00']
-    ]},
-    { title: 'Cofins', fields: [
-      ['cofins_base_calculo', 'Base de cálculo da Cofins (R$)', '0.00'],
-      ['cofins_aliquota_porcentual', 'Alíquota percentual da Cofins (%)', '0.0000'],
-      ['cofins_quantidade_vendida', 'Quantidade tributável da Cofins', '0.0000'],
-      ['cofins_aliquota_valor', 'Alíquota da Cofins por unidade (R$)', '0.0000'],
-      ['cofins_valor', 'Valor da Cofins (R$)', '0.00'],
-      ['cofins_base_calculo_st', 'Base de cálculo da Cofins-ST (R$)', '0.00'],
-      ['cofins_aliquota_porcentual_st', 'Alíquota percentual da Cofins-ST (%)', '0.0000'],
-      ['cofins_quantidade_vendida_st', 'Quantidade tributável da Cofins-ST', '0.0000'],
-      ['cofins_aliquota_valor_st', 'Alíquota da Cofins-ST por unidade (R$)', '0.0000'],
-      ['cofins_valor_st', 'Valor da Cofins-ST (R$)', '0.00']
-    ]}
-  ];
+  var focusTaxFieldSpecs = {
+    icms_modalidade_base_calculo: ['Modalidade da base do ICMS', 'Código/modalidade orientado'],
+    icms_reducao_base_calculo: ['Redução da base do ICMS (%)', 'Percentual orientado'],
+    icms_base_calculo: ['Base do ICMS (R$)', 'Base do item nesta operação'],
+    icms_aliquota: ['Alíquota do ICMS (%)', 'Percentual orientado'],
+    icms_valor: ['Valor do ICMS (R$)', 'Valor correspondente ao item'],
+    icms_modalidade_base_calculo_st: ['Modalidade da base do ICMS-ST', 'Código/modalidade orientado'],
+    icms_margem_valor_adicionado_st: ['Margem de valor agregado ST (%)', 'Percentual orientado'],
+    icms_reducao_base_calculo_st: ['Redução da base do ICMS-ST (%)', 'Percentual orientado'],
+    icms_base_calculo_st: ['Base do ICMS-ST (R$)', 'Base do item nesta operação'],
+    icms_aliquota_st: ['Alíquota do ICMS-ST (%)', 'Percentual orientado'],
+    icms_valor_st: ['Valor do ICMS-ST (R$)', 'Valor correspondente ao item'],
+    icms_aliquota_credito_simples: ['Alíquota de crédito do Simples (%)', 'Use apenas se houver crédito autorizado'],
+    icms_valor_credito_simples: ['Valor de crédito do Simples (R$)', 'Valor correspondente ao item'],
+    icms_base_calculo_retido_st: ['Base de ICMS-ST retido (R$)', 'Base informada para este item'],
+    icms_valor_retido_st: ['ICMS-ST retido anteriormente (R$)', 'Valor informado para este item'],
+    icms_valor_substituto: ['ICMS do substituto (R$)', 'Valor informado para este item'],
+    icms_aliquota_final: ['Alíquota final do ICMS (%)', 'Percentual informado para este item'],
+    pis_base_calculo: ['Base de cálculo do PIS (R$)', 'Base do item nesta operação'],
+    pis_aliquota_porcentual: ['Alíquota percentual do PIS (%)', 'Percentual orientado'],
+    pis_quantidade_vendida: ['Quantidade tributável do PIS', 'Quantidade tributável deste item'],
+    pis_aliquota_valor: ['Alíquota do PIS por unidade (R$)', 'Valor por unidade orientado'],
+    pis_valor: ['Valor do PIS (R$)', 'Valor correspondente ao item'],
+    pis_base_calculo_st: ['Base de cálculo do PIS-ST (R$)', 'Base do item nesta operação'],
+    pis_aliquota_porcentual_st: ['Alíquota percentual do PIS-ST (%)', 'Percentual orientado'],
+    pis_quantidade_vendida_st: ['Quantidade tributável do PIS-ST', 'Quantidade tributável deste item'],
+    pis_aliquota_valor_st: ['Alíquota do PIS-ST por unidade (R$)', 'Valor por unidade orientado'],
+    pis_valor_st: ['Valor do PIS-ST (R$)', 'Valor correspondente ao item'],
+    cofins_base_calculo: ['Base de cálculo da Cofins (R$)', 'Base do item nesta operação'],
+    cofins_aliquota_porcentual: ['Alíquota percentual da Cofins (%)', 'Percentual orientado'],
+    cofins_quantidade_vendida: ['Quantidade tributável da Cofins', 'Quantidade tributável deste item'],
+    cofins_aliquota_valor: ['Alíquota da Cofins por unidade (R$)', 'Valor por unidade orientado'],
+    cofins_valor: ['Valor da Cofins (R$)', 'Valor correspondente ao item'],
+    cofins_base_calculo_st: ['Base de cálculo da Cofins-ST (R$)', 'Base do item nesta operação'],
+    cofins_aliquota_porcentual_st: ['Alíquota percentual da Cofins-ST (%)', 'Percentual orientado'],
+    cofins_quantidade_vendida_st: ['Quantidade tributável da Cofins-ST', 'Quantidade tributável deste item'],
+    cofins_aliquota_valor_st: ['Alíquota da Cofins-ST por unidade (R$)', 'Valor por unidade orientado'],
+    cofins_valor_st: ['Valor da Cofins-ST (R$)', 'Valor correspondente ao item']
+  };
 
   function report(message, kind) {
     status.textContent = message;
@@ -228,6 +222,88 @@
     return window.JvgNfeTaxSuggestion.resolve(product, cfop, state.taxProfiles);
   }
 
+  function applicableFocusTaxGroups(row) {
+    var groups = [];
+    var csosn = row.querySelector('.csosn').value.trim();
+    var pisCst = row.querySelector('.pis-cst').value.trim();
+    var cofinsCst = row.querySelector('.cofins-cst').value.trim();
+    var icmsBasic = ['icms_modalidade_base_calculo', 'icms_reducao_base_calculo', 'icms_base_calculo', 'icms_aliquota', 'icms_valor'];
+    var icmsSt = ['icms_modalidade_base_calculo_st', 'icms_margem_valor_adicionado_st', 'icms_reducao_base_calculo_st', 'icms_base_calculo_st', 'icms_aliquota_st', 'icms_valor_st'];
+    var icmsCredit = ['icms_aliquota_credito_simples', 'icms_valor_credito_simples'];
+    var icmsRetained = ['icms_base_calculo_retido_st', 'icms_valor_retido_st', 'icms_valor_substituto', 'icms_aliquota_final'];
+    function add(title, fields, optional) { groups.push({ title: title, fields: fields, optional: optional === true }); }
+    function addPisCofins(prefix, cst) {
+      var label = prefix.toUpperCase();
+      if (cst === '01' || cst === '02') add(label + ' · CST ' + cst, [prefix + '_base_calculo', prefix + '_aliquota_porcentual', prefix + '_valor']);
+      else if (cst === '03') add(label + ' · CST 03', [prefix + '_quantidade_vendida', prefix + '_aliquota_valor', prefix + '_valor']);
+      else if (cst === '05') add(label + '-ST · CST 05', [prefix + '_base_calculo_st', prefix + '_aliquota_porcentual_st', prefix + '_valor_st']);
+      else if (cst === '99') add(label + ' · CST 99 · escolha percentual ou quantidade', [prefix + '_base_calculo', prefix + '_aliquota_porcentual', prefix + '_quantidade_vendida', prefix + '_aliquota_valor', prefix + '_valor']);
+    }
+    if (csosn === '101') add('Crédito do Simples Nacional · CSOSN 101', icmsCredit);
+    else if (csosn === '201') { add('ICMS-ST · CSOSN 201', icmsSt); add('Crédito do Simples · CSOSN 201', icmsCredit); }
+    else if (csosn === '202' || csosn === '203') add('ICMS-ST · CSOSN ' + csosn, icmsSt);
+    else if (csosn === '500') add('ICMS-ST retido anteriormente · opcional', icmsRetained, true);
+    else if (csosn === '900') { add('ICMS · CSOSN 900 · opcional', icmsBasic, true); add('ICMS-ST · CSOSN 900 · opcional', icmsSt, true); add('Crédito do Simples · CSOSN 900 · opcional', icmsCredit, true); }
+    addPisCofins('pis', pisCst);
+    addPisCofins('cofins', cofinsCst);
+    return groups;
+  }
+
+  function applicableFocusTaxFieldNames(row) {
+    return new Set(applicableFocusTaxGroups(row).reduce(function (all, group) { return all.concat(group.fields); }, []));
+  }
+
+  function renderFocusTaxFields(row, configuredValues) {
+    var root = row.querySelector('.advanced-tax-groups');
+    if (!root) return;
+    var manualValues = row.__manualFocusTaxValues || (row.__manualFocusTaxValues = {});
+    var groups = applicableFocusTaxGroups(row);
+    root.replaceChildren();
+    if (!groups.length) {
+      var empty = document.createElement('p');
+      empty.className = 'advanced-tax-empty';
+      empty.textContent = 'Para os códigos fiscais deste item, não há campos numéricos adicionais a preencher. As regras comuns do Simples não exigem estes valores; grupos condicionais aparecem aqui conforme o CSOSN e os CSTs selecionados.';
+      root.append(empty);
+      return;
+    }
+    groups.forEach(function (group) {
+      var section = document.createElement('section');
+      section.className = 'advanced-tax-group';
+      var heading = document.createElement('h5');
+      heading.textContent = group.title + (group.optional ? ' · opcional' : '');
+      var grid = document.createElement('div');
+      grid.className = 'advanced-tax-grid';
+      group.fields.forEach(function (name) {
+        var spec = focusTaxFieldSpecs[name];
+        if (!spec) return;
+        var input = focusTaxFieldControl([name, spec[0], spec[1]]);
+        var hasManualValue = Object.prototype.hasOwnProperty.call(manualValues, name);
+        var profileValue = configuredValues && configuredValues[name];
+        input.value = hasManualValue ? manualValues[name] : (profileValue == null ? '' : String(profileValue));
+        input.dataset.touched = hasManualValue ? 'true' : 'false';
+        input.addEventListener('input', function () {
+          manualValues[name] = input.value;
+          input.dataset.touched = 'true';
+        });
+        grid.append(input.closest('.field'));
+      });
+      section.append(heading, grid);
+      if (group.optional) {
+        var note = document.createElement('p');
+        note.className = 'advanced-tax-group-note';
+        note.textContent = 'Preencha apenas quando esta situação se aplicar e a contabilidade fornecer os dados.';
+        section.append(note);
+      }
+      if (!group.optional) {
+        var configuredNote = document.createElement('p');
+        configuredNote.className = 'advanced-tax-group-note';
+        configuredNote.textContent = 'Valores existentes no perfil do produto ou da operação aparecem preenchidos e podem ser ajustados neste item. O ERP não inventa bases, alíquotas ou valores.';
+        section.append(configuredNote);
+      }
+      root.append(section);
+    });
+  }
+
   function updateTaxSuggestion(row, product, resetTouched) {
     var cfop = row.querySelector('.cfop');
     var csosn = row.querySelector('.csosn');
@@ -245,6 +321,7 @@
       row.dataset.cofinsCstTouched = 'false';
       row.querySelector('.pis-cst').value = '';
       row.querySelector('.cofins-cst').value = '';
+      row.__manualFocusTaxValues = {};
       row.querySelectorAll('.focus-tax-field').forEach(function (input) { input.dataset.touched = 'false'; });
       row.querySelectorAll('.focus-tax-field').forEach(function (input) { input.value = ''; });
     }
@@ -256,28 +333,39 @@
       if (row.dataset.originTouched !== 'true') origin.value = '';
       if (row.dataset.pisCstTouched !== 'true') row.querySelector('.pis-cst').value = '';
       if (row.dataset.cofinsCstTouched !== 'true') row.querySelector('.cofins-cst').value = '';
-      row.querySelectorAll('.focus-tax-field').forEach(function (input) {
-        if (input.dataset.touched !== 'true') input.value = '';
-      });
+      row.__configuredFocusTaxFields = {};
+      renderFocusTaxFields(row, {});
       renderProductFiscalFacts(row, null, null);
       note.textContent = 'Selecione o produto. Os perfis e o CFOP do cadastro podem sugerir valores; a escolha final é sua em cada item.';
       return;
     }
 
-    var selected = taxRuleFor(product, cfop.value);
-    var rule = selected.rule;
     var natureCfop = String(state.natureCfopSuggestion || '');
+    var effectiveCfop = row.dataset.cfopTouched !== 'true' && !cfop.value ? natureCfop : cfop.value;
+    var selected = taxRuleFor(product, effectiveCfop);
+    var rule = selected.rule;
     // A nature explicitly chosen by the user may prefill its CFOP. Product and
     // profile CFOPs remain suggestions and are never silently applied.
     var profileCfop = rule && rule.cfop ? String(rule.cfop) : '';
     var productCfop = String(product.defaultCfop || '');
     var suggestedCfop = natureCfop;
-    var suggestedCsosn = state.isJvgPilot ? '102' : '';
+    var suggestedCsosn = rule && rule.csosn ? String(rule.csosn) : (state.isJvgPilot ? '102' : '');
+    var effectiveCsosn = row.dataset.csosnTouched === 'true' ? csosn.value : suggestedCsosn;
+    var commonSimplesSale = Boolean(state.homologationSetup && state.homologationSetup.supportedTaxRegime && state.homologationSetup.taxRegimeConfirmed) &&
+      ['5101', '5102', '6101', '6102'].indexOf(String(effectiveCfop)) >= 0 && (!effectiveCsosn || effectiveCsosn === '102');
+    var defaultPisCofinsCst = commonSimplesSale ? '49' : '';
+    var suggestedPisCst = rule && rule.pisCst ? String(rule.pisCst) : defaultPisCofinsCst;
+    var suggestedCofinsCst = rule && rule.cofinsCst ? String(rule.cofinsCst) : defaultPisCofinsCst;
     if (row.dataset.cfopTouched !== 'true') cfop.value = suggestedCfop;
     if (row.dataset.csosnTouched !== 'true') csosn.value = suggestedCsosn;
+    if (row.dataset.pisCstTouched !== 'true') row.querySelector('.pis-cst').value = suggestedPisCst;
+    if (row.dataset.cofinsCstTouched !== 'true') row.querySelector('.cofins-cst').value = suggestedCofinsCst;
     if (row.dataset.ncmTouched !== 'true') ncm.value = String(product.ncm || '').replace(/\D/g, '');
     if (row.dataset.cestTouched !== 'true') cest.value = String(product.cest || '').replace(/\D/g, '');
     if (row.dataset.originTouched !== 'true') origin.value = /^[0-8]$/.test(String(product.origin || '')) ? String(product.origin) : '';
+    var configuredFocusFields = rule && rule.focusFields && typeof rule.focusFields === 'object' ? rule.focusFields : {};
+    row.__configuredFocusTaxFields = configuredFocusFields;
+    renderFocusTaxFields(row, configuredFocusFields);
     renderProductFiscalFacts(row, product, selected);
 
     if (natureCfop) {
@@ -300,33 +388,13 @@
     if (rule && selected.profile) {
       var profileNote = document.createElement('span');
       profileNote.className = 'profile-suggestion-note';
-      profileNote.textContent = 'Perfil opcional: confira a condição tributária do destinatário e o local real de entrega.';
-      var applyProfile = document.createElement('button');
-      applyProfile.type = 'button';
-      applyProfile.className = 'inline-suggestion';
-      applyProfile.textContent = 'Preencher campos vazios pelo perfil';
-      applyProfile.addEventListener('click', function () {
-        [[row.querySelector('.csosn'), rule.csosn, 'csosnTouched'],
-          [row.querySelector('.pis-cst'), rule.pisCst, 'pisCstTouched'],
-          [row.querySelector('.cofins-cst'), rule.cofinsCst, 'cofinsCstTouched']].forEach(function (entry) {
-          if (entry[0] && !entry[0].value.trim() && entry[1] != null && entry[1] !== '') {
-            entry[0].value = String(entry[1]);
-            row.dataset[entry[2]] = 'true';
-          }
-        });
-        var values = rule.focusFields && typeof rule.focusFields === 'object' ? rule.focusFields : {};
-        row.querySelectorAll('.focus-tax-field').forEach(function (input) {
-          var suggestion = values[input.dataset.field];
-          if (!input.value.trim() && suggestion != null && suggestion !== '') {
-            input.value = String(suggestion);
-            input.dataset.touched = 'true';
-          }
-        });
-        applyProfile.disabled = true;
-        applyProfile.textContent = 'Referências preenchidas nos campos vazios';
-        updateTotal();
-      });
-      note.append(document.createTextNode(' '), profileNote, document.createTextNode(' '), applyProfile);
+      profileNote.textContent = 'Perfil do produto aplicado automaticamente para esta operação. Os códigos e valores são editáveis e suas alterações ficam neste item.';
+      note.append(document.createTextNode(' '), profileNote);
+    } else if (suggestedPisCst === '49' && suggestedCofinsCst === '49') {
+      var simplesNote = document.createElement('span');
+      simplesNote.className = 'profile-suggestion-note';
+      simplesNote.textContent = 'CST 49 preenchido como referência para venda comum do Simples Nacional. Produtos monofásicos, sujeitos a tratamento específico ou exportação precisam da regra própria do produto; não há cálculo de alíquotas ou valores.';
+      note.append(document.createTextNode(' '), simplesNote);
     }
     if (selected.profile && !rule) {
       var operations = selected.profile.rules && selected.profile.rules.operations || {};
@@ -402,8 +470,19 @@
       ['Perfil opcional', selected && selected.profile && selected.profile.name],
       ['CFOP do item', row.querySelector('.cfop').value],
       ['CFOP sugerido', (selected && selected.rule && selected.rule.cfop) || (product && product.defaultCfop)],
-      ['CSOSN sugerido', selected && selected.rule && selected.rule.csosn],
+      ['CSOSN aplicado ao item', row.querySelector('.csosn').value],
+      ['CST do PIS aplicado ao item', row.querySelector('.pis-cst').value],
+      ['CST da Cofins aplicado ao item', row.querySelector('.cofins-cst').value],
     ];
+    var applicableNames = applicableFocusTaxFieldNames(row);
+    var configuredFocusFields = selected && selected.rule && selected.rule.focusFields || {};
+    var configuredDetails = Object.keys(configuredFocusFields).filter(function (name) {
+      return applicableNames.has(name) && configuredFocusFields[name] != null && configuredFocusFields[name] !== '';
+    }).map(function (name) {
+      var spec = focusTaxFieldSpecs[name];
+      return (spec ? spec[0] : name) + ': ' + String(configuredFocusFields[name]);
+    });
+    facts.push(['Valores numericos do perfil', configuredDetails.length ? configuredDetails.join(' | ') : 'Nenhum para esta combinacao']);
     facts.forEach(function (fact) {
       var item = document.createElement('div');
       var label = document.createElement('span'); label.textContent = fact[0];
@@ -425,26 +504,14 @@
     input.min = '0';
     input.step = 'any';
     input.inputMode = 'decimal';
-    input.placeholder = 'Informe somente se orientado';
+    input.placeholder = 'Valor da regra cadastrada, se aplicável';
     input.setAttribute('aria-label', definition[1]);
-    input.addEventListener('input', function () { input.dataset.touched = 'true'; });
     label.append(caption, input);
     return label;
   }
 
   function buildFocusTaxFields(row) {
-    var root = row.querySelector('.advanced-tax-groups');
-    focusTaxFieldGroups.forEach(function (group) {
-      var section = document.createElement('section');
-      section.className = 'advanced-tax-group';
-      var heading = document.createElement('h5');
-      heading.textContent = group.title;
-      var grid = document.createElement('div');
-      grid.className = 'advanced-tax-grid';
-      group.fields.forEach(function (field) { grid.append(focusTaxFieldControl(field)); });
-      section.append(heading, grid);
-      root.append(section);
-    });
+    renderFocusTaxFields(row, {});
   }
 
   function updateItemTaxSuggestions() {
@@ -474,7 +541,7 @@
       '<label class="field"><span>CEST do item</span><input class="item-cest" maxlength="9" inputmode="numeric" placeholder="Quando aplicável"></label>' +
       '<label class="field"><span>Origem da mercadoria</span><select class="item-origin"><option value="">Selecione</option><option value="0">Nacional</option><option value="1">Importação direta</option><option value="2">Importada, adquirida no mercado interno</option><option value="3">Nacional com conteúdo de importação acima de 40%</option><option value="4">Nacional, conforme processo produtivo básico</option><option value="5">Nacional com conteúdo de importação até 40%</option><option value="6">Importação direta, sem similar nacional</option><option value="7">Importada no mercado interno, sem similar nacional</option><option value="8">Nacional com conteúdo de importação acima de 70%</option></select></label></div>' +
       '<p class="tax-suggestion" role="status" aria-live="polite">Selecione produto e operação. As sugestões são opcionais e todos os códigos podem ser alterados neste item.</p>' +
-      '<details class="product-fiscal-details"><summary>Valores tributários numéricos (avançado)</summary><p class="advanced-tax-help">Informe apenas os valores orientados para a combinação de CST/CSOSN deste item. O SigmaFiscal não calcula nem completa tributos.</p><div class="advanced-tax-groups"></div></details>' +
+      '<details class="product-fiscal-details"><summary>Valores tributários específicos (somente quando a regra exigir)</summary><p class="advanced-tax-help">Em venda comum no Simples com CSOSN 102 e CST PIS/Cofins 49, estes valores numéricos não são preenchidos. Se o perfil fiscal deste produto tiver valores orientados para a operação, eles aparecem automaticamente aqui. Só informe valores quando a regra selecionada exigir e houver orientação contábil; o SigmaFiscal não inventa nem calcula impostos.</p><div class="advanced-tax-groups"></div></details>' +
       '<details class="product-fiscal-details"><summary>Dados fiscais cadastrados</summary><div class="product-fiscal-facts"></div></details>';
     buildFocusTaxFields(row);
     var select = row.querySelector('.product');
@@ -493,12 +560,27 @@
       var product = state.products.find(function (entry) { return entry.id === select.value; });
       if (product) updateTaxSuggestion(row, product, false);
     });
-    row.querySelector('.csosn').addEventListener('input', function () { row.dataset.csosnTouched = 'true'; });
+    row.querySelector('.csosn').addEventListener('input', function () {
+      row.dataset.csosnTouched = 'true';
+      var product = state.products.find(function (entry) { return entry.id === select.value; });
+      if (product) updateTaxSuggestion(row, product, false);
+      else renderFocusTaxFields(row, {});
+    });
     row.querySelector('.item-ncm').addEventListener('input', function () { row.dataset.ncmTouched = 'true'; });
     row.querySelector('.item-cest').addEventListener('input', function () { row.dataset.cestTouched = 'true'; });
     row.querySelector('.item-origin').addEventListener('change', function () { row.dataset.originTouched = 'true'; });
-    row.querySelector('.pis-cst').addEventListener('input', function () { row.dataset.pisCstTouched = 'true'; });
-    row.querySelector('.cofins-cst').addEventListener('input', function () { row.dataset.cofinsCstTouched = 'true'; });
+    row.querySelector('.pis-cst').addEventListener('input', function () {
+      row.dataset.pisCstTouched = 'true';
+      var product = state.products.find(function (entry) { return entry.id === select.value; });
+      if (product) updateTaxSuggestion(row, product, false);
+      else renderFocusTaxFields(row, {});
+    });
+    row.querySelector('.cofins-cst').addEventListener('input', function () {
+      row.dataset.cofinsCstTouched = 'true';
+      var product = state.products.find(function (entry) { return entry.id === select.value; });
+      if (product) updateTaxSuggestion(row, product, false);
+      else renderFocusTaxFields(row, {});
+    });
     row.querySelector('.remove-item').addEventListener('click', function () {
       if (items.children.length > 1) row.remove();
       else report('Mantenha pelo menos um produto na nota.', 'error');
@@ -522,8 +604,15 @@
         csosn: row.querySelector('.csosn').value.trim(),
         pisCst: row.querySelector('.pis-cst').value.trim(),
         cofinsCst: row.querySelector('.cofins-cst').value.trim(),
+        manualTaxFields: [
+          row.dataset.csosnTouched === 'true' ? 'csosn' : '',
+          row.dataset.pisCstTouched === 'true' ? 'pisCst' : '',
+          row.dataset.cofinsCstTouched === 'true' ? 'cofinsCst' : ''
+        ].concat(Array.from(row.querySelectorAll('.focus-tax-field')).filter(function (input) {
+          return input.dataset.touched === 'true' && applicableFocusTaxFieldNames(row).has(input.dataset.field);
+        }).map(function (input) { return input.dataset.field; })).filter(Boolean),
         focusFields: Object.fromEntries(Array.from(row.querySelectorAll('.focus-tax-field')).filter(function (input) {
-          return input.value.trim() !== '';
+          return input.value.trim() !== '' && applicableFocusTaxFieldNames(row).has(input.dataset.field);
         }).map(function (input) { return [input.dataset.field, input.value.trim()]; })),
       };
     });
@@ -1000,10 +1089,10 @@
     var response = await api('/api/fiscal/nfe-drafts');
     state.drafts = Array.isArray(response.drafts) ? response.drafts : [];
     state.homologationSetup = response.homologationSetup || null;
-    state.isJvgPilot = Boolean(state.homologationSetup && state.homologationSetup.accessReady === true);
+    state.isJvgPilot = Boolean(state.homologationSetup && state.homologationSetup.isPilotCompany === true);
     renderHistory();
     renderHomologationReadiness();
-    if (state.isJvgPilot) updateItemTaxSuggestions();
+    updateItemTaxSuggestions();
   }
 
   function clearOrderQuery() {
@@ -1054,16 +1143,26 @@
         row.querySelector('.csosn').value = String(saved.taxRules && saved.taxRules.csosn || saved.csosn || '');
         row.querySelector('.pis-cst').value = String(saved.taxRules && saved.taxRules.pisCst || '');
         row.querySelector('.cofins-cst').value = String(saved.taxRules && saved.taxRules.cofinsCst || '');
+        var manualTaxFields = Array.isArray(saved.taxRules && saved.taxRules.manualTaxFields)
+          ? saved.taxRules.manualTaxFields : [];
+        var hasTaxOverrideTracking = Array.isArray(saved.taxRules && saved.taxRules.manualTaxFields);
         row.querySelector('.item-ncm').value = String(saved.ncm || '');
         row.querySelector('.item-cest').value = String(saved.cest || '');
         row.querySelector('.item-origin').value = saved.origin == null ? '' : String(saved.origin);
         var focusFields = saved.taxRules && saved.taxRules.focusFields || {};
-        row.querySelectorAll('.focus-tax-field').forEach(function (input) {
-          input.value = focusFields[input.dataset.field] == null ? '' : String(focusFields[input.dataset.field]);
-          input.dataset.touched = 'true';
+        row.__manualFocusTaxValues = {};
+        var savedManualFocusFields = hasTaxOverrideTracking ? manualTaxFields.filter(function (field) {
+          return Object.prototype.hasOwnProperty.call(focusTaxFieldSpecs, field);
+        }) : Object.keys(focusFields);
+        savedManualFocusFields.forEach(function (field) {
+          row.__manualFocusTaxValues[field] = focusFields[field] == null ? '' : String(focusFields[field]);
         });
-        ['cfopTouched', 'csosnTouched', 'ncmTouched', 'cestTouched', 'originTouched', 'pisCstTouched', 'cofinsCstTouched']
+        ['cfopTouched', 'ncmTouched', 'cestTouched', 'originTouched']
           .forEach(function (key) { row.dataset[key] = 'true'; });
+        row.dataset.csosnTouched = manualTaxFields.indexOf('csosn') >= 0 || (!hasTaxOverrideTracking && row.querySelector('.csosn').value !== '') ? 'true' : 'false';
+        row.dataset.pisCstTouched = manualTaxFields.indexOf('pisCst') >= 0 || (!hasTaxOverrideTracking && row.querySelector('.pis-cst').value !== '') ? 'true' : 'false';
+        row.dataset.cofinsCstTouched = manualTaxFields.indexOf('cofinsCst') >= 0 || (!hasTaxOverrideTracking && row.querySelector('.cofins-cst').value !== '') ? 'true' : 'false';
+        updateTaxSuggestion(row, state.products.find(function (entry) { return entry.id === saved.productId; }), false);
         if (state.sourceOrderId) {
           row.querySelectorAll('.product, .quantity, .price, .remove-item').forEach(function (field) { field.disabled = true; });
         }

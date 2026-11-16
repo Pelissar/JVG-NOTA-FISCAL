@@ -436,7 +436,7 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
       const expectedFields = conditionalPisCofinsFields(cst, prefix);
       const missing = missingTaxFields(expectedFields, focusFields);
       if (missing.length) itemPisCofinsMissing.push(`${itemLabel}: CST ${cst} de ${prefix.toUpperCase()} requer ${focusFieldList(missing)}. Preencha esses campos na seção avançada deste item.`);
-      if (cst && !expectedFields.length && !["04", "06", "07", "08", "09"].includes(cst))
+      if (cst && !expectedFields.length && !["04", "06", "07", "08", "09", "49"].includes(cst))
         itemPisCofinsMissing.push(`Item ${index + 1}: revisar o grupo condicional do ${prefix.toUpperCase()} para CST ${cst} com a tabela Focus e a contabilidade`);
     }
     if (taxRuleReview.ibsCbsMissing.length)

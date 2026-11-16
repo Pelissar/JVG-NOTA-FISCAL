@@ -592,7 +592,7 @@
             addStepError(errors, byName[percentage[0]], label + ': informe somente o grupo percentual ou o grupo por quantidade para CST ' + cst + '.');
           else if (percentageStarted) need(percentage, 'complete o grupo percentual iniciado para CST ' + cst + '.');
           else if (quantityStarted) need(quantity, 'complete o grupo por quantidade iniciado para CST ' + cst + '.');
-          else addStepError(errors, byName[percentage[0]] || row.querySelector('.' + prefix + '-cst'), label + ': informe um grupo percentual ou por quantidade com os valores orientados para CST ' + cst + '.');
+          else if (cst !== '49') addStepError(errors, byName[percentage[0]] || row.querySelector('.' + prefix + '-cst'), label + ': informe um grupo percentual ou por quantidade com os valores orientados para CST ' + cst + '.');
         }
       });
     inputs.forEach(function (input) {

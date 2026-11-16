@@ -106,6 +106,7 @@ body{min-width:320px}
 .advanced-tax-group h5{margin:0 0 10px;color:var(--ink,#183347);font-size:11px}
 .advanced-tax-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .advanced-tax-grid .field input{min-height:36px;font-size:10px}
+.advanced-tax-group-note{margin:9px 0 0;color:var(--muted,#62798a);font-size:10px;line-height:1.5}
 .item-row .inline-suggestion{display:inline-flex;align-items:center;min-height:28px;margin:5px 0 0;padding:4px 9px;border:1px solid var(--accent,#1769d2);border-radius:8px;background:var(--accent-soft,#eaf3ff);color:var(--accent-strong,#084a9e);font:inherit;font-size:11px;font-weight:750;cursor:pointer}
 .item-row .inline-suggestion:hover{filter:brightness(.97)}
 .profile-suggestion-note{display:block;margin:6px 0;color:var(--muted,#62798a);font-size:10px;line-height:1.45}

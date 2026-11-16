@@ -97,6 +97,32 @@ function pisCofinsFields(cst: string, prefix: "pis" | "cofins"): string[] | null
   return null;
 }
 
+export function filterFocusTaxFieldsForRule(
+  focusFields: FocusTaxFields,
+  rule: Record<string, unknown>,
+): FocusTaxFields {
+  const allowed = new Set<string>();
+  const csosn = typeof rule.csosn === "string" ? rule.csosn.trim() : "";
+  const basic = ["icms_modalidade_base_calculo", "icms_reducao_base_calculo", "icms_base_calculo", "icms_aliquota", "icms_valor"];
+  if (csosn === "101") icmsCreditFields.forEach(field => allowed.add(field));
+  else if (csosn === "201") [...icmsStFields, ...icmsCreditFields].forEach(field => allowed.add(field));
+  else if (csosn === "202" || csosn === "203") icmsStFields.forEach(field => allowed.add(field));
+  else if (csosn === "500") icmsRetainedStFields.forEach(field => allowed.add(field));
+  else if (csosn === "900") [...basic, ...icmsStFields, ...icmsCreditFields].forEach(field => allowed.add(field));
+  for (const [prefix, rawCst] of [["pis", rule.pisCst], ["cofins", rule.cofinsCst]] as const) {
+    const cst = typeof rawCst === "string" ? rawCst.trim() : "";
+    if (cst === "01" || cst === "02")
+      [`${prefix}_base_calculo`, `${prefix}_aliquota_porcentual`, `${prefix}_valor`].forEach(field => allowed.add(field));
+    else if (cst === "03")
+      [`${prefix}_quantidade_vendida`, `${prefix}_aliquota_valor`, `${prefix}_valor`].forEach(field => allowed.add(field));
+    else if (cst === "05")
+      [`${prefix}_base_calculo_st`, `${prefix}_aliquota_porcentual_st`, `${prefix}_valor_st`].forEach(field => allowed.add(field));
+    else if (cst === "99")
+      [`${prefix}_base_calculo`, `${prefix}_aliquota_porcentual`, `${prefix}_quantidade_vendida`, `${prefix}_aliquota_valor`, `${prefix}_valor`].forEach(field => allowed.add(field));
+  }
+  return Object.fromEntries(Object.entries(focusFields).filter(([name]) => allowed.has(name)));
+}
+
 /**
  * IBS/CBS só entra no payload quando a empresa confirmou regime regular,
  * a regra habilitou explicitamente o uso futuro e a data de emissão já
@@ -170,7 +196,11 @@ export function reviewFocusTaxRule(
       } else if (quantityStarted) {
         if (!hasQuantityGroup) result.pisCofinsMissing.push(...missing([...quantityFields, valueField], focusFields));
       } else {
-        result.pisCofinsMissing.push(`${prefix.toUpperCase()} CST ${cst}: informe o grupo percentual ou o grupo por quantidade, com o valor do tributo aprovado.`);
+        // CST 49 representa outras saídas e, para a receita comum do Simples,
+        // o recolhimento é unificado no DAS. A API exige o CST, mas o ERP não
+        // deve inventar bases, alíquotas ou valores para este grupo.
+        if (cst !== "49")
+          result.pisCofinsMissing.push(`${prefix.toUpperCase()} CST ${cst}: informe o grupo percentual ou o grupo por quantidade, com o valor do tributo aprovado.`);
       }
       continue;
     }

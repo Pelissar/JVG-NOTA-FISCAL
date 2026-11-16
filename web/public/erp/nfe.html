@@ -6,13 +6,13 @@
   <meta name="theme-color" content="#0f2334">
   <meta name="description" content="Emissão e acompanhamento de NF-e no SigmaFiscal.">
   <title>Emitir NF-e · SigmaFiscal</title>
-  <link rel="stylesheet" href="./nfe-drafts.css?v=20261116-mobile">
+  <link rel="stylesheet" href="./nfe-drafts.css?v=20261116-tax-groups">
   <link rel="stylesheet" href="./fiscal-workspace.css">
   <link rel="stylesheet" href="./fiscal-document-switcher.css?v=20261113-2">
   <link rel="stylesheet" href="./focus-diagnostic.css">
   <link rel="stylesheet" href="/erp/fiscal-theme.css">
   <script defer src="./nfe-tax-suggestion.js?v=20261112-2"></script>
-  <script defer src="./nfe-drafts.js?v=20261116-mobile"></script>
+  <script defer src="./nfe-drafts.js?v=20261116-tax-groups"></script>
   <script defer src="./nfe-wizard-ui.js?v=20261116-steps"></script>
   <script defer src="./fiscal-workspace.js?v=20261116-steps"></script>
 <style>
@@ -52,7 +52,7 @@
             <div data-fiscal-section="items" hidden><div class="items-heading"><div><h3>Produtos</h3><p>Até 20 itens, com quantidade e preço unitário.</p></div><button type="button" class="add-button" id="addItem">+ Adicionar produto</button></div>
             <div id="items" class="items" aria-live="polite"></div>
             <datalist id="cfopOptions"></datalist>
-            <p class="hint">Perfis tributários são opcionais. Se houver uma referência, ela pode sugerir dados; o que você informar diretamente neste item prevalece. Não há cálculo automático de tributos. <a href="/erp/tax-profiles.html" class="fiscal-inline-link">Configurar perfis opcionais</a>.</p>
+            <p class="hint">PIS/Cofins CST 49 é preenchido como referência para vendas comuns do Simples (CSOSN 102, CFOP 5101/5102/6101/6102). Regras do perfil do produto prevalecem e exceções como monofásico, ST e exportação exigem classificação própria. Os valores numéricos específicos aparecem automaticamente do perfil quando configurados; não são necessários para a venda comum 102/49. <a href="/erp/tax-profiles.html" class="fiscal-inline-link">Configurar perfis opcionais</a>.</p>
             <p class="hint">O CFOP é preenchido por item e pode variar dentro da mesma nota. Qualquer código sugerido pode ser alterado. Considere operação, produto, situação tributária do destinatário e local de entrega. <a href="/erp/cfop.html" class="fiscal-inline-link">Consultar tabela oficial CFOP</a>.</p>
             </div><div data-fiscal-section="transport" hidden class="fiscal-pending">
               <h3>Transporte e volumes</h3>

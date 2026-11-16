@@ -1,4 +1,4 @@
-import { parseFocusTaxFields, type FocusTaxFields } from "./focus-tax-fields.ts";
+import { focusTaxFieldNames, parseFocusTaxFields, type FocusTaxFields } from "./focus-tax-fields.ts";
 
 export const MAX_NFE_DRAFT_ITEMS = 20;
 
@@ -16,6 +16,7 @@ export type NfeDraftItemInput = {
   pisCst: string;
   cofinsCst: string;
   focusFields: FocusTaxFields;
+  manualTaxFields: string[];
 };
 
 export type NfeDraftVehicleInput = {
@@ -82,6 +83,7 @@ const ieIndicatorCodes = new Set([1, 2, 9]);
 const intermediaryCodes = new Set([0, 1]);
 const paymentIndicatorCodes = new Set([0, 1]);
 const paymentMethods = new Set(["01", "02", "03", "04", "05", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "90", "91", "99"]);
+const editableTaxFields = new Set(["csosn", "pisCst", "cofinsCst", ...focusTaxFieldNames]);
 
 function optionalCode(value: unknown, allowed: Set<number>, label: string): number | null {
   if (value == null || value === "") return null;
@@ -288,13 +290,18 @@ export function parseNfeDraftInput(raw: unknown): NfeDraftInput {
     let focusFields: FocusTaxFields;
     try { focusFields = parseFocusTaxFields(p.focusFields); }
     catch (error) { throw new Error(error instanceof Error ? error.message : "Campos fiscais do item inválidos."); }
+    const manualTaxFields = Array.isArray(p.manualTaxFields)
+      ? [...new Set(p.manualTaxFields.filter((field): field is string => typeof field === "string"))]
+      : [];
+    if (manualTaxFields.some(field => !editableTaxFields.has(field)))
+      throw new Error("A lista de campos fiscais editados contém um campo inválido.");
     const subtotalCents = Math.round(quantityMilli * unitPriceCents / 1000);
     totalCents += subtotalCents;
     if (!Number.isSafeInteger(totalCents) || totalCents > 100_000_000_000)
       throw new Error("Valor total acima do limite para rascunho.");
     return { productId: p.productId, ...(ncm !== undefined ? { ncm } : {}), ...(cest !== undefined ? { cest } : {}),
       ...(origin !== undefined ? { origin } : {}), quantity, quantityMilli, unitPriceCents, subtotalCents,
-      cfop, csosn, pisCst, cofinsCst, focusFields };
+      cfop, csosn, pisCst, cofinsCst, focusFields, manualTaxFields };
   });
 
   const grossCommercialCents = totalCents + additionalTotals.freightCents + additionalTotals.insuranceCents + additionalTotals.expensesCents;

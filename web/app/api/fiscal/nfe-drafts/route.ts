@@ -10,6 +10,7 @@ import { reviewNfeOperation } from "../../../../lib/fiscal/operation-review";
 import { reviewNfePreparation } from "../../../../lib/fiscal/nfe-preflight";
 import { reviewNfeDocument, reviewFocusNfePayload } from "../../../../lib/fiscal/nfe-document-review";
 import { reviewNfeHomologationGate } from "../../../../lib/fiscal/nfe-homologation-gate";
+import { filterFocusTaxFieldsForRule } from "../../../../lib/fiscal/focus-tax-fields";
 import { licenseView } from "../../../../lib/licensing";
 
 export const dynamic = "force-dynamic";
@@ -60,6 +61,14 @@ function stableJson(value: unknown): string {
   return JSON.stringify(value) ?? "null";
 }
 
+function asRecord(value: unknown): DbRow {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as DbRow : {};
+}
+
+function ruleText(rule: DbRow, key: string): string {
+  return typeof rule[key] === "string" ? String(rule[key]).trim() : "";
+}
+
 async function currentAccount(): Promise<SiteAccount> {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
@@ -79,6 +88,8 @@ async function homologationSetup(account: SiteAccount) {
   const accountCanSubmit = account.role !== "viewer";
   const taxRegimeConfirmed = company?.tax_regime_confirmation_available === true && company.tax_regime_confirmed === true;
   const supportedTaxRegime = company?.tax_regime === "simples_nacional";
+  const pilotCompanyId = focusRuntimeEnv("JVG_FOCUS_PILOT_COMPANY_ID");
+  const isPilotCompany = Boolean(pilotCompanyId && account.company_id === pilotCompanyId);
   const issuerMissing = company ? company.fiscal_missing.slice(0, 30) : ["Cadastro fiscal do emitente não encontrado"];
   const accessIssues: string[] = [];
   if (!accountCanSubmit) accessIssues.push("Seu perfil nesta empresa não tem permissão para transmitir documentos fiscais.");
@@ -97,6 +108,7 @@ async function homologationSetup(account: SiteAccount) {
     taxRegimeConfirmationAvailable: company?.tax_regime_confirmation_available === true,
     taxRegimeConfirmed,
     supportedTaxRegime,
+    isPilotCompany,
     accessReady: accessIssues.length === 0,
     accessIssues,
   };
@@ -258,20 +270,45 @@ export async function POST(request: Request) {
       if (!/^[0-9]{8}$/.test(itemNcm)) pending.push(`Item ${index + 1} (${product.name}): NCM ausente ou inválido. Preencha o campo NCM neste item com 8 dígitos.`);
       if (!input.cfop) pending.push(`Item ${index + 1}: CFOP pendente. Informe o CFOP aplicável no campo CFOP deste item, considerando a operação e o local de entrega.`);
       else if (!isOfficialCfopCode(input.cfop)) pending.push(`Item ${index + 1}: CFOP ${input.cfop} não consta da tabela oficial. Corrija o código no campo CFOP deste item.`);
-      // O 102 é uma sugestão editável apresentada pela interface apenas para
-      // a empresa piloto. Um campo vazio enviado pelo usuário deve continuar vazio.
-      const itemCsosn = input.csosn;
-      if (!itemCsosn) pending.push(`Item ${index + 1}: CSOSN do ICMS pendente. Informe o código indicado para este produto e operação no próprio item da NF-e.`);
       const review = reviewNfeOperation(issuerUf, recipientUf, input.cfop, index + 1);
       const profile = product.tax_profile_id ? byProfile.get(String(product.tax_profile_id)) : undefined;
+      const profileRules = asRecord(profile?.rules);
+      const profileOperations = asRecord(profileRules.operations);
+      const configuredRule = asRecord(profileOperations[review.operation]);
+      const manuallyEdited = new Set(input.manualTaxFields);
+      const profileOrInput = (key: "csosn" | "pisCst" | "cofinsCst", defaultValue = "") => {
+        if (manuallyEdited.has(key)) return input[key];
+        const entered = input[key];
+        if (entered) return entered;
+        return ruleText(configuredRule, key) || defaultValue;
+      };
+      const itemCsosn = profileOrInput("csosn");
+      const commonSimplesSale = company.tax_regime === "simples_nacional" && company.tax_regime_confirmed === true &&
+        ["5101", "5102", "6101", "6102"].includes(input.cfop) && (!itemCsosn || itemCsosn === "102");
+      // A Receita orienta CST 49 para receita comum recolhida pelo DAS. As
+      // exceções (monofásico, ST, exportação etc.) devem estar configuradas
+      // no produto/perfil; nenhum valor de imposto é calculado aqui.
+      const defaultPisCofinsCst = commonSimplesSale ? "49" : "";
+      const pisCst = profileOrInput("pisCst", defaultPisCofinsCst);
+      const cofinsCst = profileOrInput("cofinsCst", defaultPisCofinsCst);
+      const configuredFocusFields = asRecord(configuredRule.focusFields);
+      const focusFields = filterFocusTaxFieldsForRule(
+        { ...configuredFocusFields, ...input.focusFields },
+        { csosn: itemCsosn, pisCst, cofinsCst },
+      );
+      for (const field of manuallyEdited) {
+        if (field in focusFields && !Object.hasOwn(input.focusFields, field)) delete focusFields[field];
+      }
+      if (!itemCsosn) pending.push(`Item ${index + 1}: CSOSN do ICMS pendente. Informe o código indicado para este produto e operação no próprio item da NF-e.`);
       const rules = {
         csosn: itemCsosn,
-        pisCst: input.pisCst,
-        cofinsCst: input.cofinsCst,
-        focusFields: input.focusFields,
+        pisCst,
+        cofinsCst,
+        focusFields,
+        manualTaxFields: input.manualTaxFields,
       };
-      if (!input.pisCst) pending.push(`Item ${index + 1}: CST do PIS pendente. Informe no próprio item o código aplicável ao produto e à operação; não é necessário cadastrar perfil tributário.`);
-      if (!input.cofinsCst) pending.push(`Item ${index + 1}: CST da Cofins pendente. Informe no próprio item o código aplicável ao produto e à operação; não é necessário cadastrar perfil tributário.`);
+      if (!pisCst) pending.push(`Item ${index + 1}: CST do PIS sem regra automática para esta operação. Configure a regra no produto/perfil ou informe no item da NF-e.`);
+      if (!cofinsCst) pending.push(`Item ${index + 1}: CST da Cofins sem regra automática para esta operação. Configure a regra no produto/perfil ou informe no item da NF-e.`);
       const taxPreview = { lines: [], sumOfEstimatesCents: 0, provisional: true, validForEmission: false, calculationMethod: "not_calculated" };
       return {
         productId: product.id, sku: product.sku, description: product.name,
