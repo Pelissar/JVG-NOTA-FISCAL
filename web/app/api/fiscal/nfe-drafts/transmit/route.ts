@@ -52,15 +52,19 @@ function safeFocusBody(body: Json): Json {
   for (const key of focusSafeFields) {
     const value = body[key];
     if ((key === "eventos" || key === "erros" || key === "errors") && Array.isArray(value)) {
-      const entries = value.slice(0, key === "eventos" ? 50 : 20).flatMap(rawEntry => {
-        if (typeof rawEntry === "string") return rawEntry.length <= 1000 ? [rawEntry] : [];
+      const entries: unknown[] = [];
+      for (const rawEntry of value.slice(0, key === "eventos" ? 50 : 20)) {
+        if (typeof rawEntry === "string") {
+          if (rawEntry.length <= 1000) entries.push(rawEntry);
+          continue;
+        }
         const event = obj(rawEntry);
         const safeEvent = Object.fromEntries(Object.entries(event).filter(([name, item]) =>
           /^[a-zA-Z0-9_]{1,64}$/.test(name) &&
           ((typeof item === "string" && item.length <= 2000) ||
             (typeof item === "number" && Number.isFinite(item)) || typeof item === "boolean")));
-        return Object.keys(safeEvent).length ? [safeEvent] : [];
-      });
+        if (Object.keys(safeEvent).length) entries.push(safeEvent);
+      }
       if (entries.length) result[key] = entries;
       continue;
     }
