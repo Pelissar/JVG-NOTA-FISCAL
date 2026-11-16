@@ -1,6 +1,6 @@
 import { getJvgUser } from "../../../jvg-auth";
 import {
-  apiJson, dbRequest, filterEq, getCompany, getPlatformRole, getSiteAccount,
+  apiJson, dbRequest, filterEq, getCompany, getSiteAccount,
   isSameOrigin, JvgBackendError, safeError, type SiteAccount,
 } from "../../../../lib/jvg-backend";
 import { focusRuntimeEnv } from "../../../../lib/focus/runtime-env";
@@ -56,8 +56,6 @@ function outcome(body: Json): "authorized" | "rejected" | "outcome_unknown" {
 async function focusContext(): Promise<Context> {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
-  if (await getPlatformRole(user) !== "platform_admin")
-    throw new JvgBackendError("A inutilização em homologação está restrita à administração da plataforma durante o piloto JVG.", 403);
   const account = await getSiteAccount(user);
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   if (account.role === "viewer") throw new JvgBackendError("Seu perfil não pode inutilizar numeração fiscal.", 403);

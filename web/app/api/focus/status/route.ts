@@ -1,5 +1,5 @@
 import { getJvgUser } from "../../../jvg-auth";
-import { apiJson, getPlatformRole, getSiteAccount, isConfigured, safeError } from "../../../../lib/jvg-backend";
+import { apiJson, getSiteAccount, isConfigured, safeError } from "../../../../lib/jvg-backend";
 import { checkFocusHomologacaoToken } from "../../../../lib/focus/client";
 import { focusRuntimeEnv } from "../../../../lib/focus/runtime-env";
 
@@ -11,11 +11,9 @@ export async function GET() {
   if (!isConfigured()) return apiJson({ status: "supabase_not_configured" }, 503);
 
   try {
-    // Diagnóstico técnico nunca é exposto a empresas clientes.
-    if (await getPlatformRole(user) !== "platform_admin")
-      return apiJson({ error: "Acesso restrito." }, 403);
     const account = await getSiteAccount(user);
     if (!account) return apiJson({ status: "needs_company" }, 403);
+    if (account.role === "viewer") return apiJson({ error: "Seu perfil não consulta a Focus." }, 403);
 
     const pilotCompany = focusRuntimeEnv("JVG_FOCUS_PILOT_COMPANY_ID");
     if (!pilotCompany) {

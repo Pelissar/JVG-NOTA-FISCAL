@@ -101,12 +101,12 @@
     var missingNcm = activeProducts.filter(function (product) { return !/^\d{8}$/.test(String(product.ncm || '')); }).length;
     var missingOrigin = activeProducts.filter(function (product) { return !/^[0-8]$/.test(String(product.origin || '')); }).length;
     var productReady = readyProducts > 0;
-    var environmentAccessReady = setup.platformAdmin && setup.accountCanSubmit && setup.pilotCompanyConfigured && setup.pilotCompanyMatches;
+    var environmentAccessReady = setup.accountCanSubmit && setup.pilotCompanyConfigured && setup.pilotCompanyMatches;
     var regimeReady = setup.taxRegimeConfirmationAvailable && setup.taxRegimeConfirmed && setup.supportedTaxRegime;
     var issuerReady = setup.issuerFound && Array.isArray(setup.issuerMissing) && setup.issuerMissing.length === 0;
     var checks = [
       [environmentAccessReady, 'Acesso ao piloto JVG', setup.pilotCompanyMatches
-        ? (setup.platformAdmin ? 'A empresa piloto está vinculada. O envio de teste é feito por administrador da plataforma.' : 'A empresa piloto está vinculada, mas o envio é restrito a um administrador da plataforma.')
+        ? (setup.accountCanSubmit ? 'A empresa piloto está vinculada. Quem opera a empresa pode enviar o teste de homologação.' : 'A empresa piloto está vinculada, mas este perfil só consulta.')
         : 'O envio de teste está restrito à empresa piloto JVG e depende da configuração do ambiente.'],
       [setup.focusTokenConfigured, 'Token da API Focus no servidor', setup.focusTokenConfigured
         ? 'O token está configurado. Ele é diferente do certificado digital anexado no painel Focus; use “Verificar conexão Focus NFe” para validar o acesso à API.'

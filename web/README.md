@@ -63,7 +63,7 @@ O CNPJ aceita os formatos numérico e alfanumérico em vigor desde julho de 2026
 
 1. No painel da Focus, cadastre o CNPJ real da empresa, envie o certificado A1 com senha por conexão segura e habilite NF-e em homologação. Confira IE, credenciamento, série e próxima numeração com o contador.
 2. Para emissao em homologacao, configure `JVG_FOCUS_HOMOLOGACAO_TOKEN` e `JVG_FOCUS_PILOT_COMPANY_ID`. Para consulta cadastral de CNPJ, configure tambem `JVG_FOCUS_MASTER_TOKEN`; os tres valores sao segredos somente do servidor. Nao coloque tokens ou certificado no GitHub.
-3. Somente o administrador da plataforma pode consultar `GET /api/focus/status`, após login e com vínculo à empresa piloto. `token_valid` significa somente autenticação aceita na consulta de uma referência inexistente: **não comprova certificado, autorização SEFAZ ou prontidão fiscal**.
+3. Quem opera a empresa (não o perfil só consulta) pode consultar `GET /api/focus/status`, após login e com vínculo à empresa piloto. `token_valid` significa somente autenticação aceita na consulta de uma referência inexistente: **não comprova certificado, autorização SEFAZ ou prontidão fiscal**.
    O botão de diagnóstico e o nome do fornecedor foram retirados do painel comum e da central fiscal. Os dados de diagnóstico ficam restritos à administração; o UUID de outra empresa e o token não são revelados.
 4. Próxima fase: cadastro fiscal completo de emitente/destinatário/produtos, motor de validações e NF-e de teste com referência idempotente, depois consulta de resultado, XML, DANFE e eventos.
 

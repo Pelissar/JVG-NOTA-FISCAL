@@ -14,7 +14,8 @@ test('detalhe mantém a revisão de transmissão e revela elegibilidade restrita
   assert.match(api, /readyToTransmit: false, transmissionEnabled: false/);
   assert.match(api, /readyToTransmit: false,/);
   assert.match(api, /canSubmitHomologation: selected\[0\]\.status === "draft" && homologationGate\.ready && canUseHomologation/);
-  assert.match(api, /getPlatformRole/);
+  assert.match(api, /accountCanSubmit/);
+  assert.doesNotMatch(api, /platform_admin/);
   assert.match(api, /JVG_FOCUS_PILOT_COMPANY_ID/);
 });
 test('tela rende dados de API usando textContent sem HTML não confiável', () => {

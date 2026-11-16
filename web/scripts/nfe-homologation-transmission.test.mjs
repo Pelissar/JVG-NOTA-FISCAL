@@ -8,9 +8,10 @@ const detailApi = readFileSync(new URL('../app/api/fiscal/nfe-drafts/route.ts', 
 const draftsApi = detailApi;
 const ui = readFileSync(new URL('../public/erp/nfe-drafts.js', import.meta.url), 'utf8');
 
-test('emissão de teste exige same-origin, administrador, empresa piloto e credencial de homologação', () => {
+test('emissão de teste exige same-origin, usuário da empresa, empresa piloto e credencial de homologação', () => {
   assert.match(route, /isSameOrigin\(request\)/);
-  assert.match(route, /getPlatformRole\(user\) !== "platform_admin"/);
+  assert.doesNotMatch(route, /platform_admin/);
+  assert.match(route, /account\.role === "viewer"/);
   assert.match(route, /JVG_FOCUS_PILOT_COMPANY_ID/);
   assert.match(route, /JVG_FOCUS_HOMOLOGACAO_TOKEN/);
   assert.match(route, /tax_regime_confirmed !== true/);

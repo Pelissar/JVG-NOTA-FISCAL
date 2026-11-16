@@ -30,7 +30,9 @@ test('nenhum endpoint declara emissão SEFAZ a partir de venda, pedido ou orçam
 test('Focus homologação exige autorização por empresa e mantém emissão desativada',()=>{
  const status=read('../app/api/focus/status/route.ts');
  const client=read('../lib/focus/client.ts');
- assert.match(status,/getPlatformRole\(user\)/);
+ assert.match(status,/getSiteAccount\(user\)/);
+ assert.match(status,/account\.role === "viewer"/);
+ assert.doesNotMatch(status,/platform_admin/);
  assert.match(status,/JVG_FOCUS_PILOT_COMPANY_ID/);
  assert.match(status,/JVG_FOCUS_HOMOLOGACAO_TOKEN/);
  assert.match(status,/FOCUS_NFE_HOMOLOGACAO_TOKEN/);
@@ -51,7 +53,7 @@ test('Focus nunca usa URL de produção nem expõe token no cliente',()=>{
  const runtime=read('../lib/focus/runtime-env.ts');
  assert.doesNotMatch(client,/https:\/\/api\.focusnfe\.com\.br/);
  assert.match(client,/AbortSignal\.timeout\(8000\)/);
- assert.match(status,/getPlatformRole\(user\)/);
+ assert.match(status,/getSiteAccount\(user\)/);
  assert.match(status,/pilotCompany !== account\.company_id/);
  assert.match(runtime,/process\.env/);
  assert.doesNotMatch(status,/NEXT_PUBLIC_FOCUS/);

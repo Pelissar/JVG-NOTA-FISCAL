@@ -1,6 +1,6 @@
 import { getJvgUser } from "../../../jvg-auth";
 import {
-  apiJson, dbRequest, filterEq, getCompany, getPlatformRole, getSiteAccount, isSameOrigin,
+  apiJson, dbRequest, filterEq, getCompany, getSiteAccount, isSameOrigin,
   JvgBackendError, safeError, type SiteAccount,
 } from "../../../../lib/jvg-backend";
 import { focusRuntimeEnv } from "../../../../lib/focus/runtime-env";
@@ -72,20 +72,15 @@ function scope(account: SiteAccount): string {
 }
 
 async function homologationSetup(account: SiteAccount) {
-  const user = await getJvgUser();
   const pilotCompanyId = focusRuntimeEnv("JVG_FOCUS_PILOT_COMPANY_ID");
   const focusTokenConfigured = Boolean(focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN") || focusRuntimeEnv("FOCUS_NFE_HOMOLOGACAO_TOKEN"));
-  const [platformAdmin, company] = await Promise.all([
-    user ? getPlatformRole(user).then(role => role === "platform_admin") : Promise.resolve(false),
-    getCompany(account),
-  ]);
+  const company = await getCompany(account);
   const pilotCompanyMatches = Boolean(pilotCompanyId && pilotCompanyId === account.company_id);
   const accountCanSubmit = account.role !== "viewer";
   const taxRegimeConfirmed = company?.tax_regime_confirmation_available === true && company.tax_regime_confirmed === true;
   const supportedTaxRegime = company?.tax_regime === "simples_nacional";
   const issuerMissing = company ? company.fiscal_missing.slice(0, 30) : ["Cadastro fiscal do emitente não encontrado"];
   const accessIssues: string[] = [];
-  if (!platformAdmin) accessIssues.push("O envio de teste é restrito a um administrador da plataforma durante o piloto.");
   if (!accountCanSubmit) accessIssues.push("Seu perfil nesta empresa não tem permissão para transmitir documentos fiscais.");
   if (!pilotCompanyId) accessIssues.push("A empresa piloto ainda não está vinculada à configuração do ambiente de homologação.");
   else if (!pilotCompanyMatches) accessIssues.push("Este ambiente está vinculado a outra empresa piloto; o envio de teste é exclusivo da JVG.");
@@ -96,7 +91,6 @@ async function homologationSetup(account: SiteAccount) {
   if (issuerMissing.length) accessIssues.push("Complete os dados fiscais obrigatórios do emitente: " + issuerMissing.join(", ") + ".");
   return {
     environment: "homologacao",
-    platformAdmin,
     accountCanSubmit,
     pilotCompanyConfigured: Boolean(pilotCompanyId),
     pilotCompanyMatches,

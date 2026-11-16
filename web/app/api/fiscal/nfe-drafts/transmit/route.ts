@@ -1,6 +1,6 @@
 import { getJvgUser } from "../../../../jvg-auth";
 import {
-  apiJson, dbRequest, filterEq, getCompany, getPlatformRole, getSiteAccount,
+  apiJson, dbRequest, filterEq, getCompany, getSiteAccount,
   isSameOrigin, JvgBackendError, safeError, type SiteAccount,
 } from "../../../../../lib/jvg-backend";
 import {
@@ -142,8 +142,6 @@ function internalStatus(providerStatus: unknown, current = "processing"): string
 async function focusContext(): Promise<FocusContext> {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
-  if (await getPlatformRole(user) !== "platform_admin")
-    throw new JvgBackendError("O envio de NF-e em homologação está restrito à administração da plataforma durante o piloto JVG.", 403);
   const account = await getSiteAccount(user);
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   if (account.role === "viewer") throw new JvgBackendError("Seu perfil não pode transmitir documentos fiscais.", 403);
