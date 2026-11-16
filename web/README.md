@@ -53,9 +53,9 @@ A configuração de deploy libera **somente** as duas variáveis públicas `NEXT
 
 No painel web, vá em **Configurações → Editar empresa** para informar CNPJ, IE, IM, CNAE, contato fiscal, endereço completo com CEP/código IBGE e série/numeração planejada da NF-e de homologação. Os campos ficam em `public.jvg_companies`, com endereço em `address` (JSONB), sob autenticação e vínculo com a empresa.
 
-O CNPJ aceita os formatos numérico e alfanumérico em vigor desde julho de 2026, com validação de dígitos verificadores pela regra da Receita Federal (ASCII - 48, módulo 11). O sistema permite **rascunhos incompletos**, mas apresenta a lista de campos pendentes. Dados preenchidos não representam autorização fiscal: emissão permanece desativada até revisão do contador e credenciamento Focus/SEFAZ.
+O CNPJ aceita os formatos numérico e alfanumérico em vigor desde julho de 2026, com validação de dígitos verificadores pela regra da Receita Federal (ASCII - 48, módulo 11). O sistema permite **rascunhos incompletos**, mas a transmissão só segue quando o emitente, o destinatário e os itens passam na checagem estrutural.
 
-**Estado fiscal:** a transmissão pela Focus NFe permanece desativada. Não há emissão real de NF-e/NFS-e nesta versão.
+**Estado fiscal:** `POST /api/fiscal/nfe-transmit` envia a NF-e somente para `https://homologacao.focusnfe.com.br`, para a empresa piloto, com o token no servidor. Produção não é chamada. A resposta da Focus é gravada no Supabase.
 
 ### Focus NFe — passo de homologação
 

@@ -9,7 +9,7 @@
     "install:ci": "bash scripts/install-pnpm.sh",
     "dev": "next dev",
     "build": "next build && node scripts/purge-turbopack-cache.mjs",
-    "test:nfe": "node --experimental-strip-types --test scripts/nfe-draft.test.mjs",
+    "test:nfe": "node --experimental-strip-types --test scripts/nfe-draft.test.mjs scripts/nfe-focus-payload.test.mjs scripts/nfe-inspect.test.mjs",
     "test:cfop": "node --test scripts/cfop.test.mjs",
     "test:erp": "node --test scripts/erp-data.test.mjs scripts/sales-contract.test.mjs scripts/records-permissions.test.mjs",
     "start": "next start",

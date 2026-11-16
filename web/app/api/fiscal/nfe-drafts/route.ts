@@ -9,6 +9,8 @@ import { reviewNfeOperation, reviewProfileConsistency } from "../../../../lib/fi
 import { calculateTaxPreview, parsePreviewRate, PREVIEW_TAXES, type PreviewRates } from "../../../../lib/fiscal/tax-preview";
 import { reviewNfePreparation } from "../../../../lib/fiscal/nfe-preflight";
 import { reviewNfeDocument } from "../../../../lib/fiscal/nfe-document-review";
+import { emissionBlockers, focusFileUrl } from "../../../../lib/focus/nfe-payload";
+import { focusRuntimeEnv } from "../../../../lib/focus/runtime-env";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,16 @@ function scope(account: SiteAccount): string {
   return `tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`;
 }
 
+function transmissionState(account: SiteAccount): { transmissionEnabled: boolean; transmissionNote: string } {
+  const pilot = focusRuntimeEnv("JVG_FOCUS_PILOT_COMPANY_ID");
+  const token = focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN");
+  if (!pilot || pilot !== account.company_id) {
+    return { transmissionEnabled: false, transmissionNote: "A transmissão está restrita à empresa piloto configurada na Netlify." };
+  }
+  if (!token) return { transmissionEnabled: false, transmissionNote: "Falta o token de homologação da Focus na Netlify." };
+  return { transmissionEnabled: true, transmissionNote: "Homologação Focus. O documento não tem valor fiscal." };
+}
+
 export async function GET(request: Request) {
   try {
     const account = await currentAccount();
@@ -35,20 +47,33 @@ export async function GET(request: Request) {
         throw new JvgBackendError("Identificador do rascunho inválido.", 400);
       // Filtro por empresa, tipo e ambiente aplicado também na consulta individual.
       const selected = await dbRequest<DbRow[]>(
-        `/rest/v1/jvg_fiscal_documents?${scope(account)}&id=${filterEq(requestedId)}&document_type=eq.nfe&environment=eq.homologacao&status=eq.draft&select=id,status,fiscal_payload,created_at&limit=1`,
+        `/rest/v1/jvg_fiscal_documents?${scope(account)}&id=${filterEq(requestedId)}&document_type=eq.nfe&environment=eq.homologacao&select=id,status,series,document_number,access_key,pdf_storage_path,fiscal_payload,provider_response,created_at&limit=1`,
       );
-      if (!selected[0]) throw new JvgBackendError("Rascunho não encontrado nesta empresa.", 404);
+      if (!selected[0]) throw new JvgBackendError("Nota não encontrada nesta empresa.", 404);
       const payload = selected[0].fiscal_payload && typeof selected[0].fiscal_payload === "object" ? selected[0].fiscal_payload as DbRow : {};
+      const provider = selected[0].provider_response && typeof selected[0].provider_response === "object" ? selected[0].provider_response as DbRow : {};
+      const company = await getCompany(account);
+      const blockers = emissionBlockers(company ?? {}, payload);
+      const gate = transmissionState(account);
+      const status = String(selected[0].status || "draft");
       return apiJson({
         draft: {
-          id: selected[0].id, status: selected[0].status, createdAt: selected[0].created_at,
+          id: selected[0].id, status, createdAt: selected[0].created_at,
           nature: payload.nature,
           issuer: payload.issuer, recipient: payload.recipient,
           items: payload.items, totalCents: payload.totalCents,
           pending: payload.pending, taxPreview: payload.taxPreview,
           preflight: payload.preflight ?? null,
           documentReview: reviewNfeDocument(payload),
-          readyToTransmit: false, transmissionEnabled: false,
+          blockers,
+          readyToTransmit: gate.transmissionEnabled && blockers.length === 0 && (status === "draft" || status === "rejected"),
+          transmissionEnabled: gate.transmissionEnabled,
+          transmissionNote: gate.transmissionNote,
+          accessKey: selected[0].access_key || null,
+          number: selected[0].document_number || null,
+          series: selected[0].series || null,
+          danfeUrl: focusFileUrl(selected[0].pdf_storage_path),
+          sefazMessage: typeof provider.mensagem === "string" ? provider.mensagem : "",
         },
       });
     }

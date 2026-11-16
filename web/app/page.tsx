@@ -4,7 +4,7 @@ import styles from "./landing.module.css";
 const features = [
   { icon: "▦", step: "01", title: "Tudo organizado", text: "Produtos, clientes, serviços e informações fiscais em cadastros conectados." },
   { icon: "◫", step: "02", title: "Estoque sob controle", text: "Movimentações, saldos e custos para acompanhar a operação do negócio." },
-  { icon: "◇", step: "03", title: "Preparado para notas", text: "Estrutura fiscal em preparação e testes de homologação antes da emissão real." },
+  { icon: "◇", step: "03", title: "NF-e em homologação", text: "A nota de produto sai pela Focus em homologação. Produção e valor fiscal continuam desligados." },
   { icon: "⌘", step: "04", title: "Feito para crescer", text: "Plataforma web multiempresa, planejada para evoluir também para desktop." },
 ];
 
@@ -57,15 +57,15 @@ export default function Home() {
     </div></section>
 
     <section className={styles.darkSection} id="modulos"><div className={styles.container}>
-      <div className={styles.modelsIntro}><div><small className={styles.kicker}>CENTRAL FISCAL</small><h2>Cinco modelos.<br/><em>Uma visão de futuro.</em></h2></div><p>A plataforma foi planejada para os principais documentos fiscais brasileiros. A emissão ainda depende da conclusão da integração e da homologação.</p></div>
+      <div className={styles.modelsIntro}><div><small className={styles.kicker}>CENTRAL FISCAL</small><h2>NF-e modelo 55.<br/><em>No fluxo da operação.</em></h2></div><p>Cadastro, estoque, venda e nota no mesmo painel. A transmissão atual é de homologação, pela Focus, e não gera documento com valor fiscal.</p></div>
       <div className={styles.models}>{models.map(m=><article key={m.name} className={styles.model}><div className={styles.modelTop}><span>↗</span><small>{m.number}</small></div><h3>{m.name}</h3><p>{m.description}</p><div>Integração planejada <span>○</span></div></article>)}</div>
     </div></section>
 
     <section className={styles.journey} id="jornada"><div className={styles.container}><div className={styles.journeyGrid}>
-      <div><small className={styles.kicker}>COMO FUNCIONA</small><h2>Comece simples.<br/><em>Cresça com confiança.</em></h2><p>Nosso ambiente piloto permite organizar cadastros e preparar a configuração fiscal. Os demais recursos serão liberados após testes e validações.</p><Link href="/login" className={styles.primaryButton}>Acessar minha conta →</Link></div>
+      <div><small className={styles.kicker}>COMO FUNCIONA</small><h2>Do pedido<br/><em>à NF-e de teste.</em></h2><p>Organize a empresa, confirme a venda e transmita a NF-e em homologação. A nota de produção só entra quando o certificado e o ambiente estiverem liberados.</p><Link href="/login" className={styles.primaryButton}>Acessar minha conta →</Link></div>
       <div className={styles.steps}><div><b>01</b><span><strong>Acesse sua conta</strong><small>Área de gestão protegida por autenticação.</small></span></div><div><b>02</b><span><strong>Configure sua empresa</strong><small>Cadastre produtos, clientes, serviços e dados fiscais.</small></span></div><div><b>03</b><span><strong>Prepare a operação fiscal</strong><small>Validação em homologação antes da emissão real.</small></span></div></div>
     </div></div></section>
 
-    <footer className={styles.footer}><div className={styles.container}><div className={styles.footerMain}><div><strong>JVG<span>.</span> NOTA FISCAL</strong><p>Gestão inteligente para negócios reais.</p></div><div><Link href="/login">Entrar</Link><a href="#solucao">Solução</a><a href="#modulos">Módulos</a></div></div><small>© 2026 JVG Nota Fiscal · Plataforma em fase piloto. A emissão fiscal real ainda não está habilitada.</small></div></footer>
+    <footer className={styles.footer}><div className={styles.container}><div className={styles.footerMain}><div><strong>JVG<span>.</span> NOTA FISCAL</strong><p>ERP fiscal para a operação da empresa.</p></div><div><Link href="/login">Entrar</Link><a href="#solucao">Solução</a><a href="#modulos">Módulos</a></div></div><small>© 2026 JVG Nota Fiscal · Homologação Focus sem valor fiscal. Produção desligada.</small></div></footer>
   </main>;
 }
