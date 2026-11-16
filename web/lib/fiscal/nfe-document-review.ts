@@ -265,14 +265,11 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
       finalConsumerValid ? (finalConsumer ? 1 : 0) : undefined);
   const presence = payload.buyerPresence === "" || payload.buyerPresence == null ? NaN : Number(payload.buyerPresence);
   const presenceValid = Number.isInteger(presence) && [0,1,2,3,4,5,9].includes(presence);
-  const presenceValidForNormalNfe = presenceValid && !(purpose === 1 && presence === 0);
   const presenceDetail = !presenceValid
     ? "Informe a condição real da operação; o ERP não infere presença ou canal de venda."
-    : purpose === 1 && presence === 0
-      ? "Esta emissão é uma NF-e normal. O código 0 (não se aplica) não é válido para este fluxo; escolha como a operação ocorreu. A SEFAZ rejeita a combinação com indicador de intermediador (cStat 435)."
-      : "Informe a condição real da operação; o ERP não infere presença ou canal de venda.";
-  add("presenca_comprador", "Presença do comprador", presenceValidForNormalNfe,
-      presenceDetail, presenceValidForNormalNfe ? presence : undefined);
+    : "Informe a condição real da operação. Para presença 0, 1 ou 5, o indicador de intermediador será omitido conforme a regra SEFAZ 435.";
+  add("presenca_comprador", "Presença do comprador", presenceValid,
+      presenceDetail, presenceValid ? presence : undefined);
 
   const normalizeCnpj = (value: unknown) => text(value).toUpperCase().replace(/[.\-/\s]/g, "");
   const cnpj = normalizeCnpj(issuer.cnpj), issuerName = text(issuer.legalName || issuer.name);
@@ -360,14 +357,13 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
   const intermediaryValid = Number.isInteger(intermediaryInput) && [0, 1].includes(intermediaryInput);
   const intermediaryIndicator = intermediaryValid ? intermediaryInput : NaN;
   const intermediaryMapped: Json = {};
-  const intermediaryNotApplicable = presenceValid && presence === 0;
-  if (intermediaryValid && !intermediaryNotApplicable) intermediaryMapped.indicador_intermediario = intermediaryIndicator;
+  const intermediaryApplies = presenceValid && [2, 3, 4, 9].includes(presence);
+  const intermediaryNotApplicable = presenceValid && !intermediaryApplies;
+  if (intermediaryApplies && intermediaryValid) intermediaryMapped.indicador_intermediario = intermediaryIndicator;
   const intermediaryProblems: string[] = [];
   if (!presenceValid) intermediaryProblems.push("informe a presença do comprador para validar o uso do intermediador");
-  if (!intermediaryValid) intermediaryProblems.push("informe 0 (sem intermediador) ou 1 (plataforma de terceiros)");
-  if (intermediaryNotApplicable && intermediaryIndicator === 1)
-    intermediaryProblems.push("presença 0 (não se aplica) não permite intermediador; corrija a presença ou remova a plataforma desta operação");
-  if (!intermediaryNotApplicable && intermediaryIndicator === 1) {
+  if (intermediaryApplies && !intermediaryValid) intermediaryProblems.push("informe 0 (sem intermediador) ou 1 (plataforma de terceiros)");
+  if (intermediaryApplies && intermediaryValid && intermediaryIndicator === 1) {
     const intermediaryCnpj = textDigits(intermediary.cnpj);
     const intermediaryId = text(intermediary.id);
     if (/^\d{14}$/.test(intermediaryCnpj) && cnpjDocumentIsValid(intermediaryCnpj)) intermediaryMapped.cnpj_intermediario = intermediaryCnpj;
@@ -375,11 +371,11 @@ const cnpjDocumentIsValid = (digits: string): boolean => {
     if (intermediaryId.length >= 2 && intermediaryId.length <= 60) intermediaryMapped.id_intermediario = intermediaryId;
     else intermediaryProblems.push("informe o identificador de cadastro na plataforma (2 a 60 caracteres)");
   }
-  const intermediaryCheckOk = presenceValid && intermediaryValid && intermediaryProblems.length === 0;
+  const intermediaryCheckOk = presenceValid && (!intermediaryApplies || (intermediaryValid && intermediaryProblems.length === 0));
   if (intermediaryCheckOk) Object.assign(requestPreview, intermediaryMapped);
   add("intermediario", "Intermediador/marketplace", intermediaryCheckOk,
       intermediaryProblems.length ? intermediaryProblems.join("; ") :
-      intermediaryNotApplicable ? "Presença 0 (não se aplica): indicador e dados do intermediador omitidos para evitar a rejeição SEFAZ 435." :
+      intermediaryNotApplicable ? `Indicador e dados do intermediador omitidos para presença ${presence}; essa combinação evita a rejeição SEFAZ 435.` :
       intermediaryWasProvided ? "Indicador e dados correspondentes enviados à Focus." :
       "O campo foi omitido no cadastro; a prévia usa o valor padrão 0 documentado pela Focus para operação sem intermediador.");
 
