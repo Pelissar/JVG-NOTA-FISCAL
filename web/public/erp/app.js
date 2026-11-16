@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  var labels = {dashboard:'Visão geral',products:'Produtos',clients:'Clientes',services:'Serviços',fiscal:'Central fiscal',inventory:'Estoque',reports:'Relatórios',profile:'Meu perfil',settings:'Empresa e sistema'};
+  var labels = {dashboard:'Visão geral',products:'Produtos',clients:'Clientes',services:'Serviços',fiscal:'Central fiscal',inventory:'Estoque',reports:'Relatórios',profile:'Meu perfil',settings:'Empresa'};
   // Nunca mostrar dados locais como se fossem cadastros reais da empresa.
   var state = emptyState();
   var view = 'dashboard', query = '', filter = 'all', partyFilter = 'all';
@@ -28,14 +28,15 @@
   function btn(text,action,primary){return '<button class="btn '+(primary?'primary':'')+'" data-action="'+h(action)+'">'+(primary?ico('plus'):'')+h(text)+'</button>';}
   function heading(title,subtitle,action,actionText){return '<div class="page-heading"><div><div class="eyebrow">JVG NOTA FISCAL / PAINEL DE GESTÃO</div><h1>'+h(title)+'</h1><p>'+h(subtitle)+'</p></div>'+(action?'<div class="heading-actions">'+btn(actionText,action,true)+'</div>':'')+'</div>';}
   function banner(){
-    var ready=cloud.status==='ready',needs=cloud.status==='needs_company',pending=cloud.status==='waiting_secret',login=cloud.status==='login_required';
-    var title=ready?'Supabase conectado · '+h(state.companyName):needs?'Cadastro da empresa piloto pendente':pending?'Integração segura preparada · chave privada pendente':login?'Login necessário no site publicado':cloud.status==='error'?'Servidor temporariamente indisponível':'Verificando integração do Supabase';
-    var detail=ready?'Os cadastros desta empresa são salvos no servidor. A integração Focus disponível neste ambiente envia somente para homologação; produção continua bloqueada.':needs?'Sua conta já está identificada. Cadastre o nome da empresa para criar o ambiente isolado no banco.':pending?'Falta configurar a chave privada do banco no servidor. Não serão exibidos nem salvos cadastros enquanto a conexão estiver indisponível.':login?'Faça login no site publicado para acessar os cadastros da sua empresa.':cloud.status==='error'?'A conexão não pôde ser validada. Nenhum cadastro de exemplo será exibido; tente novamente.':'Aguarde a verificação. Os cadastros serão carregados diretamente do banco.';
-    var action=needs?'<div class="heading-actions" style="margin-top:10px"><button class="btn primary" data-action="configure-company">'+ico('plus')+' Cadastrar empresa</button></div>':pending?'<div class="heading-actions" style="margin-top:10px"><button class="btn" data-view="settings">Ver configuração</button></div>':cloud.status==='error'?'<div class="heading-actions" style="margin-top:10px"><button class="btn" data-action="check-connection">Tentar novamente</button></div>':'';
-    return '<div class="banner" style="border-color:'+(ready?'#76bb9c':'#d5deea')+'"><span class="banner-icon">'+ico('shield')+'</span><div class="banner-text"><strong>'+title+'</strong><p>'+detail+'</p>'+action+'</div></div>';
+    var needs=cloud.status==='needs_company',pending=cloud.status==='waiting_secret',login=cloud.status==='login_required';
+    if(cloud.status==='ready'||cloud.status==='checking')return '';
+    var title=needs?'Cadastre a empresa para começar':pending?'O sistema ainda não está pronto para salvar':login?'Entre para acessar a empresa':cloud.status==='error'?'Não foi possível carregar os dados':'Aguarde um instante';
+    var detail=needs?'Informe a razão social e os dados fiscais do emitente.':pending?'Os cadastros ficam indisponíveis até a configuração do servidor ser concluída.':login?'Use seu e-mail e senha para abrir o painel.':cloud.status==='error'?'Tente novamente. Nenhum dado de exemplo será exibido.':'Os dados da empresa estão sendo carregados.';
+    var action=needs?'<div class="heading-actions" style="margin-top:10px"><button class="btn primary" data-action="configure-company">'+ico('plus')+' Cadastrar empresa</button></div>':cloud.status==='error'?'<div class="heading-actions" style="margin-top:10px"><button class="btn" data-action="check-connection">Tentar novamente</button></div>':'';
+    return '<div class="banner"><span class="banner-icon">'+ico('shield')+'</span><div class="banner-text"><strong>'+title+'</strong><p>'+detail+'</p>'+action+'</div></div>';
   }
   function stat(label,value,icon,color,foot){return '<article class="stat-card"><div class="stat-top"><span>'+h(label)+'</span><div class="stat-icon '+(color||'')+'">'+ico(icon)+'</div></div><div class="stat-value">'+h(value)+'</div><div class="stat-foot">'+h(foot)+'</div></article>';}
-  function tableShell(searchPlaceholder,body,count,type){return '<section class="table-panel"><div class="table-toolbar"><label class="toolbar-search">'+ico('search')+'<input data-search-input placeholder="'+h(searchPlaceholder)+'" value="'+h(query)+'" aria-label="Filtrar registros"></label><div class="toolbar-controls"><select class="filter-select" data-filter aria-label="Filtrar situação"><option value="all" '+(filter==='all'?'selected':'')+'>Todos os status</option><option value="active" '+(filter==='active'?'selected':'')+'>Ativos</option><option value="inactive" '+(filter==='inactive'?'selected':'')+'>Inativos</option></select><button class="btn ghost" data-action="export-'+type+'">'+ico('download')+' Exportar CSV</button></div></div>'+body+'<div class="table-summary"><span>'+count+' registro(s) exibido(s)</span><span>'+(cloud.status==='ready'?'Dados reais · Empresa isolada':'Aguardando conexão · Sem dados de exemplo')+'</span></div></section>';}
+  function tableShell(searchPlaceholder,body,count,type){return '<section class="table-panel"><div class="table-toolbar"><label class="toolbar-search">'+ico('search')+'<input data-search-input placeholder="'+h(searchPlaceholder)+'" value="'+h(query)+'" aria-label="Filtrar registros"></label><div class="toolbar-controls"><select class="filter-select" data-filter aria-label="Filtrar situação"><option value="all" '+(filter==='all'?'selected':'')+'>Todos os status</option><option value="active" '+(filter==='active'?'selected':'')+'>Ativos</option><option value="inactive" '+(filter==='inactive'?'selected':'')+'>Inativos</option></select><button class="btn ghost" data-action="export-'+type+'">'+ico('download')+' Exportar CSV</button></div></div>'+body+'<div class="table-summary"><span>'+count+' registro(s)</span></div></section>';}
   function empty(icon,title,detail,action,actionText){return '<div class="empty-state"><div class="empty-icon">'+ico(icon)+'</div><h3>'+h(title)+'</h3><p>'+h(detail)+'</p>'+(action?btn(actionText,action,true):'')+'</div>';}
   function rowActions(kind,recordId){return '<div class="table-actions"><button class="icon-btn" title="Editar" data-action="edit-'+kind+'" data-id="'+h(recordId)+'">'+ico('edit')+'</button><button class="icon-btn" title="Inativar cadastro" aria-label="Inativar cadastro" data-action="remove-'+kind+'" data-id="'+h(recordId)+'">'+ico('trash')+'</button></div>';}
   function matches(row,keys){var hay=keys.map(function(k){return String(row[k]||'');}).join(' ').toLowerCase();return hay.indexOf(query.toLowerCase())!==-1 &&(filter==='all'||(filter==='active'?row.active:!row.active));}
@@ -89,9 +90,9 @@
       ['Referências tributárias','Cadastros opcionais para facilitar o preenchimento dos itens.','shield','/erp/tax-profiles.html','Configuração opcional']
     ];
     return heading('Central fiscal','Acesse a emissão de NF-e, os documentos recebidos e o histórico da empresa.')+banner()+
-      '<section class="fiscal-workspace"><div class="fiscal-workspace-heading"><div><span class="eyebrow">OPERAÇÃO FISCAL</span><h2>Documentos e configurações</h2><p>Os dados e arquivos são separados por empresa. A emissão conectada nesta versão é somente em homologação.</p></div><span class="fiscal-workspace-status">PRODUÇÃO BLOQUEADA</span></div><div class="fiscal-workspace-grid">'+
+      '<section class="fiscal-workspace"><div class="fiscal-workspace-heading"><div><span class="eyebrow">OPERAÇÃO FISCAL</span><h2>Documentos</h2><p>Emissão, notas recebidas e histórico da empresa.</p></div></div><div class="fiscal-workspace-grid">'+
       entries.map(function(x){return '<a class="fiscal-workspace-card" href="'+x[3]+'"><span class="fiscal-workspace-icon">'+ico(x[2])+'</span><span class="fiscal-workspace-copy"><strong>'+x[0]+'</strong><small>'+x[1]+'</small><em>'+x[4]+'</em></span><span class="fiscal-workspace-arrow" aria-hidden="true">'+ico('arrow')+'</span></a>';}).join('')+
-      '</div><div class="fiscal-production-note"><strong>Emissão oficial ainda indisponível</strong><p>O sistema atual está conectado ao ambiente de testes da Focus. A produção exige base e credencial próprias, além da validação do cadastro fiscal do emitente. Nenhuma nota real será enviada por esta tela.</p></div></section>';
+      '</div></section>';
   }
   function simpleSoon(title,subtitle,icon,features){
     return heading(title,subtitle)+banner()+'<section class="panel wide-info"><div class="panel-body">'+empty(icon,'Módulo preparado para as próximas etapas','A navegação e a arquitetura deste módulo estão previstas. Ainda não há operação real nesta primeira versão.')+'<div class="info-list">'+features.map(function(x){return '<div class="info-row"><span>'+h(x[0])+'</span><strong>'+h(x[1])+'</strong></div>';}).join('')+'</div></div></section>';
@@ -99,20 +100,30 @@
   function reports(){
     var stockValue=state.products.reduce(function(sum,p){return sum+Number(p.stock)*Number(p.cost);},0);
     var saleValue=state.products.reduce(function(sum,p){return sum+Number(p.stock)*Number(p.price);},0);
-    return heading('Relatórios','Indicadores básicos dos seus cadastros locais.')+banner()+
+    return heading('Relatórios','Indicadores dos cadastros da empresa.')+banner()+
       '<div class="stats-grid">'+stat('Itens de produto',state.products.length,'box','','Total cadastrado')+stat('Serviços cadastrados',state.services.length,'layers','blue','No catálogo')+stat('Custo do estoque',money(stockValue),'cash','amber','Valor estimado')+stat('Preço de estoque',money(saleValue),'chart','purple','Potencial de venda teórico')+'</div>'+
-      '<section class="panel"><div class="panel-head"><div><h2>Exportar cadastros</h2><p>Planilhas CSV dos registros da empresa</p></div></div><div class="panel-body"><div class="heading-actions"><button class="btn" data-action="export-products">'+ico('download')+' Produtos</button><button class="btn" data-action="export-clients">'+ico('download')+' Clientes</button><button class="btn" data-action="export-services">'+ico('download')+' Serviços</button></div><p class="small-note" style="margin-top:18px">Relatórios financeiros, fiscais e contábeis ficam para as etapas integradas ao servidor.</p></div></section>';
+      '<section class="panel"><div class="panel-head"><div><h2>Exportar cadastros</h2><p>Planilhas CSV dos registros da empresa</p></div></div><div class="panel-body"><div class="heading-actions"><button class="btn" data-action="export-products">'+ico('download')+' Produtos</button><button class="btn" data-action="export-clients">'+ico('download')+' Clientes</button><button class="btn" data-action="export-services">'+ico('download')+' Serviços</button></div></div></section>';
   }
+  function shown(value){var text=String(value==null?'':value).trim();return text||'Não informado';}
+  function formatDocument(value){
+    var digits=String(value||'').replace(/\D/g,'');
+    if(digits.length===14)return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5');
+    return shown(value);
+  }
+  function regimeName(code){return {mei:'MEI',simples_nacional:'Simples Nacional',lucro_presumido:'Lucro Presumido',lucro_real:'Lucro Real',outro:'Outro'}[code]||'';}
   function settings(){
+    var company=cloud.company||{};
+    var address=company.address&&typeof company.address==='object'?company.address:{};
     var ready=cloud.status==='ready';
-    var missing=ready&&cloud.company&&Array.isArray(cloud.company.fiscal_missing)?cloud.company.fiscal_missing:[];
-    var items=[['Usuário identificado',cloud.displayName||'Aguardando verificação'],['Empresa',state.companyName||'Aguardando empresa'],['Banco de dados',ready?'Supabase conectado':cloud.status==='needs_company'?'Aguardando cadastro da empresa':'Aguardando conexão'],['Dados dos cadastros',ready?'Persistidos no Supabase':'Nenhum dado local exibido'],['Regime da empresa piloto','Simples Nacional'],['Cadastro fiscal',ready?(missing.length?missing.length+' informação(ões) pendente(s)':'Dados preenchidos · revisão fiscal necessária'):'Aguardando empresa'],['Integração fiscal','Focus · homologação'],['Certificado digital','Gerenciado no painel Focus; não é enviado pelo ERP'],['Emissão oficial','Bloqueada · integração de produção ainda não configurada']];
-    var action=ready?'<button class="btn primary" data-action="configure-company">'+ico('edit')+' Editar empresa</button>':cloud.status==='needs_company'?'<button class="btn primary" data-action="configure-company">'+ico('plus')+' Cadastrar empresa piloto</button>':'<button class="btn" data-action="check-connection">'+ico('check')+' Verificar conexão</button>';
-    return heading('Configurações','Sua conta, empresa piloto e configurações fiscais seguras.')+banner()+
-      '<div class="settings-grid"><section class="panel wide-info"><div class="panel-head"><div><h2>Cadastro fiscal do emitente</h2><p>Dados da empresa para preparar a NF-e em homologação</p></div></div><div class="panel-body"><div class="info-list">'+items.map(function(x){return '<div class="info-row"><span>'+h(x[0])+'</span><strong>'+h(x[1])+'</strong></div>';}).join('')+'</div>'+
-      (ready&&missing.length?'<p class="small-note" style="margin-top:16px">Preencha: '+missing.map(h).join(', ')+'.</p>':ready?'<p class="small-note" style="margin-top:16px">Dados preenchidos. Ainda é obrigatória a conferência com o contador e a validação do credenciamento fiscal antes de emitir.</p>':'')+
-      '<div class="heading-actions" style="margin-top:24px">'+action+'<button class="btn" data-action="logout">Sair da conta</button></div>'+
-      '<p class="small-note" style="margin-top:16px">Credenciais de autorização fiscal e certificado A1 não são solicitados nesta página. Os segredos técnicos devem ser configurados apenas no servidor privado.</p></div></section></div>';
+    var missing=ready&&Array.isArray(company.fiscal_missing)?company.fiscal_missing:[];
+    var addressLine=[address.street,address.number,address.complement,address.district,address.city,address.state,address.postalCode].filter(function(part){return String(part||'').trim();}).join(', ');
+    var regime=company.tax_regime_confirmed===true?regimeName(company.tax_regime):'';
+    var items=[['Razão social',company.legal_name||company.legalName],['Nome fantasia',company.trade_name||company.tradeName],['CNPJ',formatDocument(company.cnpj)],['Inscrição estadual',company.state_registration],['Inscrição municipal',company.municipal_registration],['CNAE',company.cnae],['Regime tributário',regime],['E-mail fiscal',company.fiscal_email],['Telefone',company.fiscal_phone],['Endereço',addressLine]];
+    var action=ready?'<button class="btn primary" data-action="configure-company">'+ico('edit')+' Editar empresa</button>':cloud.status==='needs_company'?'<button class="btn primary" data-action="configure-company">'+ico('plus')+' Cadastrar empresa</button>':'';
+    return heading('Empresa','Dados fiscais do emitente usados na NF-e.')+banner()+
+      '<div class="settings-grid"><section class="panel wide-info"><div class="panel-head"><div><h2>Cadastro fiscal do emitente</h2><p>'+h(state.companyName||'Sua empresa')+'</p></div></div><div class="panel-body"><div class="info-list">'+items.map(function(x){return '<div class="info-row"><span>'+h(x[0])+'</span><strong>'+h(shown(x[1]))+'</strong></div>';}).join('')+'</div>'+
+      (ready&&missing.length?'<p class="small-note" style="margin-top:16px">Ainda falta: '+missing.map(h).join(', ')+'.</p>':'')+
+      '<div class="heading-actions" style="margin-top:24px">'+action+'<button class="btn" data-action="logout">Sair da conta</button></div></div></section></div>';
   }
   function profile(){
     return heading('Meu perfil','Atualize seus dados de acesso e a identidade visual da empresa.')+
@@ -332,7 +343,7 @@
         if(initialScope&&!loadedScopes[initialScope])await refreshCloud(initialScope);
         else render();
       }else {state=emptyState();state.companyName=String((cloud.company&& (cloud.company.trade_name||cloud.company.legal_name))||'Minha empresa');render();}
-    }catch(error){cloud.status='error';state=emptyState();render();toast(error.name==='AbortError'?'O Supabase não respondeu em 12 segundos. Use Tentar novamente.':'Não foi possível verificar a conexão: '+error.message,'error');}
+    }catch(error){cloud.status='error';state=emptyState();render();toast(error.name==='AbortError'?'Não foi possível carregar agora. Tente novamente.':'Não foi possível carregar os dados.','error');}
     finally{clearTimeout(timeout);checkingConnection=false;}
   }
   function companyFiscalFields(company,includeTaxSetup){
@@ -343,7 +354,7 @@
     var regimeOptions='<option value="">Selecione após consultar a contabilidade</option>'+regimes.map(function(item){return '<option value="'+item[0]+'" '+(selectedRegime===item[0]?'selected':'')+'>'+item[1]+'</option>';}).join('');
     var regimeBlock='<label class="field full"><span>Regime tributário informado</span><select name="taxRegime">'+regimeOptions+'</select><small>O regime só será usado em preparação fiscal quando estiver confirmado pela contabilidade.</small></label>'+
       '<label class="field full" style="display:flex;align-items:flex-start;gap:9px"><input type="checkbox" name="taxRegimeConfirmed" value="true" '+(company.tax_regime_confirmed===true?'checked ':'')+(!confirmationAvailable?'disabled ':'')+'style="width:auto;margin-top:3px"><span>Confirmo que este regime foi conferido com a contabilidade.</span></label>'+
-      (!confirmationAvailable?'<p class="small-note field full">A confirmação será habilitada após aplicar a migration fiscal pendente no Supabase.</p>':'');
+      (!confirmationAvailable?'<p class="small-note field full">A confirmação do regime ainda não está disponível.</p>':'');
     return '<div class="field full"><strong>Identificação e contato fiscal</strong></div>'+
       (includeTaxSetup?'<div class="field full"><strong>Enquadramento tributário</strong></div>'+regimeBlock:'')+
       field('tradeName','Nome fantasia',company.trade_name||'','maxlength="160"',false)+
@@ -370,7 +381,7 @@
   function openCompanyEditor(){
     if(!['needs_company','ready'].includes(cloud.status)){toast('Aguarde a configuração segura do servidor.','error');return;}
     var company=cloud.company||{},existing=cloud.status==='ready';
-    modalRoot.innerHTML='<div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><h2 id="modalTitle">'+(existing?'Editar empresa piloto':'Cadastrar minha empresa piloto')+'</h2><p>Seus dados serão vinculados somente à sua conta.</p></div><button class="icon-btn" type="button" data-action="close-modal">'+ico('x')+'</button></div><form id="companyForm"><div class="modal-body"><div class="form-grid">'+
+    modalRoot.innerHTML='<div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><h2 id="modalTitle">'+(existing?'Editar empresa':'Cadastrar empresa')+'</h2><p>Dados fiscais do emitente.</p></div><button class="icon-btn" type="button" data-action="close-modal">'+ico('x')+'</button></div><form id="companyForm"><div class="modal-body"><div class="form-grid">'+
       field('legalName','Razão social ou nome da empresa *',company.legal_name||'','required maxlength="160"',true)+
       companyFiscalFields(company,existing)+
       '</div><p class="small-note" style="margin-top:16px">O sistema não considera o regime padrão como confirmação fiscal. Perfis são opcionais; os dados fiscais da nota precisam estar corretos antes do envio. Salvar este cadastro não transmite nota.</p></div><div class="modal-footer"><small>* Obrigatório</small><div class="modal-footer-actions"><button class="btn" type="button" data-action="close-modal">Cancelar</button><button class="btn primary" type="submit">Salvar empresa</button></div></div></form></div></div>';
@@ -384,7 +395,7 @@
     try{
       values.taxRegimeConfirmed=!!form.querySelector('[name="taxRegimeConfirmed"]')?.checked;
       var result=await callApi('/api/company',{method:existing?'PATCH':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(values)});
-      cloud.status='ready';cloud.company=result.company;closeModal();await checkConnection();toast('Empresa piloto salva no Supabase.');
+      cloud.status='ready';cloud.company=result.company;closeModal();await checkConnection();toast('Empresa salva.');
     }catch(error){toast(error.message,'error');if(button)button.disabled=false;}
   }
   function openEditor(kind,recordId){
@@ -393,7 +404,7 @@
     var list=state[kind+'s'];if(!list)return;
     var current=recordId?list.find(function(x){return x.id===recordId;}):null;
     var p=current||{},titles={product:'produto',client:'cliente',service:'serviço'},body=kind==='product'?productForm(p):kind==='client'?clientForm(p):serviceForm(p);
-    modalRoot.innerHTML='<div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><h2 id="modalTitle">'+(current?'Editar ':'Cadastrar novo ')+titles[kind]+'</h2><p>Cadastro vinculado à sua empresa no Supabase.</p></div><button class="icon-btn" type="button" data-action="close-modal" aria-label="Fechar">'+ico('x')+'</button></div><form id="recordForm" data-kind="'+kind+'" data-id="'+h(recordId||'')+'"><div class="modal-body"><div class="form-grid">'+body+'</div></div><div class="modal-footer"><small>* Campos obrigatórios</small><div class="modal-footer-actions"><button class="btn" type="button" data-action="close-modal">Cancelar</button><button class="btn primary" type="submit">'+ico('check')+' Salvar cadastro</button></div></div></form></div></div>';
+    modalRoot.innerHTML='<div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><h2 id="modalTitle">'+(current?'Editar ':'Cadastrar novo ')+titles[kind]+'</h2><p>Cadastro da empresa ativa.</p></div><button class="icon-btn" type="button" data-action="close-modal" aria-label="Fechar">'+ico('x')+'</button></div><form id="recordForm" data-kind="'+kind+'" data-id="'+h(recordId||'')+'"><div class="modal-body"><div class="form-grid">'+body+'</div></div><div class="modal-footer"><small>* Campos obrigatórios</small><div class="modal-footer-actions"><button class="btn" type="button" data-action="close-modal">Cancelar</button><button class="btn primary" type="submit">'+ico('check')+' Salvar cadastro</button></div></div></form></div></div>';
     if(kind==='product'&&current&&cloud.status==='ready'){
       var stockField=modalRoot.querySelector('[name="stock"]');
       if(stockField){stockField.readOnly=true;stockField.title='Use Ajustar saldo no módulo Estoque';}
@@ -455,7 +466,7 @@
         try{await callApi('/api/stock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:saved.id,delta:record.stock,reason:'Saldo inicial do cadastro'})});}
         catch(stockError){toast('Produto salvo, mas ajuste inicial pendente: '+stockError.message,'error');}
       }
-      closeModal();await refreshCloud(scopeForView(view),true);toast('Cadastro salvo no Supabase.');
+      closeModal();await refreshCloud(scopeForView(view),true);toast('Cadastro salvo.');
     }catch(error){toast(error.message,'error');if(submit)submit.disabled=false;}
   }
   async function removeRecord(kind,recordId){
@@ -478,7 +489,7 @@
     var data=Object.fromEntries(new FormData(form).entries()),delta=Number(data.delta);
     if(!Number.isFinite(delta)||delta===0){toast('Informe uma quantidade diferente de zero.','error');return;}
     if(Number(p.stock)+delta<0){toast('O saldo não pode ficar negativo.','error');return;}
-    try{await callApi('/api/stock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:p.id,delta:delta,reason:data.reason})});closeModal();await refreshCloud(scopeForView(view),true);toast('Estoque atualizado no Supabase.');}
+    try{await callApi('/api/stock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:p.id,delta:delta,reason:data.reason})});closeModal();await refreshCloud(scopeForView(view),true);toast('Estoque atualizado.');}
     catch(error){toast(error.message,'error');}
   }
   function exportCsv(kind){

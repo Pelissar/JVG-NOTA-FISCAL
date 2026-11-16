@@ -1199,7 +1199,7 @@
         state.clients.some(function (c) { return c.active && c.isCustomer === true && c.type !== 'EXT'; });
       saveButton.disabled = !state.ready;
       report(state.ready ?
-        'Conectado ao Supabase. A NF-e será vinculada à empresa ativa e só será enviada após sua confirmação.' :
+        'Cadastros carregados. A NF-e fica vinculada a esta empresa e só é enviada depois da sua confirmação.' :
         'Cadastre pelo menos um produto e um cliente ativos no ERP para preparar a NF-e.', state.ready ? '' : 'info');
       var sourceOrderId = new URLSearchParams(window.location.search).get('orderId');
       if (sourceOrderId) {

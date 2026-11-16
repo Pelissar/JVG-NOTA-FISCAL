@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="./focus-diagnostic.css">
   <link rel="stylesheet" href="/erp/fiscal-theme.css">
   <script defer src="./nfe-tax-suggestion.js?v=20261112-2"></script>
-  <script defer src="./nfe-drafts.js?v=20261116-company"></script>
+  <script defer src="./nfe-drafts.js?v=20261116-issuer"></script>
   <script defer src="./nfe-wizard-ui.js?v=20261116-steps"></script>
   <script defer src="./fiscal-workspace.js?v=20261116-steps"></script>
 <style>
@@ -28,7 +28,7 @@
       <a href="/erp/nfse.html"><strong>NFS-e</strong><small>Serviços</small></a>
     </nav>
     <div class="page-title"><div><div class="eyebrow">FISCAL / SAÍDA DE MERCADORIAS</div><h1>Emitir NF-e</h1><p>Preencha a operação, revise os dados fiscais de cada item e acompanhe o retorno da Focus.</p></div><span class="phase">Produção bloqueada</span></div>
-    <div id="status" class="notice" role="status">Conectando ao Supabase e carregando seus cadastros...</div>
+    <div id="status" class="notice" role="status">Carregando os cadastros da empresa...</div>
     <section class="panel readiness-panel" aria-labelledby="readiness-heading"><div class="panel-head"><div><span class="focus-eyebrow">STATUS DO AMBIENTE</span><h2 id="readiness-heading">Produção bloqueada · Homologação disponível</h2><p>A emissão oficial exige integração de produção, credencial própria e validação fiscal concluída.</p></div><span class="readiness-badge" id="readinessSummary">Verificando</span></div><div class="panel-body"><div class="readiness-grid" id="homologationReadiness" aria-live="polite"><p>Conferindo conexão e cadastros...</p></div><div class="readiness-links"><a href="/erp/index.html#settings">Dados fiscais da empresa</a><a href="/erp/index.html#products">Produtos</a><a href="/erp/tax-profiles.html">Regras tributárias opcionais</a></div><p class="readiness-note">A integração atual envia somente para homologação. A Focus usa URL e token específicos para produção; esta tela não transmite documentos fiscais reais.</p></div></section>
 <section class="panel focus-panel" aria-labelledby="focus-heading"><div class="focus-panel-heading"><div><span class="focus-eyebrow">INTEGRAÇÃO</span><h2 id="focus-heading">Conexão Focus NFe</h2></div></div><div class="panel-body"><p>Confira a credencial de homologação. Esta verificação não transmite, autoriza ou cancela NF-e.</p><div class="focus-actions"><button id="focusCheck" class="secondary-button" type="button">Verificar conexão Focus NFe</button><span class="focus-subtext">A consulta não emite nota fiscal.</span></div><p id="focusResult" class="focus-result" role="status" aria-live="polite">Conexão ainda não verificada.</p></div></section>
 <div class="fiscal-steps" role="tablist" aria-label="Etapas de preenchimento da NF-e">
