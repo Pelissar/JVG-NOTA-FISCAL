@@ -8,12 +8,16 @@ const priorities = ["low", "normal", "high", "urgent"] as const;
 type Status = typeof statuses[number];
 type Priority = typeof priorities[number];
 
-async function accountForRequest(): Promise<{ account: SiteAccount; userId: string }> {
+async function accountForRequest(): Promise<{ account: SiteAccount; userId: string; displayName: string }> {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
   const account = await getSiteAccount(user);
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
-  return { account, userId: user.userId };
+  return { account, userId: user.userId, displayName: user.displayName };
+}
+
+function isCommercial(role?: string) {
+  return role !== "technician" && role !== "viewer";
 }
 
 function objectBody(value: unknown): Record<string, unknown> {
@@ -60,7 +64,7 @@ const transitions: Record<Status, readonly Status[]> = {
 
 export async function GET(request: Request) {
   try {
-    const { account } = await accountForRequest();
+    const { account, userId, displayName } = await accountForRequest();
     const params = new URL(request.url).searchParams;
     const pageRaw = params.get("page") ?? "1";
     if (!/^[1-9]\d{0,4}$/.test(pageRaw)) throw new JvgBackendError("Página inválida.", 400);
@@ -69,15 +73,22 @@ export async function GET(request: Request) {
     if (status && !statuses.includes(status as Status)) throw new JvgBackendError("Situação de OS inválida.", 400);
     const scope = `tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`;
     const statusFilter = status ? `&status=${filterEq(status)}` : "";
-    const [rows, summary] = await Promise.all([
-      dbRequest<Array<Record<string, unknown>>>(
-        `/rest/v1/jvg_service_orders?${scope}${statusFilter}&select=id,os_number,customer_id,created_by,device_type,brand,model,serial_number,reported_issue,diagnosis,technician_name,status,priority,customer_approved,estimated_value,promised_at,internal_notes,created_at,updated_at&order=created_at.desc,id.desc&limit=${pageSize + 1}&offset=${(page - 1) * pageSize}`,
-      ),
-      dbRequest<Record<string, number>>("/rest/v1/rpc/jvg_service_order_summary", {
-        method: "POST", body: JSON.stringify({ p_tenant_id: account.tenant_id, p_company_id: account.company_id }),
-      }),
-    ]);
-    return apiJson({ serviceOrders: rows.slice(0, pageSize), summary, page, pageSize, hasMore: rows.length > pageSize });
+    const baseSelect = "id,os_number,customer_id,created_by,device_type,brand,model,serial_number,reported_issue,diagnosis,technician_name,status,priority,customer_approved,estimated_value,promised_at,internal_notes,created_at,updated_at";
+    const listPath = (columns: string) => `/rest/v1/jvg_service_orders?${scope}${statusFilter}&select=${columns}&order=os_number.desc&limit=${pageSize + 1}&offset=${(page - 1) * pageSize}`;
+    const summaryPromise = dbRequest<Record<string, number>>("/rest/v1/rpc/jvg_service_order_summary", {
+      method: "POST", body: JSON.stringify({ p_tenant_id: account.tenant_id, p_company_id: account.company_id }),
+    });
+    let rows: Array<Record<string, unknown>>;
+    try {
+      rows = await dbRequest<Array<Record<string, unknown>>>(listPath(`${baseSelect},claimed_by,claimed_at`));
+    } catch {
+      rows = await dbRequest<Array<Record<string, unknown>>>(listPath(baseSelect));
+    }
+    const summary = await summaryPromise;
+    return apiJson({
+      serviceOrders: rows.slice(0, pageSize), summary, page, pageSize, hasMore: rows.length > pageSize,
+      access: { role: account.role || "", userId, displayName, canManage: isCommercial(account.role), canClaim: account.role === "technician" },
+    });
   } catch (error) { return safeError(error); }
 }
 
@@ -85,7 +96,7 @@ export async function POST(request: Request) {
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {
     const { account, userId } = await accountForRequest();
-    if (account.role === "viewer") throw new JvgBackendError("Sem permissão para abrir ordens de serviço.", 403);
+    if (!isCommercial(account.role)) throw new JvgBackendError("Somente o comercial abre e libera uma ordem de serviço.", 403);
     const data = objectBody(await request.json());
     const customerId = data.customerId == null || data.customerId === "" ? null : uuid(data.customerId, "Cliente");
     if (customerId) {
@@ -96,13 +107,25 @@ export async function POST(request: Request) {
     }
     const priority = data.priority == null ? "normal" : data.priority;
     if (typeof priority !== "string" || !priorities.includes(priority as Priority)) throw new JvgBackendError("Prioridade inválida.", 400);
+    let osNumber: number | undefined;
+    try {
+      const allocated = await dbRequest<number>("/rest/v1/rpc/jvg_allocate_service_order_number", {
+        method: "POST", body: JSON.stringify({ p_tenant_id: account.tenant_id, p_company_id: account.company_id }),
+      });
+      if (!Number.isInteger(allocated) || allocated < 0 || allocated > 10000) throw new Error("numero");
+      osNumber = allocated;
+    } catch (error) {
+      if (error instanceof JvgBackendError && /esgotada|10000/i.test(error.message)) throw new JvgBackendError("Esta empresa já usou a OS 10000.", 409);
+      osNumber = undefined;
+    }
     const created = await dbRequest<Array<Record<string, unknown>>>("/rest/v1/jvg_service_orders", {
       method: "POST",
       body: JSON.stringify({
+        ...(osNumber === undefined ? {} : { os_number: osNumber }),
         tenant_id: account.tenant_id, company_id: account.company_id, customer_id: customerId, created_by: userId,
         device_type: text(data.deviceType, "Equipamento", 80, 2), brand: text(data.brand ?? "", "Marca", 80),
         model: text(data.model ?? "", "Modelo", 120), serial_number: text(data.serialNumber ?? "", "Número de série", 120),
-        reported_issue: text(data.reportedIssue, "Defeito relatado", 5000, 3), technician_name: text(data.technicianName ?? "", "Técnico", 120),
+        reported_issue: text(data.reportedIssue, "Defeito relatado", 5000, 3), technician_name: "",
         status: "open", priority, estimated_value: money(data.estimatedValue), promised_at: date(data.promisedAt, "Previsão de entrega"),
         internal_notes: text(data.internalNotes ?? "", "Observações internas", 3000),
       }),
@@ -115,10 +138,37 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {
-    const { account } = await accountForRequest();
+    const { account, userId, displayName } = await accountForRequest();
     if (account.role === "viewer") throw new JvgBackendError("Sem permissão para atualizar ordens de serviço.", 403);
     const data = objectBody(await request.json());
     const id = uuid(data.id, "Ordem de serviço");
+    if (data.action === "claim") {
+      if (account.role !== "technician") throw new JvgBackendError("Somente o técnico confirma a ordem de serviço.", 403);
+      const current = await dbRequest<Array<Record<string, unknown>>>(
+        `/rest/v1/jvg_service_orders?tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}&id=${filterEq(id)}&select=id,os_number,claimed_by,technician_name&limit=1`,
+      );
+      const order = current[0];
+      if (!order) throw new JvgBackendError("Ordem de serviço não encontrada.", 404);
+      if (order.claimed_by && order.claimed_by !== userId) {
+        throw new JvgBackendError(`OS-${String(order.os_number).padStart(5, "0")} já foi confirmada por ${order.technician_name || "outro técnico"}. Ela não pode ser alterada.`, 409);
+      }
+      if (order.claimed_by === userId) return apiJson({ ok: true, serviceOrder: order });
+      const claimed = await dbRequest<Array<Record<string, unknown>>>(
+        `/rest/v1/jvg_service_orders?tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}&id=${filterEq(id)}&claimed_by=is.null&select=id,os_number,technician_name,claimed_by`,
+        { method: "PATCH", body: JSON.stringify({ claimed_by: userId, claimed_at: new Date().toISOString(), technician_name: displayName.slice(0, 120), updated_at: new Date().toISOString() }) },
+      );
+      if (!claimed.length) throw new JvgBackendError("Outro técnico confirmou esta OS agora. Atualize a lista.", 409);
+      return apiJson({ ok: true, serviceOrder: claimed[0] });
+    }
+    if (account.role === "technician") {
+      const own = await dbRequest<Array<{ claimed_by: string | null; technician_name: string; os_number: number }>>(
+        `/rest/v1/jvg_service_orders?tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}&id=${filterEq(id)}&select=claimed_by,technician_name,os_number&limit=1`,
+      );
+      if (!own[0]) throw new JvgBackendError("Ordem de serviço não encontrada.", 404);
+      if (own[0].claimed_by !== userId) throw new JvgBackendError(`OS-${String(own[0].os_number).padStart(5, "0")} está com ${own[0].technician_name || "outro técnico"}. Ela não pode ser alterada.`, 409);
+      if (data.status === "cancelled") throw new JvgBackendError("O técnico não remove a ordem. Peça ao comercial.", 403);
+      delete data.technicianName;
+    }
     const fromStatus = data.fromStatus;
     if (typeof fromStatus !== "string" || !statuses.includes(fromStatus as Status)) throw new JvgBackendError("Situação atual da OS inválida. Atualize a ficha.", 400);
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -148,5 +198,21 @@ export async function PATCH(request: Request) {
     );
     if (!updated.length) throw new JvgBackendError("OS não encontrada ou atualizada por outra pessoa. Atualize a lista.", 409);
     return apiJson({ ok: true, serviceOrder: updated[0] });
+  } catch (error) { return safeError(error); }
+}
+
+export async function DELETE(request: Request) {
+  if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
+  try {
+    const { account } = await accountForRequest();
+    if (!isCommercial(account.role)) throw new JvgBackendError("Somente o comercial pode remover uma ordem de serviço.", 403);
+    const id = new URL(request.url).searchParams.get("id") || "";
+    if (!uuidPattern.test(id)) throw new JvgBackendError("Ordem de serviço inválida.", 400);
+    const removed = await dbRequest<Array<{ id: string }>>(
+      `/rest/v1/jvg_service_orders?tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}&id=${filterEq(id)}&select=id`,
+      { method: "DELETE" },
+    );
+    if (!removed.length) throw new JvgBackendError("Ordem de serviço não encontrada.", 404);
+    return apiJson({ ok: true });
   } catch (error) { return safeError(error); }
 }
