@@ -179,9 +179,11 @@
   .header { align-items: flex-start; flex-direction: column; }
   .headerActions { width: 100%; }
   .headerActions > * { flex: 1; }
-  .metrics { gap: 8px; }
+  .metrics { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .metrics article { min-height: 100px; padding: 13px; }
   .metrics article strong { font-size: 22px; }
+  .tabs { flex-wrap: wrap; overflow-x: visible; }
+  .tabs button { max-width: 100%; white-space: normal; }
   .panel { padding: 16px; }
   .panelHead { margin: -16px -16px 16px; padding: 16px; }
   .formRow, .productGrid, .tableGrid { grid-template-columns: minmax(0, 1fr); }
