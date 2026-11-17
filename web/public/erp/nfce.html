@@ -8,9 +8,9 @@
   <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
   <link rel="stylesheet" href="/erp/styles.css"><link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css"><link rel="stylesheet" href="/erp/fiscal-document-switcher.css?v=20261113-2">
   <script src="/erp/theme-switch.js"></script>
-  <script defer src="/erp/erp-page-nav.js?v=20261116-full-redesign-2"></script>
+  <script defer src="/erp/erp-page-nav.js?v=20261116-fiscal-suite-3"></script>
   <script defer src="/erp/nfce.js?v=20261116-nfce"></script>
-<link rel="stylesheet" href="/erp/site-refresh.css?v=20261116-full-redesign-2"></head>
+<link rel="stylesheet" href="/erp/site-refresh.css?v=20261116-fiscal-suite-3"></head>
 <body>
   <div id="erpGlobalNav"></div>
   <main class="commercial-page">
@@ -20,7 +20,7 @@
     </nav>
     <div class="page-heading"><div><div class="eyebrow">FISCAL / HOMOLOGAÇÃO</div><h1>NFC-e</h1><p>Venda ao consumidor no ambiente de teste. Produção continua fechada.</p></div></div>
     <p id="nfceNotice" class="sales-notice" role="status">Carregando produtos...</p>
-    <section class="panel"><form id="nfceForm" class="os-form"><div class="os-form-grid">
+    <section class="panel nfce-compose-panel"><div class="nfce-card-heading"><div><span class="section-kicker">NOVA NOTA</span><h2>Preparar NFC-e de teste</h2><p>Confira os dados do consumidor, produto e pagamento antes de enviar à homologação.</p></div><span class="nfce-status-chip">Homologação</span></div><div class="nfce-preflight"><strong>Ambiente de teste</strong><span>A transmissão de produção permanece bloqueada. O botão de envio só será liberado após marcar a confirmação.</span></div><form id="nfceForm" class="os-form"><div class="os-form-grid">
       <label>Natureza da operação<input id="nfceNature" maxlength="60" required value="VENDA AO CONSUMIDOR"></label>
       <label>Produto<select id="nfceProduct" required></select></label>
       <label>Quantidade<input id="nfceQuantity" type="number" min="0.001" max="9999" step="0.001" value="1" required></label>
@@ -32,7 +32,7 @@
     <label class="issued-check-label" style="display:flex;gap:8px;align-items:flex-start;margin:12px 0"><input id="nfceConfirm" type="checkbox"><span>Confirmo que este envio é somente no ambiente de homologação.</span></label>
     <div class="dialog-actions"><button class="btn" type="submit">Preparar NFC-e</button><button id="nfceSend" class="btn primary" type="button" disabled>Enviar teste</button></div>
     </form></section>
-    <section class="panel"><div class="panel-head"><div><h2>NFC-e desta empresa</h2><p>Somente homologação.</p></div></div><div id="nfceList" class="commercial-table">Carregando...</div></section>
+    <section class="panel nfce-history-panel"><div class="nfce-card-heading"><div><span class="section-kicker">DOCUMENTOS DA EMPRESA</span><h2>NFC-e desta empresa</h2><p>Notas e retornos registrados neste ambiente.</p></div><span class="nfce-status-chip">Homologação</span></div><div id="nfceList" class="commercial-table">Carregando...</div></section>
   </main>
 </body>
 </html>

@@ -48,6 +48,7 @@
     { label: 'Fiscal', icon: 'receipt', links: [
       ['NF-e · Mercadorias · Modelo 55', '/erp/nfe.html', 'receipt'],
       ['NFC-e · Consumidor · Modelo 65', '/erp/nfce.html', 'receipt'],
+      ['NFS-e · Serviços · Em preparação', '/erp/nfse.html', 'file'],
       ['NF-e emitidas', '/erp/nfe-issued.html', 'file'],
       ['Notas de entrada · XML', '/erp/inbound-nfe.html', 'file'],
       ['Histórico fiscal', '/erp/fiscal-history.html', 'file'],
@@ -61,7 +62,7 @@
   var currentPath = window.location.pathname.replace(/\/$/, '/index.html');
   if (currentPath === '/erp/nfe.html' || currentPath === '/erp/nfe-issued.html') {
     var fiscalGroup = groups.find(function (group) { return group.label === 'Fiscal'; });
-    if (fiscalGroup) fiscalGroup.links = fiscalGroup.links.filter(function (entry) { return entry[1] !== '/erp/nfce.html'; });
+    if (fiscalGroup) fiscalGroup.links = fiscalGroup.links.filter(function (entry) { return entry[1] !== '/erp/nfce.html' && entry[1] !== '/erp/nfse.html'; });
   }
   var nav = document.createElement('header');
   nav.className = 'erp-global-nav';
@@ -128,7 +129,7 @@
       ['Estoque', '/erp/index.html#inventory'], ['Relatórios', '/erp/index.html#reports'], ['Notas de entrada', '/erp/inbound-nfe.html']
     ] },
     { title: 'Fiscal', note: 'Emissão, recebimentos e histórico', routes: ['/erp/nfe', '/erp/nfe-issued', '/erp/inbound-nfe', '/erp/fiscal-history', '/erp/cfop', '/erp/tax-profiles', '/erp/nfse-drafts', '/erp/nfce'], route: '/erp/index', hashes: ['#fiscal'], links: [
-      ['Emitir NF-e', '/erp/nfe.html'], ['NF-e emitidas', '/erp/nfe-issued.html'], ['Notas de entrada · XML', '/erp/inbound-nfe.html'],
+      ['Emitir NF-e', '/erp/nfe.html'], ['NF-e emitidas', '/erp/nfe-issued.html'], ['NFC-e', '/erp/nfce.html'], ['NFS-e · em preparação', '/erp/nfse.html'], ['Notas de entrada · XML', '/erp/inbound-nfe.html'],
       ['Histórico fiscal', '/erp/fiscal-history.html'], ['CFOP', '/erp/cfop.html'], ['Regras fiscais', '/erp/tax-profiles.html']
     ] },
     { title: 'Conta', note: 'Perfil e dados da empresa', route: '/erp/index', hashes: ['#profile', '#settings'], links: [
@@ -136,7 +137,10 @@
     ] }
   ];
   if (normalizedCurrentPath === '/erp/nfce') {
-    contextGroups[5].links = [['Emitir NFC-e', '/erp/nfce.html'], ['NF-e emitidas', '/erp/nfe-issued.html'], ['Histórico fiscal', '/erp/fiscal-history.html']];
+    contextGroups[5] = { title: 'NFC-e', note: 'Consumidor · Modelo 65', routes: ['/erp/nfce'], links: [['Emitir NFC-e', '/erp/nfce.html'], ['NF-e emitidas', '/erp/nfe-issued.html'], ['Histórico fiscal', '/erp/fiscal-history.html']] };
+  }
+  if (normalizedCurrentPath === '/erp/nfse' || normalizedCurrentPath === '/erp/nfse-drafts') {
+    contextGroups[5] = { title: 'NFS-e', note: 'Serviços · Em preparação', routes: ['/erp/nfse', '/erp/nfse-drafts'], links: [['Ordens de serviço', '/erp/service-orders.html'], ['Histórico fiscal', '/erp/fiscal-history.html']] };
   }
   currentContext = contextGroups.find(function (context) {
     if (context.routes && context.routes.indexOf(normalizedCurrentPath) >= 0) return true;

@@ -3,17 +3,58 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Nota de serviço · JVG ERP</title>
+  <meta name="theme-color" content="#f3f6fa">
+  <meta name="description" content="Área de NFS-e para serviços. Em preparação; sem transmissão habilitada.">
+  <title>NFS-e · Serviços · SigmaFiscal</title>
   <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
-  <link rel="stylesheet" href="/erp/styles.css"><link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css">
+  <link rel="stylesheet" href="/erp/styles.css">
+  <link rel="stylesheet" href="/erp/unified-pages.css">
+  <link rel="stylesheet" href="/erp/erp-design-v2.css">
   <script src="/erp/theme-switch.js"></script>
-  <script defer src="/erp/erp-page-nav.js?v=20261116-full-redesign-2"></script>
-<link rel="stylesheet" href="/erp/site-refresh.css?v=20261116-full-redesign-2"></head>
+  <script defer src="/erp/erp-page-nav.js?v=20261116-fiscal-suite-3"></script>
+  <link rel="stylesheet" href="/erp/site-refresh.css?v=20261116-fiscal-suite-3">
+</head>
 <body>
   <div id="erpGlobalNav"></div>
-  <main class="commercial-page">
-    <div class="page-heading"><div><div class="eyebrow">FISCAL</div><h1>Nota de serviço</h1><p>Este documento saiu do sistema. A emissão agora é feita somente no portal.</p></div></div>
-    <section class="panel"><p>A NFS-e não é mais preparada nem enviada por aqui. Use o portal da nota de serviço. As notas de mercadoria e de consumidor continuam no sistema.</p><p><a class="btn primary" href="/erp/nfe.html">Abrir NF-e</a> <a class="btn" href="/erp/nfce.html">Abrir NFC-e</a></p></section>
+  <main class="fiscal-module-page nfse-module-page">
+    <header class="fiscal-module-heading">
+      <div>
+        <p class="eyebrow">FISCAL <span aria-hidden="true">/</span> SERVIÇOS</p>
+        <h1>NFS-e</h1>
+        <p>Notas fiscais de serviço em uma área separada da NF-e de mercadorias e da NFC-e de consumidor.</p>
+      </div>
+      <span class="fiscal-module-status"><span aria-hidden="true"></span> Em preparação</span>
+    </header>
+
+    <section class="fiscal-module-hero" aria-labelledby="nfseStatusTitle">
+      <div class="fiscal-module-hero-icon" aria-hidden="true">S</div>
+      <div class="fiscal-module-hero-copy">
+        <span class="section-kicker">DOCUMENTO DE SERVIÇOS</span>
+        <h2 id="nfseStatusTitle">Emissão ainda não habilitada</h2>
+        <p>Esta área não prepara nem transmite NFS-e. Você pode continuar registrando atendimentos e ordens de serviço; a emissão só aparecerá aqui quando o fluxo estiver implementado e validado em homologação.</p>
+        <div class="fiscal-module-actions">
+          <a class="button-primary" href="/erp/service-orders.html">Abrir ordens de serviço</a>
+          <a class="button-secondary" href="/erp/fiscal-history.html">Consultar histórico fiscal</a>
+        </div>
+      </div>
+      <aside class="fiscal-module-side-note">
+        <span class="eyebrow">STATUS DO MÓDULO</span>
+        <strong>Sem transmissão</strong>
+        <small>Não há botão de emissão ou envio disponível nesta tela.</small>
+      </aside>
+    </section>
+
+    <section class="fiscal-module-next" aria-labelledby="nfseNextTitle">
+      <div class="fiscal-module-section-heading">
+        <div><span class="section-kicker">PRÓXIMOS PASSOS</span><h2 id="nfseNextTitle">O que falta para abrir este fluxo</h2></div>
+        <p>A preparação desta área não altera os parâmetros de produção da empresa.</p>
+      </div>
+      <div class="fiscal-module-checklist">
+        <article><span>01</span><div><strong>Definir os dados de serviço</strong><p>Confirmar as informações do prestador, tomador e serviço que farão parte do documento.</p></div></article>
+        <article><span>02</span><div><strong>Implementar e revisar o envio</strong><p>Mapear o payload, as respostas e o histórico da NFS-e sem reaproveitar regras de NF-e de mercadorias.</p></div></article>
+        <article><span>03</span><div><strong>Validar em homologação</strong><p>Conferir o retorno do provedor antes de disponibilizar qualquer ação de transmissão.</p></div></article>
+      </div>
+    </section>
   </main>
 </body>
 </html>

@@ -310,3 +310,133 @@ body.page-with-global-nav .main-column>.topbar{display:none!important}
 body.page-with-global-nav .main-column{display:block!important;width:100%;min-width:0}
 body.page-with-global-nav .content{min-height:calc(100dvh - 180px)}
 @media(max-width:480px){.erp-global-nav{grid-template-columns:minmax(0,1fr) auto!important;grid-template-rows:48px 36px 40px!important;grid-template-areas:"brand actions" "toggle toggle" "context context"!important;gap:0 8px!important}.erp-global-nav .erp-nav-toggle{justify-self:start}.erp-context-nav{margin:0 -12px!important;padding:0 12px!important}.erp-context-links{padding-right:0!important}.erp-global-nav .erp-global-links{top:calc(100% + 4px)!important}}
+
+/* Fiscal workspaces share one visual language across all document types. */
+body:has(> .erp-global-nav)>.topbar{display:none!important}
+body:not(:has(> .app-shell)) :is(.inbound-shell,.history-shell,.tax-page-frame,.fiscal-module-page){width:min(100% - 32px,1480px)!important;margin:0 auto!important;padding:30px 0 56px!important}
+body:not(:has(> .app-shell)) :is(.inbound-heading,.history-heading,.issued-heading,.tax-profiles-page .page-intro,.fiscal-module-heading){align-items:flex-end;gap:22px;margin:0 0 22px;padding:0 0 20px;border-bottom:1px solid var(--sf-line)}
+body:not(:has(> .app-shell)) :is(.inbound-heading h1,.history-heading h1,.fiscal-module-heading h1,.tax-profiles-page .page-intro h1){margin:5px 0 7px;color:var(--sf-ink)!important;font-size:clamp(27px,3vw,38px)!important;letter-spacing:-.045em}
+body:not(:has(> .app-shell)) :is(.inbound-heading p,.history-heading p,.fiscal-module-heading p){max-width:680px;margin:0;color:var(--sf-muted)!important;font-size:12px;line-height:1.6}
+body:not(:has(> .app-shell)) :is(.inbound-card,.history-card,.tax-profiles-page .panel,.nfce-compose-panel,.nfce-history-panel){overflow:hidden;border:1px solid var(--sf-line)!important;border-radius:16px!important;background:var(--sf-surface)!important;box-shadow:var(--sf-shadow)!important}
+body:not(:has(> .app-shell)) :is(.inbound-notice,.transition-panel,.nfce-preflight){border:1px solid color-mix(in srgb,var(--sf-blue) 24%,var(--sf-line))!important;border-radius:13px!important;background:var(--sf-blue-soft)!important;color:var(--sf-ink-soft)!important}
+body:not(:has(> .app-shell)) .inbound-notice{display:grid;gap:4px;margin:0 0 10px;padding:13px 16px}
+body:not(:has(> .app-shell)) .inbound-notice strong{color:var(--sf-blue-strong)!important;font-size:11px}
+body:not(:has(> .app-shell)) .inbound-notice span{color:var(--sf-ink-soft)!important;font-size:10px;line-height:1.55}
+body:not(:has(> .app-shell)) .inbound-grid{gap:14px;margin:15px 0}
+body:not(:has(> .app-shell)) .inbound-card{padding:0}
+body:not(:has(> .app-shell)) .inbound-card :is(.card-heading,.review-heading,.list-heading){padding:17px 19px;border-bottom:1px solid var(--sf-line)}
+body:not(:has(> .app-shell)) .inbound-card :is(.card-heading h2,.items-heading h3){color:var(--sf-ink)!important;font-size:15px}
+body:not(:has(> .app-shell)) .inbound-card :is(.card-heading p,.flow-footnote){color:var(--sf-muted)!important;font-size:10px;line-height:1.55}
+body:not(:has(> .app-shell)) .inbound-card :is(.step-number,.file-symbol){border-radius:10px;background:var(--sf-blue-soft)!important;color:var(--sf-blue-strong)!important;font-weight:850}
+body:not(:has(> .app-shell)) .file-drop{border:1px dashed var(--sf-line-strong)!important;border-radius:13px!important;background:var(--sf-soft)!important;color:var(--sf-ink)!important}
+body:not(:has(> .app-shell)) .file-drop:hover{border-color:var(--sf-blue)!important;background:var(--sf-blue-soft)!important}
+body:not(:has(> .app-shell)) .pdf-note{border-left:3px solid var(--sf-warning)!important;border-radius:0 10px 10px 0;background:var(--sf-warning-soft)!important;color:var(--sf-ink-soft)!important}
+body:not(:has(> .app-shell)) .flow-list li{border-color:var(--sf-line)!important;background:var(--sf-soft)!important}
+body:not(:has(> .app-shell)) .flow-list b{color:var(--sf-blue-strong)!important}
+body:not(:has(> .app-shell)) .document-row{border-color:var(--sf-line)!important;border-radius:12px!important;background:var(--sf-surface)!important}
+body:not(:has(> .app-shell)) .document-row:hover{border-color:var(--sf-blue)!important;background:var(--sf-blue-soft)!important}
+body:not(:has(> .app-shell)) :is(.fiscal-data-review,.receipt-summary){border-color:var(--sf-line)!important;border-radius:13px!important;background:var(--sf-soft)!important}
+body:not(:has(> .app-shell)) :is(.party-detail-card,.invoice-summary-grid>div,.invoice-tax-total,.tax-value){border-color:var(--sf-line)!important;border-radius:11px!important;background:var(--sf-surface)!important;color:var(--sf-ink)!important}
+body:not(:has(> .app-shell)) :is(.party-detail-card strong,.invoice-summary-grid strong,.tax-value strong){color:var(--sf-ink)!important}
+body:not(:has(> .app-shell)) .review-footer{background:var(--sf-surface)!important;border-top:1px solid var(--sf-line)!important}
+body:not(:has(> .app-shell)) :is(.history-summary>div,.workflow-step,.cfop-summary>div,.fiscal-module-checklist article){border:1px solid var(--sf-line)!important;border-radius:13px!important;background:var(--sf-surface)!important;box-shadow:0 5px 16px rgb(22 45 72 / 4%)}
+body:not(:has(> .app-shell)) :is(.history-summary strong,.workflow-step strong,.cfop-summary strong,.fiscal-module-checklist strong){color:var(--sf-ink)!important}
+body:not(:has(> .app-shell)) :is(.history-summary small,.workflow-step p,.cfop-summary span,.fiscal-module-checklist p){color:var(--sf-muted)!important}
+body:not(:has(> .app-shell)) .history-filters{gap:12px}
+body:not(:has(> .app-shell)) .history-filters label span{color:var(--sf-muted)!important;font-size:10px;font-weight:750}
+body:not(:has(> .app-shell)) .history-row{border-color:var(--sf-line)!important;border-radius:11px!important;background:var(--sf-surface)!important}
+body:not(:has(> .app-shell)) .history-row:hover{background:var(--sf-hover)!important}
+body:not(:has(> .app-shell)) .history-cell strong{color:var(--sf-ink)!important}
+body:not(:has(> .app-shell)) .history-cell small{color:var(--sf-muted)!important}
+body:not(:has(> .app-shell)) .history-status{border-radius:999px!important;font-weight:800}
+body:not(:has(> .app-shell)) .results-heading{gap:14px}
+body:not(:has(> .app-shell)) .results-heading h2{color:var(--sf-ink)!important}
+body:not(:has(> .app-shell)) .results-heading p{color:var(--sf-muted)!important}
+body:not(:has(> .app-shell)) .issued-overview{border:1px solid var(--sf-line)!important;border-radius:15px!important;background:var(--sf-surface)!important}
+body:not(:has(> .app-shell)) .issued-stat{min-width:0}
+body:not(:has(> .app-shell)) .issued-table tbody tr:hover td{background:var(--sf-hover)!important}
+body:not(:has(> .app-shell)) .issued-status{border-radius:999px!important;font-weight:800}
+body:not(:has(> .app-shell)) .issued-dialog[open]{max-width:min(94vw,720px);border:1px solid var(--sf-line)!important;border-radius:18px!important;background:var(--sf-surface)!important;color:var(--sf-ink)!important}
+body:not(:has(> .app-shell)) .issued-dialog-card{background:var(--sf-surface)!important;color:var(--sf-ink)!important}
+body:not(:has(> .app-shell)) .cfop-summary{gap:11px;margin:14px 0 18px}
+body:not(:has(> .app-shell)) .cfop-summary>div{min-height:92px;padding:16px!important}
+body:not(:has(> .app-shell)) .cfop-grid{gap:15px}
+body:not(:has(> .app-shell)) .cfop-record{border-color:var(--sf-line)!important;border-radius:10px!important;background:var(--sf-surface)!important}
+body:not(:has(> .app-shell)) .cfop-record.selected{border-color:var(--sf-blue)!important;background:var(--sf-blue-soft)!important;box-shadow:inset 3px 0 var(--sf-blue)}
+body:not(:has(> .app-shell)) .cfop-record-text strong{color:var(--sf-ink)!important}
+body:not(:has(> .app-shell)) .cfop-record-text small{color:var(--sf-muted)!important}
+body:not(:has(> .app-shell)) .cfop-details{min-height:260px;border:1px solid var(--sf-line)!important;border-radius:15px!important;background:var(--sf-surface)!important}
+body:not(:has(> .app-shell)) .tax-profiles-page .transition-panel{box-shadow:none!important}
+body:not(:has(> .app-shell)) .tax-profiles-page .transition-copy :is(h2,p){color:var(--sf-ink-soft)!important}
+body:not(:has(> .app-shell)) .tax-profiles-page .workflow-step{min-width:0}
+body:not(:has(> .app-shell)) .tax-profiles-page .form-group{border-color:var(--sf-line)!important;border-radius:12px!important;background:var(--sf-soft)!important}
+body:not(:has(> .app-shell)) .tax-profiles-page .field-help{color:var(--sf-muted)!important}
+body:not(:has(> .app-shell)) .tax-profiles-page .side-column .panel{height:fit-content}
+body:not(:has(> .app-shell)) .tax-profiles-page .review-dialog[open]{max-width:min(94vw,620px);border:1px solid var(--sf-line)!important;border-radius:18px!important;background:var(--sf-surface)!important;color:var(--sf-ink)!important}
+.fiscal-document-switcher{display:flex!important;gap:8px!important;margin:0 0 18px!important;padding:5px!important;border:1px solid var(--sf-line)!important;border-radius:13px!important;background:var(--sf-soft)!important}
+.fiscal-document-switcher a{flex:1;min-height:54px!important;padding:10px 15px!important;border:1px solid transparent!important;border-radius:10px!important;color:var(--sf-ink-soft)!important;text-decoration:none}
+.fiscal-document-switcher a[aria-current="page"]{border-color:var(--sf-line)!important;background:var(--sf-surface)!important;color:var(--sf-blue-strong)!important;box-shadow:0 5px 15px rgb(22 45 72 / 8%)}
+.fiscal-document-switcher strong{display:block;color:inherit!important;font-size:12px}
+.fiscal-document-switcher small{display:block;margin-top:3px;color:var(--sf-muted)!important;font-size:9px}
+.fiscal-module-page{display:grid;gap:20px}
+.fiscal-module-heading{display:flex;justify-content:space-between}
+.fiscal-module-status{display:inline-flex;align-items:center;gap:8px;flex:none;padding:9px 12px;border:1px solid var(--sf-warning);border-radius:999px;background:var(--sf-warning-soft);color:var(--sf-warning);font-size:10px;font-weight:850}
+.fiscal-module-status span{width:7px;height:7px;border-radius:50%;background:currentColor}
+.fiscal-module-hero{display:grid;grid-template-columns:52px minmax(0,1fr) minmax(190px,.36fr);align-items:center;gap:18px;padding:clamp(20px,3vw,32px);border:1px solid var(--sf-line);border-radius:17px;background:linear-gradient(120deg,var(--sf-surface),var(--sf-blue-soft));box-shadow:var(--sf-shadow)}
+.fiscal-module-hero-icon{display:grid;place-items:center;width:52px;height:52px;border-radius:15px;background:var(--sf-blue);color:#fff;font-size:20px;font-weight:900}
+.fiscal-module-hero-copy h2{margin:6px 0;color:var(--sf-ink);font-size:22px;letter-spacing:-.04em}
+.fiscal-module-hero-copy p{max-width:700px;margin:0;color:var(--sf-muted);font-size:12px;line-height:1.65}
+.fiscal-module-side-note{display:grid;gap:6px;padding:14px;border:1px solid var(--sf-line);border-radius:12px;background:var(--sf-surface)}
+.fiscal-module-side-note strong{color:var(--sf-warning);font-size:13px}
+.fiscal-module-side-note small{color:var(--sf-muted);font-size:10px;line-height:1.55}
+.fiscal-module-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:18px}
+.fiscal-module-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:9px;font-size:10px;font-weight:800;text-decoration:none}
+.fiscal-module-actions .button-primary{background:var(--sf-blue);color:var(--sf-blue-contrast)!important}
+.fiscal-module-actions .button-secondary{border:1px solid var(--sf-line-strong);background:var(--sf-surface);color:var(--sf-ink-soft)!important}
+.fiscal-module-next{padding:20px;border:1px solid var(--sf-line);border-radius:16px;background:var(--sf-surface);box-shadow:var(--sf-shadow)}
+.fiscal-module-section-heading{display:flex;justify-content:space-between;gap:16px;margin-bottom:14px}
+.fiscal-module-section-heading h2{margin:4px 0;color:var(--sf-ink);font-size:18px}
+.fiscal-module-section-heading>p{max-width:380px;color:var(--sf-muted);font-size:10px}
+.fiscal-module-checklist{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.fiscal-module-checklist article{display:flex;gap:11px;padding:14px}
+.fiscal-module-checklist article>span{display:grid;place-items:center;width:28px;height:28px;flex:none;border-radius:8px;background:var(--sf-blue-soft);color:var(--sf-blue-strong);font-size:9px;font-weight:850}
+.fiscal-module-checklist strong{display:block;margin:2px 0 5px;font-size:11px}
+.fiscal-module-checklist p{margin:0;font-size:10px;line-height:1.55}
+.nfce-card-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 20px;border-bottom:1px solid var(--sf-line)}
+.nfce-card-heading h2{margin:4px 0;color:var(--sf-ink);font-size:17px}
+.nfce-card-heading p{margin:0;color:var(--sf-muted);font-size:10px}
+.nfce-status-chip{padding:7px 10px;border:1px solid color-mix(in srgb,var(--sf-warning) 40%,var(--sf-line));border-radius:999px;background:var(--sf-warning-soft);color:var(--sf-warning);font-size:9px;font-weight:850;text-transform:uppercase}
+.nfce-preflight{display:grid;gap:3px;margin:17px 20px 4px;padding:12px 14px}
+.nfce-preflight strong{color:var(--sf-blue-strong);font-size:10px}
+.nfce-preflight span{color:var(--sf-ink-soft);font-size:10px;line-height:1.5}
+.nfce-compose-panel #nfceForm{padding:16px 20px 20px}
+.nfce-compose-panel #nfceForm .os-form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.nfce-compose-panel #nfceForm label{display:grid;gap:6px;color:var(--sf-ink-soft);font-size:10px;font-weight:750}
+.nfce-compose-panel #nfceForm input,.nfce-compose-panel #nfceForm select{min-height:40px;padding:8px 10px}
+.nfce-compose-panel #nfceForm .dialog-actions{display:flex;flex-wrap:wrap;gap:9px;padding-top:4px}
+body:not(:has(> .app-shell)) .commercial-page>#nfceNotice{margin:12px 0;padding:12px 14px;border:1px solid var(--sf-line)!important;border-radius:11px;background:var(--sf-blue-soft)!important;color:var(--sf-ink-soft)!important}
+.nfce-history-panel>#nfceList{padding:0 20px 19px}
+@media(max-width:980px){
+  body:not(:has(> .app-shell)) .fiscal-module-hero{grid-template-columns:48px minmax(0,1fr)}
+  .fiscal-module-side-note{grid-column:1/-1}
+  .fiscal-module-checklist{grid-template-columns:1fr}
+}
+@media(max-width:700px){
+  body:not(:has(> .app-shell)) :is(.inbound-shell,.history-shell,.tax-page-frame,.fiscal-module-page){width:min(100% - 24px,1480px)!important;padding:22px 0 42px!important}
+  body:not(:has(> .app-shell)) :is(.inbound-heading,.history-heading,.issued-heading,.tax-profiles-page .page-intro,.fiscal-module-heading){align-items:flex-start;flex-direction:column}
+  body:not(:has(> .app-shell)) :is(.fiscal-module-hero){grid-template-columns:1fr;align-items:start}
+  .fiscal-module-hero-icon{width:44px;height:44px}
+  .fiscal-module-section-heading{display:block}
+  .fiscal-module-checklist{grid-template-columns:1fr}
+  .fiscal-document-switcher{display:grid!important;grid-template-columns:1fr 1fr}
+  .fiscal-document-switcher a{min-height:50px!important;padding:9px!important}
+  .nfce-card-heading{align-items:flex-start}
+  .nfce-compose-panel #nfceForm .os-form-grid{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+  .fiscal-document-switcher{grid-template-columns:1fr!important}
+  .fiscal-module-actions{display:grid}
+  .fiscal-module-actions a{width:100%}
+  .nfce-card-heading{flex-direction:column}
+  .nfce-compose-panel #nfceForm{padding:13px}
+}
