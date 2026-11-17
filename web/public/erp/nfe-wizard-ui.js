@@ -209,11 +209,10 @@
       note.textContent = 'O CFOP pode variar por produto. O resumo só aparece quando os itens coincidem.';
       cfop.wrapper.append(note);
     }
-    var sourceOrderNotice = document.getElementById('sourceOrderNotice');
-    if (sourceOrderNotice) general.append(sourceOrderNotice);
-
     var recipient = sections.recipient;
     var recipientGrid = recipient.querySelector('.field-grid') || recipient;
+    var sourceOrderNotice = document.getElementById('sourceOrderNotice');
+    if (sourceOrderNotice) recipientGrid.insertAdjacentElement('afterend', sourceOrderNotice);
     var ie = makeField('Indicador de inscrição estadual', 'recipientIeIndicator', 'select');
     addOption(ie.input, '', 'Selecione conforme a operação');
     addOption(ie.input, '1', '1 · Contribuinte de ICMS');
@@ -299,9 +298,7 @@
       indicator.input.disabled = !applicable;
       var showThirdPartyFields = applicable && indicator.input.value === '1';
       cnpj.wrapper.hidden = intermediaryId.wrapper.hidden = !showThirdPartyFields;
-      intermediaryHint.textContent = applicable
-        ? 'Para esta forma de operação, indique se houve plataforma de terceiros. CNPJ e identificador só são pedidos quando houver intermediador.'
-        : 'Para esta presença, a SEFAZ proíbe o campo intermediador; o ERP vai omiti-lo automaticamente (regra 435).';
+      intermediaryHint.hidden = !applicable;
     }
     indicator.input.addEventListener('change', function () {
       var show = ['2', '3', '4', '9'].includes(form.elements.namedItem('buyerPresence').value) && indicator.input.value === '1';
@@ -959,11 +956,11 @@
     addReviewLine(target, 'Saída', exitAt ? exitAt.replace('T', ' ') : 'Não informada');
     var transportMode = form.elements.namedItem('transportMode');
     addReviewLine(target, 'Frete', transportMode && transportMode.selectedOptions[0] ? transportMode.selectedOptions[0].textContent : 'Pendente de confirmação');
-    var intermediary = fieldValue('intermediaryIndicator');
     var buyerPresence = fieldValue('buyerPresence');
-    addReviewLine(target, 'Intermediador', ['2', '3', '4', '9'].includes(buyerPresence)
-      ? intermediary === '1' ? 'Plataforma de terceiros' : 'Sem intermediador (padrão Focus: 0)'
-      : 'Campo omitido para presença ' + (buyerPresence || 'não selecionada') + ' (regra SEFAZ 435)');
+    if (['2', '3', '4', '9'].includes(buyerPresence)) {
+      var intermediary = fieldValue('intermediaryIndicator');
+      addReviewLine(target, 'Intermediador', intermediary === '1' ? 'Plataforma de terceiros' : 'Sem intermediador');
+    }
     var payments = Array.from(document.querySelectorAll('#payments .payment-row')).map(function (row) {
       var method = row.querySelector('[name="paymentMethod"]');
       var amount = row.querySelector('[name="paymentAmount"]');

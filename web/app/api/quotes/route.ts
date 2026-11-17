@@ -17,10 +17,25 @@ async function account() {
 export async function GET(request: Request) {
   try {
     const scope = await account();
+    const requestedId = new URL(request.url).searchParams.get("id");
+    if (requestedId) {
+      const id = uuid(requestedId);
+      const companyScope = `tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=${filterEq(id)}`;
+      let selected: Array<Record<string, unknown>>;
+      try {
+        selected = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_quotes?${companyScope}&select=id,quote_number,customer_id,status,notes,valid_until,total,items,created_at,updated_at&limit=1`);
+      } catch {
+        selected = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_quotes?${companyScope}&select=id,customer_id,status,notes,valid_until,total,items,created_at,updated_at&limit=1`);
+      }
+      if (!selected[0]) throw new JvgBackendError("Orçamento não encontrado nesta empresa.", 404);
+      return apiJson({ quote: selected[0] });
+    }
     const raw = new URL(request.url).searchParams.get("page") ?? "1";
     if (!/^[1-9]\d{0,4}$/.test(raw)) throw new JvgBackendError("Página inválida.", 400);
+    const requestedStatus = new URL(request.url).searchParams.get("status") ?? "";
+    if (requestedStatus && requestedStatus !== "invoiceable") throw new JvgBackendError("Situação de orçamento inválida.", 400);
     const page = Number(raw), size = 30;
-    const base = `/rest/v1/jvg_quotes?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}`;
+    const base = `/rest/v1/jvg_quotes?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}${requestedStatus === "invoiceable" ? "&status=eq.accepted" : ""}`;
     let rows: Array<Record<string, unknown>>;
     try {
       rows = await dbRequest<Array<Record<string, unknown>>>(`${base}&select=id,quote_number,customer_id,status,notes,valid_until,total,items,created_at,updated_at&order=created_at.desc,id.desc&limit=${size + 1}&offset=${(page - 1) * size}`);

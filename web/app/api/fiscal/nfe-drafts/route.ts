@@ -147,6 +147,7 @@ export async function GET(request: Request) {
           volumes: (payload.transport as DbRow | undefined)?.volumes ?? [],
           additionalTotals: payload.additionalTotals ?? null, payments: payload.payments ?? [],
           intermediary: payload.intermediary ?? null, additionalInfo: payload.additionalInfo ?? null,
+          sourceDocument: payload.sourceDocument ?? payload.sourceOrder ?? null,
           sourceOrder: payload.sourceOrder ?? null,
           issuer: payload.issuer, recipient: payload.recipient,
           items: payload.items, totalCents: payload.totalCents, commercialTotalCents: payload.commercialTotalCents ?? payload.totalCents,
@@ -174,8 +175,9 @@ export async function GET(request: Request) {
         id: row.id, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at,
         focusReference: row.focus_reference, accessKey: row.access_key,
         recipientName: String(recipient.name || "Destinatário"), itemsCount: items.length,
-        sourceOrderId: String((payload.sourceOrder as DbRow | undefined)?.id || ""),
-        sourceOrderNumber: String((payload.sourceOrder as DbRow | undefined)?.number || ""),
+        sourceDocument: payload.sourceDocument ?? payload.sourceOrder ?? null,
+        sourceOrderId: String(((payload.sourceDocument || payload.sourceOrder) as DbRow | undefined)?.id || ""),
+        sourceOrderNumber: String(((payload.sourceDocument || payload.sourceOrder) as DbRow | undefined)?.number || ""),
         totalCents: Number(payload.totalCents || 0), commercialTotalCents: Number(payload.commercialTotalCents ?? payload.totalCents ?? 0), pendingCount: warnings.length,
       };
     }) });
@@ -202,34 +204,49 @@ export async function POST(request: Request) {
     if (!company) throw new JvgBackendError("Empresa não encontrada.", 404);
 
     const scoped = scope(account);
-    let sourceOrder: DbRow | null = null;
-    if (draft.sourceOrderId) {
-      const orders = await dbRequest<DbRow[]>(
-        `/rest/v1/jvg_orders?${scoped}&id=${filterEq(draft.sourceOrderId)}&select=id,quote_id,customer_id,status,total,items&limit=1`,
-      );
-      sourceOrder = orders[0] ?? null;
-      if (!sourceOrder) throw new JvgBackendError("Pedido de origem não encontrado nesta empresa.", 404);
-      if (sourceOrder.status !== "open" && sourceOrder.status !== "fulfilled")
-        throw new JvgBackendError("Somente pedidos em aberto ou concluídos podem originar uma NF-e.", 409);
-      if (!sourceOrder.customer_id || String(sourceOrder.customer_id) !== draft.recipientId)
-        throw new JvgBackendError("O destinatário da NF-e precisa ser o mesmo do pedido.", 400);
-      const orderItems = Array.isArray(sourceOrder.items) ? sourceOrder.items as DbRow[] : [];
-      if (orderItems.length !== draft.items.length)
-        throw new JvgBackendError("Os itens da NF-e precisam corresponder ao pedido de origem.", 400);
-      orderItems.forEach((orderItem, index) => {
-        const productId = typeof orderItem.productId === "string" ? orderItem.productId : "";
-        if (!productId || orderItem.serviceId)
-          throw new JvgBackendError("Este pedido contém serviço ou item sem produto vinculado; a emissão de NF-e aceita somente mercadorias.", 400);
-        const quantityMilli = Math.round(Number(orderItem.quantity) * 1000);
-        const unitPriceCents = Math.round(Number(orderItem.unitPrice) * 100);
-        if (productId !== draft.items[index].productId ||
-            !Number.isSafeInteger(quantityMilli) || quantityMilli !== draft.items[index].quantityMilli ||
-            !Number.isSafeInteger(unitPriceCents) || unitPriceCents !== draft.items[index].unitPriceCents)
-          throw new JvgBackendError("Produtos, quantidades e preços devem permanecer iguais aos do pedido vinculado.", 400);
-      });
-      const orderTotalCents = Math.round(Number(sourceOrder.total) * 100);
-      if (!Number.isSafeInteger(orderTotalCents) || orderTotalCents !== draft.totalCents)
-        throw new JvgBackendError("O total da NF-e não corresponde ao total do pedido.", 400);
+    let sourceRecord: DbRow | null = null;
+    const source = draft.sourceDocument;
+    if (source) {
+      const sourcePath = source.type === "order"
+        ? `/rest/v1/jvg_orders?${scoped}&id=${filterEq(source.id)}&select=id,quote_id,customer_id,status,total,items&limit=1`
+        : source.type === "quote"
+          ? `/rest/v1/jvg_quotes?${scoped}&id=${filterEq(source.id)}&select=id,quote_number,customer_id,status,total,items&limit=1`
+          : `/rest/v1/jvg_service_orders?${scoped}&id=${filterEq(source.id)}&select=id,os_number,customer_id,status,estimated_value&limit=1`;
+      const rows = await dbRequest<DbRow[]>(sourcePath);
+      sourceRecord = rows[0] ?? null;
+      if (!sourceRecord) throw new JvgBackendError("Documento de origem não encontrado nesta empresa.", 404);
+      const allowedStatuses = source.type === "quote" ? ["accepted"] :
+        source.type === "order" ? ["open", "fulfilled"] : ["open", "diagnosis", "awaiting_approval", "awaiting_parts", "in_progress", "ready", "delivered"];
+      if (!allowedStatuses.includes(String(sourceRecord.status)))
+        throw new JvgBackendError(source.type === "quote"
+          ? "Somente orçamentos aceitos e válidos podem originar uma NF-e."
+          : source.type === "order" ? "Somente pedidos em aberto ou concluídos podem originar uma NF-e."
+            : "A ordem de serviço cancelada não pode ser vinculada à NF-e.", 409);
+      if (!sourceRecord.customer_id || String(sourceRecord.customer_id) !== draft.recipientId)
+        throw new JvgBackendError("O destinatário da NF-e precisa ser o mesmo do documento de origem.", 400);
+
+      if (source.type !== "service_order") {
+        const sourceItems = Array.isArray(sourceRecord.items) ? sourceRecord.items as DbRow[] : [];
+        const goodsItems = sourceItems.filter(item => typeof item.productId === "string" && !item.serviceId);
+        if (!goodsItems.length)
+          throw new JvgBackendError("Este documento contém apenas serviços. Serviços devem ser faturados em NFS-e; a NF-e aceita mercadorias.", 400);
+        if (goodsItems.length !== draft.items.length)
+          throw new JvgBackendError("A NF-e deve conter todos os produtos da origem e excluir os serviços.", 400);
+        let goodsTotalCents = 0;
+        goodsItems.forEach((sourceItem, index) => {
+          const productId = String(sourceItem.productId || "");
+          const quantityMilli = Math.round(Number(sourceItem.quantity) * 1000);
+          const unitPriceCents = Math.round(Number(sourceItem.unitPrice) * 100);
+          const lineTotalCents = Math.round(quantityMilli * unitPriceCents / 1000);
+          if (productId !== draft.items[index].productId ||
+              !Number.isSafeInteger(quantityMilli) || quantityMilli !== draft.items[index].quantityMilli ||
+              !Number.isSafeInteger(unitPriceCents) || unitPriceCents !== draft.items[index].unitPriceCents)
+            throw new JvgBackendError("Produtos, quantidades e preços da origem precisam ser mantidos. Serviços não entram na NF-e.", 400);
+          goodsTotalCents += lineTotalCents;
+        });
+        if (!Number.isSafeInteger(goodsTotalCents) || goodsTotalCents !== draft.totalCents)
+          throw new JvgBackendError("O total da NF-e precisa corresponder somente aos produtos da origem.", 400);
+      }
     }
     const [recipientRows, products, carrierRows] = await Promise.all([
       dbRequest<DbRow[]>(`/rest/v1/jvg_parties?${scoped}&id=${filterEq(draft.recipientId)}&is_customer=eq.true&active=eq.true&select=id,display_name,legal_name,document_type,document_number,state_registration,municipal_registration,email,phone,address&limit=1`),
@@ -371,10 +388,23 @@ export async function POST(request: Request) {
       transport: { mode: draft.transportMode, carrier: carrierSnapshot, vehicle: draft.vehicle, volumes: draft.volumes },
       additionalTotals: draft.additionalTotals, payments: draft.payments,
       intermediary: draft.intermediary, additionalInfo: draft.additionalInfo,
-      sourceOrder: sourceOrder ? {
-        id: String(sourceOrder.id),
-        number: "PED-" + String(sourceOrder.id).slice(0, 8).toUpperCase(),
-        quoteId: String(sourceOrder.quote_id || ""), status: String(sourceOrder.status || ""),
+      sourceDocument: source && sourceRecord ? {
+        id: String(sourceRecord.id), type: source.type,
+        number: source.type === "quote"
+          ? sourceRecord.quote_number != null
+            ? `ORC-${String(sourceRecord.quote_number).padStart(6, "0")}`
+            : "ORC-" + String(sourceRecord.id).slice(0, 8).toUpperCase()
+          : source.type === "service_order"
+            ? `OS-${String(sourceRecord.os_number ?? "").padStart(5, "0")}`
+            : "PED-" + String(sourceRecord.id).slice(0, 8).toUpperCase(),
+        quoteId: String(sourceRecord.quote_id || ""), status: String(sourceRecord.status || ""),
+        servicesExcluded: source.type === "service_order" ? 0 :
+          (Array.isArray(sourceRecord.items) ? (sourceRecord.items as DbRow[]).filter(item => Boolean(item.serviceId)).length : 0),
+        serviceLinesAvailable: source.type !== "service_order",
+      } : null,
+      sourceOrder: source && source.type === "order" && sourceRecord ? {
+        id: String(sourceRecord.id), number: "PED-" + String(sourceRecord.id).slice(0, 8).toUpperCase(),
+        quoteId: String(sourceRecord.quote_id || ""), status: String(sourceRecord.status || ""),
       } : null,
       issuer, recipient: recipientSnapshot,
       items, totalCents: draft.totalCents, commercialTotalCents, taxPreview, preflight, pending, readyToTransmit: false,

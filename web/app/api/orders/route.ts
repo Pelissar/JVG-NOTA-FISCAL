@@ -32,9 +32,10 @@ export async function GET(request:Request){
   if(!/^[1-9]\d{0,4}$/.test(raw))throw new JvgBackendError("Página inválida.",400);
   const page=Number(raw),size=30;
   const status=new URL(request.url).searchParams.get("status")??"";
-  if(status&&!['open','fulfilled','cancelled'].includes(status))throw new JvgBackendError("Situação de pedido inválida.",400);
+  if(status&&!['open','fulfilled','cancelled','invoiceable'].includes(status))throw new JvgBackendError("Situação de pedido inválida.",400);
+  const statusFilter=status==="invoiceable"?"&status=in.(open,fulfilled)":status?`&status=${filterEq(status)}`:"";
   const orders=await dbRequest<Array<Record<string,unknown>>>(
-   `/rest/v1/jvg_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}${status?`&status=${filterEq(status)}`:""}&select=id,quote_id,customer_id,status,total,items,notes,created_at&order=created_at.desc,id.desc&limit=${size+1}&offset=${(page-1)*size}`
+   `/rest/v1/jvg_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}${statusFilter}&select=id,quote_id,customer_id,status,total,items,notes,created_at&order=created_at.desc,id.desc&limit=${size+1}&offset=${(page-1)*size}`
   );
   const pageOrders=orders.slice(0,size);
   const quoteIds=[...new Set(pageOrders.map(order=>String(order.quote_id)).filter(id=>uuidPattern.test(id)))];

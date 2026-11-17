@@ -257,31 +257,46 @@ async function currentSnapshotIssues(context: FocusContext, payload: Json): Prom
       add(`Item ${index + 1}: informe um CFOP de saída existente no catálogo oficial diretamente no item da NF-e.`);
   });
 
-  const sourceOrder = obj(payload.sourceOrder);
-  const sourceOrderId = text(sourceOrder.id);
-  if (sourceOrderId) {
-    if (!uuidPattern.test(sourceOrderId)) add("O pedido de origem tem identificador inválido.");
+  const sourceDocument = obj(payload.sourceDocument || payload.sourceOrder);
+  const sourceId = text(sourceDocument.id);
+  if (sourceId) {
+    const sourceType = sourceDocument.type === "quote" || sourceDocument.type === "service_order"
+      ? sourceDocument.type : "order";
+    if (!uuidPattern.test(sourceId)) add("O documento de origem tem identificador inválido.");
     else {
-      const orderRows = await dbRequest<DbRow[]>(
-        `/rest/v1/jvg_orders?${scope(account)}&id=${filterEq(sourceOrderId)}&select=id,customer_id,status,total,items&limit=1`,
-      );
-      const order = orderRows[0];
-      if (!order || !["open", "fulfilled"].includes(String(order.status))) add("O pedido de origem não está mais disponível para faturamento.");
-      else {
-        const orderItems = Array.isArray(order.items) ? order.items.map(obj) : [];
-        if (String(order.customer_id || "") !== recipientId || orderItems.length !== items.length)
-          add("Cliente ou quantidade de itens do pedido de origem mudou.");
-        else orderItems.forEach((orderItem, index) => {
-          const quantityMilli = Math.round(Number(orderItem.quantity) * 1000);
-          const unitPriceCents = Math.round(Number(orderItem.unitPrice) * 100);
-          if (String(orderItem.productId || "") !== text(items[index].productId) ||
-              quantityMilli !== Math.round(Number(items[index].quantity) * 1000) ||
-              unitPriceCents !== Number(items[index].unitPriceCents))
-            add(`Item ${index + 1}: produto, quantidade ou preço do pedido de origem mudou.`);
-        });
-        const orderTotalCents = Math.round(Number(order.total) * 100);
-        if (!Number.isSafeInteger(orderTotalCents) || orderTotalCents !== Number(payload.totalCents))
-          add("O total do pedido de origem mudou desde que a NF-e foi preparada.");
+      const sourcePath = sourceType === "order"
+        ? `/rest/v1/jvg_orders?${scope(account)}&id=${filterEq(sourceId)}&select=id,customer_id,status,total,items&limit=1`
+        : sourceType === "quote"
+          ? `/rest/v1/jvg_quotes?${scope(account)}&id=${filterEq(sourceId)}&select=id,customer_id,status,total,items&limit=1`
+          : `/rest/v1/jvg_service_orders?${scope(account)}&id=${filterEq(sourceId)}&select=id,customer_id,status&limit=1`;
+      const sourceRows = await dbRequest<DbRow[]>(sourcePath);
+      const sourceRecord = sourceRows[0];
+      const allowedStatuses = sourceType === "quote" ? ["accepted"] : sourceType === "order"
+        ? ["open", "fulfilled"] : ["open", "diagnosis", "awaiting_approval", "awaiting_parts", "in_progress", "ready", "delivered"];
+      if (!sourceRecord || !allowedStatuses.includes(String(sourceRecord.status))) {
+        add("O documento de origem não está mais disponível para faturamento.");
+      } else if (String(sourceRecord.customer_id || "") !== recipientId) {
+        add("O destinatário da NF-e não corresponde ao documento de origem.");
+      } else if (sourceType !== "service_order") {
+        const sourceItems = Array.isArray(sourceRecord.items) ? sourceRecord.items.map(obj) : [];
+        const goodsItems = sourceItems.filter(item => typeof item.productId === "string" && !item.serviceId);
+        if (!goodsItems.length || goodsItems.length !== items.length) {
+          add("A NF-e deve conter somente os produtos da origem. Serviços não entram em NF-e.");
+        } else {
+          let sourceGoodsTotalCents = 0;
+          goodsItems.forEach((sourceItem, index) => {
+            const quantityMilli = Math.round(Number(sourceItem.quantity) * 1000);
+            const unitPriceCents = Math.round(Number(sourceItem.unitPrice) * 100);
+            const lineTotalCents = Math.round(quantityMilli * unitPriceCents / 1000);
+            if (String(sourceItem.productId || "") !== text(items[index].productId) ||
+                quantityMilli !== Math.round(Number(items[index].quantity) * 1000) ||
+                unitPriceCents !== Number(items[index].unitPriceCents))
+              add(`Item ${index + 1}: produto, quantidade ou preço do documento de origem mudou.`);
+            sourceGoodsTotalCents += lineTotalCents;
+          });
+          if (!Number.isSafeInteger(sourceGoodsTotalCents) || sourceGoodsTotalCents !== Number(payload.totalCents))
+            add("O total da NF-e precisa corresponder apenas aos produtos da origem; serviços são excluídos.");
+        }
       }
     }
   }

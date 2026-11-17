@@ -83,13 +83,22 @@ export async function GET(request: Request) {
   try {
     const { account, userId, displayName } = await accountForRequest();
     const params = new URL(request.url).searchParams;
+    const requestedId = params.get("id");
+    if (requestedId) {
+      if (!uuidPattern.test(requestedId)) throw new JvgBackendError("Identificador de OS inválido.", 400);
+      const selected = await dbRequest<Array<Record<string, unknown>>>(
+        `/rest/v1/jvg_service_orders?tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}&id=${filterEq(requestedId)}&select=id,os_number,customer_id,device_type,brand,model,serial_number,status,estimated_value,created_at&limit=1`,
+      );
+      if (!selected[0]) throw new JvgBackendError("Ordem de serviço não encontrada nesta empresa.", 404);
+      return apiJson({ serviceOrder: selected[0] });
+    }
     const pageRaw = params.get("page") ?? "1";
     if (!/^[1-9]\d{0,4}$/.test(pageRaw)) throw new JvgBackendError("Página inválida.", 400);
     const page = Number(pageRaw), pageSize = 30;
     const status = params.get("status") ?? "";
-    if (status && !statuses.includes(status as Status)) throw new JvgBackendError("Situação de OS inválida.", 400);
+    if (status && status !== "invoiceable" && !statuses.includes(status as Status)) throw new JvgBackendError("Situação de OS inválida.", 400);
     const scope = `tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`;
-    const statusFilter = status ? `&status=${filterEq(status)}` : "";
+    const statusFilter = status === "invoiceable" ? "&status=neq.cancelled" : status ? `&status=${filterEq(status)}` : "";
     const baseSelect = "id,os_number,customer_id,created_by,device_type,brand,model,serial_number,reported_issue,diagnosis,technician_name,status,priority,customer_approved,estimated_value,promised_at,internal_notes,created_at,updated_at";
     const listPath = (columns: string) => `/rest/v1/jvg_service_orders?${scope}${statusFilter}&select=${columns}&order=os_number.desc&limit=${pageSize + 1}&offset=${(page - 1) * pageSize}`;
     const summaryPromise = dbRequest<Record<string, number>>("/rest/v1/rpc/jvg_service_order_summary", {

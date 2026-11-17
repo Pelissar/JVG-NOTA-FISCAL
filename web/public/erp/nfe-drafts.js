@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var state = { products: [], clients: [], taxProfiles: [], issuerState: '', drafts: [], homologationSetup: null, isJvgPilot: false, ready: false, sourceOrderId: null, sourceOrderNumber: '', editingDraftId: null, natureCfopSuggestion: '' };
+  var state = { products: [], clients: [], taxProfiles: [], issuerState: '', drafts: [], homologationSetup: null, isJvgPilot: false, ready: false, sourceOrderId: null, sourceOrderNumber: '', sourceDocument: null, sourceDocumentLocksItems: false, sourceImportKind: '', sourceImportPage: 1, sourceImportHasMore: false, sourceImportRows: [], editingDraftId: null, natureCfopSuggestion: '' };
   var idempotencyKey = null;
   var status = document.getElementById('status');
   var form = document.getElementById('draftForm');
@@ -652,7 +652,10 @@
       date.textContent = draft.itemsCount + ' produto(s) · ' + (wasUpdated ? 'Atualizado ' : 'Criado ') +
         (wasUpdated ? updatedAt : createdAt).toLocaleString('pt-BR');
       var source = document.createElement('small');
-      source.textContent = draft.sourceOrderNumber ? 'Pedido de origem: ' + draft.sourceOrderNumber : 'Criado sem pedido de origem';
+      var sourceDocument = draft.sourceDocument || null;
+      var sourceName = sourceDocument && sourceDocument.number || draft.sourceOrderNumber || '';
+      var sourceTypeLabels = { quote: 'Orçamento', order: 'Pedido', service_order: 'OS' };
+      source.textContent = sourceName ? (sourceTypeLabels[sourceDocument && sourceDocument.type || 'order'] || 'Origem') + ' de origem: ' + sourceName : 'Criado sem origem comercial';
       var foot = document.createElement('div');
       var price = document.createElement('b');
       price.textContent = money.format(Number(draft.commercialTotalCents ?? draft.totalCents) / 100);
@@ -1016,8 +1019,10 @@
           '/' + (volume.grossWeightMilli == null ? '—' : (Number(volume.grossWeightMilli) / 1000).toFixed(3)) : '';
         appendLine(target, 'p', 'Volumes: ' + volume.quantity + (volume.species ? ' · ' + volume.species : '') + weight);
       });
-      if (draft.sourceOrder && draft.sourceOrder.number)
-        appendLine(target, 'p', 'Pedido de origem: ' + draft.sourceOrder.number + ' · situação ' + (draft.sourceOrder.status || ''));
+      var sourceDocument = draft.sourceDocument || draft.sourceOrder;
+      if (sourceDocument && sourceDocument.number)
+        appendLine(target, 'p', 'Origem comercial: ' + sourceDocument.number + ' · situação ' + (sourceDocument.status || '') +
+          (Number(sourceDocument.servicesExcluded || 0) ? ' · ' + sourceDocument.servicesExcluded + ' serviço(s) excluído(s) da NF-e' : ''));
       appendLine(target, 'p', 'Total comercial: ' + money.format(Number(draft.commercialTotalCents ?? draft.totalCents ?? 0) / 100));
       if (draft.preflight) {
         appendLine(target, 'h4', 'Pré-conferência cadastral');
@@ -1098,6 +1103,8 @@
   function clearOrderQuery() {
     var url = new URL(window.location.href);
     url.searchParams.delete('orderId');
+    url.searchParams.delete('sourceType');
+    url.searchParams.delete('sourceId');
     window.history.replaceState({}, '', url.pathname + url.search + url.hash);
   }
 
@@ -1124,11 +1131,19 @@
       form.reset();
       if (typeof window.jvgNfeWizardReset === 'function') window.jvgNfeWizardReset();
       items.replaceChildren();
-      state.sourceOrderId = draft.sourceOrder && draft.sourceOrder.id || null;
-      state.sourceOrderNumber = draft.sourceOrder && draft.sourceOrder.number || '';
+      state.sourceDocument = draft.sourceDocument || draft.sourceOrder || null;
+      if (state.sourceDocument && !state.sourceDocument.type) state.sourceDocument.type = 'order';
+      state.sourceOrderId = state.sourceDocument && state.sourceDocument.type === 'order' ? state.sourceDocument.id : null;
+      state.sourceOrderNumber = state.sourceDocument && state.sourceDocument.number || '';
+      state.sourceDocumentLocksItems = Boolean(state.sourceDocument && state.sourceDocument.type !== 'service_order');
       document.getElementById('sourceOrderLabel').textContent = state.sourceOrderNumber;
-      document.getElementById('sourceOrderNotice').hidden = !state.sourceOrderId;
-      document.getElementById('recipientId').disabled = Boolean(state.sourceOrderId);
+      document.getElementById('sourceOrderDescription').textContent = state.sourceDocument
+        ? state.sourceDocument.type === 'service_order'
+          ? 'A OS foi vinculada. O serviço estimado não é importado como mercadoria; esta OS ainda não registra peças em uma lista de produtos.'
+          : 'Mercadorias, quantidades e preços da origem foram copiados. Serviços foram excluídos e os itens importados permanecem protegidos; CFOP e tributos continuam editáveis.'
+        : '';
+      document.getElementById('sourceOrderNotice').hidden = !state.sourceDocument;
+      document.getElementById('recipientId').disabled = Boolean(state.sourceDocument);
       document.getElementById('recipientId').value = draft.recipient && draft.recipient.id || '';
       document.getElementById('recipientId').dispatchEvent(new Event('change', { bubbles: true }));
       draft.items.forEach(function (saved) {
@@ -1163,11 +1178,11 @@
         row.dataset.pisCstTouched = manualTaxFields.indexOf('pisCst') >= 0 || (!hasTaxOverrideTracking && row.querySelector('.pis-cst').value !== '') ? 'true' : 'false';
         row.dataset.cofinsCstTouched = manualTaxFields.indexOf('cofinsCst') >= 0 || (!hasTaxOverrideTracking && row.querySelector('.cofins-cst').value !== '') ? 'true' : 'false';
         updateTaxSuggestion(row, state.products.find(function (entry) { return entry.id === saved.productId; }), false);
-        if (state.sourceOrderId) {
+        if (state.sourceDocumentLocksItems) {
           row.querySelectorAll('.product, .quantity, .price, .remove-item').forEach(function (field) { field.disabled = true; });
         }
       });
-      document.getElementById('addItem').disabled = Boolean(state.sourceOrderId) || items.children.length >= 20;
+      document.getElementById('addItem').disabled = state.sourceDocumentLocksItems || items.children.length >= 20;
       if (typeof window.jvgNfeWizardLoad === 'function') window.jvgNfeWizardLoad(draft);
       updateTotal();
       state.editingDraftId = draft.id;
@@ -1185,6 +1200,8 @@
   function unlinkSourceOrder() {
     state.sourceOrderId = null;
     state.sourceOrderNumber = '';
+    state.sourceDocument = null;
+    state.sourceDocumentLocksItems = false;
     idempotencyKey = null;
     items.querySelectorAll('.product, .quantity, .price, .remove-item').forEach(function (field) {
       field.disabled = false;
@@ -1193,40 +1210,128 @@
     document.getElementById('sourceOrderNotice').hidden = true;
     document.getElementById('recipientId').disabled = false;
     clearOrderQuery();
-    report('Vínculo com o pedido removido. Você pode editar os itens; a origem não será registrada na nota.');
+    report('Origem removida. Você pode editar os itens; o documento de origem não será registrado na NF-e.');
   }
 
-  function importOrder(order) {
-    if (!order || !order.id) throw new Error('Pedido inválido.');
-    if (order.status !== 'open' && order.status !== 'fulfilled')
-      throw new Error('Somente pedidos em aberto ou concluídos podem ser preparados para NF-e.');
-    if (!order.customer_id) throw new Error('O pedido precisa ter um cliente cadastrado.');
-    if (!Array.isArray(order.items) || order.items.length < 1 || order.items.length > 20)
-      throw new Error('A NF-e aceita até 20 itens por NF-e; este pedido não pode ser importado.');
+  var sourceConfig = {
+    quote: { label: 'orçamento', collection: 'quotes', detail: 'quote', path: '/api/quotes', allowed: function (row) { return row.status === 'accepted'; } },
+    order: { label: 'pedido', collection: 'orders', detail: 'order', path: '/api/orders', allowed: function (row) { return row.status === 'open' || row.status === 'fulfilled'; } },
+    service_order: { label: 'ordem de serviço', collection: 'serviceOrders', detail: 'serviceOrder', path: '/api/service-orders', allowed: function (row) { return row.status !== 'cancelled'; } },
+  };
+
+  function sourceNumber(kind, row) {
+    if (kind === 'quote') return row.quote_number != null ? 'ORC-' + String(row.quote_number).padStart(6, '0') : 'ORC-' + String(row.id).slice(0, 8).toUpperCase();
+    if (kind === 'service_order') return 'OS-' + String(row.os_number || '').padStart(5, '0');
+    return 'PED-' + String(row.id).slice(0, 8).toUpperCase();
+  }
+
+  function openSourceImport(kind) {
+    if (!sourceConfig[kind]) return;
+    state.sourceImportKind = kind;
+    state.sourceImportPage = 1;
+    document.getElementById('sourceImportDialogTitle').textContent = 'Importar ' + sourceConfig[kind].label + ' para NF-e';
+    document.getElementById('sourceImportLabel').textContent = 'Selecione o ' + sourceConfig[kind].label;
+    document.getElementById('sourceImportHelp').textContent = kind === 'service_order'
+      ? 'A OS atual não possui uma lista estruturada de peças. O sistema vincula o cliente e a OS; o valor estimado de serviço não será convertido em produto.'
+      : 'Serão trazidos o cliente e somente os produtos. Linhas de serviço ficam fora desta NF-e e devem ser faturadas em NFS-e.';
+    document.getElementById('sourceImportStatus').textContent = '';
+    document.getElementById('sourceImportStatus').classList.remove('is-error');
+    document.getElementById('sourceImportDialog').showModal();
+    loadSourcePage();
+  }
+
+  async function loadSourcePage() {
+    var config = sourceConfig[state.sourceImportKind];
+    if (!config) return;
+    var select = document.getElementById('sourceImportSelect');
+    var status = document.getElementById('sourceImportStatus');
+    select.replaceChildren(option('', 'Carregando documentos…'));
+    document.getElementById('loadSourceIntoNfe').disabled = true;
+    document.getElementById('sourceImportPrevious').disabled = true;
+    document.getElementById('sourceImportNext').disabled = true;
+    status.textContent = '';
+    try {
+      var result = await api(config.path + '?page=' + state.sourceImportPage + '&status=invoiceable');
+      var rows = Array.isArray(result[config.collection]) ? result[config.collection] : [];
+      state.sourceImportRows = rows.filter(config.allowed);
+      state.sourceImportHasMore = result.hasMore === true;
+      select.replaceChildren(option('', 'Selecione…'));
+      state.sourceImportRows.forEach(function (row) {
+        var customer = state.clients.find(function (client) { return client.id === row.customer_id; });
+        var customerName = customer ? customer.name : 'Cliente não disponível';
+        var created = row.created_at ? new Date(row.created_at).toLocaleDateString('pt-BR') : '';
+        var amount = Number(row.total != null ? row.total : row.estimated_value);
+        var label = sourceNumber(state.sourceImportKind, row) + ' · ' + customerName + (created ? ' · ' + created : '') + (Number.isFinite(amount) && amount >= 0 ? ' · ' + money.format(amount) : '');
+        select.append(option(row.id, label));
+      });
+      document.getElementById('sourceImportPage').textContent = 'Página ' + state.sourceImportPage;
+      document.getElementById('sourceImportPrevious').disabled = state.sourceImportPage <= 1;
+      document.getElementById('sourceImportNext').disabled = !state.sourceImportHasMore;
+      document.getElementById('loadSourceIntoNfe').disabled = !state.sourceImportRows.length;
+      if (!state.sourceImportRows.length) status.textContent = state.sourceImportKind === 'quote'
+        ? 'Nenhum orçamento aceito disponível nesta página.'
+        : state.sourceImportKind === 'order' ? 'Nenhum pedido aberto ou concluído disponível nesta página.' : 'Nenhuma OS não cancelada disponível nesta página.';
+    } catch (error) {
+      select.replaceChildren(option('', 'Não foi possível carregar'));
+      status.textContent = error.message;
+      status.classList.add('is-error');
+    }
+  }
+
+  async function importSelectedSource() {
+    var kind = state.sourceImportKind;
+    var config = sourceConfig[kind];
+    var id = document.getElementById('sourceImportSelect').value;
+    if (!config || !id) return;
+    var button = document.getElementById('loadSourceIntoNfe');
+    button.disabled = true;
+    try {
+      var result = await api(config.path + '?id=' + encodeURIComponent(id));
+      if (importSourceDocument(kind, result[config.detail])) document.getElementById('sourceImportDialog').close();
+    } catch (error) {
+      var status = document.getElementById('sourceImportStatus');
+      status.textContent = error.message;
+      status.classList.add('is-error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function importSourceDocument(kind, source) {
+    var config = sourceConfig[kind];
+    if (!config || !source || !source.id) throw new Error('Documento de origem inválido.');
+    if (!config.allowed(source)) throw new Error('A situação atual deste documento não permite importar para uma NF-e.');
+    if (!source.customer_id) throw new Error('O documento de origem precisa ter um cliente cadastrado.');
     var recipient = state.clients.find(function (client) {
-      return client.id === order.customer_id && client.active && client.isCustomer === true && client.type !== 'EXT';
+      return client.id === source.customer_id && client.active && client.isCustomer === true && client.type !== 'EXT';
     });
-    if (!recipient) throw new Error('O cliente do pedido está inativo ou não está disponível para NF-e.');
-    var mapped = order.items.map(function (item) {
-      if (!item || !item.productId || item.serviceId)
-        throw new Error('Este pedido contém serviço ou item sem produto vinculado. A NF-e atual é para mercadorias.');
+    if (!recipient) throw new Error('O cliente da origem está inativo ou não está disponível para NF-e nesta empresa.');
+    var sourceItems = Array.isArray(source.items) ? source.items : [];
+    var goods = kind === 'service_order' ? [] : sourceItems.filter(function (item) { return item && item.productId && !item.serviceId; });
+    var serviceCount = kind === 'service_order' ? 0 : sourceItems.filter(function (item) { return item && item.serviceId; }).length;
+    if (goods.length > 20) throw new Error('A NF-e aceita até 20 produtos. Esta origem tem ' + goods.length + '; divida a emissão em mais de uma nota.');
+    var mapped = goods.map(function (item) {
       var product = state.products.find(function (entry) { return entry.id === item.productId && entry.active; });
-      if (!product) throw new Error('Um produto do pedido está inativo ou não pertence ao catálogo carregado.');
+      if (!product) throw new Error('Um produto da origem está inativo ou não existe no catálogo desta empresa. Cadastre ou reative o produto antes de importar.');
       var quantity = Number(item.quantity), unitPrice = Number(item.unitPrice);
       if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(unitPrice) || unitPrice < 0)
-        throw new Error('Quantidade ou preço do pedido está inválido.');
-      return { productId: item.productId, quantity: quantity, unitPrice: unitPrice, product: product };
+        throw new Error('A quantidade ou o preço de um produto na origem está inválido. Corrija o documento de origem.');
+      return { productId: item.productId, quantity: quantity, unitPrice: unitPrice };
     });
-    if (state.drafts.some(function (draft) { return draft.sourceOrderId === order.id; }) &&
-        !window.confirm('Já existe uma NF-e não transmitida para este pedido. Deseja criar outra?'))
-      return;
-    if (items.children.length && !window.confirm('Carregar este pedido substituirá os dados atuais do formulário. Continuar?'))
-      return;
+    var duplicate = state.drafts.some(function (draft) {
+      var linked = draft.sourceDocument || draft.sourceOrder;
+      return linked && linked.id === source.id && (linked.type || 'order') === kind && draft.status === 'draft';
+    });
+    if (duplicate && !window.confirm('Já existe uma NF-e não transmitida vinculada a este documento. Deseja iniciar outra?')) return false;
+    var hasCurrentData = Boolean(state.sourceDocument || form.elements.namedItem('nature').value.trim() || form.elements.namedItem('recipientId').value ||
+      Array.from(items.querySelectorAll('.product')).some(function (field) { return field.value; }));
+    if (hasCurrentData && !window.confirm('A importação substituirá os dados atuais da NF-e. Continuar?')) return false;
 
     form.reset();
+    setDefaultIssueAt();
     if (typeof window.jvgNfeWizardReset === 'function') window.jvgNfeWizardReset();
     items.replaceChildren();
-    document.getElementById('recipientId').value = order.customer_id;
+    document.getElementById('recipientId').value = source.customer_id;
     document.getElementById('recipientId').disabled = true;
     document.getElementById('recipientId').dispatchEvent(new Event('change', { bubbles: true }));
     mapped.forEach(function (entry) {
@@ -1234,23 +1339,27 @@
       var row = items.lastElementChild;
       var productSelect = row.querySelector('.product');
       productSelect.value = entry.productId;
-      productSelect.dispatchEvent(new Event('change'));
+      productSelect.dispatchEvent(new Event('change', { bubbles: true }));
       row.querySelector('.quantity').value = String(entry.quantity);
       row.querySelector('.price').value = Number(entry.unitPrice).toFixed(2);
-      productSelect.disabled = true;
-      row.querySelector('.quantity').disabled = true;
-      row.querySelector('.price').disabled = true;
-      row.querySelector('.remove-item').disabled = true;
+      row.querySelectorAll('.product, .quantity, .price, .remove-item').forEach(function (field) { field.disabled = true; });
     });
-    state.sourceOrderId = order.id;
-    state.sourceOrderNumber = 'PED-' + String(order.id).slice(0, 8).toUpperCase();
+    if (!mapped.length) addItem();
+    state.sourceDocument = { id: source.id, type: kind };
+    state.sourceOrderId = kind === 'order' ? source.id : null;
+    state.sourceOrderNumber = sourceNumber(kind, source);
+    state.sourceDocumentLocksItems = mapped.length > 0;
     idempotencyKey = null;
     document.getElementById('sourceOrderLabel').textContent = state.sourceOrderNumber;
+    document.getElementById('sourceOrderDescription').textContent = kind === 'service_order'
+      ? 'Cliente e OS vinculados. A OS não possui itens de peças cadastrados; serviço e valor estimado não foram convertidos em mercadoria. Adicione os produtos vendidos manualmente.'
+      : 'Cliente e ' + mapped.length + ' produto(s) vinculados. ' + serviceCount + ' serviço(s) foram excluídos; serviço deve ser faturado em NFS-e.';
     document.getElementById('sourceOrderNotice').hidden = false;
-    document.getElementById('addItem').disabled = true;
+    document.getElementById('addItem').disabled = state.sourceDocumentLocksItems || items.children.length >= 20;
     updateTotal();
-    report('Pedido carregado. Revise a natureza, CFOP e CSOSN com a contabilidade. Nenhuma nota foi transmitida.');
+    report('Origem carregada. Somente mercadorias entraram na NF-e; revise CFOP, CSOSN e demais dados fiscais de cada item. Nenhuma nota foi transmitida.');
     document.getElementById('draftForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return true;
   }
 
   async function load() {
@@ -1309,7 +1418,7 @@
       if (sourceOrderId) {
         try {
           var orderResponse = await api('/api/orders?id=' + encodeURIComponent(sourceOrderId));
-          importOrder(orderResponse.order);
+          importSourceDocument('order', orderResponse.order);
         } catch (error) {
           report('Não foi possível carregar o pedido na nota: ' + error.message, 'error');
         }
@@ -1322,10 +1431,27 @@
 
   document.getElementById('addItem').addEventListener('click', addItem);
   document.getElementById('unlinkSourceOrder').addEventListener('click', unlinkSourceOrder);
+  document.querySelectorAll('[data-source-kind]').forEach(function (button) {
+    button.addEventListener('click', function () { openSourceImport(button.dataset.sourceKind); });
+  });
+  document.getElementById('closeSourceImport').addEventListener('click', function () { document.getElementById('sourceImportDialog').close(); });
+  document.getElementById('cancelSourceImport').addEventListener('click', function () { document.getElementById('sourceImportDialog').close(); });
+  document.getElementById('loadSourceIntoNfe').addEventListener('click', importSelectedSource);
+  document.getElementById('sourceImportPrevious').addEventListener('click', function () {
+    if (state.sourceImportPage > 1) { state.sourceImportPage -= 1; loadSourcePage(); }
+  });
+  document.getElementById('sourceImportNext').addEventListener('click', function () {
+    if (state.sourceImportHasMore) { state.sourceImportPage += 1; loadSourcePage(); }
+  });
+  document.getElementById('sourceImportSelect').addEventListener('change', function () {
+    document.getElementById('loadSourceIntoNfe').disabled = !this.value;
+  });
   function resetComposition() {
     idempotencyKey = null;
     state.sourceOrderId = null;
     state.sourceOrderNumber = '';
+    state.sourceDocument = null;
+    state.sourceDocumentLocksItems = false;
     state.editingDraftId = null;
     document.getElementById('sourceOrderNotice').hidden = true;
     document.getElementById('recipientId').disabled = false;
@@ -1372,6 +1498,7 @@
         }],
         recipientId: form.elements.namedItem('recipientId').value,
         sourceOrderId: state.sourceOrderId,
+        sourceDocument: state.sourceDocument,
         items: readItems(),
       }, typeof window.jvgNfeWizardData === 'function' ? window.jvgNfeWizardData() : {})),
     });

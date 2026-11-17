@@ -71,6 +71,7 @@ export type NfeDraftInput = {
   additionalInfo: string | null;
   items: NfeDraftItemInput[];
   totalCents: number;
+  sourceDocument: { type: "quote" | "order" | "service_order"; id: string } | null;
   sourceOrderId: string | null;
 };
 
@@ -223,7 +224,20 @@ export function parseNfeDraftInput(raw: unknown): NfeDraftInput {
   const sourceOrderRaw = data.sourceOrderId;
   if (sourceOrderRaw != null && sourceOrderRaw !== "" && (typeof sourceOrderRaw !== "string" || !uuid.test(sourceOrderRaw)))
     throw new Error("Pedido de origem inválido.");
-  const sourceOrderId = typeof sourceOrderRaw === "string" && sourceOrderRaw ? sourceOrderRaw : null;
+  const sourceRaw = data.sourceDocument;
+  let sourceDocument: NfeDraftInput["sourceDocument"] = null;
+  if (sourceRaw != null) {
+    if (!sourceRaw || typeof sourceRaw !== "object" || Array.isArray(sourceRaw)) throw new Error("Documento de origem inválido.");
+    const source = sourceRaw as Record<string, unknown>;
+    if (!(source.type === "quote" || source.type === "order" || source.type === "service_order") ||
+        typeof source.id !== "string" || !uuid.test(source.id)) throw new Error("Documento de origem inválido.");
+    sourceDocument = { type: source.type, id: source.id };
+  } else if (typeof sourceOrderRaw === "string" && sourceOrderRaw) {
+    sourceDocument = { type: "order", id: sourceOrderRaw };
+  }
+  if (sourceOrderRaw && sourceDocument && (sourceDocument.type !== "order" || sourceDocument.id !== sourceOrderRaw))
+    throw new Error("O pedido vinculado não corresponde ao documento de origem.");
+  const sourceOrderId = sourceDocument?.type === "order" ? sourceDocument.id : null;
   const nature = typeof data.nature === "string" ? data.nature.trim() : "";
   if (nature.length < 3 || nature.length > 60) throw new Error("Informe a natureza da operação (3 a 60 caracteres).");
   const purpose = optionalCode(data.purpose, purposeCodes, "Finalidade da emissão");
@@ -311,6 +325,6 @@ export function parseNfeDraftInput(raw: unknown): NfeDraftInput {
   return {
     recipientId, nature, purpose, issueAt, exitAt, consumerFinal, buyerPresence, recipientIeIndicator,
     transportMode, carrierId, vehicle, volumes, additionalTotals, payments, intermediary, additionalInfo,
-    items, totalCents, sourceOrderId,
+    items, totalCents, sourceDocument, sourceOrderId,
   };
 }
