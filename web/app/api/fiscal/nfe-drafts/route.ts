@@ -81,6 +81,10 @@ function scope(account: SiteAccount): string {
   return `tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}`;
 }
 
+function isMissingSchemaColumn(error: unknown): boolean {
+  return error instanceof JvgBackendError && ["PGRST204", "42703"].includes(error.databaseCode || "");
+}
+
 async function homologationSetup(account: SiteAccount) {
   const company = await getCompany(account);
   const license = await licenseView(account);
@@ -250,7 +254,15 @@ export async function POST(request: Request) {
     }
     const [recipientRows, products, carrierRows] = await Promise.all([
       dbRequest<DbRow[]>(`/rest/v1/jvg_parties?${scoped}&id=${filterEq(draft.recipientId)}&is_customer=eq.true&active=eq.true&select=id,display_name,legal_name,document_type,document_number,state_registration,municipal_registration,email,phone,address&limit=1`),
-      dbRequest<DbRow[]>(`/rest/v1/jvg_products?${scoped}&id=in.(${draft.items.map(i => i.productId).join(",")})&active=eq.true&select=id,sku,name,unit,ncm,cest,gtin,origin,tax_profile_id,sale_price`),
+      (async () => {
+        const productIds = draft.items.map(item => item.productId).join(",");
+        try {
+          return await dbRequest<DbRow[]>(`/rest/v1/jvg_products?${scoped}&id=in.(${productIds})&active=eq.true&select=id,sku,name,unit,ncm,cest,gtin,origin,tax_profile_id,default_csosn,default_pis_cst,default_cofins_cst,sale_price`);
+        } catch (error) {
+          if (!isMissingSchemaColumn(error)) throw error;
+          return dbRequest<DbRow[]>(`/rest/v1/jvg_products?${scoped}&id=in.(${productIds})&active=eq.true&select=id,sku,name,unit,ncm,cest,gtin,origin,tax_profile_id,sale_price`);
+        }
+      })(),
       draft.carrierId
         ? dbRequest<DbRow[]>(`/rest/v1/jvg_parties?${scoped}&id=${filterEq(draft.carrierId)}&is_carrier=eq.true&active=eq.true&select=id,display_name,legal_name,document_type,document_number,state_registration,email,phone,address&limit=1`)
         : Promise.resolve([]),
@@ -293,21 +305,21 @@ export async function POST(request: Request) {
       const profileOperations = asRecord(profileRules.operations);
       const configuredRule = asRecord(profileOperations[review.operation]);
       const manuallyEdited = new Set(input.manualTaxFields);
-      const profileOrInput = (key: "csosn" | "pisCst" | "cofinsCst", defaultValue = "") => {
+      const profileOrInput = (key: "csosn" | "pisCst" | "cofinsCst", productDefault = "", defaultValue = "") => {
         if (manuallyEdited.has(key)) return input[key];
-        const entered = input[key];
-        if (entered) return entered;
-        return ruleText(configuredRule, key) || defaultValue;
+        // Rascunhos antigos não tinham rastreamento de edição explícita.
+        if (!input.manualTaxFieldsProvided && input[key]) return input[key];
+        return ruleText(configuredRule, key) || productDefault || defaultValue;
       };
-      const itemCsosn = profileOrInput("csosn");
+      const itemCsosn = profileOrInput("csosn", String(product.default_csosn || ""));
       const commonSimplesSale = company.tax_regime === "simples_nacional" && company.tax_regime_confirmed === true &&
         ["5101", "5102", "6101", "6102"].includes(input.cfop) && (!itemCsosn || itemCsosn === "102");
       // A Receita orienta CST 49 para receita comum recolhida pelo DAS. As
       // exceções (monofásico, ST, exportação etc.) devem estar configuradas
       // no produto/perfil; nenhum valor de imposto é calculado aqui.
       const defaultPisCofinsCst = commonSimplesSale ? "49" : "";
-      const pisCst = profileOrInput("pisCst", defaultPisCofinsCst);
-      const cofinsCst = profileOrInput("cofinsCst", defaultPisCofinsCst);
+      const pisCst = profileOrInput("pisCst", String(product.default_pis_cst || ""), defaultPisCofinsCst);
+      const cofinsCst = profileOrInput("cofinsCst", String(product.default_cofins_cst || ""), defaultPisCofinsCst);
       const configuredFocusFields = asRecord(configuredRule.focusFields);
       const storedFocusFields = inspectFocusTaxFields({ ...configuredFocusFields, ...input.focusFields }).fields;
       const focusFields = filterFocusTaxFieldsForRule(

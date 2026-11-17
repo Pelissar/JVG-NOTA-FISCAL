@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  var docs=[], products=[], suppliers=[], selectedDoc=null;
+  var docs=[], products=[], suppliers=[], selectedDoc=null, productTaxDefaultsAvailable=null;
   var $=function(id){return document.getElementById(id);};
   function escapeHtml(value){return String(value==null?'':value).replace(/[&<>"']/g,function(char){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char];});}
   function money(value){return Number(value||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
@@ -78,7 +78,9 @@
     var hasCatalogGtin=!!product&&product.gtin&&product.gtin!=='SEM GTIN';
     var canImportClassification=!!product&&((!product.ncm&&ncm)||(!product.cest&&cest)||(!product.origin&&xmlOrigin)||(!hasCatalogGtin&&item.gtin&&item.gtin!=='SEMGTIN'));
     var classificationImport=canImportClassification?'<button class="secondary-button product-classification-import" type="button" data-fill-classification>Preencher dados fiscais ausentes com o XML</button><small class="classification-source-note">Ação opcional: confira os dados do fornecedor e valide a classificação com a contabilidade.</small>':'';
-    var createProduct='<button class="secondary-button product-create-trigger" type="button" data-create-product'+(item.productId?' hidden':'')+'>Cadastrar produto com dados desta nota</button><div class="product-create-panel" hidden><div class="product-create-heading"><strong>Novo produto para o estoque</strong><span>Os campos fiscais vêm do XML. Confira antes de salvar.</span></div><div class="product-create-grid">'+
+    var taxDefaultsDisabled=productTaxDefaultsAvailable===false?'disabled':'';
+    var taxDefaultsNotice=productTaxDefaultsAvailable===false?'<p class="classification-source-note">A atualização dos campos fiscais padrão ainda está pendente. Você pode continuar cadastrando o produto.</p>':'';
+    var createProduct='<button class="secondary-button product-create-trigger" type="button" data-create-product'+(item.productId?' hidden':'')+'>Cadastrar produto com dados desta nota</button><div class="product-create-panel" hidden><div class="product-create-heading"><strong>Novo produto para o estoque</strong><span>Dados de identificação vêm do XML. Confira antes de salvar.</span></div><div class="product-create-grid">'+
       '<label class="review-field"><span>SKU interno *</span><input name="newProductSku" maxlength="40" value="'+escapeHtml(String(item.supplierCode||'').slice(0,40))+'"></label>'+
       '<label class="review-field"><span>Descrição *</span><input name="newProductName" maxlength="160" value="'+escapeHtml(item.description||'')+'"></label>'+
       '<label class="review-field"><span>Unidade de compra *</span><input name="newProductUnit" maxlength="8" value="'+escapeHtml(item.unit||'UN')+'"></label>'+
@@ -88,7 +90,7 @@
       '<label class="review-field"><span>Origem da mercadoria (XML)</span><select name="newProductOrigin"><option value="">Não informada</option>'+['0','1','2','3','4','5','6','7','8'].map(function(value){return '<option value="'+value+'" '+(String(item.origin||'')===value?'selected':'')+'>'+escapeHtml(value+' · '+originText(value))+'</option>';}).join('')+'</select></label>'+
       '<label class="review-field"><span>Categoria</span><input name="newProductCategory" maxlength="80" placeholder="Opcional"></label>'+
       '<label class="review-field"><span>Custo unitário conforme XML (R$)</span><input name="newProductCostPrice" type="number" min="0" step="0.0001" value="'+Number(item.unitPrice||0).toFixed(4)+'"></label>'+
-      '<label class="review-field"><span>Preço de venda (R$) *</span><input name="newProductSalePrice" type="number" min="0" step="0.01" value="0.00"></label></div><label class="stock-choice create-stock-choice"><input name="newProductTracksStock" type="checkbox" checked><span>Controlar este produto no estoque e lançar a quantidade desta nota</span></label><div class="product-create-actions"><button class="primary-button" type="button" data-save-product>Salvar produto, vincular e preparar entrada</button><button class="secondary-button" type="button" data-cancel-product>Cancelar</button></div></div>';
+      '<label class="review-field"><span>Preço de venda (R$) *</span><input name="newProductSalePrice" type="number" min="0" step="0.01" value="0.00"></label></div><fieldset class="product-tax-defaults"><legend>Tributação padrão para vendas · opcional</legend><p>O XML mostra os dados fiscais do fornecedor. Eles não definem automaticamente os códigos de venda da sua empresa. Informe apenas os códigos confirmados para este produto.</p>'+taxDefaultsNotice+'<div class="product-create-grid"><label class="review-field"><span>CSOSN padrão</span><input name="newProductDefaultCsosn" maxlength="3" inputmode="numeric" placeholder="3 dígitos" '+taxDefaultsDisabled+'></label><label class="review-field"><span>CST padrão do PIS</span><input name="newProductDefaultPisCst" maxlength="2" inputmode="numeric" placeholder="2 dígitos" '+taxDefaultsDisabled+'></label><label class="review-field"><span>CST padrão da Cofins</span><input name="newProductDefaultCofinsCst" maxlength="2" inputmode="numeric" placeholder="2 dígitos" '+taxDefaultsDisabled+'></label></div></fieldset><label class="stock-choice create-stock-choice"><input name="newProductTracksStock" type="checkbox" checked><span>Controlar este produto no estoque e lançar a quantidade desta nota</span></label><div class="product-create-actions"><button class="primary-button" type="button" data-save-product>Salvar produto, vincular e preparar entrada</button><button class="secondary-button" type="button" data-cancel-product>Cancelar</button></div></div>';
     var stockControl=!item.productId?'<small class="stock-hint">Cadastre ou selecione o produto para habilitar a entrada.</small>':!canTrack?'<button class="secondary-button enable-stock-button" type="button" data-enable-stock>Habilitar controle de estoque neste produto</button>':'';
     var quantity=item.quantity||0,unit=item.unit||'';
     var values=[['Quantidade comprada',String(quantity)+' '+unit],['Valor unitário',money(item.unitPrice)],['Desconto',money(item.discount||0)],['Frete do item',money(item.freight||0)],['Seguro',money(item.insurance||0)],['Outras despesas',money(item.otherAmount||0)],['Total do produto no XML',money(item.total)]];
@@ -228,6 +230,7 @@
       var result=await Promise.all([api('/api/inbound-nfe'),api('/api/records?scope=products'),api('/api/records?scope=clients')]);
       docs=Array.isArray(result[0].documents)?result[0].documents:[];
       products=(result[1].products||[]).filter(function(product){return product.active;});
+      productTaxDefaultsAvailable=result[1].productTaxDefaultsAvailable===true;
       suppliers=(result[2].clients||[]).filter(function(person){return person.active&&person.isSupplier;});
       setStatus(docs.length?docs.length+' NF-e(s) nesta empresa.':'Nenhum lançamento encontrado.');
       render();
@@ -331,6 +334,9 @@
     var categoryInput=panel.querySelector('[name="newProductCategory"]');
     var costInput=panel.querySelector('[name="newProductCostPrice"]');
     var salePrice=panel.querySelector('[name="newProductSalePrice"]');
+    var defaultCsosn=panel.querySelector('[name="newProductDefaultCsosn"]');
+    var defaultPisCst=panel.querySelector('[name="newProductDefaultPisCst"]');
+    var defaultCofinsCst=panel.querySelector('[name="newProductDefaultCofinsCst"]');
     var tracksStockInput=panel.querySelector('[name="newProductTracksStock"]');
     if(!item||!sku||!nameInput||!unitInput||!salePrice||!tracksStockInput)return;
     if(!sku.value.trim()){setStatus('Informe o SKU interno do novo produto.',true);sku.focus();return;}
@@ -338,6 +344,9 @@
     if(!unitInput.value.trim()){setStatus('Informe a unidade do produto.',true);unitInput.focus();return;}
     if(ncmInput&&ncmInput.value.trim()&&!/^\d{8}$/.test(ncmInput.value.trim())){setStatus('NCM inválido: use oito dígitos ou deixe vazio.',true);ncmInput.focus();return;}
     if(cestInput&&cestInput.value.trim()&&!/^\d{7}$/.test(cestInput.value.trim())){setStatus('CEST inválido: use sete dígitos ou deixe vazio.',true);cestInput.focus();return;}
+    if(defaultCsosn&&defaultCsosn.value.trim()&&!/^\d{3}$/.test(defaultCsosn.value.trim())){setStatus('O CSOSN padrão deve conter 3 dígitos.',true);defaultCsosn.focus();return;}
+    if(defaultPisCst&&defaultPisCst.value.trim()&&!/^\d{2}$/.test(defaultPisCst.value.trim())){setStatus('O CST padrão do PIS deve conter 2 dígitos.',true);defaultPisCst.focus();return;}
+    if(defaultCofinsCst&&defaultCofinsCst.value.trim()&&!/^\d{2}$/.test(defaultCofinsCst.value.trim())){setStatus('O CST padrão da Cofins deve conter 2 dígitos.',true);defaultCofinsCst.focus();return;}
     if(salePrice.value.trim()===''||!Number.isFinite(Number(salePrice.value))||Number(salePrice.value)<0){setStatus('Informe um preço de venda válido; use 0,00 se ainda não definiu o preço.',true);salePrice.focus();return;}
     button.disabled=true;
     var createdProduct=null;
@@ -353,9 +362,13 @@
       var cost=Number(costInput&&costInput.value);
       if(!Number.isFinite(cost)||cost<0)throw new Error('Informe um custo unitário válido.');
       var tracksStock=tracksStockInput.checked;
-      var result=await api('/api/records',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'product',record:{sku:sku.value.trim(),name:name,category:category,unit:unit,gtin:gtin,ncm:ncm,cest:cest,origin:origin,cost:cost,price:Number(salePrice.value),tracksStock:tracksStock,active:true}})});
+      var taxDefaults={};
+      if(defaultCsosn&&!defaultCsosn.disabled)taxDefaults.defaultCsosn=defaultCsosn.value.trim();
+      if(defaultPisCst&&!defaultPisCst.disabled)taxDefaults.defaultPisCst=defaultPisCst.value.trim();
+      if(defaultCofinsCst&&!defaultCofinsCst.disabled)taxDefaults.defaultCofinsCst=defaultCofinsCst.value.trim();
+      var result=await api('/api/records',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'product',record:Object.assign({sku:sku.value.trim(),name:name,category:category,unit:unit,gtin:gtin,ncm:ncm,cest:cest,origin:origin,cost:cost,price:Number(salePrice.value),tracksStock:tracksStock,active:true},taxDefaults)})});
       if(!result.id)throw new Error('O produto foi enviado, mas não retornou identificador para vínculo. Atualize o catálogo antes de tentar de novo.');
-      createdProduct={id:String(result.id),sku:sku.value.trim(),name:name,category:category,unit:unit,gtin:gtin||'SEM GTIN',ncm:ncm,cest:cest,origin:origin,cost:cost,price:Number(salePrice.value),stock:0,tracksStock:tracksStock,active:true};
+      createdProduct={id:String(result.id),sku:sku.value.trim(),name:name,category:category,unit:unit,gtin:gtin||'SEM GTIN',ncm:ncm,cest:cest,origin:origin,defaultCsosn:taxDefaults.defaultCsosn||'',defaultPisCst:taxDefaults.defaultPisCst||'',defaultCofinsCst:taxDefaults.defaultCofinsCst||'',cost:cost,price:Number(salePrice.value),stock:0,tracksStock:tracksStock,active:true};
       products=products.filter(function(product){return product.id!==createdProduct.id;});
       products.push(createdProduct);
       item.productId=createdProduct.id;

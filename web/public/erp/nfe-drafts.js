@@ -349,13 +349,13 @@
     var profileCfop = rule && rule.cfop ? String(rule.cfop) : '';
     var productCfop = String(product.defaultCfop || '');
     var suggestedCfop = natureCfop;
-    var suggestedCsosn = rule && rule.csosn ? String(rule.csosn) : (state.isJvgPilot ? '102' : '');
+    var suggestedCsosn = rule && rule.csosn ? String(rule.csosn) : (product.defaultCsosn ? String(product.defaultCsosn) : (state.isJvgPilot ? '102' : ''));
     var effectiveCsosn = row.dataset.csosnTouched === 'true' ? csosn.value : suggestedCsosn;
     var commonSimplesSale = Boolean(state.homologationSetup && state.homologationSetup.supportedTaxRegime && state.homologationSetup.taxRegimeConfirmed) &&
       ['5101', '5102', '6101', '6102'].indexOf(String(effectiveCfop)) >= 0 && (!effectiveCsosn || effectiveCsosn === '102');
     var defaultPisCofinsCst = commonSimplesSale ? '49' : '';
-    var suggestedPisCst = rule && rule.pisCst ? String(rule.pisCst) : defaultPisCofinsCst;
-    var suggestedCofinsCst = rule && rule.cofinsCst ? String(rule.cofinsCst) : defaultPisCofinsCst;
+    var suggestedPisCst = rule && rule.pisCst ? String(rule.pisCst) : (product.defaultPisCst ? String(product.defaultPisCst) : defaultPisCofinsCst);
+    var suggestedCofinsCst = rule && rule.cofinsCst ? String(rule.cofinsCst) : (product.defaultCofinsCst ? String(product.defaultCofinsCst) : defaultPisCofinsCst);
     if (row.dataset.cfopTouched !== 'true') cfop.value = suggestedCfop;
     if (row.dataset.csosnTouched !== 'true') csosn.value = suggestedCsosn;
     if (row.dataset.pisCstTouched !== 'true') row.querySelector('.pis-cst').value = suggestedPisCst;
@@ -470,6 +470,9 @@
       ['Perfil opcional', selected && selected.profile && selected.profile.name],
       ['CFOP do item', row.querySelector('.cfop').value],
       ['CFOP sugerido', (selected && selected.rule && selected.rule.cfop) || (product && product.defaultCfop)],
+      ['CSOSN padrão do produto', product && product.defaultCsosn],
+      ['CST PIS padrão do produto', product && product.defaultPisCst],
+      ['CST Cofins padrão do produto', product && product.defaultCofinsCst],
       ['CSOSN aplicado ao item', row.querySelector('.csosn').value],
       ['CST do PIS aplicado ao item', row.querySelector('.pis-cst').value],
       ['CST da Cofins aplicado ao item', row.querySelector('.cofins-cst').value],

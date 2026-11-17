@@ -31,10 +31,11 @@ export async function dbRequest<T = unknown>(path: string, init: RequestInit = {
   try { parsed = raw ? JSON.parse(raw) : null; } catch { parsed = null; }
   if (!response.ok) {
     const detail = (parsed && typeof parsed === "object" && "message" in parsed) ? String(parsed.message) : "Erro de acesso ao banco.";
+    const databaseCode = parsed && typeof parsed === "object" && "code" in parsed ? String(parsed.code) : undefined;
     // Nao devolver detalhes de infraestrutura ou informacoes do provedor ao navegador.
     if (response.status === 409 || detail.toLowerCase().includes("duplicate key"))
-      throw new JvgBackendError("Já existe um cadastro com estes dados.", 409);
-    throw new JvgBackendError("Não foi possível concluir a operação no Supabase.", 502);
+      throw new JvgBackendError("Já existe um cadastro com estes dados.", 409, databaseCode);
+    throw new JvgBackendError("Não foi possível concluir a operação no Supabase.", 502, databaseCode);
   }
   return parsed as T;
 }

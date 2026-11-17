@@ -23,6 +23,10 @@ function validUuid(input: unknown): string {
   return input;
 }
 
+function isMissingSchemaColumn(error: unknown): boolean {
+  return error instanceof JvgBackendError && ["PGRST204", "42703"].includes(error.databaseCode || "");
+}
+
 
 function buildRow(kind: RecordKind, input: Record<string, unknown>, account: SiteAccount) {
   const base = { tenant_id: account.tenant_id, company_id: account.company_id };
@@ -31,6 +35,22 @@ function buildRow(kind: RecordKind, input: Record<string, unknown>, account: Sit
     const ncm = str(input.ncm, 8), cest = str(input.cest, 7), origin = str(input.origin, 1);
     const defaultCfop = str(input.defaultCfop, 4);
     const taxProfileId = input.taxProfileId ? validUuid(input.taxProfileId) : null;
+    const taxDefaults: Record<string, string | null> = {};
+    if (Object.hasOwn(input, "defaultCsosn")) {
+      const value = typeof input.defaultCsosn === "string" ? input.defaultCsosn.trim() : "";
+      if (value && !/^\d{3}$/.test(value)) throw new JvgBackendError("CSOSN padrão deve ter 3 dígitos.", 400);
+      taxDefaults.default_csosn = value || null;
+    }
+    if (Object.hasOwn(input, "defaultPisCst")) {
+      const value = typeof input.defaultPisCst === "string" ? input.defaultPisCst.trim() : "";
+      if (value && !/^\d{2}$/.test(value)) throw new JvgBackendError("CST padrão do PIS deve ter 2 dígitos.", 400);
+      taxDefaults.default_pis_cst = value || null;
+    }
+    if (Object.hasOwn(input, "defaultCofinsCst")) {
+      const value = typeof input.defaultCofinsCst === "string" ? input.defaultCofinsCst.trim() : "";
+      if (value && !/^\d{2}$/.test(value)) throw new JvgBackendError("CST padrão da Cofins deve ter 2 dígitos.", 400);
+      taxDefaults.default_cofins_cst = value || null;
+    }
     if (!sku || !name) throw new JvgBackendError("SKU e descrição são obrigatórios.", 400);
     if (!unit) throw new JvgBackendError("Unidade do produto é obrigatória.", 400);
     if (input.price === undefined || input.price === null || String(input.price).trim() === "") throw new JvgBackendError("Preço de venda é obrigatório; informe 0,00 se o item não tiver preço.", 400);
@@ -42,6 +62,7 @@ function buildRow(kind: RecordKind, input: Record<string, unknown>, account: Sit
       ncm: ncm || null, cest: cest || null, gtin: str(input.gtin, 20) || "SEM GTIN", origin: origin || null,
       default_cfop: defaultCfop || null, tax_profile_id: taxProfileId,
       cost_price: positiveMoney(input.cost ?? 0), sale_price: positiveMoney(input.price ?? 0), active: input.active !== false,
+      ...taxDefaults,
       ...(typeof input.tracksStock === "boolean" ? { tracks_stock: input.tracksStock } : {}) };
   }
   if (kind === "client") {
@@ -117,11 +138,19 @@ export async function GET(request: Request) {
     const wantsMovements = ["full", "reports", "products", "inventory", "dashboard"].includes(dataScope);
     const wantsCompany = ["full", "reports", "documents"].includes(dataScope);
     const emptyRows: Array<Record<string, unknown>> = [];
-    const productFields = dashboardFallback ? "id,name,cost_price,active" : "id,sku,name,category,unit,ncm,cest,gtin,origin,default_cfop,tax_profile_id,cost_price,sale_price,tracks_stock,active";
+    let productTaxDefaultsAvailable: boolean | null = dashboardFallback ? null : true;
+    const productFields = dashboardFallback ? "id,name,cost_price,active" : "id,sku,name,category,unit,ncm,cest,gtin,origin,default_cfop,tax_profile_id,default_csosn,default_pis_cst,default_cofins_cst,cost_price,sale_price,tracks_stock,active";
+    const legacyProductFields = "id,sku,name,category,unit,ncm,cest,gtin,origin,default_cfop,tax_profile_id,cost_price,sale_price,tracks_stock,active";
     const [products, parties, services, movements, company, partyCount] = await Promise.all([
-      wantsProducts
-        ? dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_products?${scope}&select=${productFields}&order=created_at.desc&limit=1000`)
-        : Promise.resolve(emptyRows),
+      wantsProducts ? (async () => {
+        try {
+          return await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_products?${scope}&select=${productFields}&order=created_at.desc&limit=1000`);
+        } catch (error) {
+          if (dashboardFallback || !isMissingSchemaColumn(error)) throw error;
+          productTaxDefaultsAvailable = false;
+          return dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_products?${scope}&select=${legacyProductFields}&order=created_at.desc&limit=1000`);
+        }
+      })() : Promise.resolve(emptyRows),
       wantsParties
         ? dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_parties?${scope}&select=id,registration_number,display_name,legal_name,document_type,document_number,state_registration,municipal_registration,email,phone,address,is_customer,is_supplier,is_carrier,active&order=registration_number.desc&limit=5000`)
         : Promise.resolve(emptyRows),
@@ -142,6 +171,7 @@ export async function GET(request: Request) {
     }
     const productRecords = products.map(p => ({ id: p.id, sku: p.sku, name: p.name, category: p.category || "", unit: p.unit,
       ncm: p.ncm || "", cest: p.cest || "", gtin: p.gtin || "SEM GTIN", origin: p.origin || "", defaultCfop: p.default_cfop || "", taxProfileId: p.tax_profile_id || "",
+      defaultCsosn: p.default_csosn || "", defaultPisCst: p.default_pis_cst || "", defaultCofinsCst: p.default_cofins_cst || "",
       cost: Number(p.cost_price), price: Number(p.sale_price), stock: balances.get(String(p.id)) || 0, tracksStock: p.tracks_stock !== false, active: p.active }));
     const clientRecords = parties.map(p => {
       const address = p.address && typeof p.address === "object" ? p.address as Record<string, unknown> : {};
@@ -175,10 +205,10 @@ export async function GET(request: Request) {
         recentMovements,
       } });
     }
-    if (dataScope === "products" || dataScope === "inventory") return apiJson({ status: "ready", products: productRecords });
+    if (dataScope === "products" || dataScope === "inventory") return apiJson({ status: "ready", products: productRecords, productTaxDefaultsAvailable });
     if (dataScope === "clients") return apiJson({ status: "ready", clients: clientRecords });
     if (dataScope === "services") return apiJson({ status: "ready", services: serviceRecords });
-    if (dataScope === "quotes" || dataScope === "sales") return apiJson({ status: "ready", products: productRecords, clients: clientRecords, services: serviceRecords });
+    if (dataScope === "quotes" || dataScope === "sales") return apiJson({ status: "ready", products: productRecords, productTaxDefaultsAvailable, clients: clientRecords, services: serviceRecords });
     if (dataScope === "orders") return apiJson({ status: "ready", clients: clientRecords });
     if (dataScope === "documents") return apiJson({ status: "ready", company: company ? {
       legalName: company.legal_name || "", tradeName: company.trade_name || "", cnpj: company.cnpj || "",
@@ -195,6 +225,7 @@ export async function GET(request: Request) {
         address: company.address || {},
       } : null,
       products: productRecords,
+      productTaxDefaultsAvailable,
       clients: clientRecords,
       services: serviceRecords,
       movements: movementRecords,
@@ -233,6 +264,9 @@ export async function POST(request: Request) {
     let savedId: string | undefined;
     try { savedId = await save(row, id); }
     catch (error) {
+      if (kind === "product" && isMissingSchemaColumn(error) &&
+          ["default_csosn", "default_pis_cst", "default_cofins_cst"].some(column => column in row))
+        throw new JvgBackendError("A configuração tributária padrão do produto ainda não está disponível. Atualize a estrutura do cadastro antes de salvar esses campos.", 409);
       // A ausência da migration não interrompe cadastros sem esse campo opcional.
       const nationalTaxationCode = (row as Record<string, unknown>).national_taxation_code;
       if (kind !== "service" || nationalTaxationCode !== null) throw error;

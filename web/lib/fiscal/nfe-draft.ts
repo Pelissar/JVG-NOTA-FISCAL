@@ -17,6 +17,7 @@ export type NfeDraftItemInput = {
   cofinsCst: string;
   focusFields: FocusTaxFields;
   manualTaxFields: string[];
+  manualTaxFieldsProvided: boolean;
 };
 
 export type NfeDraftVehicleInput = {
@@ -304,7 +305,8 @@ export function parseNfeDraftInput(raw: unknown): NfeDraftInput {
     let focusFields: FocusTaxFields;
     try { focusFields = parseFocusTaxFields(p.focusFields); }
     catch (error) { throw new Error(error instanceof Error ? error.message : "Campos fiscais do item inválidos."); }
-    const manualTaxFields = Array.isArray(p.manualTaxFields)
+    const manualTaxFieldsProvided = Array.isArray(p.manualTaxFields);
+    const manualTaxFields = manualTaxFieldsProvided
       ? [...new Set(p.manualTaxFields.filter((field): field is string => typeof field === "string"))]
       : [];
     if (manualTaxFields.some(field => !editableTaxFields.has(field)))
@@ -315,7 +317,7 @@ export function parseNfeDraftInput(raw: unknown): NfeDraftInput {
       throw new Error("Valor total acima do limite para rascunho.");
     return { productId: p.productId, ...(ncm !== undefined ? { ncm } : {}), ...(cest !== undefined ? { cest } : {}),
       ...(origin !== undefined ? { origin } : {}), quantity, quantityMilli, unitPriceCents, subtotalCents,
-      cfop, csosn, pisCst, cofinsCst, focusFields, manualTaxFields };
+      cfop, csosn, pisCst, cofinsCst, focusFields, manualTaxFields, manualTaxFieldsProvided };
   });
 
   const grossCommercialCents = totalCents + additionalTotals.freightCents + additionalTotals.insuranceCents + additionalTotals.expensesCents;

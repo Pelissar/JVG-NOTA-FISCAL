@@ -221,6 +221,11 @@ body:not(:has(> .app-shell)) .tax-profiles-page .transition-copy :is(h2,p){color
 body:not(:has(> .app-shell)) .tax-profiles-page .workflow-step{min-width:0}
 body:not(:has(> .app-shell)) .tax-profiles-page .form-group{border-color:var(--sf-line)!important;border-radius:12px!important;background:var(--sf-soft)!important}
 body:not(:has(> .app-shell)) .tax-profiles-page .field-help{color:var(--sf-muted)!important}
+.product-tax-section{padding:11px 13px;border:1px solid var(--line,#dce5ef);border-radius:10px;background:var(--surface-soft,#f5f8fc)}
+.product-tax-section strong{display:block;color:var(--ink,#172b46);font-size:12px}
+.product-tax-section strong span{color:var(--muted,#73839a);font-size:10px;font-weight:600}
+.product-tax-section small{display:block;margin-top:4px;color:var(--muted,#73839a);font-size:10px;line-height:1.5}
+.product-tax-notice{padding:10px 12px;border:1px solid #e9d49c;border-radius:9px;background:#fff8e7;color:#73510b;font-size:11px;line-height:1.45}
 body:not(:has(> .app-shell)) .tax-profiles-page .side-column .panel{height:fit-content}
 body:not(:has(> .app-shell)) .tax-profiles-page .review-dialog[open]{max-width:min(94vw,620px);border:1px solid var(--sf-line)!important;border-radius:18px!important;background:var(--sf-surface)!important;color:var(--sf-ink)!important}
 .fiscal-document-switcher{display:flex!important;gap:8px!important;margin:0 0 18px!important;padding:5px!important;border:1px solid var(--sf-line)!important;border-radius:13px!important;background:var(--sf-soft)!important}
