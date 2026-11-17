@@ -321,14 +321,11 @@ export async function POST(request: Request) {
         return ruleText(configuredRule, key) || productTaxDefaults[key] || defaultValue;
       };
       const itemCsosn = profileOrInput("csosn");
-      const commonSimplesSale = company.tax_regime === "simples_nacional" && company.tax_regime_confirmed === true &&
-        ["5101", "5102", "6101", "6102"].includes(input.cfop) && (!itemCsosn || itemCsosn === "102");
-      // A Receita orienta CST 49 para receita comum recolhida pelo DAS. As
-      // exceções (monofásico, ST, exportação etc.) devem estar configuradas
-      // no produto/perfil; nenhum valor de imposto é calculado aqui.
-      const defaultPisCofinsCst = commonSimplesSale ? "49" : "";
-      const pisCst = profileOrInput("pisCst", defaultPisCofinsCst);
-      const cofinsCst = profileOrInput("cofinsCst", defaultPisCofinsCst);
+      // PIS/Cofins pode variar por produto e tipo de receita, inclusive no
+      // Simples Nacional. Use somente classificação informada no item, produto
+      // ou regra da operação; não deduza CST apenas de regime, CFOP ou CSOSN.
+      const pisCst = profileOrInput("pisCst");
+      const cofinsCst = profileOrInput("cofinsCst");
       const configuredFocusFields = asRecord(configuredRule.focusFields);
       const storedFocusFields = inspectFocusTaxFields({ ...configuredFocusFields, ...input.focusFields }).fields;
       const focusFields = filterFocusTaxFieldsForRule(
