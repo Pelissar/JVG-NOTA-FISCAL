@@ -1,0 +1,23 @@
+.adminOverrides button,
+.adminOverrides input,
+.adminOverrides select,
+.adminOverrides textarea {
+  font-family: inherit;
+}
+
+.adminOverrides button {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.adminOverrides input,
+.adminOverrides select,
+.adminOverrides textarea {
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.adminOverrides .buttonPrimarySmall,
+.adminOverrides .buttonGhostSmall {
+  font-size: 11px;
+}

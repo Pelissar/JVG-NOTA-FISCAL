@@ -1,0 +1,6 @@
+.landingOverrides input,
+.landingOverrides select,
+.landingOverrides textarea,
+.landingOverrides button {
+  font-family: inherit;
+}

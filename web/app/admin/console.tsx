@@ -1,158 +1,118 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { BUSINESS_TYPES } from "../../lib/business-types";
+import styles from "./console.module.css";
+import overrides from "./console-overrides.module.css";
 
-type DocumentItem = { code: string; status: string; note: string };
-type Company = {
-  id: string;
-  legalName: string;
-  tradeName: string;
-  cnpj: string;
-  license: { planCode: string; planName: string; status: string; startsAt: string | null; endsAt: string | null };
-  focus: { configured: boolean; hint: string };
-  documents: DocumentItem[];
+type AdminCompany = {
+  id: string; tenantId: string; legalName: string; tradeName: string; cnpj: string;
+  businessType: string; status: string;
+  subscription: { id: string; planCode: string; planName: string; status: string; startsAt: string | null; endsAt: string | null; temporaryAccessUntil: string | null; gracePeriodDays: number } | null;
+  documents: Array<{ document_code: string; status: string; note?: string }>;
+  invites: Array<{ id: string; email: string; display_name: string; role: string; status: string }>;
 };
-type Catalog = { code: string; label?: string; name?: string; days?: number };
+type Plan = { code: string; name: string; description: string; billing_interval: string; amount_minor: number | null; active: boolean; is_public: boolean; grace_period_days: number; enabled_business_types: string[]; max_users: number | null; max_companies: number | null; sort_order: number };
+type Application = { id: string; case_code: string; company_name: string; contact_name: string; email: string; cnpj: string; phone: string; business_type: string; message: string; status: string; admin_note: string; linked_company_id: string | null; created_at: string };
+type Charge = { id: string; company_id: string; company_name: string; description: string; amount_minor: number; due_at: string; status: string; payment_method: string; boleto_url: string | null; boleto_line: string | null; pix_copy_paste: string | null; pix_qr_url: string | null };
+type Content = { id: string; content_type: string; slug: string; title: string; summary: string; body: string; status: string; published_at: string | null };
+type Invite = { id: string; company_id: string; email: string; display_name: string; role: string; status: string };
+type Data = { companies: AdminCompany[]; plans: Plan[]; applications: Application[]; charges: Charge[]; content: Content[]; invites: Invite[]; summary: { companies: number; active: number; pendingApplications: number; openCharges: number } };
 
-const STATUS_LABEL: Record<string, string> = {
-  active: "Ativa", trialing: "Aguardando liberação", paused: "Suspensa", canceled: "Encerrada",
-  past_due: "Em atraso", incomplete: "Sem licença",
-};
-const DOC_STATUS = [
-  ["pending", "Pendente"], ["received", "Recebido"], ["approved", "Aprovado"], ["rejected", "Recusado"],
-];
-
-function dateLabel(value: string | null) {
-  if (!value) return "Sem vencimento";
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(value));
-}
-
-type LicensePayload = {
-  error?: string;
-  needsMigration?: boolean;
-  companies?: Company[];
-  plans?: Catalog[];
-  documents?: Catalog[];
-};
+const nav = [["overview", "Visão geral"], ["applications", "Solicitações"], ["companies", "Empresas"], ["billing", "Cobranças"], ["plans", "Planos"], ["team", "Equipe"], ["content", "Conteúdo"]] as const;
+type Section = (typeof nav)[number][0];
+const roleNames: Record<string, string> = { technician: "Técnico", commercial: "Comercial", accounting: "Contabilidade" };
+const statusNames: Record<string, string> = { new: "Nova", contacted: "Em contato", approved: "Aprovada", closed: "Encerrada", open: "Em aberto", overdue: "Vencida", payment_reported: "Pagamento informado", paid: "Paga", canceled: "Cancelada", active: "Ativa", paused: "Suspensa", canceled_subscription: "Encerrada", trialing: "Aguardando liberação", incomplete: "Incompleta", draft: "Rascunho", published: "Publicado", archived: "Arquivado", invited: "Convite enviado" };
+const intervalNames: Record<string, string> = { month: "Mensal", quarter: "Trimestral", semester: "Semestral", year: "Anual" };
+const date = (value?: string | null) => value ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(new Date(value)) : "—";
+const money = (minor?: number | null) => minor == null ? "Sob consulta" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(minor / 100);
+const typeLabel = (code: string) => BUSINESS_TYPES.find((item) => item.code === code)?.label || "Outro segmento";
+const emptyData: Data = { companies: [], plans: [], applications: [], charges: [], content: [], invites: [], summary: { companies: 0, active: 0, pendingApplications: 0, openCharges: 0 } };
 
 export function AdminConsole({ name }: { name: string }) {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [plans, setPlans] = useState<Catalog[]>([]);
-  const [documents, setDocuments] = useState<Catalog[]>([]);
+  const [data, setData] = useState<Data>(emptyData);
+  const [section, setSection] = useState<Section>("overview");
   const [query, setQuery] = useState("");
-  const [message, setMessage] = useState("Carregando empresas...");
-  const [needsMigration, setNeedsMigration] = useState(false);
-  const [busy, setBusy] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+  const [editingContent, setEditingContent] = useState<Content | null>(null);
 
-  async function load(): Promise<LicensePayload> {
-    const response = await fetch("/api/admin/licenses", { cache: "no-store" });
-    const data = await response.json() as LicensePayload;
-    if (!response.ok) throw new Error(data.error || "Não foi possível carregar as licenças.");
-    return data;
-  }
-
-  function applyLicenseData(data: LicensePayload) {
-    setNeedsMigration(Boolean(data.needsMigration));
-    setCompanies(data.companies || []);
-    setPlans(data.plans || []);
-    setDocuments(data.documents || []);
-    setMessage(data.needsMigration ? "Falta aplicar a migration de licenças no Supabase." : "");
-  }
-
-  useEffect(() => {
-    let active = true;
-    void load().then((data) => {
-      if (active) applyLicenseData(data);
-    }).catch((error: Error) => {
-      if (active) setMessage(error.message);
-    });
-    return () => { active = false; };
+  const refresh = useCallback(async () => {
+    const response = await fetch("/api/admin/platform", { cache: "no-store" });
+    const payload = await response.json() as Data & { error?: string };
+    if (!response.ok) throw new Error(payload.error || "Não foi possível carregar o painel. Aplique a migration administrativa no Supabase e atualize.");
+    setData(payload);
   }, []);
+  useEffect(() => { void refresh().catch((error: Error) => setNotice(error.message)); }, [refresh]);
 
-  async function send(companyId: string, body: Record<string, unknown>) {
-    setBusy(companyId);
+  async function mutate(path: string, method: "POST" | "PATCH", body: Record<string, unknown>) {
+    setBusy(true); setNotice("");
     try {
-      const response = await fetch("/api/admin/licenses", {
-        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ companyId, ...body }),
-      });
-      const data = await response.json() as LicensePayload;
-      if (!response.ok) throw new Error(data.error || "Não foi possível salvar.");
-      applyLicenseData(await load());
-      setMessage("Salvo.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Não foi possível salvar.");
-    } finally { setBusy(""); }
+      const response = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const result = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(result.error || "Não foi possível salvar.");
+      await refresh(); setNotice("Alteração salva."); return true;
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Falha ao salvar."); return false; }
+    finally { setBusy(false); }
   }
 
-  const visible = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    if (!term) return companies;
-    return companies.filter((company) => `${company.legalName} ${company.tradeName} ${company.cnpj}`.toLowerCase().includes(term));
-  }, [companies, query]);
+  const filteredCompanies = useMemo(() => {
+    const term = query.trim().toLocaleLowerCase("pt-BR");
+    return !term ? data.companies : data.companies.filter((company) => `${company.tradeName} ${company.legalName} ${company.cnpj} ${typeLabel(company.businessType)}`.toLocaleLowerCase("pt-BR").includes(term));
+  }, [data.companies, query]);
 
-  return (
-    <main style={{ minHeight: "100vh", background: "#f4f7fb", color: "#172033", fontFamily: "system-ui,sans-serif", padding: "28px 16px 48px" }}>
-      <section style={{ maxWidth: 980, margin: "0 auto" }}>
-        <header style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-          <div>
-            <p style={{ margin: 0, color: "#1769d2", fontWeight: 700, letterSpacing: ".04em", fontSize: 12 }}>ADMINISTRAÇÃO</p>
-            <h1 style={{ margin: "6px 0 0", fontSize: 28 }}>Licenças dos clientes</h1>
-            <p style={{ margin: "8px 0 0", color: "#5c6b80" }}>Olá, {name}. O cliente cria a conta. Aqui você confere os documentos, grava o token da Focus e libera o plano.</p>
-          </div>
-          <a href="/logout" style={{ color: "#1769d2", fontWeight: 700 }}>Sair</a>
-        </header>
-        {message ? <p role="status" style={{ background: "#fff", border: "1px solid #d9e2ec", borderRadius: 12, padding: 12 }}>{message}</p> : null}
-        <label style={{ display: "block", margin: "16px 0" }}>
-          <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden" }}>Buscar empresa</span>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nome ou CNPJ" style={{ width: "100%", boxSizing: "border-box", border: "1px solid #d5deea", borderRadius: 12, padding: "12px 14px", font: "inherit" }} />
-        </label>
-        {needsMigration ? <p>No Supabase, execute o arquivo supabase/migrations/20261116_jvg_client_licenses.sql e atualize esta página.</p> : null}
-        <div style={{ display: "grid", gap: 14 }}>
-          {visible.map((company) => (
-            <article key={`${company.id}-${company.license.status}-${company.license.endsAt || ""}-${company.focus.hint}-${company.documents.map((item) => item.status + item.note).join("|")}`} style={{ background: "#fff", border: "1px solid #d9e2ec", borderRadius: 16, padding: 16 }}>
-              <header style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: 18 }}>{company.tradeName || company.legalName}</h2>
-                  <p style={{ margin: "4px 0 0", color: "#5c6b80" }}>{company.legalName}{company.cnpj ? ` · ${company.cnpj}` : ""}</p>
-                </div>
-                <strong>{STATUS_LABEL[company.license.status] || company.license.status} · {company.license.planName}</strong>
-              </header>
-              <p style={{ color: "#5c6b80" }}>Vigência até {dateLabel(company.license.endsAt)}</p>
-              <form onSubmit={(event) => { event.preventDefault(); const data = new FormData(event.currentTarget); void send(company.id, { action: "activate", planCode: data.get("planCode") }); }} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <select name="planCode" defaultValue={plans.some((plan) => plan.code === company.license.planCode) ? company.license.planCode : plans[0]?.code} aria-label="Plano" style={{ flex: "1 1 180px", minHeight: 42, borderRadius: 10, border: "1px solid #d5deea", padding: "0 10px" }}>
-                  {plans.map((plan) => <option key={plan.code} value={plan.code}>{plan.name} · {plan.days} dias</option>)}
-                </select>
-                <button disabled={busy === company.id} style={buttonStyle}>Liberar</button>
-                <button type="button" disabled={busy === company.id} onClick={() => void send(company.id, { action: "pause" })} style={quietButton}>Suspender</button>
-                <button type="button" disabled={busy === company.id} onClick={() => void send(company.id, { action: "cancel" })} style={quietButton}>Encerrar</button>
-              </form>
-              <form onSubmit={(event) => { event.preventDefault(); const data = new FormData(event.currentTarget); void send(company.id, { action: "token", token: data.get("token") }); }} style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-                <input name="token" type="password" autoComplete="off" placeholder={company.focus.configured ? `Token salvo · final ${company.focus.hint}` : "Token da Focus desta empresa"} aria-label="Token da Focus" style={{ flex: "1 1 240px", minHeight: 42, borderRadius: 10, border: "1px solid #d5deea", padding: "0 10px" }} />
-                <button disabled={busy === company.id} style={buttonStyle}>Salvar token</button>
-              </form>
-              <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
-                {company.documents.map((item) => {
-                  const label = documents.find((entry) => entry.code === item.code)?.label || item.code;
-                  return (
-                    <form className="doc-row" key={item.code} onSubmit={(event) => { event.preventDefault(); const data = new FormData(event.currentTarget); void send(company.id, { action: "document", documentCode: item.code, status: data.get("status"), note: data.get("note") }); }}>
-                      <strong style={{ alignSelf: "center" }}>{label}</strong>
-                      <select name="status" defaultValue={item.status} aria-label={`Situação de ${label}`} style={{ minHeight: 40, borderRadius: 10, border: "1px solid #d5deea" }}>
-                        {DOC_STATUS.map(([value, text]) => <option key={value} value={value}>{text}</option>)}
-                      </select>
-                      <input name="note" defaultValue={item.note} placeholder="Observação" aria-label={`Observação de ${label}`} style={{ minHeight: 40, borderRadius: 10, border: "1px solid #d5deea", padding: "0 10px" }} />
-                      <button disabled={busy === company.id} style={quietButton}>Salvar</button>
-                    </form>
-                  );
-                })}
-              </div>
-            </article>
-          ))}
-        </div>
+  function formValues(form: HTMLFormElement) { return Object.fromEntries(new FormData(form).entries()); }
+  const submit = (action: (event: FormEvent<HTMLFormElement>) => Promise<unknown>) => (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); void action(event); };
+
+  return <main className={`${styles.shell} ${overrides.adminOverrides}`}>
+    <header className={styles.topbar}><a href="/admin" className={styles.brand}><span className={styles.mark}>S</span><span><b>SigmaFiscal</b><small>Administração da plataforma</small></span></a><div className={styles.topActions}><span>Olá, {name}</span><a className={styles.buttonGhost} href="/logout">Sair</a></div></header>
+    <div className={styles.layout}>
+      <aside className={styles.sidebar}><div className={styles.sideTitle}>PLATAFORMA</div>{nav.map(([id, label]) => <button key={id} className={`${styles.navButton} ${section === id ? styles.selected : ""}`} onClick={() => setSection(id)}>{label}{id === "applications" && data.summary.pendingApplications > 0 ? <span className={styles.badge}>{data.summary.pendingApplications}</span> : null}</button>)}<div className={styles.sideFoot}><a href="/erp/index.html">Abrir ERP</a></div></aside>
+      <section className={styles.content}>
+        <div className={styles.pageHead}><div><p className={styles.eyebrow}>SIGMAFISCAL · OPERAÇÃO SAAS</p><h1>{nav.find((item) => item[0] === section)?.[1]}</h1><p>Empresas, assinaturas, cobrança e comunicação com clientes em um só lugar.</p></div><button className={styles.buttonGhost} onClick={() => void refresh().catch((error: Error) => setNotice(error.message))}>Atualizar dados</button></div>
+        {notice ? <div className={styles.notice} role="status">{notice}</div> : null}
+
+        {section === "overview" ? <>
+          <div className={styles.metrics}><Metric title="Empresas" value={data.summary.companies} detail="Contas cadastradas"/><Metric title="Assinaturas ativas" value={data.summary.active} detail="Acesso liberado"/><Metric title="Solicitações novas" value={data.summary.pendingApplications} detail="Aguardando equipe comercial"/><Metric title="Cobranças abertas" value={data.summary.openCharges} detail="Em aberto ou vencidas"/></div>
+          <div className={styles.twoColumns}><section className={styles.panel}><PanelHead title="Solicitações recentes" detail="Novas empresas interessadas" action={<button className={styles.linkButton} onClick={() => setSection("applications")}>Ver todas</button>}/>{data.applications.slice(0, 5).map((item) => <div className={styles.listRow} key={item.id}><div><b>{item.company_name}</b><small>{item.case_code} · {item.contact_name} · {typeLabel(item.business_type)}</small></div><Status value={item.status}/></div>)}</section><section className={styles.panel}><PanelHead title="Cobranças recentes" detail="Boletos, Pix e cobranças manuais" action={<button className={styles.linkButton} onClick={() => setSection("billing")}>Gerenciar</button>}/>{data.charges.slice(0, 5).map((item) => <div className={styles.listRow} key={item.id}><div><b>{item.company_name}</b><small>{item.description} · vence {date(item.due_at)}</small></div><strong>{money(item.amount_minor)}</strong></div>)}</section></div>
+          <div className={styles.panel}><PanelHead title="Atalhos da operação" detail="Ações administrativas comuns"/><div className={styles.quickActions}><button onClick={() => setSection("companies")}>Liberar uma empresa</button><button onClick={() => setSection("billing")}>Lançar cobrança</button><button onClick={() => setSection("team")}>Criar acesso de equipe</button><button onClick={() => setSection("content")}>Publicar atualização</button></div></div>
+        </> : null}
+
+        {section === "applications" ? <section className={styles.panel}><PanelHead title="Solicitações de cadastro" detail="Pedidos de contato recebidos pelo site público"/><div className={styles.cards}>{data.applications.map((item) => { const matches = data.companies.filter((company) => company.cnpj.toUpperCase().replace(/[^A-Z0-9]/g, "") === item.cnpj); return <article className={styles.card} key={item.id}><div className={styles.cardTop}><div><span className={styles.case}>{item.case_code}</span><h2>{item.company_name}</h2><p>{typeLabel(item.business_type)} · CNPJ {item.cnpj}</p></div><Status value={item.status}/></div><div className={styles.contactGrid}><span><b>Responsável</b>{item.contact_name}</span><span><b>E-mail</b><a href={`mailto:${item.email}`}>{item.email}</a></span><span><b>Telefone</b><a href={`tel:${item.phone}`}>{item.phone}</a></span><span><b>Recebida</b>{date(item.created_at)}</span></div>{item.message ? <p className={styles.message}>{item.message}</p> : null}<form className={styles.formGrid} onSubmit={submit(async (event) => { const values = formValues(event.currentTarget); return mutate("/api/admin/platform", "PATCH", { action: "application", id: item.id, status: values.status, adminNote: values.adminNote, linkedCompanyId: values.linkedCompanyId }); })}><label>Situação<select name="status" defaultValue={item.status}>{[["new","Nova"],["contacted","Em contato"],["approved","Aprovada"],["closed","Encerrada"]].map(([v,l])=><option value={v} key={v}>{l}</option>)}</select></label><label>Vincular cadastro existente<select name="linkedCompanyId" defaultValue={item.linked_company_id || ""}><option value="">Não vincular ainda</option>{matches.map((company)=><option value={company.id} key={company.id}>{company.tradeName || company.legalName}</option>)}</select></label><label className={styles.wide}>Anotações internas<input name="adminNote" defaultValue={item.admin_note} placeholder="Próximo contato, responsável comercial…"/></label><div className={`${styles.wide} ${styles.formActions}`}><button className={styles.buttonPrimary} disabled={busy}>Salvar atendimento</button><a className={styles.buttonGhost} href={`https://wa.me/${item.phone}?text=${encodeURIComponent(`Olá ${item.contact_name}, sobre sua solicitação ${item.case_code} do SigmaFiscal.`)}`} target="_blank" rel="noreferrer">WhatsApp</a></div></form><p className={styles.muted}>A aprovação registra o andamento comercial; para liberar acesso, abra a empresa e ative um plano. O vínculo só aceita empresa com o mesmo CNPJ.</p></article>; })}</div>{data.applications.length === 0 ? <Empty text="Nenhuma solicitação recebida ainda."/> : null}</section> : null}
+
+        {section === "companies" ? <><div className={styles.toolbar}><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar nome, CNPJ ou segmento"/><span>{filteredCompanies.length} empresas</span></div><div className={styles.cards}>{filteredCompanies.map((company) => <CompanyCard key={company.id} company={company} plans={data.plans} busy={busy} onMutate={mutate}/>)}</div>{filteredCompanies.length === 0 ? <Empty text="Nenhuma empresa corresponde à busca."/> : null}</> : null}
+
+        {section === "billing" ? <><section className={styles.panel}><PanelHead title="Criar cobrança" detail="Cadastre boleto/Pix gerado pelo provedor ou uma cobrança manual. A confirmação de pagamento aqui é manual."/><form className={styles.formGrid} onSubmit={submit(async (event) => { const form = event.currentTarget; const values = formValues(form); const result = await mutate("/api/admin/platform", "POST", { action: "charge", ...values, amountMinor: Math.round(Number(String(values.amount).replace(",", ".")) * 100), dueAt: values.dueAt ? new Date(`${values.dueAt}T23:59:00`).toISOString() : "" }); if (result) form.reset(); })}><label>Empresa<select name="companyId" required defaultValue=""><option value="" disabled>Selecione</option>{data.companies.map((c)=><option key={c.id} value={c.id}>{c.tradeName || c.legalName}</option>)}</select></label><label>Descrição<input name="description" required defaultValue="Assinatura SigmaFiscal"/></label><label>Valor (R$)<input name="amount" inputMode="decimal" required placeholder="99,90"/></label><label>Vencimento<input name="dueAt" type="date" required/></label><label>Forma de pagamento<select name="paymentMethod"><option value="boleto">Boleto</option><option value="pix">Pix</option><option value="manual">Manual</option></select></label><label>Link do boleto (HTTPS)<input name="boletoUrl" type="url" placeholder="https://…"/></label><label className={styles.wide}>Linha digitável<input name="boletoLine"/></label><label className={styles.wide}>Pix copia e cola<textarea name="pixCopyPaste" rows={2}/></label><label>Link do QR Pix<input name="pixQrUrl" type="url" placeholder="https://…"/></label><label>Referência do provedor<input name="providerReference"/></label><label className={styles.wide}>Nota interna<textarea name="adminNote" rows={2}/></label><div className={styles.wide}><button className={styles.buttonPrimary} disabled={busy}>Criar cobrança</button></div></form></section><section className={styles.panel}><PanelHead title="Histórico de cobranças" detail="A marcação de paga atualiza a assinatura e reabre o acesso."/><div className={styles.tableWrap}><table><thead><tr><th>Empresa</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Pagamento</th><th>Situação</th><th>Ações</th></tr></thead><tbody>{data.charges.map((charge)=><tr key={charge.id}><td>{charge.company_name}</td><td>{charge.description}</td><td>{money(charge.amount_minor)}</td><td>{date(charge.due_at)}</td><td>{charge.payment_method === "boleto" ? <>{charge.boleto_url ? <a href={charge.boleto_url} target="_blank" rel="noreferrer">Abrir boleto</a> : "Boleto pendente"}<small>{charge.boleto_line}</small></> : charge.payment_method === "pix" ? <>{charge.pix_copy_paste ? <button className={styles.linkButton} onClick={() => void navigator.clipboard.writeText(charge.pix_copy_paste || "")}>Copiar Pix</button> : "Pix pendente"}{charge.pix_qr_url ? <a href={charge.pix_qr_url} target="_blank" rel="noreferrer">QR Pix</a> : null}</> : "Manual"}</td><td><Status value={charge.status}/></td><td><div className={styles.rowActions}><button className={styles.buttonPrimarySmall} disabled={busy || charge.status === "paid"} onClick={() => void mutate("/api/admin/platform", "PATCH", { action: "charge", id: charge.id, status: "paid" })}>Confirmar paga</button><button className={styles.buttonGhostSmall} disabled={busy || ["paid", "canceled"].includes(charge.status)} onClick={() => void mutate("/api/admin/platform", "PATCH", { action: "charge", id: charge.id, status: "canceled" })}>Cancelar</button></div></td></tr>)}</tbody></table></div></section><p className={styles.callout}>Esta versão registra cobranças, links e confirmação manual. Não gera boletos/Pix nem consulta compensação bancária automaticamente; para isso falta contratar e integrar um provedor de pagamento.</p></> : null}
+
+        {section === "plans" ? <><section className={styles.panel}><PanelHead title={editingPlan ? `Editar plano · ${editingPlan.name}` : "Novo plano"} detail="Defina preço, período de tolerância, segmentos e publicação na página inicial."/><PlanEditor key={editingPlan?.code || "new"} initial={editingPlan} busy={busy} onCancel={() => setEditingPlan(null)} onSave={async (body) => { const ok = await mutate(editingPlan ? "/api/admin/platform" : "/api/admin/platform", editingPlan ? "PATCH" : "POST", { action: "plan", ...body }); if (ok) setEditingPlan(null); }}/></section><section className={styles.panel}><PanelHead title="Planos cadastrados" detail="Planos públicos aparecem na página inicial."/><div className={styles.cards}>{data.plans.map((plan)=><article className={styles.planCard} key={plan.code}><div className={styles.cardTop}><div><h2>{plan.name}</h2><p>{plan.code} · {intervalNames[plan.billing_interval] || plan.billing_interval} · {money(plan.amount_minor)}</p></div><Status value={plan.active ? (plan.is_public ? "published" : "active") : "paused"}/></div><p>{plan.description || "Sem descrição"}</p><small>{plan.grace_period_days} dias de tolerância · {plan.enabled_business_types.map(typeLabel).join(", ") || "Sem segmentos"}</small><button className={styles.buttonGhost} onClick={() => setEditingPlan(plan)}>Editar plano</button></article>)}</div></section></> : null}
+
+        {section === "team" ? <><section className={styles.panel}><PanelHead title="Convidar usuário para empresa" detail="O convite é enviado pelo Supabase Auth. Cada acesso fica associado a uma única empresa."/><form className={styles.formGrid} onSubmit={submit(async (event) => { const form = event.currentTarget; const values = formValues(form); const ok = await mutate("/api/admin/team", "POST", values); if (ok) form.reset(); })}><label>Empresa<select name="companyId" required defaultValue=""><option value="" disabled>Selecione</option>{data.companies.map((c)=><option key={c.id} value={c.id}>{c.tradeName || c.legalName}</option>)}</select></label><label>Nome<input name="name" required minLength={2}/></label><label>E-mail<input name="email" type="email" required/></label><label>Função<select name="role"><option value="technician">Técnico</option><option value="commercial">Comercial</option><option value="accounting">Contabilidade · leitura</option></select></label><div className={styles.wide}><button className={styles.buttonPrimary} disabled={busy}>Enviar convite</button></div></form></section><section className={styles.panel}><PanelHead title="Equipe convidada" detail="Acesso vinculado à empresa indicada."/><div className={styles.tableWrap}><table><thead><tr><th>Empresa</th><th>Usuário</th><th>Função</th><th>Status</th></tr></thead><tbody>{data.invites.map((invite)=><tr key={invite.id}><td>{data.companies.find((c)=>c.id===invite.company_id)?.tradeName || data.companies.find((c)=>c.id===invite.company_id)?.legalName || "Empresa"}</td><td>{invite.display_name}<small>{invite.email}</small></td><td>{roleNames[invite.role] || invite.role}</td><td><Status value={invite.status}/></td></tr>)}</tbody></table></div></section></> : null}
+
+        {section === "content" ? <><section className={styles.panel}><PanelHead title={editingContent ? "Editar publicação" : "Publicar no site"} detail="Atualizações e artigos aparecem na página inicial somente após publicação."/><ContentEditor key={editingContent?.id || "new-content"} initial={editingContent} busy={busy} onCancel={() => setEditingContent(null)} onSave={async (body) => { const ok = await mutate("/api/admin/platform", editingContent ? "PATCH" : "POST", { action: "content", ...body, ...(editingContent ? { id: editingContent.id } : {}) }); if (ok) setEditingContent(null); }}/></section><section className={styles.panel}><PanelHead title="Publicações e rascunhos" detail="Revise antes de publicar informações fiscais ou comerciais."/><div className={styles.cards}>{data.content.map((item)=><article className={styles.card} key={item.id}><div className={styles.cardTop}><div><span className={styles.case}>{item.content_type === "changelog" ? "ATUALIZAÇÃO DO SISTEMA" : "ARTIGO"}</span><h2>{item.title}</h2><p>/{item.slug} · {date(item.published_at)}</p></div><Status value={item.status}/></div><p>{item.summary}</p><div className={styles.rowActions}><button className={styles.buttonGhostSmall} onClick={() => setEditingContent(item)}>Editar</button>{item.status !== "published" ? <button className={styles.buttonPrimarySmall} disabled={busy} onClick={() => void mutate("/api/admin/platform", "PATCH", { action: "content", id: item.id, status: "published", contentType: item.content_type, title: item.title, slug: item.slug, summary: item.summary, body: item.body })}>Publicar</button> : <button className={styles.buttonGhostSmall} disabled={busy} onClick={() => void mutate("/api/admin/platform", "PATCH", { action: "content", id: item.id, status: "draft", contentType: item.content_type, title: item.title, slug: item.slug, summary: item.summary, body: item.body })}>Tirar do ar</button>}<button className={styles.buttonGhostSmall} disabled={busy} onClick={() => void mutate("/api/admin/platform", "PATCH", { action: "content", id: item.id, status: "archived", contentType: item.content_type, title: item.title, slug: item.slug, summary: item.summary, body: item.body })}>Arquivar</button></div></article>)}</div>{data.content.length === 0 ? <Empty text="Ainda não há publicações."/> : null}</section></> : null}
       </section>
-      <style>{`.doc-row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(120px,.6fr) minmax(0,1fr) auto;gap:8px}@media(max-width:720px){.doc-row{grid-template-columns:1fr}}`}</style>
-    </main>
-  );
+    </div>
+  </main>;
 }
 
-const buttonStyle = { minHeight: 42, border: 0, borderRadius: 10, background: "#1769d2", color: "#fff", fontWeight: 700, padding: "0 14px" };
-const quietButton = { minHeight: 42, border: "1px solid #d5deea", borderRadius: 10, background: "#fff", color: "#172033", fontWeight: 700, padding: "0 12px" };
+function Metric({ title, value, detail }: { title: string; value: number; detail: string }) { return <article className={styles.metric}><span>{title}</span><strong>{value}</strong><small>{detail}</small></article>; }
+function PanelHead({ title, detail, action }: { title: string; detail: string; action?: ReactNode }) { return <header className={styles.panelHead}><div><h2>{title}</h2><p>{detail}</p></div>{action}</header>; }
+function Status({ value }: { value: string }) { return <span className={`${styles.status} ${styles[`status_${value}`] || ""}`}>{statusNames[value] || value}</span>; }
+function Empty({ text }: { text: string }) { return <div className={styles.empty}>{text}</div>; }
+
+function CompanyCard({ company, plans, busy, onMutate }: { company: AdminCompany; plans: Plan[]; busy: boolean; onMutate: (path: string, method: "POST" | "PATCH", body: Record<string, unknown>) => Promise<boolean> }) {
+  const [planCode, setPlanCode] = useState(company.subscription?.planCode || plans.find((p) => p.active)?.code || "");
+  const [endsAt, setEndsAt] = useState(company.subscription?.endsAt?.slice(0, 10) || "");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const plan = plans.find((item) => item.code === planCode);
+  return <article className={styles.companyCard}><div className={styles.cardTop}><div><span className={styles.case}>{typeLabel(company.businessType)}</span><h2>{company.tradeName || company.legalName}</h2><p>{company.legalName}{company.cnpj ? ` · ${company.cnpj}` : ""}</p></div><Status value={company.subscription?.status || "incomplete"}/></div><div className={styles.companyMeta}><span>Plano <b>{company.subscription?.planName || "Sem plano"}</b></span><span>Vigência <b>{date(company.subscription?.endsAt)}</b></span><span>Empresa <b>{statusNames[company.status] || company.status}</b></span>{company.subscription?.temporaryAccessUntil ? <span>Acesso temporário até <b>{date(company.subscription.temporaryAccessUntil)}</b></span> : null}</div><form className={styles.inlineForm} onSubmit={(event) => { event.preventDefault(); void onMutate("/api/admin/platform", "PATCH", { action: "subscription", companyId: company.id, operation: "activate", planCode, endsAt }); }}><select aria-label="Plano" value={planCode} onChange={(event) => setPlanCode(event.target.value)}>{plans.filter((p)=>p.active).map((p)=><option value={p.code} key={p.code}>{p.name} · {money(p.amount_minor)} / {intervalNames[p.billing_interval] || p.billing_interval}</option>)}</select><label className={styles.compactLabel}>Válido até<input aria-label="Válido até" type="date" value={endsAt} onChange={(event)=>setEndsAt(event.target.value)}/></label><button className={styles.buttonPrimary} disabled={busy || !planCode}>Liberar / renovar</button><button className={styles.buttonGhost} type="button" disabled={busy} onClick={()=>void onMutate("/api/admin/platform","PATCH",{action:"subscription",companyId:company.id,operation:"pause"})}>Suspender</button><button className={styles.buttonDanger} type="button" disabled={busy} onClick={()=>void onMutate("/api/admin/platform","PATCH",{action:"subscription",companyId:company.id,operation:"cancel"})}>Encerrar</button></form><button className={styles.linkButton} onClick={()=>setShowAdvanced((value)=>!value)}>{showAdvanced ? "Ocultar" : "Mostrar"} convites e controles fiscais</button>{showAdvanced ? <div className={styles.advanced}><h3>Usuários da empresa</h3>{company.invites.length ? company.invites.map((invite)=><p key={invite.id}>{invite.display_name} · {invite.email} · {roleNames[invite.role] || invite.role} · {statusNames[invite.status] || invite.status}</p>) : <p>Nenhum convite enviado.</p>}<h3>Documentos de cadastro</h3>{company.documents.length ? company.documents.map((doc)=><p key={doc.document_code}>{doc.document_code}: {statusNames[doc.status] || doc.status}{doc.note ? ` · ${doc.note}` : ""}</p>) : <p>Nenhum documento pendente nesta implantação.</p>}</div> : null}{plan ? <small className={styles.muted}>Prazo de tolerância deste plano: {plan.grace_period_days} dias. Após o vencimento, a conta permanece acessível por esse período.</small> : null}</article>;
+}
+
+function PlanEditor({ initial, busy, onCancel, onSave }: { initial: Plan | null; busy: boolean; onCancel: () => void; onSave: (body: Record<string, unknown>) => Promise<void> }) {
+  const [types, setTypes] = useState<string[]>(initial?.enabled_business_types || BUSINESS_TYPES.map((item)=>item.code));
+  return <form className={styles.formGrid} onSubmit={(event)=>{event.preventDefault();const values=Object.fromEntries(new FormData(event.currentTarget).entries());void onSave({...values,amountMinor:values.amount===""?null:Math.round(Number(String(values.amount).replace(",","."))*100),gracePeriodDays:Number(values.gracePeriodDays),maxUsers:values.maxUsers||null,maxCompanies:values.maxCompanies||1,sortOrder:Number(values.sortOrder)||100,isPublic:values.isPublic==="on",active:values.active==="on",enabledBusinessTypes:types});}}><label>Código único<input name="code" defaultValue={initial?.code||""} required pattern="[a-z][a-z0-9_-]{1,39}" disabled={Boolean(initial)}/></label><label>Nome do plano<input name="name" defaultValue={initial?.name||""} required minLength={2}/></label><label>Periodicidade<select name="interval" defaultValue={initial?.billing_interval||"month"}>{Object.entries(intervalNames).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><label>Preço mensal ou período (R$)<input name="amount" inputMode="decimal" defaultValue={initial?.amount_minor == null ? "" : (initial.amount_minor/100).toFixed(2)} placeholder="Deixe vazio para sob consulta"/></label><label>Dias após vencimento<input name="gracePeriodDays" type="number" min="0" max="60" defaultValue={initial?.grace_period_days ?? 15}/></label><label>Máximo de usuários<input name="maxUsers" type="number" min="1" defaultValue={initial?.max_users||""} placeholder="Sem limite"/></label><label>Máximo de empresas<input name="maxCompanies" type="number" min="1" defaultValue={initial?.max_companies||1}/></label><label>Ordem na página inicial<input name="sortOrder" type="number" defaultValue={initial?.sort_order||100}/></label><label className={styles.wide}>Descrição<textarea name="description" rows={3} defaultValue={initial?.description||""}/></label><fieldset className={`${styles.wide} ${styles.segmentField}`}><legend>Segmentos incluídos</legend><div>{BUSINESS_TYPES.map((item)=><label key={item.code}><input type="checkbox" checked={types.includes(item.code)} onChange={(event)=>setTypes((current)=>event.target.checked?[...current,item.code]:current.filter((code)=>code!==item.code))}/>{item.label}</label>)}</div></fieldset><label className={styles.checkLabel}><input name="active" type="checkbox" defaultChecked={initial?.active ?? true}/> Plano ativo</label><label className={styles.checkLabel}><input name="isPublic" type="checkbox" defaultChecked={initial?.is_public ?? false}/> Mostrar no site</label><div className={`${styles.wide} ${styles.formActions}`}><button className={styles.buttonPrimary} disabled={busy}>{initial ? "Salvar plano" : "Criar plano"}</button>{initial ? <button type="button" className={styles.buttonGhost} onClick={onCancel}>Cancelar edição</button> : null}</div></form>;
+}
+
+function ContentEditor({ initial, busy, onCancel, onSave }: { initial: Content | null; busy: boolean; onCancel: () => void; onSave: (body: Record<string, unknown>) => Promise<void> }) {
+  return <form className={styles.formGrid} onSubmit={(event)=>{event.preventDefault();const values=Object.fromEntries(new FormData(event.currentTarget).entries());void onSave({...values,status:values.publish==="on"?"published":"draft"});}}><label>Tipo<select name="contentType" defaultValue={initial?.content_type||"changelog"}><option value="changelog">Atualização do sistema</option><option value="article">Artigo / informação</option></select></label><label>Título<input name="title" required minLength={3} defaultValue={initial?.title||""}/></label><label className={styles.wide}>Endereço (slug)<input name="slug" defaultValue={initial?.slug||""} placeholder="Gerado pelo título se vazio"/></label><label className={styles.wide}>Resumo<input name="summary" maxLength={500} defaultValue={initial?.summary||""}/></label><label className={styles.wide}>Conteúdo<textarea name="body" rows={7} maxLength={30000} defaultValue={initial?.body||""}/></label><label className={styles.checkLabel}><input name="publish" type="checkbox" defaultChecked={initial?.status==="published"}/> Publicar agora</label><div className={`${styles.wide} ${styles.formActions}`}><button className={styles.buttonPrimary} disabled={busy}>{initial ? "Salvar publicação" : "Criar publicação"}</button>{initial ? <button className={styles.buttonGhost} type="button" onClick={onCancel}>Cancelar edição</button> : null}</div></form>;
+}

@@ -86,39 +86,86 @@ export async function getPlatformRole(user: JvgAuthUser): Promise<"platform_admi
   return role === "platform_admin" ? role : null;
 }
 
-export async function getSiteAccount(user: JvgAuthUser): Promise<SiteAccount | null> {
+type SiteAccountOptions = { allowBillingLocked?: boolean };
+
+async function enforceSubscriptionAccess(account: SiteAccount): Promise<void> {
   try {
-    const resolved = await dbRequest<SiteAccount[]>("/rest/v1/rpc/jvg_resolve_site_account", {
+    const subscriptions = await dbRequest<Array<{
+      plan_code: string; status: string; current_period_ends_at: string | null; trial_ends_at: string | null; temporary_access_until: string | null;
+    }>>(`/rest/v1/jvg_subscriptions?tenant_id=${filterEq(account.tenant_id)}&select=plan_code,status,current_period_ends_at,trial_ends_at,temporary_access_until&limit=1`);
+    const subscription = subscriptions[0];
+    if (!subscription || subscription.plan_code === "pilot") return;
+    if (["paused", "canceled", "incomplete"].includes(subscription.status)) {
+      throw new JvgBackendError("A assinatura está suspensa. Acesse a área de cobrança para consultar o boleto ou Pix e falar com a equipe financeira.", 402);
+    }
+    if (subscription.status === "trialing" && subscription.trial_ends_at && Date.parse(subscription.trial_ends_at) > Date.now()) return;
+    if (subscription.status === "active" && (!subscription.current_period_ends_at || Date.parse(subscription.current_period_ends_at) > Date.now())) return;
+    if ((subscription.status === "active" || subscription.status === "past_due") && subscription.temporary_access_until && Date.parse(subscription.temporary_access_until) > Date.now()) return;
+    if ((subscription.status === "active" || subscription.status === "past_due") && subscription.temporary_access_until) {
+      throw new JvgBackendError("O prazo temporário de 48 horas terminou. Confirme o pagamento ou fale com a equipe financeira.", 402);
+    }
+    if ((subscription.status === "active" || subscription.status === "past_due") && subscription.current_period_ends_at) {
+      const plans = await dbRequest<Array<{ grace_period_days: number }>>(
+        `/rest/v1/jvg_subscription_plans?code=${filterEq(subscription.plan_code)}&select=grace_period_days&limit=1`,
+      );
+      const graceDays = Math.max(0, Math.min(60, Number(plans[0]?.grace_period_days ?? 15)));
+      const graceEndsAt = Date.parse(subscription.current_period_ends_at) + graceDays * 86400000;
+      if (graceEndsAt > Date.now()) return;
+    }
+    if (["active", "past_due", "trialing"].includes(subscription.status)) {
+      throw new JvgBackendError("A assinatura está suspensa. Acesse a área de cobrança para consultar o boleto ou Pix e falar com a equipe financeira.", 402);
+    }
+  } catch (error) {
+    if (error instanceof JvgBackendError && error.status === 402) throw error;
+    // The licensing migration may still be rolling out. Do not turn a transient
+    // database/network failure into a company-wide outage.
+  }
+}
+
+export async function getSiteAccount(user: JvgAuthUser, options: SiteAccountOptions = {}): Promise<SiteAccount | null> {
+  let account: SiteAccount | null = null;
+  try {
+    const resolver = options.allowBillingLocked ? "jvg_resolve_billing_account" : "jvg_resolve_site_account";
+    const resolved = await dbRequest<SiteAccount[]>(`/rest/v1/rpc/${resolver}`, {
       method: "POST",
       body: JSON.stringify({ p_user_id: user.userId }),
     });
-    return resolved[0] ?? null;
+    account = resolved[0] ?? null;
   } catch {
     // Preview environments may not have received the security migration yet.
     // Keep the fallback equally strict while using the slower REST path.
   }
 
-  const memberships = await dbRequest<SiteAccount[]>(
-    `/rest/v1/jvg_company_memberships?user_id=${filterEq(user.userId)}&active=eq.true&select=tenant_id,company_id,role&order=created_at.asc&limit=50`,
-  );
-  const tenantIds = [...new Set(memberships.map((membership) => membership.tenant_id))]
-    .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
-  if (!memberships.length || !tenantIds.length) return null;
+  if (!account) {
+    const memberships = await dbRequest<SiteAccount[]>(
+      `/rest/v1/jvg_company_memberships?user_id=${filterEq(user.userId)}&active=eq.true&select=tenant_id,company_id,role&order=created_at.asc&limit=50`,
+    );
+    const tenantIds = [...new Set(memberships.map((membership) => membership.tenant_id))]
+      .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+    if (!memberships.length || !tenantIds.length) return null;
 
-  const tenantFilter = encodeURIComponent(`in.(${tenantIds.join(",")})`);
-  const [tenantMemberships, tenants] = await Promise.all([
-    dbRequest<Array<{ tenant_id: string }>>(
-      `/rest/v1/jvg_tenant_memberships?user_id=${filterEq(user.userId)}&active=eq.true&tenant_id=${tenantFilter}&select=tenant_id&limit=50`,
-    ),
-    dbRequest<Array<{ id: string; status: string }>>(
-      `/rest/v1/jvg_tenants?id=${tenantFilter}&status=in.(pilot,active)&select=id,status&limit=50`,
-    ),
-  ]);
-  const activeTenantIds = new Set(tenantMemberships.map((membership) => membership.tenant_id));
-  const availableTenantIds = new Set(tenants.map((tenant) => tenant.id));
-  return memberships.find((membership) =>
-    activeTenantIds.has(membership.tenant_id) && availableTenantIds.has(membership.tenant_id),
-  ) ?? null;
+    const tenantFilter = encodeURIComponent(`in.(${tenantIds.join(",")})`);
+    const [tenantMemberships, tenants] = await Promise.all([
+      dbRequest<Array<{ tenant_id: string }>>(
+        `/rest/v1/jvg_tenant_memberships?user_id=${filterEq(user.userId)}&active=eq.true&tenant_id=${tenantFilter}&select=tenant_id&limit=50`,
+      ),
+      dbRequest<Array<{ id: string; status: string }>>(
+        `/rest/v1/jvg_tenants?id=${tenantFilter}&status=in.(${options.allowBillingLocked ? "pilot,active,suspended" : "pilot,active"})&select=id,status&limit=50`,
+      ),
+    ]);
+    const activeTenantIds = new Set(tenantMemberships.map((membership) => membership.tenant_id));
+    const availableTenantIds = new Set(tenants.map((tenant) => tenant.id));
+    account = memberships.find((membership) =>
+      activeTenantIds.has(membership.tenant_id) && availableTenantIds.has(membership.tenant_id),
+    ) ?? null;
+  }
+  if (!account) return null;
+  // Keep the business role for read-only accounting distinct in storage while
+  // applying the ERP's existing viewer permissions at every business endpoint.
+  if (account.role === "accounting") account = { ...account, role: "viewer" };
+  if (account.role === "commercial") account = { ...account, role: "operator" };
+  if (!options.allowBillingLocked) await enforceSubscriptionAccess(account);
+  return account;
 }
 
 export async function ensureSiteAccount(user: JvgAuthUser, companyName: string): Promise<SiteAccount> {
@@ -136,7 +183,8 @@ export async function ensureSiteAccount(user: JvgAuthUser, companyName: string):
 
 export async function getCompany(account: SiteAccount): Promise<(Record<string, unknown> & { fiscal_missing: string[]; fiscal_profile_complete: boolean }) | null> {
   const scope = `tenant_id=${filterEq(account.tenant_id)}&id=${filterEq(account.company_id)}`;
-  const base = "id,legal_name,trade_name,cnpj,state_registration,municipal_registration,tax_regime,status,address,cnae,fiscal_email,fiscal_phone,nfe_series_homologacao,nfe_next_number_homologacao";
+  const legacyBase = "id,legal_name,trade_name,cnpj,state_registration,municipal_registration,tax_regime,status,address,cnae,fiscal_email,fiscal_phone,nfe_series_homologacao,nfe_next_number_homologacao";
+  const base = `${legacyBase},business_type`;
   let rows: Array<Record<string, unknown>>;
   let confirmationAvailable = true;
   try {
@@ -144,11 +192,16 @@ export async function getCompany(account: SiteAccount): Promise<(Record<string, 
   } catch {
     // Mantém o restante do ERP funcional enquanto a migration manual está pendente.
     confirmationAvailable = false;
-    rows = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_companies?${scope}&select=${base}&limit=1`);
+    try {
+      rows = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_companies?${scope}&select=${base}&limit=1`);
+    } catch {
+      rows = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_companies?${scope}&select=${legacyBase}&limit=1`);
+    }
   }
   const stored = rows[0];
   const company = stored ? {
     ...stored,
+    business_type: stored.business_type || "comercio",
     tax_regime_confirmed: confirmationAvailable && stored.tax_regime_confirmed === true,
     tax_regime_confirmation_available: confirmationAvailable,
   } : null;

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./landing-redesign.module.css";
+import { LandingResources } from "./landing-resources";
 
 const modules = [
   { number: "01", title: "Clientes e fornecedores", description: "Cadastros empresariais organizados para o dia a dia." },
@@ -18,7 +19,7 @@ export default function Home() {
         <Link href="/" className={styles.brandLink} aria-label="SigmaFiscal — início">
           <Image className={styles.brandIcon} src="/branding/sigmafiscal-icon.svg" width={56} height={56} alt="" priority /><span className={styles.brandName}><strong>Sigma<span>Fiscal</span></strong><small>ERP EMPRESARIAL</small></span>
         </Link>
-        <div className={styles.navlinks}><a href="#sistema">O sistema</a><a href="#modulos">Módulos</a><a href="#acesso">Começar</a></div>
+        <div className={styles.navlinks}><a href="#sistema">O sistema</a><a href="#modulos">Módulos</a><a href="#planos">Planos</a><a href="#novidades">Novidades</a><a href="#solicitar">Fale conosco</a></div>
         <Link href="/login" className={styles.login}>Acessar plataforma ↗</Link>
       </nav>
     </header>
@@ -56,6 +57,8 @@ export default function Home() {
         <div className={styles.cards}>{modules.map((item)=><article className={styles.card} key={item.number}><span className={styles.number}>{item.number} / MÓDULO</span><h3>{item.title}</h3><p>{item.description}</p></article>)}</div>
       </div>
     </section>
+
+    <LandingResources />
 
     <section className={styles.section} id="acesso">
       <div className={styles.inner}>

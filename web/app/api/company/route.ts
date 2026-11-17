@@ -1,6 +1,7 @@
 import { getJvgUser } from "../../jvg-auth";
 import { apiJson, dbRequest, ensureSiteAccount, filterEq, getCompany, getSiteAccount, isSameOrigin, JvgBackendError, safeError, str } from "../../../lib/jvg-backend";
 import { fiscalAddress, fiscalInteger, validCnpj } from "../../../lib/fiscal-company";
+import { BUSINESS_TYPES } from "../../../lib/business-types";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,9 @@ function fiscalCompanyPatch(data: Record<string, unknown>, currentCompany: Await
     throw new JvgBackendError("Selecione o regime informado pela contabilidade antes de confirmar.", 400);
   if (confirmsTaxRegime && currentCompany?.tax_regime_confirmation_available !== true)
     throw new JvgBackendError("A confirmação do regime depende da migration fiscal pendente no Supabase.", 409);
+  const businessType = str(data.businessType, 40) || String(currentCompany?.business_type || "");
+  if (!BUSINESS_TYPES.some((item) => item.code === businessType))
+    throw new JvgBackendError("Selecione um segmento de empresa válido.", 400);
 
   const allowed: Record<string, unknown> = {
     legal_name: legalName,
@@ -35,6 +39,7 @@ function fiscalCompanyPatch(data: Record<string, unknown>, currentCompany: Await
     cnae: cnae || null,
     fiscal_email: fiscalEmail || null,
     fiscal_phone: fiscalPhone || null,
+    business_type: businessType,
     updated_at: new Date().toISOString(),
   };
   if (taxRegime && confirmsTaxRegime) allowed.tax_regime = taxRegime;

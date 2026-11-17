@@ -28,11 +28,11 @@
   function btn(text,action,primary){return '<button class="btn '+(primary?'primary':'')+'" data-action="'+h(action)+'">'+(primary?ico('plus'):'')+h(text)+'</button>';}
   function heading(title,subtitle,action,actionText){return '<div class="page-heading"><div><div class="eyebrow">JVG NOTA FISCAL / PAINEL DE GESTÃO</div><h1>'+h(title)+'</h1><p>'+h(subtitle)+'</p></div>'+(action?'<div class="heading-actions">'+btn(actionText,action,true)+'</div>':'')+'</div>';}
   function banner(){
-    var needs=cloud.status==='needs_company',pending=cloud.status==='waiting_secret',login=cloud.status==='login_required';
+    var needs=cloud.status==='needs_company',pending=cloud.status==='waiting_secret',login=cloud.status==='login_required',billing=cloud.status==='subscription_locked';
     if(cloud.status==='ready'||cloud.status==='checking')return '';
-    var title=needs?'Cadastre a empresa para começar':pending?'O sistema ainda não está pronto para salvar':login?'Entre para acessar a empresa':cloud.status==='error'?'Não foi possível carregar os dados':'Aguarde um instante';
-    var detail=needs?'Informe a razão social e os dados fiscais do emitente.':pending?'Os cadastros ficam indisponíveis até a configuração do servidor ser concluída.':login?'Use seu e-mail e senha para abrir o painel.':cloud.status==='error'?'Tente novamente. Nenhum dado de exemplo será exibido.':'Os dados da empresa estão sendo carregados.';
-    var action=needs?'<div class="heading-actions" style="margin-top:10px"><button class="btn primary" data-action="configure-company">'+ico('plus')+' Cadastrar empresa</button></div>':cloud.status==='error'?'<div class="heading-actions" style="margin-top:10px"><button class="btn" data-action="check-connection">Tentar novamente</button></div>':'';
+    var title=billing?'Assinatura vencida':needs?'Cadastre a empresa para começar':pending?'O sistema ainda não está pronto para salvar':login?'Entre para acessar a empresa':cloud.status==='error'?'Não foi possível carregar os dados':'Aguarde um instante';
+    var detail=billing?'O acesso aos módulos está suspenso. Consulte boletos e Pix, informe um pagamento ou fale com a equipe financeira.':needs?'Informe a razão social e os dados fiscais do emitente.':pending?'Os cadastros ficam indisponíveis até a configuração do servidor ser concluída.':login?'Use seu e-mail e senha para abrir o painel.':cloud.status==='error'?'Tente novamente. Nenhum dado de exemplo será exibido.':'Os dados da empresa estão sendo carregados.';
+    var action=billing?'<div class="heading-actions" style="margin-top:10px"><button class="btn primary" data-action="open-billing">'+ico('receipt')+' Ver cobranças</button></div>':needs?'<div class="heading-actions" style="margin-top:10px"><button class="btn primary" data-action="configure-company">'+ico('plus')+' Cadastrar empresa</button></div>':cloud.status==='error'?'<div class="heading-actions" style="margin-top:10px"><button class="btn" data-action="check-connection">Tentar novamente</button></div>':'';
     return '<div class="banner"><span class="banner-icon">'+ico('shield')+'</span><div class="banner-text"><strong>'+title+'</strong><p>'+detail+'</p>'+action+'</div></div>';
   }
   function stat(label,value,icon,color,foot){return '<article class="stat-card"><div class="stat-top"><span>'+h(label)+'</span><div class="stat-icon '+(color||'')+'">'+ico(icon)+'</div></div><div class="stat-value">'+h(value)+'</div><div class="stat-foot">'+h(foot)+'</div></article>';}
@@ -355,6 +355,8 @@
   }
   function companyFiscalFields(company,includeTaxSetup){
     var a=company.address||{};
+    var businessTypes=[['comercio','Comércio e loja'],['restaurante','Restaurante, bar e lanchonete'],['mercado','Mercado e supermercado'],['farmacia','Farmácia e drogaria'],['distribuidora','Distribuidora e atacado'],['industria','Indústria e fabricação'],['logistica','Logística e transportadora'],['tecnologia','Tecnologia e informática'],['assistencia_tecnica','Assistência técnica e manutenção'],['servicos','Prestação de serviços'],['saude','Clínica e saúde'],['construcao','Construção e materiais'],['agronegocio','Agronegócio'],['hotelaria','Hotelaria e hospedagem'],['petshop','Pet shop e veterinária'],['educacao','Educação'],['beleza','Salão e beleza'],['outros','Outro segmento']];
+    var businessTypeOptions='<option value="">Selecione o segmento</option>'+businessTypes.map(function(item){return '<option value="'+item[0]+'" '+(String(company.business_type||'')===item[0]?'selected':'')+'>'+item[1]+'</option>';}).join('');
     var regimes=[['mei','MEI'],['simples_nacional','Simples Nacional'],['lucro_presumido','Lucro Presumido'],['lucro_real','Lucro Real'],['outro','Outro']];
     var selectedRegime=company.tax_regime_confirmed===true?company.tax_regime:'';
     var confirmationAvailable=company.tax_regime_confirmation_available===true;
@@ -363,6 +365,7 @@
       '<label class="field full" style="display:flex;align-items:flex-start;gap:9px"><input type="checkbox" name="taxRegimeConfirmed" value="true" '+(company.tax_regime_confirmed===true?'checked ':'')+(!confirmationAvailable?'disabled ':'')+'style="width:auto;margin-top:3px"><span>Confirmo que este regime foi conferido com a contabilidade.</span></label>'+
       (!confirmationAvailable?'<p class="small-note field full">A confirmação do regime ainda não está disponível.</p>':'');
     return '<div class="field full"><strong>Identificação e contato fiscal</strong></div>'+
+      '<label class="field full"><span>Atividade principal da empresa *</span><select name="businessType" required>'+businessTypeOptions+'</select><small>Esse segmento organiza a configuração do ERP. Os recursos específicos aparecem conforme forem habilitados no plano.</small></label>'+
       (includeTaxSetup?'<div class="field full"><strong>Enquadramento tributário</strong></div>'+regimeBlock:'')+
       field('tradeName','Nome fantasia',company.trade_name||'','maxlength="160"',false)+
       lookupField('cnpj','CNPJ (numérico ou alfanumérico)',company.cnpj||'','maxlength="18" placeholder="00.000.000/0000-00"','cnpj',false)+'<p class="lookup-note field full" data-cnpj-lookup-status role="status" aria-live="polite" hidden></p>'+
@@ -514,6 +517,7 @@
     if(a==='close-modal'){closeModal();return;}
     if(a==='lookup-cep'||a==='lookup-cnpj'){lookupRegistration(b,a.substring(7));return;}
     if(a==='configure-company'){openCompanyEditor();return;}
+    if(a==='open-billing'){window.location.href='/billing';return;}
     if(a==='check-connection'){checkConnection();return;}
     if(a==='retry-data'){var retryScope=scopeForView(view);if(retryScope){scopeErrors[retryScope]='';refreshCloud(retryScope).catch(function(error){toast(error.message,'error');});}return;}
     if(a==='logout'){var workspaceMenu=document.getElementById('workspaceMenu');if(workspaceMenu)workspaceMenu.open=false;window.location.assign('/logout');return;}
