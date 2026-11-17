@@ -295,3 +295,276 @@ body:not(:has(> .app-shell)) .commercial-page>#nfceNotice{margin:12px 0;padding:
   .nfce-card-heading{flex-direction:column}
   .nfce-compose-panel #nfceForm{padding:13px}
 }
+
+/* Mobile navigation: keep the company controls and every module reachable without clipping. */
+@media (max-width: 1080px) {
+  .erp-global-nav {
+    grid-template-columns: minmax(0, 1fr) auto auto !important;
+    grid-template-rows: 54px 44px !important;
+    grid-template-areas: "brand toggle actions" "context context context" !important;
+    align-items: center;
+    gap: 0 8px !important;
+    min-width: 0;
+    padding: 6px 14px 0 !important;
+    overflow: visible;
+  }
+
+  .erp-global-nav .erp-global-brand {
+    grid-area: brand;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .erp-global-nav .erp-nav-toggle {
+    grid-area: toggle;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: max-content;
+    min-width: 0 !important;
+    min-height: 36px !important;
+    padding: 0 10px !important;
+    white-space: nowrap;
+  }
+
+  .erp-global-nav .erp-global-actions {
+    grid-area: actions;
+    display: flex !important;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .erp-global-nav .erp-global-links {
+    position: absolute !important;
+    top: calc(100% + 2px) !important;
+    right: 10px !important;
+    left: 10px !important;
+    display: none !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: auto !important;
+    max-height: calc(100dvh - 100px) !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    padding: 10px !important;
+    border: 1px solid var(--sf-line) !important;
+    border-radius: 0 0 14px 14px !important;
+    background: var(--sf-surface) !important;
+    box-shadow: var(--sf-pop) !important;
+  }
+
+  .erp-global-nav.menu-open .erp-global-links {
+    display: flex !important;
+  }
+
+  .erp-global-nav .erp-global-links > a,
+  .erp-global-nav .erp-global-links summary {
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
+  }
+
+  .erp-global-nav .erp-global-links details > div {
+    position: static !important;
+    display: grid !important;
+    min-width: 0 !important;
+    gap: 2px;
+    padding: 3px 0 5px 14px !important;
+    border: 0 !important;
+    border-left: 1px solid var(--sf-line) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .erp-context-nav {
+    grid-area: context;
+    min-width: 0;
+    width: auto;
+    margin: 0 -14px;
+    padding-inline: 14px;
+    gap: 10px;
+  }
+
+  .erp-context-title {
+    flex: 0 0 auto;
+    min-width: 88px;
+  }
+
+  .erp-context-links {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-right: 0 !important;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 760px) {
+  .erp-global-nav {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-rows: minmax(50px, auto) 40px 44px !important;
+    grid-template-areas: "brand workspace" "toggle theme" "context context" !important;
+    gap: 0 8px !important;
+    padding: 7px 12px 0 !important;
+  }
+
+  .erp-global-nav .erp-global-brand {
+    grid-area: brand;
+    overflow: hidden;
+  }
+
+  .erp-global-brand > span {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .erp-global-brand strong {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .erp-global-nav .erp-global-actions {
+    display: contents !important;
+  }
+
+  .erp-global-actions .erp-workspace-menu {
+    grid-area: workspace;
+    justify-self: end;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .erp-global-actions .erp-workspace-switch {
+    max-width: min(175px, 42vw) !important;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .erp-global-actions .erp-environment-status,
+  .erp-global-actions .global-search {
+    display: none !important;
+  }
+
+  .erp-global-nav .theme-toggle {
+    grid-area: theme;
+    justify-self: end;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 34px !important;
+    padding-inline: 10px !important;
+    font-size: 11px !important;
+    white-space: nowrap;
+  }
+
+  .erp-global-nav .erp-nav-toggle {
+    grid-area: toggle;
+    justify-self: start;
+    min-width: 0 !important;
+    min-height: 34px !important;
+    padding-inline: 10px !important;
+  }
+
+  .erp-global-nav .erp-nav-toggle span:last-child {
+    display: inline !important;
+  }
+
+  .erp-global-nav .erp-global-links {
+    right: 10px !important;
+    left: 10px !important;
+  }
+
+  .erp-context-nav {
+    min-height: 42px;
+    margin-inline: -12px;
+    padding-inline: 12px;
+  }
+
+  .erp-context-title {
+    min-width: 76px;
+  }
+
+  .erp-context-title small {
+    display: none !important;
+  }
+
+  .erp-context-links {
+    gap: 3px;
+    scrollbar-width: thin;
+  }
+
+  .erp-context-links a {
+    flex: 0 0 auto;
+    min-height: 30px;
+    padding-inline: 8px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 400px) {
+  .erp-global-nav {
+    grid-template-rows: minmax(48px, auto) 38px 42px !important;
+    gap: 0 6px !important;
+    padding-inline: 10px !important;
+  }
+
+  .erp-global-brand {
+    gap: 6px !important;
+  }
+
+  .erp-global-brand img {
+    width: 32px !important;
+    height: 32px !important;
+    flex: 0 0 32px;
+  }
+
+  .erp-global-brand strong {
+    font-size: 14px !important;
+  }
+
+  .erp-global-actions .erp-workspace-switch {
+    max-width: 132px !important;
+    padding-inline: 5px !important;
+  }
+
+  .erp-global-actions .erp-workspace-name strong {
+    max-width: 78px;
+    font-size: 10px;
+  }
+
+  .erp-global-actions .erp-workspace-avatar {
+    width: 24px;
+    height: 24px;
+    flex-basis: 24px;
+  }
+
+  .erp-global-nav .theme-toggle {
+    min-height: 32px !important;
+    padding-inline: 8px !important;
+    font-size: 10px !important;
+  }
+
+  .erp-global-nav .erp-nav-toggle {
+    min-height: 32px !important;
+    padding-inline: 8px !important;
+    font-size: 11px !important;
+  }
+
+  .erp-context-title {
+    min-width: 66px;
+  }
+
+  .erp-context-links a {
+    padding-inline: 7px;
+    font-size: 10px;
+  }
+}
