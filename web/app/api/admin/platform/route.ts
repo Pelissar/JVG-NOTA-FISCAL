@@ -275,13 +275,17 @@ export async function PATCH(request: Request) {
       const companyId = str(body.companyId, 40);
       const operation = str(body.operation, 20);
       if (!UUID.test(companyId) || !["activate", "pause", "cancel"].includes(operation)) throw new JvgBackendError("Empresa ou operação inválida.", 400);
-      const companies = await dbRequest<Array<{ id: string; tenant_id: string }>>(`/rest/v1/jvg_companies?id=${filterEq(companyId)}&select=id,tenant_id&limit=1`);
+      const companies = await dbRequest<Array<{ id: string; tenant_id: string; business_type: string | null }>>(`/rest/v1/jvg_companies?id=${filterEq(companyId)}&select=id,tenant_id,business_type&limit=1`);
       const company = companies[0];
       if (!company) throw new JvgBackendError("Empresa não encontrada.", 404);
       if (operation === "activate") {
         const planCode = str(body.planCode, 40);
-        const plan = await dbRequest<Array<{ code: string; billing_interval: string }>>(`/rest/v1/jvg_subscription_plans?code=${filterEq(planCode)}&active=eq.true&select=code,billing_interval&limit=1`);
+        const plan = await dbRequest<Array<{ code: string; billing_interval: string; enabled_business_types: string[] | null }>>(`/rest/v1/jvg_subscription_plans?code=${filterEq(planCode)}&active=eq.true&select=code,billing_interval,enabled_business_types&limit=1`);
         if (!plan[0]) throw new JvgBackendError("Escolha um plano ativo.", 400);
+        const businessType = company.business_type || "comercio";
+        if (!plan[0].enabled_business_types?.includes(businessType)) {
+          throw new JvgBackendError("Este plano não está disponível para o segmento desta empresa. Escolha um plano compatível ou ajuste os segmentos do plano.", 400);
+        }
         const requestedEnd = str(body.endsAt, 32);
         const end = requestedEnd ? new Date(`${requestedEnd}T23:59:59.000Z`).toISOString() : new Date(Date.now() + planDays(plan[0].billing_interval) * 86400000).toISOString();
         if (!Number.isFinite(Date.parse(end)) || Date.parse(end) <= Date.now()) throw new JvgBackendError("A vigência deve terminar em uma data futura.", 400);
