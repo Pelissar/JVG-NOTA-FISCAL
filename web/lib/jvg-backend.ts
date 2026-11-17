@@ -145,12 +145,15 @@ export async function getSiteAccount(user: JvgAuthUser, options: SiteAccountOpti
     if (!memberships.length || !tenantIds.length) return null;
 
     const tenantFilter = encodeURIComponent(`in.(${tenantIds.join(",")})`);
+    const tenantStatusFilter = options.allowBillingLocked
+      ? "status=in.(pilot,active,suspended)"
+      : "status=in.(pilot,active)";
     const [tenantMemberships, tenants] = await Promise.all([
       dbRequest<Array<{ tenant_id: string }>>(
         `/rest/v1/jvg_tenant_memberships?user_id=${filterEq(user.userId)}&active=eq.true&tenant_id=${tenantFilter}&select=tenant_id&limit=50`,
       ),
       dbRequest<Array<{ id: string; status: string }>>(
-        `/rest/v1/jvg_tenants?id=${tenantFilter}&status=in.(${options.allowBillingLocked ? "pilot,active,suspended" : "pilot,active"})&select=id,status&limit=50`,
+        `/rest/v1/jvg_tenants?id=${tenantFilter}&${tenantStatusFilter}&select=id,status&limit=50`,
       ),
     ]);
     const activeTenantIds = new Set(tenantMemberships.map((membership) => membership.tenant_id));

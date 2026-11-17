@@ -311,9 +311,13 @@ export async function POST(request: Request) {
         cofinsCst: String(product.default_cofins_cst || ""),
       };
       const profileOrInput = (key: "csosn" | "pisCst" | "cofinsCst", defaultValue = "") => {
-        if (manuallyEdited.has(key)) return input[key];
+        const entered = input[key];
+        if (manuallyEdited.has(key)) {
+          if (entered) return entered;
+          return "";
+        }
         // Rascunhos antigos não tinham rastreamento de edição explícita.
-        if (!input.manualTaxFieldsProvided && input[key]) return input[key];
+        if (!input.manualTaxFieldsProvided && entered) return entered;
         return ruleText(configuredRule, key) || productTaxDefaults[key] || defaultValue;
       };
       const itemCsosn = profileOrInput("csosn");
