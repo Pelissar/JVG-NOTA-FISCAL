@@ -10,18 +10,27 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}
 const safeFields = ["status", "status_sefaz", "mensagem_sefaz", "ref", "chave_nfe", "numero", "serie", "protocolo", "numero_protocolo", "codigo_status", "erro", "mensagem", "caminho_xml_nota_fiscal", "caminho_danfe", "eventos"];
 function obj(value: unknown): Row { return value && typeof value === "object" && !Array.isArray(value) ? value as Row : {}; }
 function text(value: unknown, max = 2000): string { return typeof value === "string" || typeof value === "number" ? String(value).trim().slice(0, max) : ""; }
+function safeEvents(value: unknown): Array<string | Row> {
+  if (!Array.isArray(value)) return [];
+  const events: Array<string | Row> = [];
+  for (const item of value.slice(0, 20)) {
+    if (typeof item === "string" && item.length <= 500) {
+      events.push(item);
+      continue;
+    }
+    const event = obj(item);
+    const safe = Object.fromEntries(Object.entries(event).filter(([name, child]) => /^[A-Za-z0-9_]{1,50}$/.test(name) && ((typeof child === "string" && child.length <= 500) || (typeof child === "number" && Number.isFinite(child)))));
+    if (Object.keys(safe).length) events.push(safe);
+  }
+  return events;
+}
 function scope(account: SiteAccount): string { return "tenant_id=" + filterEq(account.tenant_id) + "&company_id=" + filterEq(account.company_id); }
 function safeResponse(raw: unknown): Row {
   const source = obj(raw), result: Row = {};
   for (const key of safeFields) {
     const value = source[key];
     if ((typeof value === "string" && value.length <= 2000) || (typeof value === "number" && Number.isFinite(value))) result[key] = value;
-    else if (key === "eventos" && Array.isArray(value)) result[key] = value.slice(0, 20).flatMap(item => {
-      if (typeof item === "string" && item.length <= 500) return [item];
-      const event = obj(item);
-      const safe = Object.fromEntries(Object.entries(event).filter(([name, child]) => /^[A-Za-z0-9_]{1,50}$/.test(name) && ((typeof child === "string" && child.length <= 500) || (typeof child === "number" && Number.isFinite(child)))));
-      return Object.keys(safe).length ? [safe] : [];
-    });
+    else if (key === "eventos" && Array.isArray(value)) result[key] = safeEvents(value);
   }
   return result;
 }

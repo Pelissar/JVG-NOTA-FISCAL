@@ -14,6 +14,22 @@ const allowedResponseFields = new Set([
 
 function obj(value: unknown): Row { return value && typeof value === "object" && !Array.isArray(value) ? value as Row : {}; }
 function text(value: unknown, max = 2000): string { return typeof value === "string" || typeof value === "number" ? String(value).trim().slice(0, max) : ""; }
+function safeEvents(value: unknown): Array<string | Row> {
+  if (!Array.isArray(value)) return [];
+  const events: Array<string | Row> = [];
+  for (const item of value.slice(0, 20)) {
+    if (typeof item === "string" && item.length <= 500) {
+      events.push(item);
+      continue;
+    }
+    const event = obj(item);
+    const selected = Object.fromEntries(Object.entries(event).filter(([name, field]) =>
+      /^[a-zA-Z0-9_]{1,50}$/.test(name) &&
+      ((typeof field === "string" && field.length <= 500) || (typeof field === "number" && Number.isFinite(field)))));
+    if (Object.keys(selected).length) events.push(selected);
+  }
+  return events;
+}
 function scope(account: SiteAccount): string { return "tenant_id=" + filterEq(account.tenant_id) + "&company_id=" + filterEq(account.company_id); }
 function safeProviderResponse(raw: unknown): Row {
   const source = obj(raw), safe: Row = {};
@@ -21,14 +37,7 @@ function safeProviderResponse(raw: unknown): Row {
     const value = source[key];
     if (typeof value === "string" && value.length <= 2000) safe[key] = value;
     else if (typeof value === "number" && Number.isFinite(value)) safe[key] = value;
-    else if (key === "eventos" && Array.isArray(value)) safe[key] = value.slice(0, 20).flatMap(item => {
-      if (typeof item === "string" && item.length <= 500) return [item];
-      const event = obj(item);
-      const selected = Object.fromEntries(Object.entries(event).filter(([name, field]) =>
-        /^[a-zA-Z0-9_]{1,50}$/.test(name) &&
-        ((typeof field === "string" && field.length <= 500) || (typeof field === "number" && Number.isFinite(field)))));
-      return Object.keys(selected).length ? [selected] : [];
-    });
+    else if (key === "eventos" && Array.isArray(value)) safe[key] = safeEvents(value);
   }
   return safe;
 }
