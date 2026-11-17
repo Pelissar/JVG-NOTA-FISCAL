@@ -126,11 +126,10 @@ async function enforceSubscriptionAccess(account: SiteAccount): Promise<void> {
 export async function getSiteAccount(user: JvgAuthUser, options: SiteAccountOptions = {}): Promise<SiteAccount | null> {
   let account: SiteAccount | null = null;
   try {
-    const resolver = options.allowBillingLocked ? "jvg_resolve_billing_account" : "jvg_resolve_site_account";
-    const resolved = await dbRequest<SiteAccount[]>(`/rest/v1/rpc/${resolver}`, {
-      method: "POST",
-      body: JSON.stringify({ p_user_id: user.userId }),
-    });
+    const resolverPayload = { method: "POST", body: JSON.stringify({ p_user_id: user.userId }) } as const;
+    const resolved = options.allowBillingLocked
+      ? await dbRequest<SiteAccount[]>("/rest/v1/rpc/jvg_resolve_billing_account", resolverPayload)
+      : await dbRequest<SiteAccount[]>("/rest/v1/rpc/jvg_resolve_site_account", resolverPayload);
     account = resolved[0] ?? null;
   } catch {
     // Preview environments may not have received the security migration yet.

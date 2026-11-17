@@ -305,21 +305,26 @@ export async function POST(request: Request) {
       const profileOperations = asRecord(profileRules.operations);
       const configuredRule = asRecord(profileOperations[review.operation]);
       const manuallyEdited = new Set(input.manualTaxFields);
-      const profileOrInput = (key: "csosn" | "pisCst" | "cofinsCst", productDefault = "", defaultValue = "") => {
+      const productTaxDefaults = {
+        csosn: String(product.default_csosn || ""),
+        pisCst: String(product.default_pis_cst || ""),
+        cofinsCst: String(product.default_cofins_cst || ""),
+      };
+      const profileOrInput = (key: "csosn" | "pisCst" | "cofinsCst", defaultValue = "") => {
         if (manuallyEdited.has(key)) return input[key];
         // Rascunhos antigos não tinham rastreamento de edição explícita.
         if (!input.manualTaxFieldsProvided && input[key]) return input[key];
-        return ruleText(configuredRule, key) || productDefault || defaultValue;
+        return ruleText(configuredRule, key) || productTaxDefaults[key] || defaultValue;
       };
-      const itemCsosn = profileOrInput("csosn", String(product.default_csosn || ""));
+      const itemCsosn = profileOrInput("csosn");
       const commonSimplesSale = company.tax_regime === "simples_nacional" && company.tax_regime_confirmed === true &&
         ["5101", "5102", "6101", "6102"].includes(input.cfop) && (!itemCsosn || itemCsosn === "102");
       // A Receita orienta CST 49 para receita comum recolhida pelo DAS. As
       // exceções (monofásico, ST, exportação etc.) devem estar configuradas
       // no produto/perfil; nenhum valor de imposto é calculado aqui.
       const defaultPisCofinsCst = commonSimplesSale ? "49" : "";
-      const pisCst = profileOrInput("pisCst", String(product.default_pis_cst || ""), defaultPisCofinsCst);
-      const cofinsCst = profileOrInput("cofinsCst", String(product.default_cofins_cst || ""), defaultPisCofinsCst);
+      const pisCst = profileOrInput("pisCst", defaultPisCofinsCst);
+      const cofinsCst = profileOrInput("cofinsCst", defaultPisCofinsCst);
       const configuredFocusFields = asRecord(configuredRule.focusFields);
       const storedFocusFields = inspectFocusTaxFields({ ...configuredFocusFields, ...input.focusFields }).fields;
       const focusFields = filterFocusTaxFieldsForRule(

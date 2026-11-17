@@ -307,7 +307,7 @@ export function parseNfeDraftInput(raw: unknown): NfeDraftInput {
     catch (error) { throw new Error(error instanceof Error ? error.message : "Campos fiscais do item inválidos."); }
     const manualTaxFieldsProvided = Array.isArray(p.manualTaxFields);
     const manualTaxFields = manualTaxFieldsProvided
-      ? [...new Set(p.manualTaxFields.filter((field): field is string => typeof field === "string"))]
+      ? [...new Set((p.manualTaxFields as unknown[]).filter((field: unknown): field is string => typeof field === "string"))]
       : [];
     if (manualTaxFields.some(field => !editableTaxFields.has(field)))
       throw new Error("A lista de campos fiscais editados contém um campo inválido.");
