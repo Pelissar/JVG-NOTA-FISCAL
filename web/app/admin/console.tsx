@@ -44,10 +44,14 @@ export function AdminConsole({ name }: { name: string }) {
   const [needsMigration, setNeedsMigration] = useState(false);
   const [busy, setBusy] = useState("");
 
-  async function load() {
+  async function load(): Promise<LicensePayload> {
     const response = await fetch("/api/admin/licenses", { cache: "no-store" });
     const data = await response.json() as LicensePayload;
     if (!response.ok) throw new Error(data.error || "Não foi possível carregar as licenças.");
+    return data;
+  }
+
+  function applyLicenseData(data: LicensePayload) {
     setNeedsMigration(Boolean(data.needsMigration));
     setCompanies(data.companies || []);
     setPlans(data.plans || []);
@@ -55,7 +59,15 @@ export function AdminConsole({ name }: { name: string }) {
     setMessage(data.needsMigration ? "Falta aplicar a migration de licenças no Supabase." : "");
   }
 
-  useEffect(() => { load().catch((error: Error) => setMessage(error.message)); }, []);
+  useEffect(() => {
+    let active = true;
+    void load().then((data) => {
+      if (active) applyLicenseData(data);
+    }).catch((error: Error) => {
+      if (active) setMessage(error.message);
+    });
+    return () => { active = false; };
+  }, []);
 
   async function send(companyId: string, body: Record<string, unknown>) {
     setBusy(companyId);
@@ -65,7 +77,7 @@ export function AdminConsole({ name }: { name: string }) {
       });
       const data = await response.json() as LicensePayload;
       if (!response.ok) throw new Error(data.error || "Não foi possível salvar.");
-      await load();
+      applyLicenseData(await load());
       setMessage("Salvo.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Não foi possível salvar.");

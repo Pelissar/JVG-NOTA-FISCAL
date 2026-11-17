@@ -26,12 +26,14 @@ export default function LoginPage() {
   useEffect(() => {
     const savedTheme = window.localStorage.getItem("sigmafiscal-theme") === "dark" ? "dark" : "light";
     document.documentElement.dataset.theme = savedTheme;
-    setTheme(savedTheme);
+    const themeFrame = window.requestAnimationFrame(() => setTheme(savedTheme));
     const client = browserAuth();
-    if (!client) return;
-    void client.auth.getUser().then(({ data }) => {
-      if (data.user) window.location.replace("/erp/index.html");
-    });
+    if (client) {
+      void client.auth.getUser().then(({ data }) => {
+        if (data.user) window.location.replace("/erp/index.html");
+      });
+    }
+    return () => window.cancelAnimationFrame(themeFrame);
   }, []);
 
   function toggleTheme() {
