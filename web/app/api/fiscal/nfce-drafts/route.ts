@@ -2,9 +2,11 @@ import { getJvgUser } from "../../../jvg-auth";
 import { apiJson, dbRequest, filterEq, getCompany, getSiteAccount, isSameOrigin, JvgBackendError, safeError, type SiteAccount } from "../../../../lib/jvg-backend";
 import { buildNfceHomologacaoPayload, type NfceItemInput } from "../../../../lib/fiscal/nfce-payload";
 import { focusReferenceForFiscalDocument } from "../../../../lib/focus/client";
+import { focusRuntimeEnv } from "../../../../lib/focus/runtime-env";
 
 export const dynamic = "force-dynamic";
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+type Row = Record<string, unknown>;
 
 async function account(): Promise<SiteAccount> {
   const user = await getJvgUser();
@@ -19,13 +21,68 @@ function scope(site: SiteAccount): string {
   return `tenant_id=${filterEq(site.tenant_id)}&company_id=${filterEq(site.company_id)}`;
 }
 
+function obj(value: unknown): Row {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Row : {};
+}
+
+function cleanText(value: unknown, max: number): string {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
+function simpleConfirmed(company: Row): boolean {
+  return company.tax_regime_confirmed === true && ["simples_nacional", "1"].includes(String(company.tax_regime || "").trim().toLowerCase());
+}
+
+function operationForCfop(cfop: string): "interna" | "interestadual" {
+  return cfop.startsWith("6") ? "interestadual" : "interna";
+}
+
+function profileRule(profile: Row | undefined, operation: "interna" | "interestadual"): Row {
+  const rules = obj(profile?.rules);
+  return obj(obj(rules.operations)[operation]);
+}
+
+function safeProviderResponse(value: unknown): Row {
+  const source = obj(value);
+  const allowed = ["status", "status_sefaz", "mensagem_sefaz", "ref", "chave_nfe", "numero", "serie", "protocolo",
+    "numero_protocolo", "codigo_status", "erro", "mensagem", "caminho_xml_nota_fiscal", "caminho_danfe", "eventos"];
+  const output: Row = {};
+  for (const key of allowed) {
+    const item = source[key];
+    if (typeof item === "string" && item.length <= 2000) output[key] = item;
+    else if (typeof item === "number" && Number.isFinite(item)) output[key] = item;
+    else if (key === "eventos" && Array.isArray(item)) output[key] = item.slice(0, 30);
+  }
+  return output;
+}
+
 export async function GET() {
   try {
     const site = await account();
-    const rows = await dbRequest<Array<Record<string, unknown>>>(
-      `/rest/v1/jvg_fiscal_documents?${scope(site)}&document_type=eq.nfce&environment=eq.homologacao&select=id,status,document_number,series,access_key,created_at,updated_at&order=created_at.desc&limit=20`,
-    );
-    return apiJson({ environment: "homologacao", documents: rows });
+    const [documents, products, profiles, company] = await Promise.all([
+      dbRequest<Row[]>(`/rest/v1/jvg_fiscal_documents?${scope(site)}&document_type=eq.nfce&environment=eq.homologacao&select=id,status,document_number,series,access_key,focus_reference,provider_response,xml_storage_path,pdf_storage_path,fiscal_payload,created_at,updated_at&order=created_at.desc&limit=30`),
+      dbRequest<Row[]>(`/rest/v1/jvg_products?${scope(site)}&active=eq.true&select=id,tax_profile_id&limit=1000`),
+      dbRequest<Row[]>(`/rest/v1/jvg_tax_profiles?${scope(site)}&document_type=eq.nfe&select=id,name,rules,review_status&order=created_at.desc&limit=200`),
+      getCompany(site),
+    ]);
+    const pilotCompanyId = focusRuntimeEnv("JVG_FOCUS_PILOT_COMPANY_ID");
+    const isJvgPilot = Boolean(pilotCompanyId && site.company_id === pilotCompanyId);
+    return apiJson({
+      environment: "homologacao",
+      documents: documents.map(row => {
+        const stored = obj(row.fiscal_payload);
+        const publicRow = { ...row };
+        delete publicRow.fiscal_payload;
+        return {
+          ...publicRow,
+          totalCents: Number.isSafeInteger(stored.totalCents) ? stored.totalCents : 0,
+          provider_response: safeProviderResponse(obj(row.provider_response).response),
+        };
+      }),
+      productProfileIds: Object.fromEntries(products.map(product => [String(product.id), String(product.tax_profile_id || "")])),
+      profiles,
+      defaults: { isJvgPilot, simplesNacionalConfirmado: company ? simpleConfirmed(company) : false },
+    });
   } catch (error) { return safeError(error); }
 }
 
@@ -33,50 +90,82 @@ export async function POST(request: Request) {
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {
     const site = await account();
-    const body = await request.json() as Record<string, unknown>;
+    const body = await request.json() as Row;
     const company = await getCompany(site);
     if (!company) throw new JvgBackendError("Empresa emitente não encontrada.", 404);
     const rawItems = Array.isArray(body.items) ? body.items : [];
-    const productIds = rawItems.map((item) => (item && typeof item === "object" ? String((item as { productId?: string }).productId || "") : "")).filter((id) => uuidPattern.test(id));
-    if (!productIds.length) throw new JvgBackendError("Selecione ao menos um produto.", 400);
-    const products = await dbRequest<Array<Record<string, unknown>>>(
-      `/rest/v1/jvg_products?${scope(site)}&id=in.(${productIds.join(",")})&active=eq.true&select=id,sku,name,ncm,unit,origin,default_cfop,sale_price&limit=20`,
+    if (!rawItems.length || rawItems.length > 20) throw new JvgBackendError("Informe de 1 a 20 itens para preparar a NFC-e.", 400);
+    const productIds = rawItems.map(raw => cleanText(obj(raw).productId, 80));
+    if (productIds.some(id => !uuidPattern.test(id))) throw new JvgBackendError("Selecione um produto cadastrado em cada item.", 400);
+    const uniqueIds = [...new Set(productIds)];
+    const products = await dbRequest<Row[]>(
+      `/rest/v1/jvg_products?${scope(site)}&id=in.(${uniqueIds.join(",")})&active=eq.true&select=id,sku,name,ncm,cest,unit,origin,default_cfop,sale_price,tax_profile_id&limit=20`,
     );
-    const byId = new Map(products.map((product) => [String(product.id), product]));
-    const items: NfceItemInput[] = rawItems.map((raw) => {
-      const item = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
-      const product = byId.get(String(item.productId || ""));
-      const cfop = typeof item.cfop === "string" && item.cfop.trim() ? item.cfop.trim() : String(product?.default_cfop || "");
+    const byId = new Map(products.map(product => [String(product.id), product]));
+    if (productIds.some(id => !byId.has(id))) throw new JvgBackendError("Um produto não pertence a esta empresa ou está inativo. Atualize a seleção e tente novamente.", 400);
+    const profileIds = [...new Set(products.map(product => cleanText(product.tax_profile_id, 80)).filter(Boolean))];
+    const profiles = profileIds.length
+      ? await dbRequest<Row[]>(`/rest/v1/jvg_tax_profiles?${scope(site)}&id=in.(${profileIds.join(",")})&document_type=eq.nfe&select=id,rules,review_status&limit=200`)
+      : [];
+    const byProfile = new Map(profiles.map(profile => [String(profile.id), profile]));
+    const isPilotCompany = focusRuntimeEnv("JVG_FOCUS_PILOT_COMPANY_ID") === site.company_id;
+    const canUseJvgDefault = isPilotCompany && simpleConfirmed(company);
+    const rawNfeItems = rawItems.map(obj);
+    const items: NfceItemInput[] = rawNfeItems.map((input, index) => {
+      const product = byId.get(productIds[index])!;
+      const cfop = cleanText(input.cfop, 4) || cleanText(product.default_cfop, 4);
+      const operation = operationForCfop(cfop);
+      const rule = profileRule(byProfile.get(String(product.tax_profile_id || "")), operation);
+      const manual = new Set(Array.isArray(input.manualTaxFields)
+        ? input.manualTaxFields.filter((field): field is string => typeof field === "string") : []);
+      const entered = (key: string) => cleanText(input[key], key === "focusFields" ? 2000 : 20);
+      const choose = (key: "csosn" | "pisCst" | "cofinsCst", fallback = "") => {
+        if (manual.has(key)) return entered(key);
+        return entered(key) || cleanText(rule[key], 20) || fallback;
+      };
+      const csosn = choose("csosn", canUseJvgDefault && ["5101", "5102", "6101", "6102"].includes(cfop) ? "102" : "");
+      const pisCst = choose("pisCst");
+      const cofinsCst = choose("cofinsCst");
+      const productCest = cleanText(product.cest, 20).replace(/\D/g, "");
+      const enteredCest = cleanText(input.cest, 20).replace(/\D/g, "");
+      const focusFields = obj(input.focusFields);
+      const profileFocusFields = obj(rule.focusFields);
+      const mergedFocusFields: Row = { ...profileFocusFields, ...focusFields };
+      if (Array.isArray(input.manualFocusFields)) {
+        for (const field of input.manualFocusFields) {
+          if (typeof field === "string" && !Object.hasOwn(focusFields, field)) delete mergedFocusFields[field];
+        }
+      }
       return {
-        sku: String(product?.sku || ""),
-        name: String(product?.name || ""),
-        ncm: String(product?.ncm || ""),
-        cfop,
-        unit: String(product?.unit || "UN"),
-        origin: String(product?.origin || ""),
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice ?? product?.sale_price),
+        sku: cleanText(product.sku, 60), name: cleanText(product.name, 120),
+        ncm: cleanText(input.ncm, 20) || cleanText(product.ncm, 20), cest: enteredCest || productCest,
+        cfop, unit: cleanText(product.unit, 6), origin: cleanText(input.origin, 3) || cleanText(product.origin, 3),
+        quantity: Number(input.quantity), unitPrice: Number(input.unitPrice ?? product.sale_price),
+        csosn, pisCst, cofinsCst, focusFields: mergedFocusFields,
       };
     });
     const built = buildNfceHomologacaoPayload({
       company,
       items,
-      cpf: typeof body.cpf === "string" ? body.cpf : "",
-      paymentMethod: typeof body.paymentMethod === "string" ? body.paymentMethod : "",
-      naturezaOperacao: typeof body.naturezaOperacao === "string" ? body.naturezaOperacao : "",
+      cpf: cleanText(body.cpf, 20),
+      paymentMethod: cleanText(body.paymentMethod, 2),
+      naturezaOperacao: cleanText(body.naturezaOperacao, 60),
+      localDestino: cleanText(body.localDestino, 1),
+      presencaComprador: cleanText(body.presencaComprador, 1),
     });
-    if (built.issues.length) throw new JvgBackendError(built.issues[0], 400);
+    if (built.issues.length) return apiJson({ error: "A NFC-e não foi preparada. Corrija as pendências listadas.", issues: built.issues }, 400);
     const id = crypto.randomUUID();
+    const reference = focusReferenceForFiscalDocument(id);
     const saved = await dbRequest<Array<{ id: string }>>("/rest/v1/jvg_fiscal_documents", {
       method: "POST",
       body: JSON.stringify({
         id, tenant_id: site.tenant_id, company_id: site.company_id,
         document_type: "nfce", environment: "homologacao", status: "draft",
-        focus_reference: focusReferenceForFiscalDocument(id),
+        focus_reference: reference,
         idempotency_key: `nfce-${id}`,
-        fiscal_payload: { schema: "jvg_nfce_homologacao_v1", payload: built.payload, totalCents: built.totalCents },
+        fiscal_payload: { schema: "jvg_nfce_homologacao_v2", payload: built.payload, totalCents: built.totalCents },
       }),
     });
-    return apiJson({ ok: true, id: saved[0]?.id || id, environment: "homologacao", totalCents: built.totalCents }, 201);
+    return apiJson({ ok: true, id: saved[0]?.id || id, reference, environment: "homologacao", totalCents: built.totalCents, issues: [] }, 201);
   } catch (error) { return safeError(error); }
 }

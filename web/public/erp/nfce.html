@@ -4,35 +4,75 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#f4f6f8">
-  <title>NFC-e · JVG ERP</title>
+  <title>NFC-e · SigmaFiscal</title>
   <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
-  <link rel="stylesheet" href="/erp/styles.css"><link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css"><link rel="stylesheet" href="/erp/fiscal-document-switcher.css?v=20261113-2">
+  <link rel="stylesheet" href="/erp/styles.css">
+  <link rel="stylesheet" href="/erp/unified-pages.css">
+  <link rel="stylesheet" href="/erp/erp-design-v2.css">
+  <link rel="stylesheet" href="/erp/nfce-workspace.css?v=20261117-1">
   <script src="/erp/theme-switch.js"></script>
   <script defer src="/erp/erp-page-nav.js?v=20261116-fiscal-suite-3"></script>
-  <script defer src="/erp/nfce.js?v=20261116-nfce"></script>
-<link rel="stylesheet" href="/erp/site-refresh.css?v=20261116-fiscal-suite-3"></head>
+  <script defer src="/erp/nfce.js?v=20261117-1"></script>
+  <link rel="stylesheet" href="/erp/site-refresh.css?v=20261116-fiscal-suite-3">
+</head>
 <body>
   <div id="erpGlobalNav"></div>
-  <main class="commercial-page">
-    <nav class="fiscal-document-switcher" aria-label="Tipo de documento fiscal">
-      <a href="/erp/nfe.html"><strong>NF-e</strong><small>Mercadorias · Modelo 55</small></a>
-      <a href="/erp/nfce.html" aria-current="page"><strong>NFC-e</strong><small>Consumidor · Modelo 65</small></a>
-    </nav>
-    <div class="page-heading"><div><div class="eyebrow">FISCAL / HOMOLOGAÇÃO</div><h1>NFC-e</h1><p>Venda ao consumidor no ambiente de teste. Produção continua fechada.</p></div></div>
-    <p id="nfceNotice" class="sales-notice" role="status">Carregando produtos...</p>
-    <section class="panel nfce-compose-panel"><div class="nfce-card-heading"><div><span class="section-kicker">NOVA NOTA</span><h2>Preparar NFC-e de teste</h2><p>Confira os dados do consumidor, produto e pagamento antes de enviar à homologação.</p></div><span class="nfce-status-chip">Homologação</span></div><div class="nfce-preflight"><strong>Ambiente de teste</strong><span>A transmissão de produção permanece bloqueada. O botão de envio só será liberado após marcar a confirmação.</span></div><form id="nfceForm" class="os-form"><div class="os-form-grid">
-      <label>Natureza da operação<input id="nfceNature" maxlength="60" required value="VENDA AO CONSUMIDOR"></label>
-      <label>Produto<select id="nfceProduct" required></select></label>
-      <label>Quantidade<input id="nfceQuantity" type="number" min="0.001" max="9999" step="0.001" value="1" required></label>
-      <label>Preço unitário (R$)<input id="nfcePrice" type="number" min="0.01" step="0.01" required></label>
-      <label>CFOP<input id="nfceCfop" inputmode="numeric" maxlength="4" placeholder="Usa o CFOP do produto"></label>
-      <label>CPF do consumidor<input id="nfceCpf" inputmode="numeric" maxlength="14" placeholder="Opcional"></label>
-      <label>Pagamento<select id="nfcePayment"><option value="01">Dinheiro</option><option value="17">Pix</option><option value="03">Cartão de crédito</option><option value="04">Cartão de débito</option><option value="99">Outro</option></select></label>
-    </div>
-    <label class="issued-check-label" style="display:flex;gap:8px;align-items:flex-start;margin:12px 0"><input id="nfceConfirm" type="checkbox"><span>Confirmo que este envio é somente no ambiente de homologação.</span></label>
-    <div class="dialog-actions"><button class="btn" type="submit">Preparar NFC-e</button><button id="nfceSend" class="btn primary" type="button" disabled>Enviar teste</button></div>
-    </form></section>
-    <section class="panel nfce-history-panel"><div class="nfce-card-heading"><div><span class="section-kicker">DOCUMENTOS DA EMPRESA</span><h2>NFC-e desta empresa</h2><p>Notas e retornos registrados neste ambiente.</p></div><span class="nfce-status-chip">Homologação</span></div><div id="nfceList" class="commercial-table">Carregando...</div></section>
+  <main class="nfce-workspace">
+    <header class="nfce-page-heading">
+      <div>
+        <p class="eyebrow">FISCAL <span aria-hidden="true">/</span> CONSUMIDOR</p>
+        <h1>NFC-e</h1>
+        <p>Prepare e acompanhe notas de venda ao consumidor. Os envios desta tela usam exclusivamente a homologação da Focus.</p>
+      </div>
+      <span class="nfce-environment-pill"><span></span> Homologação</span>
+    </header>
+
+    <div id="nfceNotice" class="nfce-notice" role="status" aria-live="polite">Carregando dados fiscais...</div>
+
+    <section class="nfce-layout">
+      <div class="nfce-main-column">
+        <section class="panel nfce-compose-panel" aria-labelledby="nfceFormTitle">
+          <div class="nfce-card-heading">
+            <div><span class="section-kicker">NOVA NOTA · MODELO 65</span><h2 id="nfceFormTitle">Dados da venda</h2><p>Preencha a operação, o consumidor, os itens e o pagamento. Os códigos fiscais do produto e do perfil servem como sugestão editável.</p></div>
+          </div>
+          <form id="nfceForm" class="nfce-form">
+            <fieldset>
+              <legend>Operação</legend>
+              <div class="nfce-form-grid nfce-operation-grid">
+                <label>Natureza da operação <span class="required">*</span><input id="nfceNature" maxlength="60" required value="VENDA AO CONSUMIDOR"></label>
+                <label>Local da operação <span class="required">*</span><select id="nfceDestination" required><option value="">Selecione</option><option value="1">Dentro do estado</option><option value="2">Interestadual</option></select></label>
+                <label>Presença do comprador <span class="required">*</span><select id="nfcePresence" required><option value="">Selecione</option><option value="1">Presencial</option><option value="4">Entrega a domicílio</option></select></label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Item da NFC-e</legend>
+              <div id="nfceItems" class="nfce-items" aria-live="polite"></div>
+              <div class="nfce-item-toolbar"><p id="nfceTaxHint" class="nfce-help">Dados fiscais do produto e do perfil são sugestões. O que você ajustar aqui será enviado para este item.</p><button id="nfceAddItem" class="button-secondary" type="button">+ Adicionar item</button></div>
+            </fieldset>
+            <fieldset>
+              <legend>Consumidor e pagamento</legend>
+              <div class="nfce-form-grid nfce-payment-grid">
+                <label>CPF do consumidor <span class="optional">opcional</span><input id="nfceCpf" inputmode="numeric" maxlength="14" placeholder="Somente se informado na venda"></label>
+                <label>Forma de pagamento <span class="required">*</span><select id="nfcePayment" required><option value="">Selecione</option><option value="01">Dinheiro</option><option value="17">Pix</option><option value="03">Cartão de crédito</option><option value="04">Cartão de débito</option><option value="99">Outro</option></select></label>
+              </div>
+            </fieldset>
+            <div class="nfce-homologation-callout"><strong>Somente ambiente de teste</strong><span>Esta tela nunca chama o endpoint de produção. A emissão real permanece bloqueada no sistema.</span></div>
+            <label class="nfce-confirm"><input id="nfceConfirm" type="checkbox"><span>Confirmo que o envio será realizado somente em homologação.</span></label>
+            <div class="nfce-actions"><button id="nfcePrepare" class="button-secondary" type="submit">Preparar e revisar</button><button id="nfceSend" class="button-primary" type="button" disabled>Enviar NFC-e de teste</button></div>
+          </form>
+        </section>
+
+        <section class="panel nfce-history-panel" aria-labelledby="nfceHistoryTitle">
+          <div class="nfce-card-heading"><div><span class="section-kicker">HISTÓRICO</span><h2 id="nfceHistoryTitle">NFC-e desta empresa</h2><p>Veja o retorno da Focus, a chave de acesso e as ações de consulta.</p></div><button id="nfceRefresh" class="button-secondary" type="button">Atualizar</button></div>
+          <div id="nfceList" class="nfce-history-table">Carregando...</div>
+        </section>
+      </div>
+
+      <aside class="nfce-side-column">
+        <section class="panel nfce-review-card"><span class="section-kicker">CONFERÊNCIA</span><h2>Antes de enviar</h2><ul><li>Confira CFOP, CSOSN, CEST e NCM de cada produto.</li><li>Confirme CST de PIS/Cofins e valores condicionais para a operação.</li><li>A Focus valida a estrutura, mas não escolhe a tributação.</li></ul><p>Perfis fiscais são opcionais. Os dados ajustados no item prevalecem sobre as sugestões.</p></section>
+        <section class="panel nfce-preview-card"><span class="section-kicker">DOCUMENTO ATUAL</span><h2>Resumo</h2><dl><div><dt>Ambiente</dt><dd>Homologação</dd></div><div><dt>Valor total</dt><dd id="nfceTotal">R$ 0,00</dd></div><div><dt>Referência</dt><dd id="nfceReference">Ainda não preparado</dd></div></dl><div id="nfceIssues" class="nfce-issues" hidden></div></section>
+      </aside>
+    </section>
   </main>
 </body>
 </html>

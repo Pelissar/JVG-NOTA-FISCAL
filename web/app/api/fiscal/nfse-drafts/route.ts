@@ -121,9 +121,9 @@ async function existingDraft(account: SiteAccount, serviceOrderId: string) {
 }
 
 export async function GET() {
-  return apiJson({ error: "A nota de serviço saiu do sistema. A emissão agora é feita somente no portal." }, 410);
+  return apiJson({ error: "A NFS-e ainda está em preparação e não possui consulta de rascunhos habilitada. Use a área NFS-e para acompanhar os requisitos de configuração." }, 503);
 }
 
 export async function POST() {
-  return apiJson({ error: "A nota de serviço saiu do sistema. A emissão agora é feita somente no portal." }, 410);
+  return apiJson({ error: "A preparação de rascunhos de NFS-e ainda não está habilitada. Configure primeiro os dados municipais do prestador e a série da DPS." }, 503);
 }
