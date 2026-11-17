@@ -49,9 +49,9 @@
     var productCount=summary?Number(summary.productsCount||0):state.products.length;
     var clientCount=summary?Number(summary.clientsCount||0):state.clients.length;
     var quick=[
-      ['Nova venda','Registre uma operação comercial','cash','/erp/sales.html','Comercial'],
+      ['Registrar venda','Registre uma operação comercial','cash','/erp/sales.html','Comercial'],
       ['Novo orçamento','Prepare uma proposta para o cliente','receipt','/erp/quotes.html','Comercial'],
-      ['Acompanhar pedidos','Consulte pedidos em andamento','layers','/erp/orders.html','Comercial'],
+      ['Ver pedidos','Consulte pedidos em andamento','layers','/erp/orders.html','Comercial'],
       ['Abrir ordem de serviço','Receba equipamento para manutenção','tool','/erp/service-orders.html','Assistência'],
       ['Preparar NF-e','Monte uma nota para homologação','file','/erp/nfe.html','Fiscal'],
       ['Ver estoque','Consulte saldos e movimentações','warehouse','/erp/index.html#inventory','Operação']
