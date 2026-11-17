@@ -44,7 +44,7 @@
     ] },
     { label: 'Assistência', icon: 'wrench', links: [['Ordens de serviço', '/erp/service-orders.html', 'wrench']] },
     { label: 'Cadastros', icon: 'users', links: [['Pessoas e clientes', '/erp/index.html#clients', 'users'], ['Produtos', '/erp/index.html#products', 'box'], ['Serviços', '/erp/index.html#services', 'wrench']] },
-    { label: 'Operação', icon: 'warehouse', links: [['Estoque', '/erp/index.html#inventory', 'box'], ['Relatórios', '/erp/index.html#reports', 'chart']] },
+    { label: 'Operação', icon: 'warehouse', links: [['Restaurante', '/restaurant', 'receipt'], ['Estoque', '/erp/index.html#inventory', 'box'], ['Relatórios', '/erp/index.html#reports', 'chart']] },
     { label: 'Fiscal', icon: 'receipt', links: [
       ['NF-e · Mercadorias · Modelo 55', '/erp/nfe.html', 'receipt'],
       ['NFC-e · Consumidor · Modelo 65', '/erp/nfce.html', 'receipt'],
@@ -114,7 +114,7 @@
   var contextGroups = [
     { title: 'Painel', note: 'Atalhos para a operação', route: '/erp/index', hash: '', links: [
       ['Orçamentos', '/erp/quotes.html'], ['Pedidos', '/erp/orders.html'], ['Vendas', '/erp/sales.html'],
-      ['Ordens de serviço', '/erp/service-orders.html'], ['Preparar NF-e', '/erp/nfe.html']
+      ['Ordens de serviço', '/erp/service-orders.html'], ['Restaurante', '/restaurant'], ['Preparar NF-e', '/erp/nfe.html']
     ] },
     { title: 'Comercial', note: 'Propostas, pedidos e vendas', routes: ['/erp/quotes', '/erp/orders', '/erp/sales'], links: [
       ['Vendas', '/erp/sales.html'], ['Orçamentos', '/erp/quotes.html'], ['Pedidos', '/erp/orders.html']
@@ -125,8 +125,8 @@
     { title: 'Cadastros', note: 'Base da empresa', route: '/erp/index', hashes: ['#clients', '#products', '#services'], links: [
       ['Pessoas e empresas', '/erp/index.html#clients'], ['Produtos', '/erp/index.html#products'], ['Serviços', '/erp/index.html#services']
     ] },
-    { title: 'Operação', note: 'Estoque e acompanhamento', routes: ['/erp/index', '/erp/purchases'], hashes: ['#inventory', '#reports'], links: [
-      ['Estoque', '/erp/index.html#inventory'], ['Relatórios', '/erp/index.html#reports'], ['Notas de entrada', '/erp/inbound-nfe.html']
+    { title: 'Operação', note: 'Atendimento, estoque e acompanhamento', routes: ['/erp/index', '/erp/purchases'], hashes: ['#inventory', '#reports'], links: [
+      ['Restaurante', '/restaurant'], ['Estoque', '/erp/index.html#inventory'], ['Relatórios', '/erp/index.html#reports'], ['Notas de entrada', '/erp/inbound-nfe.html']
     ] },
     { title: 'Fiscal', note: 'Emissão, recebimentos e histórico', routes: ['/erp/nfe', '/erp/nfe-issued', '/erp/inbound-nfe', '/erp/fiscal-history', '/erp/cfop', '/erp/tax-profiles', '/erp/nfse-drafts', '/erp/nfce'], route: '/erp/index', hashes: ['#fiscal'], links: [
       ['Emitir NF-e', '/erp/nfe.html'], ['NF-e emitidas', '/erp/nfe-issued.html'], ['NFC-e', '/erp/nfce.html'], ['NFS-e · em preparação', '/erp/nfse.html'], ['Notas de entrada · XML', '/erp/inbound-nfe.html'],
