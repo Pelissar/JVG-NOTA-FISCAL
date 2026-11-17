@@ -1,21 +1,43 @@
-/* Emission wizard: keep every step visible in a horizontal, responsive workflow. */
-.nfe-emission-page {
-  overflow-x: clip;
+/* Responsive layout for the eight-step NF-e wizard. */
+.nfe-emission-page,
+.nfe-emission-page body {
+  width: 100%;
+  min-width: 320px;
+  max-width: 100%;
+  overflow-x: clip !important;
 }
 
-.nfe-emission-page .layout {
+.nfe-emission-page .layout,
+.nfe-emission-page .nfe-layout {
   width: min(100%, 1580px) !important;
   max-width: 1580px !important;
+  min-width: 0 !important;
   margin-inline: auto !important;
-  padding: clamp(16px, 2vw, 30px) clamp(12px, 2vw, 30px) 56px !important;
-  box-sizing: border-box;
+  padding: clamp(16px, 2vw, 30px) clamp(12px, 2vw, 30px) 48px !important;
+  box-sizing: border-box !important;
+}
+
+.nfe-emission-page .page-title,
+.nfe-emission-page .page-title > div,
+.nfe-emission-page .nfe-wizard,
+.nfe-emission-page .nfe-grid,
+.nfe-emission-page .nfe-form-panel,
+.nfe-emission-page .nfe-step-content,
+.nfe-emission-page form,
+.nfe-emission-page .field,
+.nfe-emission-page .field-grid,
+.nfe-emission-page .item-row,
+.nfe-emission-page .items,
+.nfe-emission-page .items-heading {
+  min-width: 0 !important;
+  max-width: 100%;
 }
 
 .nfe-emission-page .nfe-wizard {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) !important;
   align-items: start;
-  gap: 14px !important;
+  gap: 12px !important;
   width: 100%;
   min-width: 0;
 }
@@ -24,36 +46,35 @@
   display: grid !important;
   grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
   grid-auto-flow: row !important;
-  align-content: stretch;
   align-items: stretch;
-  gap: 8px;
+  gap: 8px !important;
   position: static !important;
   inset: auto !important;
   width: 100% !important;
-  min-width: 0;
+  min-width: 0 !important;
   max-height: none !important;
+  margin: 0 !important;
   padding: 0 !important;
   overflow: visible !important;
-  overscroll-behavior: auto;
 }
 
 .nfe-emission-page .nfe-wizard > .fiscal-steps button {
   display: grid !important;
-  grid-template-columns: 25px minmax(0, 1fr) !important;
-  grid-auto-rows: auto;
+  grid-template-columns: 26px minmax(0, 1fr) !important;
   align-content: center;
   align-items: center;
   gap: 6px 8px;
   width: 100% !important;
   min-width: 0 !important;
   max-width: 100%;
-  min-height: 62px;
-  padding: 9px 10px;
+  min-height: 58px;
+  padding: 8px 9px;
   box-sizing: border-box;
   flex: none !important;
   white-space: normal !important;
   overflow-wrap: anywhere;
   word-break: normal;
+  line-height: 1.25;
   text-align: left;
   transform: none !important;
 }
@@ -61,27 +82,26 @@
 .nfe-emission-page .nfe-wizard > .fiscal-steps button > span:first-child {
   display: inline-grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 25px;
+  height: 25px;
   border-radius: 50%;
   flex: none;
 }
 
 .nfe-emission-page .nfe-wizard > .fiscal-steps button > span:last-child {
   min-width: 0;
+  max-width: 100%;
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
 
+.nfe-emission-page .nfe-wizard > .fiscal-steps button[data-locked="true"] {
+  opacity: .78;
+}
+
 .nfe-emission-page .nfe-wizard > .fiscal-steps button[data-locked="true"]::after {
-  grid-column: 1 / -1;
-  min-width: 0;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  font-size: 9px;
-  line-height: 1.25;
-  text-align: left;
-  content: "Conclua a etapa anterior";
+  content: none !important;
+  display: none !important;
 }
 
 .nfe-emission-page .nfe-wizard > .nfe-grid {
@@ -89,9 +109,14 @@
   grid-column: 1 !important;
   grid-row: 2 !important;
   grid-template-columns: minmax(0, 1fr) !important;
-  gap: 14px;
+  gap: 12px;
   width: 100%;
   min-width: 0;
+}
+
+/* The emission screen stays focused on completing the document. */
+.nfe-emission-page .nfe-grid > .side {
+  display: none !important;
 }
 
 .nfe-emission-page .nfe-grid > .nfe-form-panel {
@@ -101,28 +126,20 @@
   min-width: 0;
 }
 
-.nfe-emission-page .nfe-grid > .side[hidden] {
-  display: none !important;
-}
-
-.nfe-emission-page .page-title,
-.nfe-emission-page .page-title > div,
-.nfe-emission-page .panel-head > div,
-.nfe-emission-page .nfe-step-content,
-.nfe-emission-page form,
-.nfe-emission-page .field,
-.nfe-emission-page .field-grid,
-.nfe-emission-page .item-row,
-.nfe-emission-page .items,
-.nfe-emission-page .items-heading {
+.nfe-emission-page .nfe-form-panel .panel-head,
+.nfe-emission-page .items-heading,
+.nfe-emission-page .form-footer,
+.nfe-emission-page .wizard-footer,
+.nfe-emission-page .wizard-footer > div,
+.nfe-emission-page .wizard-validation-summary {
   min-width: 0;
-  max-width: 100%;
+  flex-wrap: wrap;
 }
 
 .nfe-emission-page .page-title h1 {
   max-width: 100%;
-  font-size: clamp(27px, 3vw, 40px);
-  line-height: 1.1;
+  font-size: clamp(26px, 3vw, 40px);
+  line-height: 1.12;
   overflow-wrap: anywhere;
 }
 
@@ -130,41 +147,55 @@
 .nfe-emission-page .panel-head p,
 .nfe-emission-page .field small,
 .nfe-emission-page .hint,
-.nfe-emission-page #status {
+.nfe-emission-page #status,
+.nfe-emission-page .wizard-validation-summary li {
   overflow-wrap: anywhere;
 }
 
-.nfe-emission-page .nfe-form-panel .panel-head,
-.nfe-emission-page .items-heading,
-.nfe-emission-page .form-footer,
-.nfe-emission-page .wizard-footer {
-  flex-wrap: wrap;
+.nfe-emission-page .page-title .nfe-model-badge {
+  max-width: 100%;
+  white-space: normal;
 }
 
 .nfe-emission-page .nfe-step-content .field input,
 .nfe-emission-page .nfe-step-content .field select,
-.nfe-emission-page .nfe-step-content .field textarea {
+.nfe-emission-page .nfe-step-content .field textarea,
+.nfe-emission-page .nfe-step-content input,
+.nfe-emission-page .nfe-step-content select,
+.nfe-emission-page .nfe-step-content textarea {
   width: 100%;
-  max-width: 100%;
   min-width: 0;
+  max-width: 100%;
   box-sizing: border-box;
 }
 
-.nfe-emission-page .nfe-step-content table {
+.nfe-emission-page .nfe-step-content table,
+.nfe-emission-page .table-wrap,
+.nfe-emission-page .table-container {
   display: block;
+  width: 100%;
   max-width: 100%;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
-@media (max-width: 1120px) {
+.nfe-emission-page .wizard-footer button,
+.nfe-emission-page .form-footer button {
+  max-width: 100%;
+  white-space: normal;
+}
+
+@media (max-width: 1180px) {
   .nfe-emission-page .nfe-wizard > .fiscal-steps {
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   }
 }
 
-@media (max-width: 640px) {
-  .nfe-emission-page .layout {
-    padding: 14px 12px 36px !important;
+@media (max-width: 760px) {
+  .nfe-emission-page .layout,
+  .nfe-emission-page .nfe-layout {
+    padding: 14px 12px 32px !important;
   }
 
   .nfe-emission-page .nfe-wizard {
@@ -173,30 +204,54 @@
 
   .nfe-emission-page .nfe-wizard > .fiscal-steps {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 6px;
+    gap: 7px !important;
   }
 
   .nfe-emission-page .nfe-wizard > .fiscal-steps button {
-    min-height: 64px;
+    min-height: 56px;
     padding: 8px;
-    gap: 5px 6px;
-    font-size: 11px;
-  }
-
-  .nfe-emission-page .nfe-wizard > .fiscal-steps button[data-locked="true"]::after {
-    font-size: 8px;
+    gap: 5px 7px;
+    font-size: 12px;
   }
 
   .nfe-emission-page .nfe-form-panel .panel-head,
   .nfe-emission-page .nfe-step-content,
+  .nfe-emission-page .form-footer,
+  .nfe-emission-page .wizard-footer {
+    padding: 14px !important;
+  }
+
+  .nfe-emission-page .wizard-footer,
   .nfe-emission-page .form-footer {
-    padding: 14px;
+    justify-content: stretch;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 380px) {
+  .nfe-emission-page .layout,
+  .nfe-emission-page .nfe-layout {
+    padding-inline: 10px !important;
+  }
+
+  .nfe-emission-page .nfe-wizard > .fiscal-steps {
+    gap: 6px !important;
+  }
+
+  .nfe-emission-page .nfe-wizard > .fiscal-steps button {
+    grid-template-columns: 23px minmax(0, 1fr) !important;
+    min-height: 54px;
+    padding: 7px 6px;
+    font-size: 11px;
+  }
+
+  .nfe-emission-page .nfe-wizard > .fiscal-steps button > span:first-child {
+    width: 22px;
+    height: 22px;
   }
 
   .nfe-emission-page .page-title .nfe-model-badge {
     display: inline-flex;
-    max-width: 100%;
-    white-space: normal;
-    margin-top: 10px;
+    margin-top: 8px;
   }
 }

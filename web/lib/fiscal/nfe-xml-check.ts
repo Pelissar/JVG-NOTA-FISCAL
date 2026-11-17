@@ -98,7 +98,7 @@ export function checkNfeXml(xml: string, companyTaxId: string): NfeXmlReport {
   else if (accessKeyDigit(accessKey.slice(0, 43)) !== accessKey.slice(43)) issues.push("O dígito verificador da chave de acesso não confere.");
   if (!infoKey) issues.push("O identificador infNFe não informa a chave.");
   else if (infoKey !== accessKey) issues.push("A chave do protocolo difere da chave da NF-e.");
-  if (text(ide, "mod") !== "55") issues.push("Este conferidor aceita somente NF-e modelo 55.");
+  if (text(ide, "mod") !== "55") issues.push("Este conferidor aceita somente NF-e.");
   if (!report.environment) issues.push("O ambiente (tpAmb) precisa ser 1, produção, ou 2, homologação.");
   if (!report.issuerName || !report.recipientName) issues.push("Faltam o nome do emitente ou do destinatário.");
   if (!/^[A-Z0-9]{14}$/.test(report.issuerDocument) && !/^\d{11}$/.test(report.issuerDocument)) issues.push("CPF/CNPJ do emitente ausente ou inválido.");
@@ -108,7 +108,7 @@ export function checkNfeXml(xml: string, companyTaxId: string): NfeXmlReport {
   }
   if (/^\d{44}$/.test(accessKey)) {
     if (report.issuerDocument && accessKey.slice(6, 20) !== report.issuerDocument) issues.push("O documento do emitente não bate com a chave.");
-    if (accessKey.slice(20, 22) !== "55") issues.push("O modelo gravado na chave não é 55.");
+    if (accessKey.slice(20, 22) !== "55") issues.push("A chave de acesso não corresponde a uma NF-e.");
     if (!/^\d{1,3}$/.test(report.series) || accessKey.slice(22, 25) !== report.series.padStart(3, "0")) issues.push("A série não corresponde à chave.");
     if (!/^\d{1,9}$/.test(report.number) || Number(report.number) < 1 || accessKey.slice(25, 34) !== report.number.padStart(9, "0")) issues.push("O número não corresponde à chave.");
     const issuedAt = text(ide, "dhEmi") || text(ide, "dEmi");

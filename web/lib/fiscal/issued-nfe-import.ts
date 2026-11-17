@@ -134,7 +134,7 @@ export function parseAuthorizedIssuedNfe(xml: string, companyTaxId: string): Par
 
   const ide = object(info.ide);
   if (value(ide, "mod") !== "55")
-    throw new Error("Este fluxo aceita somente NF-e modelo 55.");
+    throw new Error("Este fluxo aceita somente NF-e de saída.");
   if (value(ide, "tpAmb") !== "1")
     throw new Error("Somente NF-e autorizada em produção pode ser arquivada aqui.");
 
@@ -150,7 +150,7 @@ export function parseAuthorizedIssuedNfe(xml: string, companyTaxId: string): Par
   if (accessKey.slice(6, 20) !== issuerDocument)
     throw new Error("O CNPJ do emitente difere do CNPJ registrado na chave de acesso.");
   if (accessKey.slice(20, 22) !== "55")
-    throw new Error("O modelo informado na chave de acesso não é NF-e 55.");
+    throw new Error("A chave de acesso informada não corresponde a uma NF-e de saída.");
   if (!validTaxDocument(destinationDocument))
     throw new Error("O XML não informa CPF/CNPJ válido do destinatário.");
 

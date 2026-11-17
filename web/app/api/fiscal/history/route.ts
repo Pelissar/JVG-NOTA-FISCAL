@@ -99,7 +99,7 @@ export async function GET(request: Request) {
         }
         return apiJson({ document: {
           id: row.id, direction: "incoming", status: row.status, environment: "produção (XML recebido)",
-          documentType: "NF-e 55", accessKey: row.access_key, invoiceNumber: row.invoice_number,
+          documentType: "NF-e", accessKey: row.access_key, invoiceNumber: row.invoice_number,
           series: row.series || "", issuedAt: row.issued_at, issuerDocument: row.issuer_document,
           issuerName: row.issuer_name, destinationDocument: row.destination_document,
           authorizationStatus: row.authorization_status, authorizationReason: row.authorization_reason || "",
@@ -207,7 +207,7 @@ export async function GET(request: Request) {
     const documents = [
       ...inboundRows.map(row => ({
         id: row.id, direction: "incoming", status: row.status, environment: "produção",
-        documentType: "NF-e 55", number: row.invoice_number || "", series: row.series || "",
+        documentType: "NF-e", number: row.invoice_number || "", series: row.series || "",
         accessKey: row.access_key || "", date: row.issued_at || row.created_at,
         total: Number(row.total_amount || 0), contactPartyId: row.supplier_party_id || "",
         contactName: row.issuer_name || "Fornecedor", contactDocument: row.issuer_document || "",
@@ -223,7 +223,7 @@ export async function GET(request: Request) {
         const items = Array.isArray(payload.items) ? payload.items.map(parsedJson) : [];
         const providerResponse = focusResponse(row.provider_response);
         const environment = row.environment === "producao" ? "produção" : "homologação";
-        const typeNames: Record<string, string> = { nfe: "NF-e 55", nfce: "NFC-e 65", nfse: "NFS-e", cte: "CT-e", mdfe: "MDF-e" };
+        const typeNames: Record<string, string> = { nfe: "NF-e", nfce: "NFC-e", nfse: "NFS-e", cte: "CT-e", mdfe: "MDF-e" };
         return {
           id: row.id, direction: "outgoing", status: row.status, environment,
           documentType: typeNames[String(row.document_type)] || String(row.document_type),

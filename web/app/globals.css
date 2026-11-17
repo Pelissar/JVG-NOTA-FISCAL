@@ -83,7 +83,13 @@ html[data-theme="dark"] {
 }
 html{min-width:320px;background:var(--background)}
 body{min-width:320px;margin:0;background:var(--background);color:var(--foreground);font-family:Inter,"Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,sans-serif}
+*,*::before,*::after{box-sizing:border-box}
+html,body{width:100%;max-width:100%;overflow-x:clip}
+body{overflow-wrap:break-word}
+main,section,article,header,footer,nav,aside,form,fieldset{min-width:0}
+img,svg,video,canvas,iframe{max-width:100%}
 button,input,select,textarea{font:inherit}
+input,textarea,select,button{min-width:0;max-width:100%}
 input,textarea,select{color:var(--foreground)}
 input::placeholder,textarea::placeholder{color:var(--muted-foreground);opacity:1}
 :focus-visible{outline:3px solid color-mix(in srgb,var(--ring) 72%,transparent);outline-offset:2px}

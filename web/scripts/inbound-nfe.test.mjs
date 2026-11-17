@@ -41,7 +41,7 @@ test("lê NF-e processada autorizada e preserva valores do item", () => {
 
 test("recusa XML sem protocolo, modelo diferente, nota não autorizada ou destinatário de outra empresa", () => {
   assert.throws(() => parseAuthorizedInboundNfe(xml().replace(/<protNFe>[\s\S]*?<\/protNFe>/, ""), "99887766000155"), /protocolo/i);
-  assert.throws(() => parseAuthorizedInboundNfe(xml("100", "65"), "99887766000155"), /modelo 55/i);
+  assert.throws(() => parseAuthorizedInboundNfe(xml("100", "65"), "99887766000155"), /somente NF-e/i);
   assert.throws(() => parseAuthorizedInboundNfe(xml("110"), "99887766000155"), /não consta autorizada/i);
   assert.throws(() => parseAuthorizedInboundNfe(xml("100", "55", "11111111000111"), "99887766000155"), /não corresponde/i);
   assert.throws(() => parseAuthorizedInboundNfe(xml().replace("<emit><CNPJ>12345678000195</CNPJ>", "<emit><CNPJ>11222333000181</CNPJ>"), "99887766000155"), /CNPJ do emitente difere/i);

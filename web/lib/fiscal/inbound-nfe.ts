@@ -146,7 +146,7 @@ export function parseAuthorizedInboundNfe(xml: string, companyTaxId: string): Pa
   if (keyFromProtocol && id && keyFromProtocol !== normalizeTaxId(id)) throw new Error("Chave do protocolo difere da chave da NF-e.");
 
   const ide = object(info.ide);
-  if (value(ide, "mod") !== "55") throw new Error("Este lançamento aceita NF-e modelo 55; NFC-e e outros documentos não são suportados.");
+  if (value(ide, "mod") !== "55") throw new Error("Este lançamento aceita somente NF-e; NFC-e e outros documentos não são suportados.");
   if (value(ide, "tpAmb") !== "1") throw new Error("Somente NF-e autorizada em produção pode ser recebida no estoque.");
   const issuer = object(info.emit);
   const destination = object(info.dest);

@@ -5,11 +5,32 @@ const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 const html=read('../public/erp/index.html');
 const js=read('../public/erp/app.js');
 const css=read('../public/erp/design-system.css');
+const pageNav=read('../public/erp/erp-page-nav.js');
+const issuedPage=read('../public/erp/nfe-issued.html');
+const issuedScript=read('../public/erp/nfe-issued.js');
+const inboundPage=read('../public/erp/inbound-nfe.html');
+ const nfsePage=read('../public/erp/nfse.html');
+ const nfseDraftsPage=read('../public/erp/nfse-drafts.html');
+ const nfeXmlChecker=read('../lib/fiscal/nfe-xml-check.ts');
 const matches=(text,re)=>[...text.matchAll(re)].length;
 test('navegação sem duplicatas nem links fiscais falsamente operacionais',()=>{
  for(const href of ['/erp/quotes.html','/erp/orders.html','/erp/sales.html','/erp/nfe.html','/erp/nfe-issued.html','/erp/cfop.html','/erp/tax-profiles.html'])
   assert.equal(matches(html,new RegExp('href="'+href.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'"','g')),1,href);
- assert.doesNotMatch(html,/Emitir NF-e|NFC-e \(65\) · Em preparação|NFS-e · Em preparação/);
+ assert.match(html,/Emitir NF-e/);
+ assert.match(html,/NFC-e · Homologação/);
+ assert.doesNotMatch(html,/NFC-e \(65\) · Em preparação|NFS-e · Em preparação/);
+ assert.doesNotMatch(pageNav,/\['NFS-e[^\]]*\/erp\/nfse\.html/);
+ assert.match(pageNav,/\/erp\/nfe-drafts/);
+ assert.match(pageNav,/Rascunhos de NF-e/);
+ assert.match(pageNav,/Histórico de documentos fiscais/);
+ assert.match(pageNav,/Perfis fiscais opcionais/);
+ assert.doesNotMatch(pageNav,/NFS-e · Em preparação|Serviços fiscais em preparação|Modelo 55|NF-e 55/);
+ assert.doesNotMatch(issuedPage+issuedScript+inboundPage,/modelo 55|modelo 55|NF-e 55/i);
+ assert.match(nfsePage,/url=\/erp\/index\.html#fiscal/);
+ assert.match(nfseDraftsPage,/url=\/erp\/index\.html#fiscal/);
+ assert.doesNotMatch(nfsePage+nfseDraftsPage,/Em preparação|preparação fiscal/i);
+ assert.doesNotMatch(nfeXmlChecker,/NF-e modelo 55|modelo gravado na chave/i);
+ assert.match(nfeXmlChecker,/text\(ide, "mod"\) !== "55"/);
  assert.doesNotMatch(html,/data-view="finance"|data-view="transport"/);
  assert.match(html,/class="nav-group"/);
 });
@@ -75,7 +96,7 @@ test('tema unificado preserva contraste, acessibilidade e navegação responsiva
 });
 
 test('todas as páginas comerciais e fiscais carregam tema e favicon compartilhados',()=>{
- const pages=['quotes','orders','sales','cfop','nfe','nfce','nfse','nfe-issued','tax-profiles'];
+ const pages=['quotes','orders','sales','cfop','nfe','nfce','nfe-issued','tax-profiles'];
  for(const page of pages){
   const source=read('../public/erp/'+page+'.html');
   assert.match(source,/\/erp\/unified-pages\.css/);

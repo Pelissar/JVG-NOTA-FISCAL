@@ -39,7 +39,7 @@ export default function Home() {
         <div className={styles.showcase} aria-label="Apresentação dos módulos do SigmaFiscal">
           <div className={styles.showcaseHead}><span className={styles.showcaseLogo}><Image src="/branding/sigmafiscal-icon.svg" alt="" width={38} height={38}/> SigmaFiscal</span><span className={styles.showcaseStatus}>● AMBIENTE DE TESTES</span></div>
           <div className={styles.showcaseBody}>
-            <div className={styles.showcaseSide}><strong>Visão geral</strong><span>Clientes</span><span>Produtos</span><span>Estoque</span><span>Orçamentos</span><span>Vendas</span><span>Central fiscal</span></div>
+            <div className={styles.showcaseSide}><strong>Visão geral</strong><span>Clientes</span><span>Produtos</span><span>Estoque</span><span>Orçamentos</span><span>Vendas</span><span>Painel fiscal</span></div>
             <div className={styles.showcaseMain}>
               <span className={styles.showcaseLabel}>GESTÃO EMPRESARIAL</span><h3>Organize sua operação.</h3><p>Os módulos do seu negócio em uma experiência integrada.</p>
               <div className={styles.showcaseStats}><div><span>01</span><strong>Cadastros</strong><small>Clientes e produtos</small></div><div><span>02</span><strong>Comercial</strong><small>Pedidos e vendas</small></div><div><span>03</span><strong>Estoque</strong><small>Controle operacional</small></div></div>

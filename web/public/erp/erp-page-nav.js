@@ -46,13 +46,12 @@
     { label: 'Cadastros', icon: 'users', links: [['Pessoas e clientes', '/erp/index.html#clients', 'users'], ['Produtos', '/erp/index.html#products', 'box'], ['Serviços', '/erp/index.html#services', 'wrench']] },
     { label: 'Operação', icon: 'warehouse', links: [['Restaurante', '/restaurant', 'receipt'], ['Estoque', '/erp/index.html#inventory', 'box'], ['Relatórios', '/erp/index.html#reports', 'chart']] },
     { label: 'Fiscal', icon: 'receipt', links: [
-      ['NF-e · Mercadorias · Modelo 55', '/erp/nfe.html', 'receipt'],
-      ['NFC-e · Consumidor · Modelo 65', '/erp/nfce.html', 'receipt'],
-      ['NFS-e · Serviços · Em preparação', '/erp/nfse.html', 'file'],
+      ['Emitir NF-e', '/erp/nfe.html', 'receipt'],
+      ['NFC-e · Homologação', '/erp/nfce.html', 'receipt'],
       ['NF-e emitidas', '/erp/nfe-issued.html', 'file'],
-      ['Notas de entrada · XML', '/erp/inbound-nfe.html', 'file'],
-      ['Histórico fiscal', '/erp/fiscal-history.html', 'file'],
-      ['Central fiscal', '/erp/index.html#fiscal', 'receipt'],
+      ['Notas de entrada', '/erp/inbound-nfe.html', 'file'],
+      ['Histórico de documentos fiscais', '/erp/fiscal-history.html', 'file'],
+      ['Painel fiscal', '/erp/index.html#fiscal', 'receipt'],
       ['Naturezas e CFOP', '/erp/cfop.html', 'hash'],
       ['Perfis fiscais opcionais', '/erp/tax-profiles.html', 'sliders']
     ] },
@@ -60,10 +59,6 @@
   ];
 
   var currentPath = window.location.pathname.replace(/\/$/, '/index.html');
-  if (currentPath === '/erp/nfe.html' || currentPath === '/erp/nfe-issued.html') {
-    var fiscalGroup = groups.find(function (group) { return group.label === 'Fiscal'; });
-    if (fiscalGroup) fiscalGroup.links = fiscalGroup.links.filter(function (entry) { return entry[1] !== '/erp/nfce.html' && entry[1] !== '/erp/nfse.html'; });
-  }
   var nav = document.createElement('header');
   nav.className = 'erp-global-nav';
   nav.innerHTML = '<a class="erp-global-brand" href="/erp/index.html"><img src="/branding/sigmafiscal-icon.svg" alt=""><span><strong>SigmaFiscal</strong><small>GESTÃO DA EMPRESA</small></span></a>' +
@@ -112,36 +107,15 @@
   var currentContext = null;
   var currentHash = window.location.hash;
   var contextGroups = [
-    { title: 'Painel', note: 'Atalhos para a operação', route: '/erp/index', hash: '', links: [
-      ['Orçamentos', '/erp/quotes.html'], ['Pedidos', '/erp/orders.html'], ['Vendas', '/erp/sales.html'],
-      ['Ordens de serviço', '/erp/service-orders.html'], ['Restaurante', '/restaurant'], ['Preparar NF-e', '/erp/nfe.html']
-    ] },
-    { title: 'Comercial', note: 'Propostas, pedidos e vendas', routes: ['/erp/quotes', '/erp/orders', '/erp/sales'], links: [
-      ['Vendas', '/erp/sales.html'], ['Orçamentos', '/erp/quotes.html'], ['Pedidos', '/erp/orders.html']
-    ] },
-    { title: 'Assistência', note: 'Atendimento técnico e manutenção', routes: ['/erp/service-orders'], links: [
-      ['Ordens de serviço', '/erp/service-orders.html'], ['Serviços', '/erp/index.html#services']
-    ] },
-    { title: 'Cadastros', note: 'Base da empresa', route: '/erp/index', hashes: ['#clients', '#products', '#services'], links: [
-      ['Pessoas e empresas', '/erp/index.html#clients'], ['Produtos', '/erp/index.html#products'], ['Serviços', '/erp/index.html#services']
-    ] },
-    { title: 'Operação', note: 'Atendimento, estoque e acompanhamento', routes: ['/erp/index', '/erp/purchases'], hashes: ['#inventory', '#reports'], links: [
-      ['Restaurante', '/restaurant'], ['Estoque', '/erp/index.html#inventory'], ['Relatórios', '/erp/index.html#reports'], ['Notas de entrada', '/erp/inbound-nfe.html']
-    ] },
-    { title: 'Fiscal', note: 'Emissão, recebimentos e histórico', routes: ['/erp/nfe', '/erp/nfe-issued', '/erp/inbound-nfe', '/erp/fiscal-history', '/erp/cfop', '/erp/tax-profiles', '/erp/nfse-drafts', '/erp/nfce'], route: '/erp/index', hashes: ['#fiscal'], links: [
-      ['Emitir NF-e', '/erp/nfe.html'], ['NF-e emitidas', '/erp/nfe-issued.html'], ['NFC-e', '/erp/nfce.html'], ['NFS-e · em preparação', '/erp/nfse.html'], ['Notas de entrada · XML', '/erp/inbound-nfe.html'],
-      ['Histórico fiscal', '/erp/fiscal-history.html'], ['CFOP', '/erp/cfop.html'], ['Regras fiscais', '/erp/tax-profiles.html']
-    ] },
-    { title: 'Conta', note: 'Perfil e dados da empresa', route: '/erp/index', hashes: ['#profile', '#settings'], links: [
-      ['Meu perfil', '/erp/index.html#profile'], ['Empresa e sistema', '/erp/index.html#settings']
-    ] }
+    { title: 'Visão geral', route: '/erp/index', hash: '' },
+    { title: 'Comercial', routes: ['/erp/quotes', '/erp/orders', '/erp/sales'] },
+    { title: 'Assistência', routes: ['/erp/service-orders'] },
+    { title: 'Cadastros', route: '/erp/index', hashes: ['#clients', '#products', '#services'] },
+    { title: 'Operação', route: '/erp/index', hashes: ['#inventory', '#reports'] },
+    { title: 'Fiscal', routes: ['/erp/nfe', '/erp/nfe-drafts', '/erp/nfe-issued', '/erp/inbound-nfe', '/erp/fiscal-history', '/erp/cfop', '/erp/tax-profiles', '/erp/nfce'], route: '/erp/index', hashes: ['#fiscal'] },
+    { title: 'Conta', route: '/erp/index', hashes: ['#profile', '#settings'] },
+    { title: 'Operação', routes: ['/restaurant'] }
   ];
-  if (normalizedCurrentPath === '/erp/nfce') {
-    contextGroups[5] = { title: 'NFC-e', note: 'Consumidor · Modelo 65', routes: ['/erp/nfce'], links: [['Emitir NFC-e', '/erp/nfce.html'], ['NF-e emitidas', '/erp/nfe-issued.html'], ['Histórico fiscal', '/erp/fiscal-history.html']] };
-  }
-  if (normalizedCurrentPath === '/erp/nfse' || normalizedCurrentPath === '/erp/nfse-drafts') {
-    contextGroups[5] = { title: 'NFS-e', note: 'Serviços · Em preparação', routes: ['/erp/nfse', '/erp/nfse-drafts'], links: [['Ordens de serviço', '/erp/service-orders.html'], ['Histórico fiscal', '/erp/fiscal-history.html']] };
-  }
   currentContext = contextGroups.find(function (context) {
     if (context.routes && context.routes.indexOf(normalizedCurrentPath) >= 0) return true;
     if (context.route === normalizedCurrentPath) {
@@ -152,25 +126,21 @@
   }) || contextGroups[0];
   var contextNav = document.createElement('div');
   contextNav.className = 'erp-context-nav';
-  contextNav.setAttribute('aria-label', 'Atalhos da área atual');
+  contextNav.setAttribute('aria-label', 'Localização da página');
   var contextTitle = document.createElement('div');
   contextTitle.className = 'erp-context-title';
-  contextTitle.innerHTML = '<strong>' + currentContext.title + '</strong><small>' + currentContext.note + '</small>';
-  var contextLinks = document.createElement('nav');
-  contextLinks.className = 'erp-context-links';
-  contextLinks.setAttribute('aria-label', 'Navegação da área ' + currentContext.title);
-  function targetIsCurrent(href) {
-    var target = new URL(href, window.location.origin);
-    return normalizePath(target.pathname) === normalizedCurrentPath && target.hash === currentHash;
-  }
-  currentContext.links.forEach(function (entry) {
-    var link = document.createElement('a');
-    link.href = entry[1];
-    link.textContent = entry[0];
-    if (targetIsCurrent(entry[1])) link.setAttribute('aria-current', 'page');
-    contextLinks.appendChild(link);
-  });
-  contextNav.append(contextTitle, contextLinks);
+  var pageTitles = {
+    '/erp/index': { '': 'Painel da empresa', '#clients': 'Pessoas e empresas', '#products': 'Produtos', '#services': 'Serviços', '#inventory': 'Estoque', '#reports': 'Relatórios', '#fiscal': 'Painel fiscal', '#profile': 'Meu perfil', '#settings': 'Empresa e sistema' },
+    '/erp/quotes': { '': 'Orçamentos' }, '/erp/orders': { '': 'Pedidos' }, '/erp/sales': { '': 'Vendas' },
+    '/erp/service-orders': { '': 'Ordens de serviço' }, '/restaurant': { '': 'Restaurante' },
+    '/erp/nfe': { '': 'Emitir NF-e' }, '/erp/nfe-drafts': { '': 'Rascunhos de NF-e' }, '/erp/nfce': { '': 'NFC-e · Homologação' },
+    '/erp/nfe-issued': { '': 'NF-e emitidas' }, '/erp/inbound-nfe': { '': 'Notas de entrada' },
+    '/erp/fiscal-history': { '': 'Histórico de documentos fiscais' }, '/erp/cfop': { '': 'Naturezas e CFOP' },
+    '/erp/tax-profiles': { '': 'Perfis tributários opcionais' }
+  };
+  var pageTitle = (pageTitles[normalizedCurrentPath] || {})[currentHash] || 'Página atual';
+  contextTitle.innerHTML = '<strong>' + currentContext.title + '</strong><small>' + pageTitle + '</small>';
+  contextNav.appendChild(contextTitle);
   var shortcutIcons = {
     '/erp/sales.html': 'chart',
     '/erp/quotes.html': 'file',

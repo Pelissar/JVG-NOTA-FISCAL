@@ -1236,7 +1236,7 @@
     document.getElementById('sourceImportLabel').textContent = 'Selecione o ' + sourceConfig[kind].label;
     document.getElementById('sourceImportHelp').textContent = kind === 'service_order'
       ? 'A OS atual não possui uma lista estruturada de peças. O sistema vincula o cliente e a OS; o valor estimado de serviço não será convertido em produto.'
-      : 'Serão trazidos o cliente e somente os produtos. Linhas de serviço ficam fora desta NF-e e devem ser faturadas em NFS-e.';
+      : 'Serão trazidos o cliente e os produtos. Serviços ficam fora desta NF-e e devem seguir o processo fiscal de serviços da empresa.';
     document.getElementById('sourceImportStatus').textContent = '';
     document.getElementById('sourceImportStatus').classList.remove('is-error');
     document.getElementById('sourceImportDialog').showModal();
@@ -1356,7 +1356,7 @@
     document.getElementById('sourceOrderLabel').textContent = state.sourceOrderNumber;
     document.getElementById('sourceOrderDescription').textContent = kind === 'service_order'
       ? 'Cliente e OS vinculados. A OS não possui itens de peças cadastrados; serviço e valor estimado não foram convertidos em mercadoria. Adicione os produtos vendidos manualmente.'
-      : 'Cliente e ' + mapped.length + ' produto(s) vinculados. ' + serviceCount + ' serviço(s) foram excluídos; serviço deve ser faturado em NFS-e.';
+      : 'Cliente e ' + mapped.length + ' produto(s) vinculados. ' + serviceCount + ' serviço(s) foram excluídos desta NF-e.';
     document.getElementById('sourceOrderNotice').hidden = false;
     document.getElementById('addItem').disabled = state.sourceDocumentLocksItems || items.children.length >= 20;
     updateTotal();
@@ -1415,7 +1415,7 @@
         state.clients.some(function (c) { return c.active && c.isCustomer === true && c.type !== 'EXT'; });
       saveButton.disabled = !state.ready;
       report(state.ready ?
-        'Cadastros carregados. A NF-e fica vinculada a esta empresa e só é enviada depois da sua confirmação.' :
+        'Produtos e clientes ativos carregados. Revise a nota antes de confirmar o envio.' :
         'Cadastre pelo menos um produto e um cliente ativos no ERP para preparar a NF-e.', state.ready ? '' : 'info');
       var sourceOrderId = new URLSearchParams(window.location.search).get('orderId');
       if (sourceOrderId) {
@@ -1427,7 +1427,7 @@
         }
       }
     } catch (error) {
-      report('Falha ao carregar a central fiscal: ' + error.message + ' Volte ao ERP ou recarregue esta página.', 'error');
+      report('Falha ao carregar os dados da NF-e: ' + error.message + ' Tente novamente ou recarregue esta página.', 'error');
       saveButton.disabled = true;
     }
   }

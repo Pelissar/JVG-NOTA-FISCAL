@@ -7,14 +7,14 @@
 <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
 <link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css">
 <link rel="stylesheet" href="/erp/inbound-nfe.css?v=20261113-2">
-<script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261116-fiscal-suite-3"></script><script defer src="/erp/inbound-nfe.js?v=20261113-3"></script>
-<link rel="stylesheet" href="/erp/site-refresh.css?v=20261117-mobile-navigation-2"></head>
+<script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261117-navigation-2"></script><script defer src="/erp/inbound-nfe.js?v=20261113-3"></script>
+<link rel="stylesheet" href="/erp/site-refresh.css?v=20261117-navigation-2"></head>
 <body>
 <div id="erpGlobalNav"></div><button type="button" class="theme-toggle" data-theme-toggle aria-label="Alternar tema">◐ Modo escuro</button>
 <main class="inbound-shell">
   <header class="inbound-heading">
-    <div><div class="eyebrow">FISCAL / DOCUMENTOS RECEBIDOS</div><h1>Notas de entrada</h1><p>Importe o XML do fornecedor, confira os itens e registre a entrada no estoque.</p></div>
-    <a class="back-link" href="/erp/index.html#fiscal">Voltar à central fiscal</a>
+    <div><div class="eyebrow">FISCAL / DOCUMENTOS RECEBIDOS</div><h1>Notas de entrada</h1><p>Selecione manualmente o XML do fornecedor, confira os itens e registre a entrada no estoque.</p></div>
+    <a class="back-link" href="/erp/index.html#fiscal">Voltar ao painel fiscal</a>
   </header>
   <section class="inbound-notice" role="note"><strong>Entrada controlada, sem escrituração fiscal.</strong><span>O lançamento organiza o recebimento e o estoque. Ele não calcula tributos, contas a pagar nem valida assinatura digital junto à SEFAZ.</span></section>
   <section class="inbound-notice" role="note" aria-label="Revisão fiscal de compras interestaduais"><strong>Compra de fora do estado: confira a classificação fiscal.</strong><span>Confirme com a contabilidade se a mercadoria, na UF da JVG, está sujeita à substituição tributária ou à tributação aplicável. O CST/CSOSN do fornecedor no XML não preenche automaticamente a regra de venda da JVG.</span></section>
@@ -22,7 +22,7 @@
     <section class="inbound-card upload-card">
       <div class="card-heading"><div class="step-number">01</div><div><h2>Importar arquivo XML</h2><p>Use o XML processado da NF-e, com protocolo de autorização.</p></div></div>
       <form id="uploadForm">
-        <label class="file-drop" for="xmlFile"><span class="file-symbol">XML</span><strong>Selecione o XML da nota</strong><small>Um arquivo por vez · até 2 MB · NF-e modelo 55</small><input id="xmlFile" name="xml" type="file" accept=".xml,application/xml,text/xml" required></label>
+        <label class="file-drop" for="xmlFile"><span class="file-symbol">XML</span><strong>Selecione o XML da nota</strong><small>Um arquivo por vez · até 2 MB · NF-e</small><input id="xmlFile" name="xml" type="file" accept=".xml,application/xml,text/xml" required></label>
         <button class="primary-button" id="uploadButton" type="submit">Analisar e importar XML</button>
       </form>
       <p class="upload-status" id="uploadStatus" role="status" aria-live="polite">A importação valida estrutura, chave, protocolo e destinatário. A assinatura deve ser conferida na consulta oficial antes do recebimento.</p>

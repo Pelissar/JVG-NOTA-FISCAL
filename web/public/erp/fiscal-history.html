@@ -2,18 +2,18 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#f4f6f8"><meta name="description" content="Histórico fiscal de documentos emitidos e recebidos por empresa.">
-  <title>Histórico fiscal · SigmaFiscal</title>
+  <meta name="theme-color" content="#f4f6f8"><meta name="description" content="Histórico de documentos fiscais emitidos e recebidos pela empresa.">
+  <title>Histórico de documentos fiscais · SigmaFiscal</title>
   <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
   <link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css">
   <link rel="stylesheet" href="/erp/fiscal-history.css">
-  <script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261116-fiscal-suite-3"></script><script defer src="/erp/fiscal-history.js"></script>
-<link rel="stylesheet" href="/erp/site-refresh.css?v=20261117-mobile-navigation-2"></head>
+  <script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261117-navigation-2"></script><script defer src="/erp/fiscal-history.js"></script>
+<link rel="stylesheet" href="/erp/site-refresh.css?v=20261117-navigation-2"></head>
 <body>
   <div id="erpGlobalNav"></div>
   <main class="history-shell">
     <header class="history-heading">
-      <div><div class="eyebrow">FISCAL / DOCUMENTOS DA EMPRESA</div><h1>Histórico fiscal</h1><p>Consulte NF-e emitidas e notas recebidas, com pesquisa por cliente, fornecedor e transportadora.</p></div>
+      <div><div class="eyebrow">FISCAL / DOCUMENTOS DA EMPRESA</div><h1>Histórico de documentos fiscais</h1><p>Consulte notas emitidas e recebidas, com pesquisa por cliente, fornecedor e transportadora.</p></div>
       <div class="heading-actions"><a class="secondary-button" href="/erp/nfe.html">Emitir NF-e</a><button class="primary-button" id="refreshHistory" type="button">Atualizar histórico</button></div>
     </header>
     <section class="history-summary" aria-label="Como consultar">
@@ -21,7 +21,7 @@
       <div><span class="summary-icon">↙</span><div><strong>Entradas</strong><small>XML importado, conferência e registro no estoque.</small></div></div>
       <div><span class="summary-icon">⌕</span><div><strong>Por pessoa</strong><small>Filtre pelo mesmo cadastro de cliente, fornecedor ou transportadora.</small></div></div>
     </section>
-    <section class="history-card filter-card" aria-label="Filtros do histórico fiscal">
+     <section class="history-card filter-card" aria-label="Filtros do histórico de documentos fiscais">
       <div class="filter-heading"><div><h2>Localize um documento</h2><p>Todos os resultados pertencem à empresa ativa.</p></div><button class="text-button" id="clearFilters" type="button">Limpar filtros</button></div>
       <form id="historyFilters" class="history-filters">
         <label><span>Movimento</span><select name="kind"><option value="all">Entradas e saídas</option><option value="outgoing">Notas de saída</option><option value="incoming">Notas de entrada</option></select></label>

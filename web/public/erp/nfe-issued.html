@@ -7,13 +7,13 @@
   <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
   <link rel="stylesheet" href="/erp/unified-pages.css"><link rel="stylesheet" href="/erp/erp-design-v2.css">
   <link rel="stylesheet" href="/erp/fiscal-history.css"><link rel="stylesheet" href="/erp/nfe-issued.css?v=20261116-history">
-  <script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261116-fiscal-suite-3"></script><script defer src="/erp/nfe-issued.js?v=20261116-history"></script>
-<link rel="stylesheet" href="/erp/site-refresh.css?v=20261117-mobile-navigation-2"></head>
+  <script src="/erp/theme-switch.js"></script><script defer src="/erp/erp-page-nav.js?v=20261117-navigation-2"></script><script defer src="/erp/nfe-issued.js?v=20261116-history"></script>
+<link rel="stylesheet" href="/erp/site-refresh.css?v=20261117-navigation-2"></head>
 <body>
   <div id="erpGlobalNav"></div>
   <main class="history-shell issued-shell">
     <header class="history-heading issued-heading">
-      <div><div class="eyebrow">FISCAL / NOTA FISCAL ELETRÔNICA · MODELO 55</div><h1>NF-e da empresa</h1><p>Histórico de notas autorizadas, canceladas e rejeitadas, com retorno da SEFAZ e motivo da rejeição.</p></div>
+      <div><div class="eyebrow">FISCAL / DOCUMENTOS DE SAÍDA</div><h1>NF-e emitidas</h1><p>Acompanhe autorizações, cancelamentos, rejeições e os retornos da SEFAZ.</p></div>
       <div class="heading-actions">
         <a class="primary-button issue-nfe-button" href="/erp/nfe.html">＋ Emitir NF-e</a>
         <button class="secondary-button" id="openXmlCheck" type="button">Validar XML</button>
@@ -40,7 +40,7 @@
     </section>
 
     <section class="history-card filter-card issued-filter-card" id="issuedFilters" hidden aria-label="Filtros de NF-e emitidas">
-      <div class="filter-heading"><div><h2>Filtrar NF-e</h2><p>Os filtros pesquisam somente documentos modelo 55 desta empresa.</p></div><button class="text-button" id="clearIssuedFilters" type="button">Limpar filtros</button></div>
+      <div class="filter-heading"><div><h2>Filtrar NF-e</h2><p>Os filtros pesquisam as notas de saída da empresa ativa.</p></div><button class="text-button" id="clearIssuedFilters" type="button">Limpar filtros</button></div>
       <form id="issuedFilterForm" class="issued-filters">
         <label><span>Número da nota</span><input name="number" inputmode="numeric" maxlength="9" placeholder="Ex.: 142719"></label>
         <label><span>Cliente</span><input name="customer" maxlength="80" placeholder="Nome do destinatário"></label>
@@ -102,7 +102,7 @@
   <dialog class="issued-dialog" id="importDialog" aria-labelledby="importDialogTitle">
     <form id="importForm" class="issued-dialog-card">
       <div class="dialog-heading"><div><span class="eyebrow">ARQUIVO AUTORIZADO</span><h2 id="importDialogTitle">Importar XML de NF-e</h2></div><button class="dialog-close" type="button" data-close-dialog="importDialog" aria-label="Fechar">×</button></div>
-      <p>O arquivo será guardado no histórico desta empresa. O emitente precisa ser a empresa ativa e a nota deve ser modelo 55, autorizada e de produção.</p>
+      <p>O arquivo será guardado no histórico desta empresa. O emitente precisa ser a empresa ativa e a nota deve estar autorizada e ser de produção.</p>
       <label class="dialog-field"><span>Arquivo XML original</span><input id="authorizedXmlFile" name="xml" type="file" accept=".xml,application/xml,text/xml" required></label>
       <label class="issued-check-label"><input id="confirmSeFazImport" type="checkbox" required><span>Conferi a chave e a autorização desta NF-e no portal oficial da SEFAZ. Entendo que o sistema não verifica a assinatura digital.</span></label>
       <p class="dialog-result" id="importResult" role="status" aria-live="polite"></p>

@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  var labels = {dashboard:'Visão geral',products:'Produtos',clients:'Clientes',services:'Serviços',fiscal:'Central fiscal',inventory:'Estoque',reports:'Relatórios',profile:'Meu perfil',settings:'Empresa'};
+  var labels = {dashboard:'Visão geral',products:'Produtos',clients:'Clientes',services:'Serviços',fiscal:'Painel fiscal',inventory:'Estoque',reports:'Relatórios',profile:'Meu perfil',settings:'Empresa'};
   // Nunca mostrar dados locais como se fossem cadastros reais da empresa.
   var state = emptyState();
   var view = 'dashboard', query = '', filter = 'all', partyFilter = 'all';
@@ -88,15 +88,15 @@
   }
   function fiscal(){
     var entries=[
-      ['NF-e · Mercadorias · Modelo 55','Emita e acompanhe a NF-e de mercadorias em ambiente de homologação.','receipt','/erp/nfe.html','Homologação disponível'],
-      ['NFC-e · Consumidor · Modelo 65','Emita a NFC-e de teste para venda ao consumidor.','receipt','/erp/nfce.html','Homologação'],
+      ['Emitir NF-e','Prepare e confira uma nota de mercadorias antes do envio.','receipt','/erp/nfe.html','Preparar documento'],
+      ['NFC-e · Homologação','Prepare operações ao consumidor no ambiente de homologação.','receipt','/erp/nfce.html','Somente testes'],
       ['NF-e emitidas','Consulte documentos autorizados, filtros, eventos e arquivos.','file','/erp/nfe-issued.html','Histórico de saídas'],
       ['Notas de entrada','Importe XML, confira fornecedor, itens, tributos e estoque.','download','/erp/inbound-nfe.html','Entrada por XML'],
-      ['Histórico fiscal','Pesquise documentos por cliente, fornecedor, transportadora e situação.','chart','/erp/fiscal-history.html','Entradas e saídas'],
-      ['CFOP','Consulte o catálogo e organize descrições internas.','layers','/erp/cfop.html','Consulta fiscal'],
-      ['Referências tributárias','Cadastros opcionais para facilitar o preenchimento dos itens.','shield','/erp/tax-profiles.html','Configuração opcional']
+      ['Histórico de documentos fiscais','Pesquise entradas e saídas por cliente, fornecedor, transportadora e situação.','chart','/erp/fiscal-history.html','Entradas e saídas'],
+      ['Naturezas e CFOP','Consulte o catálogo e organize descrições internas.','layers','/erp/cfop.html','Consulta fiscal'],
+      ['Perfis tributários opcionais','Cadastros opcionais para facilitar o preenchimento dos itens.','shield','/erp/tax-profiles.html','Configuração opcional']
     ];
-    return heading('Central fiscal','Acesse a emissão de NF-e, os documentos recebidos e o histórico da empresa.')+banner()+
+    return heading('Painel fiscal','Acesse a emissão de NF-e, os documentos recebidos e o histórico da empresa.')+banner()+
       '<section class="fiscal-workspace"><div class="fiscal-workspace-heading"><div><span class="eyebrow">OPERAÇÃO FISCAL</span><h2>Documentos</h2><p>Emissão, notas recebidas e histórico da empresa.</p></div></div><div class="fiscal-workspace-grid">'+
       entries.map(function(x){return '<a class="fiscal-workspace-card" href="'+x[3]+'"><span class="fiscal-workspace-icon">'+ico(x[2])+'</span><span class="fiscal-workspace-copy"><strong>'+x[0]+'</strong><small>'+x[1]+'</small><em>'+x[4]+'</em></span><span class="fiscal-workspace-arrow" aria-hidden="true">'+ico('arrow')+'</span></a>';}).join('')+
       '</div></section>';

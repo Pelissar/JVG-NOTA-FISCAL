@@ -91,3 +91,4 @@
 .footer a{color:#93caff}
 .notice{color:#566e89}
 @media(max-width:700px){.hero{background:linear-gradient(160deg,#f7faff,#edf4fc)}}
+@media(max-width:900px){.nav{height:auto;flex-wrap:wrap;gap:8px 12px}.navlinks{order:3;display:flex;width:100%;min-width:0;gap:18px;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;padding:7px 1px 9px;scrollbar-width:thin}.navlinks a{flex:none;white-space:nowrap}.login{margin-left:auto;max-width:100%;white-space:normal;text-align:center}}

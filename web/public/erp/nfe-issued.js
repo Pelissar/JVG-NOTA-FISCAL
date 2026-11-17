@@ -194,7 +194,7 @@
       content.replaceChildren();
       var meta = node('div', 'detail-meta');
       meta.append(node('p', '', 'Situação: ' + (statusLabels[detail.status] || detail.status || '—')));
-      meta.append(node('p', '', 'Ambiente: ' + (detail.environment || '—') + ' · Tipo: ' + (detail.documentType || 'NF-e 55')));
+      meta.append(node('p', '', 'Ambiente: ' + (detail.environment || '—') + ' · Tipo: ' + (detail.documentType || 'NF-e')));
       if (detail.invoiceNumber || detail.number) meta.append(node('p', '', 'Número: ' + (detail.invoiceNumber || detail.number) + (detail.series ? ' · Série ' + detail.series : '')));
       if (detail.reference) meta.append(node('p', '', 'Referência Focus: ' + detail.reference));
       if (detail.accessKey) meta.append(node('p', '', 'Chave: ' + detail.accessKey));

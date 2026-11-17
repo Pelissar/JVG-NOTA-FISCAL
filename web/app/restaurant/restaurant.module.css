@@ -161,6 +161,14 @@
 .qrSuccess h2 { font-size: 24px; }
 .qrError { padding: 12px; border: 1px solid #f1b5bd; border-radius: 10px; color: #9d2434; background: #fff2f4; }
 
+.page, .qrPage { width: 100%; max-width: 100%; min-width: 0; overflow-x: clip; }
+.tabs, .kitchenGrid { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.tabs { scrollbar-width: thin; }
+.kitchenGrid { min-width: 0; }
+.qrProduct > div { min-width: 0; overflow-wrap: anywhere; }
+.qrProduct h3, .qrProduct p, .qrNotice { overflow-wrap: anywhere; }
+.qrPage button, .qrCheckout button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+
 @media (max-width: 1050px) {
   .serviceGrid, .twoCol { grid-template-columns: minmax(0, 1fr); }
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -184,6 +192,19 @@
   .cartRow { align-items: flex-start; flex-direction: column; }
   .cartRow > div { width: 100%; justify-content: flex-end; }
   .customerCard { flex-direction: column; }
+  .panelHead { min-width: 0; overflow-wrap: anywhere; }
+  .sectionTitle, .orderTop, .tableCardHead { align-items: flex-start; flex-wrap: wrap; }
+  .cartRow > div { flex-wrap: wrap; }
+  .kitchenGrid { grid-template-columns: repeat(3, minmax(280px, 1fr)); }
+  .qrPage { padding: 18px 12px 36px; }
+}
+
+@media (max-width: 380px) {
+  .page { padding-right: 10px; padding-left: 10px; }
+  .panel { padding: 13px; }
+  .panelHead { margin: -13px -13px 13px; padding: 14px 13px; }
+  .metrics { grid-template-columns: 1fr; }
+  .qrPage { padding-right: 10px; padding-left: 10px; }
 }
 
 @media print {
