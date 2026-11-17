@@ -1,0 +1,72 @@
+/* Keep the guided NF-e steps readable at every viewport and browser zoom. */
+.nfe-emission-page .nfe-wizard {
+  display: grid !important;
+  grid-template-columns: minmax(210px, 250px) minmax(0, 1fr) !important;
+  align-items: start;
+  gap: 18px;
+}
+
+.nfe-emission-page .nfe-wizard > .fiscal-steps {
+  display: grid !important;
+  grid-auto-flow: row;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  align-items: stretch;
+  position: sticky;
+  top: 150px;
+  min-width: 0;
+  width: 100%;
+  max-height: calc(100dvh - 170px);
+  overflow-x: hidden !important;
+  overflow-y: auto;
+  box-sizing: border-box;
+  overscroll-behavior: contain;
+}
+
+.nfe-emission-page .nfe-wizard > .fiscal-steps button {
+  display: grid !important;
+  grid-template-columns: 30px minmax(0, 1fr) !important;
+  flex: none !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  transform: none !important;
+}
+
+.nfe-emission-page .nfe-wizard > .fiscal-steps button[data-locked="true"]::after {
+  grid-column: 2;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 850px) {
+  .nfe-emission-page .nfe-wizard {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .nfe-emission-page .nfe-wizard > .fiscal-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    position: static;
+    top: auto;
+    max-height: none;
+    overflow: visible !important;
+  }
+
+  .nfe-emission-page .nfe-wizard > .fiscal-steps button {
+    min-height: 48px;
+  }
+
+  .nfe-emission-page .nfe-wizard > .nfe-grid {
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .nfe-emission-page .nfe-wizard > .fiscal-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
