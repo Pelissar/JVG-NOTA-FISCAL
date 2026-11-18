@@ -18,6 +18,10 @@
   ];
   var currentStep = 0;
   var unlockedThrough = 0;
+  var currentRtcCalculation = null;
+  var rtcReviewDirty = false;
+  form.addEventListener('input', function () { if (currentRtcCalculation) rtcReviewDirty = true; });
+  form.addEventListener('change', function () { if (currentRtcCalculation) rtcReviewDirty = true; });
   var paymentsRoot;
   var totalsRoot;
   var validationSummary;
@@ -995,6 +999,78 @@
       addReviewLine(target, 'Item ' + (index + 1) + ' · ' + product, 'Qtd. ' + qty + ' · R$ ' + price);
       addReviewLine(target, 'Dados fiscais do item ' + (index + 1), fiscal);
     });
+    renderRtcReviewInWizard();
+  }
+
+  function renderRtcReviewInWizard() {
+    var existing = review.querySelector('.rtc-review');
+    if (existing) existing.remove();
+    var section = document.createElement('section');
+    section.className = 'rtc-review';
+    var calculation = currentRtcCalculation;
+    var heading = document.createElement('h4');
+    heading.textContent = 'IBS/CBS · calculadora oficial da Receita Federal';
+    section.append(heading);
+    if (!calculation) {
+      var empty = document.createElement('p');
+      empty.textContent = 'Nenhum cálculo RTC foi registrado para este rascunho. A seção é informativa e não altera os dados fiscais nem o envio à Focus.';
+      section.append(empty);
+    } else {
+      var regimeNames = { simples_nacional: 'Simples Nacional', lucro_presumido: 'Lucro presumido', lucro_real: 'Lucro real' };
+      var endpointNames = { 'simples-nacional': 'Calculadora oficial do Simples Nacional', 'regime-geral': 'Calculadora oficial do regime regular' };
+      var metadata = document.createElement('p');
+      metadata.textContent = (endpointNames[calculation.endpoint] || String(calculation.endpoint || 'Calculadora não identificada')) +
+        ' · regime: ' + (regimeNames[calculation.regime] || String(calculation.regime || 'não informado')) +
+        ' · aplicação: ' + (calculation.calculatorVersion || 'não informada') +
+        ' · base oficial: ' + (calculation.calculatorDatabaseVersion || 'não informada') +
+        ' · contrato: ' + (calculation.operationContractVersion || 'não informado');
+      section.append(metadata);
+      var states = Array.isArray(calculation.itemStates) ? calculation.itemStates : [];
+      if (states.length) {
+        var stateList = document.createElement('ul');
+        states.forEach(function (state, index) {
+          var stateItem = document.createElement('li');
+          stateItem.textContent = 'Item ' + (index + 1) + ': ' + String(state);
+          stateList.append(stateItem);
+        });
+        section.append(stateList);
+      }
+      if (calculation.stale || rtcReviewDirty) {
+        var stale = document.createElement('p');
+        stale.textContent = 'Resultado desatualizado: o rascunho ou o regime mudou depois do cálculo. Recalcule antes de usar como referência.';
+        section.append(stale);
+      }
+      if (calculation.warning || calculation.simulatedDataWarning) {
+        var warning = document.createElement('p');
+        warning.textContent = calculation.warning || 'A calculadora sinalizou dados simulados. Use somente para conferência, nunca para emissão.';
+        section.append(warning);
+      }
+      if (calculation.allItemsCalculated === false) {
+        var incomplete = document.createElement('p');
+        incomplete.textContent = 'A calculadora não concluiu todos os itens; consulte o retorno para identificar as pendências.';
+        section.append(incomplete);
+      }
+      if (calculation.createdAt) {
+        var date = new Date(calculation.createdAt);
+        var timestamp = document.createElement('p');
+        timestamp.textContent = 'Registrado em: ' + (Number.isNaN(date.getTime()) ? String(calculation.createdAt) : date.toLocaleString('pt-BR'));
+        section.append(timestamp);
+      }
+      if (calculation.result && typeof calculation.result === 'object') {
+        var details = document.createElement('details');
+        var summary = document.createElement('summary');
+        summary.textContent = 'Detalhamento oficial por item';
+        var resultJson = document.createElement('pre');
+        resultJson.className = 'rtc-json-preview';
+        resultJson.textContent = JSON.stringify(calculation.result, null, 2);
+        details.append(summary, resultJson);
+        section.append(details);
+      }
+      var note = document.createElement('p');
+      note.textContent = 'Resultado de referência: não preenche nem transmite IBS/CBS à Focus e não substitui a revisão contábil.';
+      section.append(note);
+    }
+    review.insertBefore(section, document.getElementById('reviewTotal').parentNode);
   }
 
   function renderRecipient() {
@@ -1086,6 +1162,7 @@
     unlockedThrough = 0;
     clearStepErrors();
     data = data && typeof data === 'object' ? data : {};
+    currentRtcCalculation = data.rtcCalculation && typeof data.rtcCalculation === 'object' ? data.rtcCalculation : null;
     function set(name, value) {
       var field = form.elements.namedItem(name);
       if (field) field.value = value == null ? '' : String(value);
@@ -1155,11 +1232,14 @@
     renderRecipient();
     updateRequiredMarkers();
     refreshComputed();
+    rtcReviewDirty = false;
     goToStep(0, false);
   };
   window.jvgNfeWizardReset = function () {
     unlockedThrough = 0;
     clearStepErrors();
+    currentRtcCalculation = null;
+    rtcReviewDirty = false;
     var payments = document.getElementById('payments');
     if (payments) payments.replaceChildren();
     var issueAt = form.elements.namedItem('issueAt');

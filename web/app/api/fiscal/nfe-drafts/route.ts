@@ -82,7 +82,7 @@ function scope(account: SiteAccount): string {
 }
 
 function isMissingSchemaColumn(error: unknown): boolean {
-  return error instanceof JvgBackendError && ["PGRST204", "42703"].includes(error.databaseCode || "");
+  return error instanceof JvgBackendError && ["PGRST204", "PGRST205", "42703", "42P01"].includes(error.databaseCode || "");
 }
 
 async function homologationSetup(account: SiteAccount) {
@@ -111,6 +111,7 @@ async function homologationSetup(account: SiteAccount) {
     issuerMissing,
     taxRegimeConfirmationAvailable: company?.tax_regime_confirmation_available === true,
     taxRegimeConfirmed,
+    taxRegime: company?.tax_regime ?? null,
     supportedTaxRegime,
     isPilotCompany,
     accessReady: accessIssues.length === 0,
@@ -134,6 +135,38 @@ export async function GET(request: Request) {
       const payload = selected[0].fiscal_payload && typeof selected[0].fiscal_payload === "object" ? selected[0].fiscal_payload as DbRow : {};
       const homologationGate = selected[0].status === "draft" ? reviewNfeHomologationGate(payload) : { ready: false, issues: [], reviewCount: 0 };
       const canUseHomologation = setup.accessReady;
+      let rtcCalculation: DbRow | null = null;
+      try {
+        const rtcRows = await dbRequest<DbRow[]>(
+          `/rest/v1/jvg_fiscal_rtc_calculations?${scope(account)}&fiscal_document_id=${filterEq(requestedId)}&select=id,regime,calculator_endpoint,calculator_version,calculator_db_version,request_version,input_snapshot,result_snapshot,simulated_data_warning,created_at&order=created_at.desc&limit=1`,
+        );
+        const latest = rtcRows[0];
+        if (latest) {
+          const inputSnapshot = asRecord(latest.input_snapshot);
+          const resultSnapshot = asRecord(latest.result_snapshot);
+          const savedDocumentUpdatedAt = typeof inputSnapshot.fiscalDocumentUpdatedAt === "string" ? inputSnapshot.fiscalDocumentUpdatedAt : "";
+          const savedRegime = typeof inputSnapshot.regime === "string" ? inputSnapshot.regime : "";
+          rtcCalculation = {
+            id: latest.id,
+            regime: latest.regime,
+            endpoint: latest.calculator_endpoint,
+            calculatorVersion: latest.calculator_version,
+            calculatorDatabaseVersion: latest.calculator_db_version,
+            operationContractVersion: latest.request_version,
+            createdAt: latest.created_at,
+            simulatedDataWarning: latest.simulated_data_warning === true,
+            itemStates: Array.isArray(resultSnapshot.itemStates) ? resultSnapshot.itemStates : [],
+            allItemsCalculated: resultSnapshot.allItemsCalculated === true,
+            warning: typeof resultSnapshot.warning === "string" ? resultSnapshot.warning : null,
+            result: resultSnapshot.response ?? null,
+            stale: !savedDocumentUpdatedAt || savedDocumentUpdatedAt !== String(selected[0].updated_at || "") ||
+              !savedRegime || savedRegime !== String(setup.taxRegime || ""),
+            focusTransmissionEnabled: false,
+          };
+        }
+      } catch (error) {
+        if (!isMissingSchemaColumn(error)) throw error;
+      }
       return apiJson({
         draft: {
           id: selected[0].id, status: selected[0].status, createdAt: selected[0].created_at,
@@ -161,6 +194,7 @@ export async function GET(request: Request) {
           focusPayloadReview: reviewFocusNfePayload(payload),
           homologationGate: { ready: homologationGate.ready, issues: homologationGate.issues, reviewCount: homologationGate.reviewCount },
           homologationSetup: setup,
+          rtcCalculation,
           canSubmitHomologation: selected[0].status === "draft" && homologationGate.ready && canUseHomologation,
           homologationAccessIssue: canUseHomologation ? null : setup.accessIssues.join(" "),
           readyToTransmit: false, transmissionEnabled: false,

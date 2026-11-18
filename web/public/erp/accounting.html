@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6f8">
+  <meta name="description" content="Configuração fiscal, acesso do contador e cálculo de referência RTC por empresa.">
+  <title>Contabilidade | SigmaFiscal</title>
+  <link rel="icon" type="image/svg+xml" href="/branding/sigmafiscal-icon.svg">
+  <link rel="stylesheet" href="/erp/unified-pages.css">
+  <link rel="stylesheet" href="/erp/erp-design-v2.css">
+  <link rel="stylesheet" href="/erp/accounting.css?v=20261118-1">
+  <script src="/erp/theme-switch.js"></script>
+  <script defer src="/erp/erp-page-nav.js?v=20261118-accounting"></script>
+  <script defer src="/erp/accounting.js?v=20261118-1"></script>
+  <link rel="stylesheet" href="/erp/site-refresh.css?v=20261117-navigation-2">
+</head>
+<body class="accounting-page">
+  <div id="erpGlobalNav"></div>
+  <main class="accounting-shell">
+    <header class="accounting-heading">
+      <div>
+        <p class="accounting-eyebrow">FISCAL / CONTABILIDADE</p>
+        <h1>Contabilidade da empresa</h1>
+        <p>Organize os dados fiscais, convide seu contador e consulte os documentos da empresa ativa.</p>
+      </div>
+      <a class="accounting-button accounting-button-secondary" href="/erp/fiscal-history.html">Abrir histórico fiscal</a>
+    </header>
+
+    <div id="accountingStatus" class="accounting-alert" role="status" aria-live="polite">Carregando os dados fiscais desta empresa...</div>
+    <div id="migrationNotice" class="accounting-alert accounting-alert-warning" hidden></div>
+
+    <section class="accounting-company-grid" aria-label="Dados fiscais da empresa">
+      <article class="accounting-card">
+        <header class="accounting-card-header">
+          <div><p class="accounting-kicker">EMPRESA ATIVA</p><h2 id="companyTitle">Dados da empresa</h2></div>
+          <span id="regimeBadge" class="accounting-badge">Regime não confirmado</span>
+        </header>
+        <dl class="accounting-company-facts" id="companyFacts"></dl>
+        <form id="companyForm" class="accounting-form-grid">
+          <label>Regime tributário
+            <select name="taxRegime">
+              <option value="">Selecione</option>
+              <option value="mei">MEI</option>
+              <option value="simples_nacional">Simples Nacional</option>
+              <option value="lucro_presumido">Lucro Presumido</option>
+              <option value="lucro_real">Lucro Real</option>
+              <option value="outro">Outro / a confirmar</option>
+            </select>
+          </label>
+          <label>CRT informado pela contabilidade
+            <select name="crt">
+              <option value="">Não informado</option>
+              <option value="1">1 · Simples Nacional</option>
+              <option value="2">2 · Simples Nacional, excesso de sublimite</option>
+              <option value="3">3 · Regime normal</option>
+              <option value="4">4 · MEI</option>
+            </select>
+          </label>
+          <label>Opção de regime IBS/CBS (se confirmada)
+            <select name="tpRegimeIbsCbs">
+              <option value="">Não informada</option>
+              <option value="1">1 · Apuração no Simples Nacional</option>
+              <option value="2">2 · Regime regular de IBS/CBS</option>
+            </select>
+          </label>
+          <label class="accounting-check"><input name="taxRegimeConfirmed" type="checkbox"> Regime conferido com a contabilidade</label>
+          <div class="accounting-form-actions"><button class="accounting-button accounting-button-primary" type="submit" disabled>Salvar dados fiscais</button><small>Salvamento parcial. O sistema não escolhe códigos ou alíquotas.</small></div>
+        </form>
+      </article>
+      <aside class="accounting-card accounting-documents-card">
+        <p class="accounting-kicker">DOCUMENTOS E RELATÓRIOS</p>
+        <h2>Entradas e saídas</h2>
+        <p>Consulte documentos por período, pessoa, situação e tipo. As notas e os XML são exibidos conforme os arquivos disponíveis para esta empresa.</p>
+        <div class="accounting-link-stack">
+          <a href="/erp/fiscal-history.html">Histórico fiscal · entradas e saídas</a>
+          <a href="/erp/inbound-nfe.html">Conferir XML de entrada</a>
+          <a href="/erp/nfe-issued.html">Notas fiscais de saída</a>
+          <a href="/erp/index.html#reports">Relatórios da empresa</a>
+        </div>
+        <p class="accounting-help">O histórico fiscal permite filtrar documentos e abrir os dados registrados. Um XML ou DANFE só pode ser baixado quando o arquivo correspondente estiver disponível.</p>
+      </aside>
+    </section>
+
+    <section id="inviteSection" class="accounting-card" hidden aria-labelledby="inviteTitle">
+      <header class="accounting-card-header">
+        <div><p class="accounting-kicker">ACESSO CONTROLADO</p><h2 id="inviteTitle">Acesso do contador</h2><p>O convite concede acesso contábil somente à empresa ativa. Não permite cobrança, administração global, transmissão ou cancelamento de notas.</p></div>
+      </header>
+      <form id="inviteForm" class="accounting-invite-form">
+        <label>Nome do contador ou escritório<input name="name" required minlength="2" maxlength="120" autocomplete="name"></label>
+        <label>E-mail de acesso<input name="email" type="email" required maxlength="254" autocomplete="email"></label>
+        <button class="accounting-button accounting-button-primary" type="submit">Enviar convite</button>
+      </form>
+      <p id="inviteStatus" class="accounting-help" role="status" aria-live="polite"></p>
+      <div id="inviteList" class="accounting-list" aria-live="polite">Carregando convites...</div>
+    </section>
+
+    <section class="accounting-card" aria-labelledby="productsTitle">
+      <header class="accounting-card-header">
+        <div><p class="accounting-kicker">CADASTRO FISCAL</p><h2 id="productsTitle">Produtos e classificações</h2><p>Dados reaproveitáveis do produto. Os campos permanecem opcionais enquanto não forem exigidos pelo documento e pela operação.</p></div>
+      </header>
+      <div id="productList" class="accounting-product-list" aria-live="polite">Carregando produtos...</div>
+    </section>
+
+    <section class="accounting-card" aria-labelledby="rtcTitle">
+      <header class="accounting-card-header">
+        <div><p class="accounting-kicker">REFORMA TRIBUTÁRIA · CONSULTA</p><h2 id="rtcTitle">Calculadora oficial IBS/CBS</h2><p>A calculadora selecionada segue o regime confirmado da empresa. O resultado fica vinculado ao rascunho de homologação, não altera outros tributos e não é usado na emissão.</p></div>
+        <span id="rtcModeBadge" class="accounting-badge">Desativada</span>
+      </header>
+      <div id="rtcUnavailable" class="accounting-alert accounting-alert-info">A integração está desligada até que os serviços oficiais da Receita sejam instalados e validados em homologação.</div>
+      <form id="rtcForm" hidden>
+        <label class="accounting-draft-select">Rascunho de NF-e salvo
+          <select name="draftId" required><option value="">Selecione um rascunho</option></select>
+        </label>
+        <label id="rtcGovernmentField" class="accounting-rtc-operation">Compra governamental · opcional
+          <select name="tpEnteGov">
+            <option value="">Não se aplica / não informado</option>
+            <option value="1">União</option>
+            <option value="2">Estado</option>
+            <option value="3">Distrito Federal</option>
+            <option value="4">Município</option>
+            <option value="5" data-regular-only hidden>Consórcio público</option>
+            <option value="6" data-regular-only hidden>Comitê Gestor do IBS</option>
+          </select>
+          <small>Preencha somente quando esta operação envolver compra governamental e a classificação oficial do ente estiver confirmada.</small>
+        </label>
+        <p id="rtcDraftSummary" class="accounting-help">Selecione um rascunho para informar os parâmetros oficiais item a item.</p>
+        <div id="rtcItems" class="accounting-rtc-items"></div>
+        <div class="accounting-form-actions"><button id="calculateRtc" class="accounting-button accounting-button-primary" type="submit">Consultar calculadora oficial</button><small>Use os dados fiscais confirmados. O cálculo é registrado para conferência e não preenche nem transmite a NF-e.</small></div>
+      </form>
+      <div id="rtcResult" class="accounting-result" hidden></div>
+      <div id="rtcHistory" class="accounting-list"></div>
+    </section>
+
+    <section class="accounting-card" aria-labelledby="auditTitle">
+      <header class="accounting-card-header"><div><p class="accounting-kicker">RASTREABILIDADE</p><h2 id="auditTitle">Histórico das configurações fiscais</h2><p>Alterações registradas com usuário e data.</p></div></header>
+      <div id="auditList" class="accounting-list" aria-live="polite">Carregando histórico...</div>
+    </section>
+    <p class="accounting-disclaimer">Os resultados das calculadoras RTC são informativos e seguem a versão exibida. Não substituem o contador, o PGDAS-D ou a validação fiscal. Nenhum valor ou código padrão é inventado pelo SigmaFiscal.</p>
+  </main>
+</body>
+</html>

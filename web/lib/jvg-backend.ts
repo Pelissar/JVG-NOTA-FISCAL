@@ -4,7 +4,7 @@ import { fiscalMissing } from "./fiscal-company";
 import { JvgBackendError } from "./jvg-errors";
 export { JvgBackendError } from "./jvg-errors";
 
-export type SiteAccount = { tenant_id: string; company_id: string; role?: string };
+export type SiteAccount = { tenant_id: string; company_id: string; role?: string; member_role?: string };
 
 export function isConfigured(): boolean {
   const runtime = jvgRuntime();
@@ -130,7 +130,7 @@ export async function getSiteAccount(user: JvgAuthUser, options: SiteAccountOpti
     const resolved = options.allowBillingLocked
       ? await dbRequest<SiteAccount[]>("/rest/v1/rpc/jvg_resolve_billing_account", resolverPayload)
       : await dbRequest<SiteAccount[]>("/rest/v1/rpc/jvg_resolve_site_account", resolverPayload);
-    account = resolved[0] ?? null;
+    account = resolved[0] ? { ...resolved[0], member_role: resolved[0].role } : null;
   } catch {
     // Preview environments may not have received the security migration yet.
     // Keep the fallback equally strict while using the slower REST path.
@@ -158,13 +158,15 @@ export async function getSiteAccount(user: JvgAuthUser, options: SiteAccountOpti
     ]);
     const activeTenantIds = new Set(tenantMemberships.map((membership) => membership.tenant_id));
     const availableTenantIds = new Set(tenants.map((tenant) => tenant.id));
-    account = memberships.find((membership) =>
+    const membership = memberships.find((membership) =>
       activeTenantIds.has(membership.tenant_id) && availableTenantIds.has(membership.tenant_id),
     ) ?? null;
+    account = membership ? { ...membership, member_role: membership.role } : null;
   }
   if (!account) return null;
   // Keep the business role for read-only accounting distinct in storage while
   // applying the ERP's existing viewer permissions at every business endpoint.
+  account = { ...account, member_role: account.member_role || account.role };
   if (account.role === "accounting") account = { ...account, role: "viewer" };
   if (account.role === "commercial") account = { ...account, role: "operator" };
   if (!options.allowBillingLocked) await enforceSubscriptionAccess(account);
@@ -188,25 +190,39 @@ export async function getCompany(account: SiteAccount): Promise<(Record<string, 
   const scope = `tenant_id=${filterEq(account.tenant_id)}&id=${filterEq(account.company_id)}`;
   const legacyBase = "id,legal_name,trade_name,cnpj,state_registration,municipal_registration,tax_regime,status,address,cnae,fiscal_email,fiscal_phone,nfe_series_homologacao,nfe_next_number_homologacao";
   const base = `${legacyBase},business_type`;
-  let rows: Array<Record<string, unknown>>;
+  let rows: Array<Record<string, unknown>> = [];
   let confirmationAvailable = true;
-  try {
-    rows = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_companies?${scope}&select=${base},tax_regime_confirmed&limit=1`);
-  } catch {
-    // Mantém o restante do ERP funcional enquanto a migration manual está pendente.
-    confirmationAvailable = false;
+  let rtcColumnsAvailable = true;
+  const variants = [
+    { columns: `${base},tax_regime_confirmed,crt,tp_regime_ibs_cbs`, confirmed: true, rtc: true },
+    { columns: `${base},tax_regime_confirmed`, confirmed: true, rtc: false },
+    { columns: `${base},crt,tp_regime_ibs_cbs`, confirmed: false, rtc: true },
+    { columns: base, confirmed: false, rtc: false },
+    { columns: `${legacyBase},tax_regime_confirmed`, confirmed: true, rtc: false },
+    { columns: legacyBase, confirmed: false, rtc: false },
+  ];
+  let selectedVariant = variants[0];
+  let loaded = false;
+  for (const variant of variants) {
     try {
-      rows = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_companies?${scope}&select=${base}&limit=1`);
-    } catch {
-      rows = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_companies?${scope}&select=${legacyBase}&limit=1`);
+      rows = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_companies?${scope}&select=${variant.columns}&limit=1`);
+      selectedVariant = variant;
+      loaded = true;
+      break;
+    } catch (error) {
+      if (!(error instanceof JvgBackendError) || !["PGRST204", "PGRST205", "42703"].includes(error.databaseCode || "")) throw error;
     }
   }
+  if (!loaded) throw new JvgBackendError("Não foi possível consultar o cadastro da empresa.", 502);
+  confirmationAvailable = selectedVariant.confirmed;
+  rtcColumnsAvailable = selectedVariant.rtc;
   const stored = rows[0];
   const company = stored ? {
     ...stored,
     business_type: stored.business_type || "comercio",
     tax_regime_confirmed: confirmationAvailable && stored.tax_regime_confirmed === true,
     tax_regime_confirmation_available: confirmationAvailable,
+    fiscal_rtc_columns_available: rtcColumnsAvailable,
   } : null;
   if (!company) return null;
   const missing = fiscalMissing(company);

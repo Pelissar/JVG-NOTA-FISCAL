@@ -24,7 +24,7 @@ function scoped(account: SiteAccount): string {
 }
 
 function canEdit(account: SiteAccount): boolean {
-  return ["owner", "admin", "manager", "operator"].includes(account.role || "");
+  return ["owner", "admin", "manager", "operator", "accounting"].includes(account.member_role || account.role || "");
 }
 
 export async function GET() {

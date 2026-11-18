@@ -965,6 +965,56 @@
     target.append(section);
   }
 
+  function renderRtcReview(target, calculation) {
+    var section = document.createElement('section');
+    section.className = 'rtc-review';
+    appendLine(section, 'h4', 'IBS/CBS · calculadora oficial da Receita Federal');
+    if (!calculation) {
+      appendLine(section, 'p', 'Nenhum cálculo RTC foi registrado para este rascunho. Esta conferência é separada dos demais tributos e não altera os campos da NF-e nem o payload enviado à Focus.');
+      target.append(section);
+      return;
+    }
+
+    var regimeNames = { simples_nacional: 'Simples Nacional', lucro_presumido: 'Lucro presumido', lucro_real: 'Lucro real' };
+    var endpointNames = { 'simples-nacional': 'Calculadora oficial do Simples Nacional', 'regime-geral': 'Calculadora oficial do regime regular' };
+    appendLine(section, 'p', 'Origem: Receita Federal · ' + (endpointNames[calculation.endpoint] || String(calculation.endpoint || 'calculadora não identificada')));
+    appendLine(section, 'p', 'Regime: ' + (regimeNames[calculation.regime] || String(calculation.regime || 'não informado')));
+    appendLine(section, 'p', 'Versão da aplicação: ' + (calculation.calculatorVersion || 'não informada') +
+      ' · base oficial: ' + (calculation.calculatorDatabaseVersion || 'não informada') +
+      ' · contrato: ' + (calculation.operationContractVersion || 'não informado'));
+    if (calculation.createdAt) {
+      var createdAt = new Date(calculation.createdAt);
+      appendLine(section, 'p', 'Registrado em: ' + (Number.isNaN(createdAt.getTime()) ? String(calculation.createdAt) : createdAt.toLocaleString('pt-BR')));
+    }
+
+    var states = Array.isArray(calculation.itemStates) ? calculation.itemStates : [];
+    if (states.length) {
+      appendLine(section, 'h5', 'Situação por item');
+      var stateList = document.createElement('ul');
+      states.forEach(function (state, index) { appendLine(stateList, 'li', 'Item ' + (index + 1) + ': ' + String(state)); });
+      section.append(stateList);
+    }
+    if (calculation.stale) appendLine(section, 'p', 'Este resultado está desatualizado: o rascunho ou o regime da empresa mudou depois do cálculo. Recalcule antes de usar como referência.');
+    if (calculation.simulatedDataWarning || calculation.warning)
+      appendLine(section, 'p', calculation.warning || 'A calculadora sinalizou dados simulados. Use o resultado somente para conferência, nunca para emissão.');
+    if (calculation.allItemsCalculated === false)
+      appendLine(section, 'p', 'A calculadora não concluiu todos os itens. Consulte o retorno oficial para ver as pendências.');
+
+    var responseData = calculation.result;
+    if (responseData && typeof responseData === 'object') {
+      var details = document.createElement('details');
+      var summary = document.createElement('summary');
+      summary.textContent = 'Detalhamento oficial por item';
+      var resultJson = document.createElement('pre');
+      resultJson.className = 'rtc-json-preview';
+      resultJson.textContent = JSON.stringify(responseData, null, 2);
+      details.append(summary, resultJson);
+      section.append(details);
+    }
+    appendLine(section, 'p', 'O resultado RTC é apenas informativo nesta versão: não preenche nem transmite IBS/CBS à Focus e não substitui a validação do contador.');
+    target.append(section);
+  }
+
   async function inspectDraft(id) {
     var target = document.getElementById('draftDetails');
     target.replaceChildren();
@@ -1080,9 +1130,9 @@
       } else {
         appendLine(target, 'p', 'Sem pendências registradas neste documento. Isso não representa aprovação fiscal.');
       }
-      appendLine(target, 'h4', 'Apuração tributária');
-      appendLine(target, 'p', 'Não realizada. O ERP não calcula bases, alíquotas ou valores de impostos. A prévia mostra os campos informados e os dados obrigatórios que ainda faltam.');
-      appendLine(target, 'p', 'O perfil tributário é opcional. A transmissão em homologação depende dos campos exigidos para cada CST/CSOSN e da conferência da operação real.');
+      renderRtcReview(target, draft.rtcCalculation);
+      appendLine(target, 'h4', 'Demais tributos');
+      appendLine(target, 'p', 'O ERP não calcula ICMS, ICMS-ST, PIS, Cofins ou outros valores fiscais. A prévia mostra os campos informados e os dados exigidos que ainda faltam; o perfil tributário continua opcional.');
       renderHomologationActions(target, draft);
       target.hidden = false;
       target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

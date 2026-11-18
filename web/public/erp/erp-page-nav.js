@@ -55,7 +55,7 @@
       ['Naturezas e CFOP', '/erp/cfop.html', 'hash'],
       ['Perfis fiscais opcionais', '/erp/tax-profiles.html', 'sliders']
     ] },
-    { label: 'Conta', icon: 'settings', links: [['Empresa e sistema', '/erp/index.html#settings', 'building'], ['Meu perfil', '/erp/index.html#profile', 'user']] },
+    { label: 'Conta', icon: 'settings', links: [['Contabilidade', '/erp/accounting.html', 'file'], ['Empresa e sistema', '/erp/index.html#settings', 'building'], ['Meu perfil', '/erp/index.html#profile', 'user']] },
   ];
 
   var currentPath = window.location.pathname.replace(/\/$/, '/index.html');
@@ -113,7 +113,7 @@
     { title: 'Cadastros', route: '/erp/index', hashes: ['#clients', '#products', '#services'] },
     { title: 'Operação', route: '/erp/index', hashes: ['#inventory', '#reports'] },
     { title: 'Fiscal', routes: ['/erp/nfe', '/erp/nfe-drafts', '/erp/nfe-issued', '/erp/inbound-nfe', '/erp/fiscal-history', '/erp/cfop', '/erp/tax-profiles', '/erp/nfce'], route: '/erp/index', hashes: ['#fiscal'] },
-    { title: 'Conta', route: '/erp/index', hashes: ['#profile', '#settings'] },
+    { title: 'Conta', routes: ['/erp/accounting'] , route: '/erp/index', hashes: ['#profile', '#settings'] },
     { title: 'Operação', routes: ['/restaurant'] }
   ];
   currentContext = contextGroups.find(function (context) {
@@ -136,7 +136,7 @@
     '/erp/nfe': { '': 'Emitir NF-e' }, '/erp/nfe-drafts': { '': 'Rascunhos de NF-e' }, '/erp/nfce': { '': 'NFC-e · Homologação' },
     '/erp/nfe-issued': { '': 'NF-e emitidas' }, '/erp/inbound-nfe': { '': 'Notas de entrada' },
     '/erp/fiscal-history': { '': 'Histórico de documentos fiscais' }, '/erp/cfop': { '': 'Naturezas e CFOP' },
-    '/erp/tax-profiles': { '': 'Perfis tributários opcionais' }
+    '/erp/tax-profiles': { '': 'Perfis tributários opcionais' }, '/erp/accounting': { '': 'Contabilidade e acesso do contador' }
   };
   var pageTitle = (pageTitles[normalizedCurrentPath] || {})[currentHash] || 'Página atual';
   contextTitle.innerHTML = '<strong>' + currentContext.title + '</strong><small>' + pageTitle + '</small>';

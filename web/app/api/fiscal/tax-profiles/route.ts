@@ -25,7 +25,7 @@ function scope(a: SiteAccount): string {
   return `tenant_id=${filterEq(a.tenant_id)}&company_id=${filterEq(a.company_id)}`;
 }
 function canEdit(a: SiteAccount): boolean {
-  return ["owner", "admin", "manager"].includes(a.role || "");
+  return ["owner", "admin", "manager", "accounting"].includes(a.member_role || a.role || "");
 }
 function textValue(raw: unknown, size: number): string {
   if (raw == null || raw === "") return "";
