@@ -1,5 +1,5 @@
 import { getJvgUser } from "../../jvg-auth";
-import { apiJson, dbRequest, filterEq, getSiteAccount, isSameOrigin, JvgBackendError, safeError } from "../../../lib/jvg-backend";
+import { apiJson, dbRequest, filterEq, getSiteAccount, isSameOrigin, JvgBackendError, requireModuleAccess, safeError } from "../../../lib/jvg-backend";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +38,7 @@ async function accountForRequest() {
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
   const account = await getSiteAccount(user);
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
+  await requireModuleAccess(account, "comercial");
   return account;
 }
 

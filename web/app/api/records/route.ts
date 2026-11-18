@@ -1,5 +1,5 @@
 import { getJvgUser } from "../../jvg-auth";
-import { apiJson, dbCount, dbRequest, filterEq, getCompany, getDashboardSummary, getSiteAccount, isSameOrigin, JvgBackendError, positiveMoney, safeError, str, type SiteAccount } from "../../../lib/jvg-backend";
+import { apiJson, dbCount, dbRequest, filterEq, getCompany, getDashboardSummary, getSiteAccount, isSameOrigin, JvgBackendError, moduleAccessGranted, positiveMoney, requireModuleAccess, safeError, str, type SiteAccount } from "../../../lib/jvg-backend";
 import { fiscalAddress, validCnpj } from "../../../lib/fiscal-company";
 import { isValidCpf } from "../../../lib/fiscal/cpf";
 import { isOfficialCfopCode } from "../../../lib/fiscal/cfop";
@@ -112,18 +112,26 @@ export async function GET(request: Request) {
     const requestedScope = new URL(request.url).searchParams.get("scope") || "full";
     const supportedScopes = ["dashboard", "products", "clients", "services", "inventory", "reports", "quotes", "sales", "orders", "documents", "full"];
     const dataScope = supportedScopes.includes(requestedScope) ? requestedScope : "full";
+    const includeCatalog = await moduleAccessGranted(account, "cadastros");
+    const includeInventory = await moduleAccessGranted(account, "estoque");
+    if (dataScope === "dashboard") await requireModuleAccess(account, "core");
+    if (["products", "clients", "services"].includes(dataScope)) await requireModuleAccess(account, "cadastros");
+    if (dataScope === "inventory") { await requireModuleAccess(account, "cadastros"); await requireModuleAccess(account, "estoque"); }
+    if (["quotes", "sales", "orders"].includes(dataScope)) { await requireModuleAccess(account, "comercial"); await requireModuleAccess(account, "cadastros"); }
+    if (dataScope === "documents") { await requireModuleAccess(account, "fiscal_nfe"); await requireModuleAccess(account, "cadastros"); }
+    if (["reports", "full"].includes(dataScope)) { await requireModuleAccess(account, "cadastros"); await requireModuleAccess(account, "estoque"); }
 
     const shouldTryDashboardRpc = dataScope === "dashboard" && new URL(request.url).searchParams.get("summary") !== "skip";
     if (shouldTryDashboardRpc) {
       try {
         const dashboard = await getDashboardSummary(account);
         return apiJson({ status: "ready", dashboardAvailable: true, dashboard: {
-          productsCount: Number(dashboard.productsCount || 0),
-          clientsCount: Number(dashboard.clientsCount || 0),
-          unitsStock: Number(dashboard.unitsStock || 0),
-          lowStockCount: Number(dashboard.lowStockCount || 0),
-          stockValue: Number(dashboard.stockValue || 0),
-          recentMovements: Array.isArray(dashboard.recentMovements) ? dashboard.recentMovements : [],
+          productsCount: includeCatalog ? Number(dashboard.productsCount || 0) : 0,
+          clientsCount: includeCatalog ? Number(dashboard.clientsCount || 0) : 0,
+          unitsStock: includeInventory ? Number(dashboard.unitsStock || 0) : 0,
+          lowStockCount: includeInventory ? Number(dashboard.lowStockCount || 0) : 0,
+          stockValue: includeInventory ? Number(dashboard.stockValue || 0) : 0,
+          recentMovements: includeInventory && Array.isArray(dashboard.recentMovements) ? dashboard.recentMovements : [],
         } });
       } catch {
         // Mantém a tela funcional enquanto a migração do resumo agregado não for aplicada.
@@ -131,11 +139,11 @@ export async function GET(request: Request) {
     }
 
     const dashboardFallback = dataScope === "dashboard";
-    const wantsProducts = ["full", "reports", "products", "inventory", "dashboard", "quotes", "sales"].includes(dataScope);
-    const wantsParties = ["full", "reports", "clients", "quotes", "sales", "orders", "documents"].includes(dataScope);
-    const wantsPartyCount = dashboardFallback;
-    const wantsServices = ["full", "reports", "services", "quotes", "sales"].includes(dataScope);
-    const wantsMovements = ["full", "reports", "products", "inventory", "dashboard"].includes(dataScope);
+    const wantsProducts = includeCatalog && ["full", "reports", "products", "inventory", "dashboard", "quotes", "sales"].includes(dataScope);
+    const wantsParties = includeCatalog && ["full", "reports", "clients", "quotes", "sales", "orders", "documents"].includes(dataScope);
+    const wantsPartyCount = dashboardFallback && includeCatalog;
+    const wantsServices = includeCatalog && ["full", "reports", "services", "quotes", "sales"].includes(dataScope);
+    const wantsMovements = includeInventory && ["full", "reports", "products", "inventory", "dashboard"].includes(dataScope);
     const wantsCompany = ["full", "reports", "documents"].includes(dataScope);
     const emptyRows: Array<Record<string, unknown>> = [];
     let productTaxDefaultsAvailable: boolean | null = dashboardFallback ? null : true;
@@ -197,12 +205,12 @@ export async function GET(request: Request) {
         name: names.get(String(m.product_id)) || "produto",
       }));
       return apiJson({ status: "ready", dashboardAvailable: false, dashboard: {
-        productsCount: products.length,
+        productsCount: includeCatalog ? products.length : 0,
         clientsCount: Number(partyCount || 0),
-        unitsStock: productRecords.reduce((sum, p) => sum + Number(p.stock || 0), 0),
-        lowStockCount: productRecords.filter(p => p.active && Number(p.stock) <= 10).length,
-        stockValue: productRecords.reduce((sum, p) => sum + Number(p.stock || 0) * Number(p.cost || 0), 0),
-        recentMovements,
+        unitsStock: includeInventory ? productRecords.reduce((sum, p) => sum + Number(p.stock || 0), 0) : 0,
+        lowStockCount: includeInventory ? productRecords.filter(p => p.active && Number(p.stock) <= 10).length : 0,
+        stockValue: includeInventory ? productRecords.reduce((sum, p) => sum + Number(p.stock || 0) * Number(p.cost || 0), 0) : 0,
+        recentMovements: includeInventory ? recentMovements : [],
       } });
     }
     if (dataScope === "products" || dataScope === "inventory") return apiJson({ status: "ready", products: productRecords, productTaxDefaultsAvailable });
@@ -237,6 +245,7 @@ export async function POST(request: Request) {
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {
     const account = await authenticatedAccount();
+    await requireModuleAccess(account, "cadastros");
     if (account.role === 'viewer') throw new JvgBackendError('Sem permissão para alterar cadastros.', 403);
     const data = await request.json() as Record<string, unknown>;
     const kind = validKind(data.kind);
@@ -282,6 +291,7 @@ export async function DELETE(request: Request) {
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {
     const account = await authenticatedAccount();
+    await requireModuleAccess(account, "cadastros");
     if (account.role === 'viewer') throw new JvgBackendError('Sem permissão para alterar cadastros.', 403);
     const data = await request.json() as Record<string, unknown>;
     const kind = validKind(data.kind), id = validUuid(data.id);

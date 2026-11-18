@@ -148,7 +148,7 @@ function internalStatus(providerStatus: unknown, current = "processing"): string
 async function focusContext(): Promise<FocusContext> {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
-  const account = await getSiteAccount(user);
+  const account = await getSiteAccount(user, { requiredModule: "fiscal_nfe" });
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   if (account.role === "viewer") throw new JvgBackendError("Seu perfil não pode transmitir documentos fiscais.", 403);
 

@@ -11,7 +11,7 @@ type Priority = typeof priorities[number];
 async function accountForRequest(): Promise<{ account: SiteAccount; userId: string; displayName: string }> {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
-  const account = await getSiteAccount(user);
+  const account = await getSiteAccount(user, { requiredModule: "assistencia" });
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   return { account, userId: user.userId, displayName: user.displayName };
 }

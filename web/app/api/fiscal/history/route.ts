@@ -13,7 +13,7 @@ const fiscalStatuses = new Set(["draft", "waiting_certificate", "queued", "proce
 async function context(): Promise<SiteAccount> {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
-  const account = await getSiteAccount(user);
+  const account = await getSiteAccount(user, { requiredModule: "fiscal_nfe" });
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   return account;
 }

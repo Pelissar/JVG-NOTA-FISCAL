@@ -11,7 +11,7 @@ function commercial(role?: string) {
 async function account() {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
-  const site = await getSiteAccount(user);
+  const site = await getSiteAccount(user, { requiredModule: "assistencia" });
   if (!site) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   return site;
 }

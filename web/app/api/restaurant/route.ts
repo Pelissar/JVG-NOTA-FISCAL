@@ -1,5 +1,5 @@
 import { getJvgUser } from "../../jvg-auth";
-import { apiJson, dbRequest, filterEq, getSiteAccount, isSameOrigin, JvgBackendError, safeError, str } from "../../../lib/jvg-backend";
+import { apiJson, dbRequest, filterEq, getSiteAccount, isSameOrigin, JvgBackendError, moduleAccessGranted, safeError, str } from "../../../lib/jvg-backend";
 
 export const dynamic = "force-dynamic";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -9,7 +9,7 @@ type RestaurantScope = { tenant_id: string; company_id: string; role?: string };
 async function requireRestaurant(): Promise<RestaurantScope> {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
-  const scope = await getSiteAccount(user);
+  const scope = await getSiteAccount(user, { requiredModule: "restaurante" });
   if (!scope) throw new JvgBackendError("Não encontramos uma empresa ativa para este usuário.", 409);
   const companies = await dbRequest<Array<{ business_type: string | null }>>(
     `/rest/v1/jvg_companies?tenant_id=${filterEq(scope.tenant_id)}&id=${filterEq(scope.company_id)}&select=business_type&limit=1`,
@@ -37,6 +37,9 @@ async function readPublicTable(token: string) {
   ]);
   if (!settings[0]?.qr_orders_enabled || companies[0]?.business_type !== "restaurante") {
     throw new JvgBackendError("Os pedidos por QR estão temporariamente desativados.", 404);
+  }
+  if (!await moduleAccessGranted({ tenant_id: table.tenant_id, company_id: table.company_id }, "restaurante")) {
+    throw new JvgBackendError("Os pedidos por QR estão suspensos porque o módulo Restaurante não está liberado para esta empresa.", 402);
   }
   await ensurePublicTenantAccess(table.tenant_id);
   return { table, company: companies[0] };

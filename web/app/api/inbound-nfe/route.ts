@@ -12,7 +12,7 @@ type Row = Record<string, unknown>;
 async function context() {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
-  const account = await getSiteAccount(user);
+  const account = await getSiteAccount(user, { requiredModule: "fiscal_nfe" });
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   return { user, account };
 }

@@ -11,7 +11,7 @@ const PRODUCT_FIELDS = new Set(["ncm", "cest", "origin", "default_cfop", "defaul
 async function current() {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
-  const account = await getSiteAccount(user);
+  const account = await getSiteAccount(user, { requiredModule: "contabilidade" });
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   const role = account.member_role || account.role || "viewer";
   if (!["owner", "admin", "manager", "accounting"].includes(role))

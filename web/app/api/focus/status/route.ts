@@ -1,5 +1,5 @@
 import { getJvgUser } from "../../../jvg-auth";
-import { apiJson, getSiteAccount, isConfigured, safeError } from "../../../../lib/jvg-backend";
+import { apiJson, getSiteAccount, isConfigured, requireModuleAccess, safeError } from "../../../../lib/jvg-backend";
 import { checkFocusHomologacaoToken } from "../../../../lib/focus/client";
 import { focusRuntimeEnv } from "../../../../lib/focus/runtime-env";
 import { homologationToken } from "../../../../lib/licensing";
@@ -14,6 +14,7 @@ export async function GET() {
   try {
     const account = await getSiteAccount(user);
     if (!account) return apiJson({ status: "needs_company" }, 403);
+    await requireModuleAccess(account, "fiscal_nfe");
     if (account.role === "viewer") return apiJson({ error: "Seu perfil não consulta a Focus." }, 403);
 
     const siteToken = focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN") || focusRuntimeEnv("FOCUS_NFE_HOMOLOGACAO_TOKEN");

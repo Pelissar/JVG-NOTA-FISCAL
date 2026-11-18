@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   const user = await getJvgUser();
   if (!user) return apiJson({ error: "Faça login para continuar." }, 401);
   try {
-    const account = await getSiteAccount(user);
+    const account = await getSiteAccount(user, { requiredModule: "estoque" });
     if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
     if (account.role === "viewer") throw new JvgBackendError("Sem permissão para ajustar o estoque.", 403);
     const data = await request.json() as Record<string, unknown>;

@@ -8,7 +8,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 async function current() {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
-  const account = await getSiteAccount(user);
+  const account = await getSiteAccount(user, { requiredModule: "contabilidade" });
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   const role = account.member_role || account.role || "viewer";
   if (role !== "owner" && role !== "admin") throw new JvgBackendError("Somente proprietário ou administrador desta empresa pode gerenciar convites.", 403);

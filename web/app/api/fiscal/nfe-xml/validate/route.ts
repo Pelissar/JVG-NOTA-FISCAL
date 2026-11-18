@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   try {
     const user = await getJvgUser();
     if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
-    const account = await getSiteAccount(user);
+    const account = await getSiteAccount(user, { requiredModule: "fiscal_nfe" });
     if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
     if (!(request.headers.get("content-type") || "").toLowerCase().includes("multipart/form-data"))
       throw new JvgBackendError("Envie o arquivo XML pelo formulário.", 400);

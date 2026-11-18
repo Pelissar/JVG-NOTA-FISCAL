@@ -2,6 +2,7 @@ import { jvgRuntime } from "./jvg-runtime";
 import type { JvgAuthUser } from "../app/jvg-auth";
 import { fiscalMissing } from "./fiscal-company";
 import { JvgBackendError } from "./jvg-errors";
+import { PLATFORM_MODULES, type PlatformModuleKey } from "./platform-modules";
 export { JvgBackendError } from "./jvg-errors";
 
 export type SiteAccount = { tenant_id: string; company_id: string; role?: string; member_role?: string };
@@ -87,7 +88,49 @@ export async function getPlatformRole(user: JvgAuthUser): Promise<"platform_admi
   return role === "platform_admin" ? role : null;
 }
 
-type SiteAccountOptions = { allowBillingLocked?: boolean };
+type SiteAccountOptions = { allowBillingLocked?: boolean; requiredModule?: PlatformModuleKey };
+
+export async function getModuleEntitlements(account: SiteAccount): Promise<Record<PlatformModuleKey, boolean>> {
+  const legacyAccess = Object.fromEntries(PLATFORM_MODULES.map(({ key }) => [key, true])) as Record<PlatformModuleKey, boolean>;
+  try {
+    const subscriptions = await dbRequest<Array<{ plan_code: string }>>(
+      `/rest/v1/jvg_subscriptions?tenant_id=${filterEq(account.tenant_id)}&select=plan_code&order=updated_at.desc,created_at.desc&limit=1`,
+    );
+    const planCode = subscriptions[0]?.plan_code;
+    const overrides = await dbRequest<Array<{ module_key: string; enabled: boolean }>>(
+      `/rest/v1/jvg_company_module_overrides?tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}&select=module_key,enabled&limit=100`,
+    );
+    let access: Record<PlatformModuleKey, boolean>;
+    if (!planCode || planCode === "pilot") {
+      access = { ...legacyAccess };
+    } else {
+      const plans = await dbRequest<Array<{ features: Record<string, unknown> | null }>>(
+        `/rest/v1/jvg_subscription_plans?code=${filterEq(planCode)}&select=features&limit=1`,
+      );
+      const features = plans[0]?.features && typeof plans[0].features === "object" ? plans[0].features : {};
+      const modules = features.modules && typeof features.modules === "object" && !Array.isArray(features.modules)
+        ? features.modules as Record<string, unknown> : {};
+      access = Object.fromEntries(PLATFORM_MODULES.map(({ key }) => [key, modules[key] === true])) as Record<PlatformModuleKey, boolean>;
+    }
+    for (const override of overrides) {
+      if (PLATFORM_MODULES.some(({ key }) => key === override.module_key)) access[override.module_key as PlatformModuleKey] = override.enabled === true;
+    }
+    return access;
+  } catch (error) {
+    // Keep existing customers working until the versioned entitlement migration is present.
+    if (error instanceof JvgBackendError && ["42P01", "PGRST205"].includes(error.databaseCode || "")) return legacyAccess;
+    throw error;
+  }
+}
+
+export async function moduleAccessGranted(account: SiteAccount, moduleKey: PlatformModuleKey): Promise<boolean> {
+  return (await getModuleEntitlements(account))[moduleKey] === true;
+}
+
+export async function requireModuleAccess(account: SiteAccount, moduleKey: PlatformModuleKey): Promise<void> {
+  if (await moduleAccessGranted(account, moduleKey)) return;
+  throw new JvgBackendError("Este módulo não está liberado para esta empresa. Fale com o administrador da plataforma.", 403);
+}
 
 async function enforceSubscriptionAccess(account: SiteAccount): Promise<void> {
   try {
@@ -170,6 +213,7 @@ export async function getSiteAccount(user: JvgAuthUser, options: SiteAccountOpti
   if (account.role === "accounting") account = { ...account, role: "viewer" };
   if (account.role === "commercial") account = { ...account, role: "operator" };
   if (!options.allowBillingLocked) await enforceSubscriptionAccess(account);
+  if (options.requiredModule) await requireModuleAccess(account, options.requiredModule);
   return account;
 }
 

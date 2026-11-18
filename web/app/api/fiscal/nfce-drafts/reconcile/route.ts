@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   try {
     const user = await getJvgUser();
     if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
-    const account = await getSiteAccount(user);
+    const account = await getSiteAccount(user, { requiredModule: "nfce" });
     if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
     if (account.role === "viewer") throw new JvgBackendError("Seu perfil não pode consultar documentos fiscais.", 403);
     const body = await request.json() as Row;

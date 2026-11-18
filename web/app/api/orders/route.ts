@@ -1,5 +1,5 @@
 import { getJvgUser } from "../../jvg-auth";
-import { apiJson, dbRequest, filterEq, getSiteAccount, isSameOrigin, JvgBackendError, safeError } from "../../../lib/jvg-backend";
+import { apiJson, dbRequest, filterEq, getSiteAccount, isSameOrigin, JvgBackendError, requireModuleAccess, safeError } from "../../../lib/jvg-backend";
 export const dynamic = "force-dynamic";
 const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 async function account(){
@@ -7,6 +7,7 @@ async function account(){
  if(!user)throw new JvgBackendError("Faça login para continuar.",401);
  const scope=await getSiteAccount(user);
  if(!scope)throw new JvgBackendError("Cadastre sua empresa primeiro.",409);
+ await requireModuleAccess(scope, "comercial");
  return scope;
 }
 export async function GET(request:Request){

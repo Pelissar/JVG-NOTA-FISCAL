@@ -4,7 +4,7 @@
   // Nunca mostrar dados locais como se fossem cadastros reais da empresa.
   var state = emptyState();
   var view = 'dashboard', query = '', filter = 'all', partyFilter = 'all';
-  var cloud = {status:'checking',displayName:'',company:null};
+  var cloud = {status:'checking',displayName:'',company:null,moduleAccess:null};
   var profileData = {displayName:'',email:''};
   var logoCompanyId = '';
   var content = document.getElementById('content');
@@ -199,10 +199,15 @@
     var companyId=cloud.company&&cloud.company.id?String(cloud.company.id):'';
     if(logo&&companyId!==logoCompanyId){logoCompanyId=companyId;if(avatar)avatar.classList.remove('has-logo');logo.onload=function(){if(avatar)avatar.classList.add('has-logo');};logo.onerror=function(){if(avatar)avatar.classList.remove('has-logo');};logo.src=companyId?'/api/company/logo?v='+encodeURIComponent(companyId):'';}
     document.querySelectorAll('.sidebar .nav-link').forEach(function(b){var active=b.dataset.view===view;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+    var moduleAccess=cloud.moduleAccess&&typeof cloud.moduleAccess==='object'?cloud.moduleAccess:null;
+    var moduleAllowed=function(key){return !moduleAccess||moduleAccess[key]!==false;};
+    document.querySelectorAll('#sidebarNavigation [data-module]').forEach(function(item){item.hidden=!moduleAllowed(item.dataset.module);});
+    document.querySelectorAll('#sidebarNavigation .nav-group').forEach(function(group){var links=group.querySelectorAll('.nav-link');group.hidden=links.length>0&&Array.from(links).every(function(item){return item.hidden;});});
     var views={dashboard:dashboard,products:products,clients:clients,services:services,fiscal:fiscal,inventory:inventory,reports:reports,profile:profile,settings:settings};
     var requiredScope=scopeForView(view);
     var waiting=(requiredScope&&cloud.status==='checking')||(requiredScope&&cloud.status==='ready'&&!loadedScopes[requiredScope]&&!scopeErrors[requiredScope])||(requiredScope&&loadingScope===requiredScope);
     content.innerHTML=waiting?loadingPanel(requiredScope||'dashboard'):(requiredScope&&scopeErrors[requiredScope]?loadingPanel(requiredScope):(views[view]||dashboard)());
+    if(moduleAccess){var hrefModule={'/erp/sales.html':'comercial','/erp/quotes.html':'comercial','/erp/orders.html':'comercial','/erp/service-orders.html':'assistencia','/erp/nfe.html':'fiscal_nfe','/erp/index.html#inventory':'estoque'};content.querySelectorAll('.dashboard-action-card, .dashboard-hero-actions a').forEach(function(link){var key=hrefModule[link.getAttribute('href')];if(key&&!moduleAllowed(key))link.hidden=true;});}
     var search=document.getElementById('globalSearch');search.value=query;
     if(view==='profile')loadProfile();
   }
@@ -342,7 +347,7 @@
       if(response.status===401&&status.status==='sign_in_required'){window.location.replace('/login');return;}
       if(!response.ok)throw new Error(status.error||'Erro de conexão.');
       if(status.status==='admin_ready'){window.location.replace('/admin');return;}
-      cloud={status:status.status,displayName:status.displayName||'',company:status.company||null};
+      cloud={status:status.status,displayName:status.displayName||'',company:status.company||null,moduleAccess:status.moduleAccess&&typeof status.moduleAccess==='object'?status.moduleAccess:null};
       dashboardRpcAvailable=status.dashboardAvailable===true;
       state.companyName=String((cloud.company&& (cloud.company.trade_name||cloud.company.legal_name))||state.companyName||'Minha empresa');
       if(cloud.status==='ready'){

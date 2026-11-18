@@ -14,7 +14,7 @@ type CfopOverride = { code: string; custom_label: string };
 async function current(): Promise<{ account: SiteAccount; userId: string }> {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para acessar o catálogo fiscal.", 401);
-  const account = await getSiteAccount(user);
+  const account = await getSiteAccount(user, { requiredModule: "fiscal_nfe" });
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   return { account, userId: user.userId };
 }

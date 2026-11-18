@@ -11,7 +11,7 @@ const ROLES = new Set(["owner", "admin", "manager", "accounting"]);
 async function currentAccount(): Promise<{ userId: string; account: SiteAccount }> {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
-  const account = await getSiteAccount(user);
+  const account = await getSiteAccount(user, { requiredModule: "fiscal_nfe" });
   if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   if (!ROLES.has(account.member_role || account.role || "viewer")) throw new JvgBackendError("Acesso fiscal não autorizado.", 403);
   return { userId: user.userId, account };

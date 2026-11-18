@@ -11,7 +11,7 @@ type Row = Record<string, unknown>;
 async function account(): Promise<SiteAccount> {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
-  const site = await getSiteAccount(user);
+  const site = await getSiteAccount(user, { requiredModule: "nfce" });
   if (!site) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   if (site.role === "viewer") throw new JvgBackendError("Seu perfil não prepara NFC-e.", 403);
   return site;

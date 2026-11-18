@@ -14,7 +14,7 @@ const labels: Record<string, string> = {
 async function account(): Promise<{ site: SiteAccount; userId: string; displayName: string }> {
   const user = await getJvgUser();
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
-  const site = await getSiteAccount(user);
+  const site = await getSiteAccount(user, { requiredModule: "assistencia" });
   if (!site) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   return { site, userId: user.userId, displayName: user.displayName };
 }
