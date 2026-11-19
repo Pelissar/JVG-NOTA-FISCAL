@@ -49,6 +49,14 @@ function planModules(plan: Record<string, unknown> | undefined) {
   return Object.fromEntries(PLATFORM_MODULES.map((item) => [item.key, modules[item.key] === true])) as Record<string, boolean>;
 }
 
+function restaurantOnlineMonthlyPrice(features: unknown): number | null {
+  if (!features || typeof features !== "object" || Array.isArray(features)) return null;
+  const prices = (features as Record<string, unknown>).module_prices;
+  if (!prices || typeof prices !== "object" || Array.isArray(prices)) return null;
+  const value = (prices as Record<string, unknown>).restaurante_online;
+  return Number.isSafeInteger(value) && Number(value) >= 0 ? Number(value) : null;
+}
+
 function moduleAccessForCompany(plan: Record<string, unknown> | undefined, overrides: Array<Record<string, unknown>>) {
   const included = planModules(plan);
   const byKey = new Map(overrides.map((item) => [String(item.module_key), item]));
@@ -74,10 +82,16 @@ function parsePlanModules(value: unknown): Record<string, boolean> | null {
   return Object.fromEntries(PLATFORM_MODULES.map((item) => [item.key, input[item.key] === true]));
 }
 
-function mergePlanFeatures(current: unknown, selectedModules: Record<string, boolean> | null) {
+function mergePlanFeatures(current: unknown, selectedModules: Record<string, boolean> | null, onlineMonthlyPrice?: number | null) {
   const existing = current && typeof current === "object" && !Array.isArray(current) ? current as Record<string, unknown> : {};
-  if (!selectedModules) return existing;
-  return { ...existing, modules: selectedModules };
+  const next = { ...existing };
+  if (selectedModules) next.modules = selectedModules;
+  if (onlineMonthlyPrice !== undefined) {
+    const currentPrices = existing.module_prices && typeof existing.module_prices === "object" && !Array.isArray(existing.module_prices)
+      ? existing.module_prices as Record<string, unknown> : {};
+    next.module_prices = { ...currentPrices, restaurante_online: onlineMonthlyPrice };
+  }
+  return next;
 }
 
 async function recordRequestEvent(userId: string, actorName: string, requestId: string, eventType: string, previous: Record<string, unknown>, next: Record<string, unknown>) {
@@ -214,7 +228,7 @@ export async function GET(request: Request) {
     };
     return apiJson({
       companies: companiesView,
-      plans: plans.map((plan) => ({ ...plan, amount_minor: plan.amount_minor === null ? null : Number(plan.amount_minor), modules: planModules(plan), subscriber_count: subscriptions.filter((item) => item.plan_code === plan.code).length })),
+      plans: plans.map((plan) => ({ ...plan, amount_minor: plan.amount_minor === null ? null : Number(plan.amount_minor), restaurant_online_monthly_minor: restaurantOnlineMonthlyPrice(plan.features), modules: planModules(plan), subscriber_count: subscriptions.filter((item) => item.plan_code === plan.code).length })),
       applications: applications.map((application) => ({ ...application, history: eventsByRequest.get(String(application.id)) || [] })), content,
       charges: chargeView,
       invites,
@@ -247,6 +261,7 @@ export async function POST(request: Request) {
       const name = str(body.name, 80);
       const interval = str(body.interval, 20);
       const amountMinor = body.amountMinor === "" || body.amountMinor == null ? null : Number(body.amountMinor);
+      const onlineMonthlyMinor = body.restaurantOnlineMonthlyMinor === "" || body.restaurantOnlineMonthlyMinor == null ? null : Number(body.restaurantOnlineMonthlyMinor);
       const graceDays = Number(body.gracePeriodDays ?? 15);
       const enabledBusinessTypes = Array.isArray(body.enabledBusinessTypes) ? body.enabledBusinessTypes.map((value) => str(value, 40)) : [];
       const moduleSchema = await optionalRows<Record<string, unknown>>("/rest/v1/jvg_company_module_overrides?select=id&limit=1");
@@ -256,6 +271,7 @@ export async function POST(request: Request) {
       if (!PLAN_CODE.test(code) || name.length < 2) throw new JvgBackendError("Informe um código e nome válidos para o plano.", 400);
       if (!INTERVALS.has(interval)) throw new JvgBackendError("Escolha uma periodicidade válida.", 400);
       if (amountMinor !== null && (!Number.isSafeInteger(amountMinor) || amountMinor < 0)) throw new JvgBackendError("Preço do plano inválido.", 400);
+      if (onlineMonthlyMinor !== null && (!Number.isSafeInteger(onlineMonthlyMinor) || onlineMonthlyMinor < 0)) throw new JvgBackendError("Preço mensal do site e pedidos do restaurante inválido.", 400);
       if (!Number.isInteger(graceDays) || graceDays < 0 || graceDays > 60) throw new JvgBackendError("O prazo após vencimento deve ficar entre 0 e 60 dias.", 400);
       if (enabledBusinessTypes.some((code: string) => !BUSINESS_TYPES.some((item) => item.code === code))) throw new JvgBackendError("Um dos segmentos selecionados é inválido.", 400);
       const existingPlans = await dbRequest<Array<{ code: string; name: string; features: Record<string, unknown> | null }>>(`/rest/v1/jvg_subscription_plans?code=${filterEq(code)}&select=code,name,features&limit=1`);
@@ -266,7 +282,7 @@ export async function POST(request: Request) {
           code, name, description: str(body.description, 1200), billing_interval: interval,
           amount_minor: amountMinor, currency: "BRL", max_users: body.maxUsers ? Number(body.maxUsers) : null,
           max_companies: body.maxCompanies ? Number(body.maxCompanies) : 1,
-          features: mergePlanFeatures(existingPlan?.features ?? body.features, modules),
+          features: mergePlanFeatures(existingPlan?.features ?? body.features, modules, onlineMonthlyMinor),
           enabled_business_types: enabledBusinessTypes, grace_period_days: graceDays,
           is_public: body.isPublic === true, active: body.active !== false,
           sort_order: Number.isInteger(Number(body.sortOrder)) ? Number(body.sortOrder) : 100,
@@ -274,7 +290,7 @@ export async function POST(request: Request) {
         }),
       });
       if (!savedPlans[0]?.code) throw new JvgBackendError("O plano não foi salvo. Atualize o painel e tente novamente.", 409);
-      const afterPlan = { name, interval, amountMinor, graceDays, enabledBusinessTypes, modules };
+      const afterPlan = { name, interval, amountMinor, restaurantOnlineMonthlyMinor: onlineMonthlyMinor, graceDays, enabledBusinessTypes, modules };
       await recordAdminAction(user.userId, existingPlan ? "update_subscription_plan" : "create_subscription_plan", "subscription_plan", code, {
         before: existingPlan ? { name: existingPlan.name, features: existingPlan.features } : null,
         after: afterPlan,
@@ -418,8 +434,9 @@ export async function PATCH(request: Request) {
       if (!PLAN_CODE.test(code)) throw new JvgBackendError("Plano inválido.", 400);
       const interval = str(body.interval, 20);
       const amountMinor = body.amountMinor === "" || body.amountMinor == null ? null : Number(body.amountMinor);
+      const onlineMonthlyMinor = body.restaurantOnlineMonthlyMinor === "" || body.restaurantOnlineMonthlyMinor == null ? null : Number(body.restaurantOnlineMonthlyMinor);
       const graceDays = Number(body.gracePeriodDays ?? 15);
-      if (!INTERVALS.has(interval) || (amountMinor !== null && (!Number.isSafeInteger(amountMinor) || amountMinor < 0)) || !Number.isInteger(graceDays) || graceDays < 0 || graceDays > 60) throw new JvgBackendError("Revise periodicidade, preço e prazo de tolerância do plano.", 400);
+      if (!INTERVALS.has(interval) || (amountMinor !== null && (!Number.isSafeInteger(amountMinor) || amountMinor < 0)) || (onlineMonthlyMinor !== null && (!Number.isSafeInteger(onlineMonthlyMinor) || onlineMonthlyMinor < 0)) || !Number.isInteger(graceDays) || graceDays < 0 || graceDays > 60) throw new JvgBackendError("Revise periodicidade, preços e prazo de tolerância do plano.", 400);
       const types = Array.isArray(body.enabledBusinessTypes) ? body.enabledBusinessTypes.map((value) => str(value, 40)) : [];
       if (types.some((type: string) => !BUSINESS_TYPES.some((item) => item.code === type))) throw new JvgBackendError("Segmento de empresa inválido.", 400);
       const existingRows = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_subscription_plans?code=${filterEq(code)}&select=code,name,description,billing_interval,amount_minor,grace_period_days,is_public,active,enabled_business_types,max_users,max_companies,features,sort_order&limit=1`);
@@ -441,13 +458,13 @@ export async function PATCH(request: Request) {
           active: body.active !== false, sort_order: Number(body.sortOrder) || 100,
           enabled_business_types: types, max_users: body.maxUsers ? Number(body.maxUsers) : null,
           max_companies: body.maxCompanies ? Number(body.maxCompanies) : 1,
-          features: mergePlanFeatures(existing.features, selectedModules), updated_at: now,
+          features: mergePlanFeatures(existing.features, selectedModules, onlineMonthlyMinor), updated_at: now,
         }),
       });
       if (!savedPlans[0]?.code) throw new JvgBackendError("O plano não foi atualizado. Recarregue os dados e tente novamente.", 409);
       await recordAdminAction(user.userId, "update_subscription_plan", "subscription_plan", code, {
-        before: { name: existing.name, interval: existing.billing_interval, amountMinor: existing.amount_minor, gracePeriodDays: existing.grace_period_days, active: existing.active, modules: previousModules },
-        after: { name: str(body.name, 80), interval, amountMinor, gracePeriodDays: graceDays, active: body.active !== false, modules: nextModules },
+        before: { name: existing.name, interval: existing.billing_interval, amountMinor: existing.amount_minor, restaurantOnlineMonthlyMinor: restaurantOnlineMonthlyPrice(existing.features), gracePeriodDays: existing.grace_period_days, active: existing.active, modules: previousModules },
+        after: { name: str(body.name, 80), interval, amountMinor, restaurantOnlineMonthlyMinor: onlineMonthlyMinor, gracePeriodDays: graceDays, active: body.active !== false, modules: nextModules },
         subscribersAffected: subscribers.length, moduleChanges,
       });
       return apiJson({ ok: true, subscribersAffected: subscribers.length, moduleChanges, customCompanyOverridesPreserved: true });

@@ -1,10 +1,60 @@
 import { getJvgUser } from "../../jvg-auth";
 import { apiJson, dbRequest, filterEq, getSiteAccount, isSameOrigin, JvgBackendError, moduleAccessGranted, safeError, str } from "../../../lib/jvg-backend";
+import { currentMenuPrice, normalizeMenuComponents, normalizeMenuOptions, normalizeMenuPromotion, resolveMenuChoices } from "../../../lib/restaurant-menu";
+import { jvgRuntime } from "../../../lib/jvg-runtime";
+import { requireVerifiedRestaurantCustomer } from "../../../lib/restaurant-customer-auth";
 
 export const dynamic = "force-dynamic";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-type Product = { id: string; name: string; description: string | null; sku: string; category: string | null; unit: string; sale_price: number | string; active: boolean };
+type Product = { id: string; name: string; description: string | null; sku: string; category: string | null; unit: string; cost_price: number | string; sale_price: number | string; tracks_stock: boolean; active: boolean };
+type RestaurantMenuItem = { product_id: string; image_path: string | null; options: unknown; is_combo: boolean; combo_components: unknown; promotion: unknown; public_active: boolean; sort_order: number };
+type Category = { id: string; name: string; active: boolean; sort_order: number };
+type OrderRequestItem = { productId: string; quantity: number; optionChoiceIds: string[] };
 type RestaurantScope = { tenant_id: string; company_id: string; role?: string };
+type PublicContext = {
+  tenant_id: string; company_id: string;
+  company: { trade_name: string | null; legal_name: string };
+  brand: Record<string, unknown>;
+  table?: { id: string; label: string; service_status: string };
+};
+
+type StockNeed = { productId: string; name: string; quantity: number };
+
+function validCpf(value: string) {
+  const cpf = value.replace(/\D/g, "");
+  if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false;
+  const digit = (length: number) => {
+    let sum = 0;
+    for (let index = 0; index < length; index += 1) sum += Number(cpf[index]) * (length + 1 - index);
+    const result = (sum * 10) % 11;
+    return result === 10 ? 0 : result;
+  };
+  return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
+}
+
+const logoBucket = "jvg-company-logos";
+
+function menuSchemaUnavailable(error: unknown) {
+  return error instanceof JvgBackendError && ["42P01", "42703", "PGRST204", "PGRST205"].includes(error.databaseCode || "");
+}
+
+function publicAssetUrl(path: string | null | undefined) {
+  if (!path) return null;
+  const runtime = jvgRuntime();
+  if (!runtime.supabaseUrl) return null;
+  return `${runtime.supabaseUrl}/storage/v1/object/public/${logoBucket}/${path.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+async function readMenuItems(scope: Pick<RestaurantScope, "tenant_id" | "company_id">, productIds?: string[]) {
+  if (productIds && !productIds.length) return [];
+  const ids = productIds?.length ? `&product_id=in.(${productIds.join(",")})` : "";
+  try {
+    return await dbRequest<RestaurantMenuItem[]>(`/rest/v1/jvg_restaurant_menu_items?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}${ids}&select=product_id,image_path,options,is_combo,combo_components,promotion,public_active,sort_order&limit=1000`);
+  } catch (error) {
+    if (menuSchemaUnavailable(error)) return [];
+    throw error;
+  }
+}
 
 async function requireRestaurant(): Promise<RestaurantScope> {
   const user = await getJvgUser();
@@ -31,14 +81,131 @@ async function readPublicTable(token: string) {
     dbRequest<Array<{ qr_orders_enabled: boolean }>>(`/rest/v1/jvg_restaurant_settings?tenant_id=${filterEq(table.tenant_id)}&company_id=${filterEq(table.company_id)}&select=qr_orders_enabled&limit=1`),
     dbRequest<Array<{ trade_name: string | null; legal_name: string }>>(`/rest/v1/jvg_companies?tenant_id=${filterEq(table.tenant_id)}&id=${filterEq(table.company_id)}&select=trade_name,legal_name&limit=1`),
   ]);
+  let brand: Record<string, unknown> = {};
+  try {
+    const rows = await dbRequest<Array<{ public_name: string | null; public_description: string | null; logo_path: string | null; cover_path: string | null; brand_color: string | null; opening_hours: unknown }>>(
+      `/rest/v1/jvg_restaurant_settings?tenant_id=${filterEq(table.tenant_id)}&company_id=${filterEq(table.company_id)}&select=public_name,public_description,logo_path,cover_path,brand_color,opening_hours&limit=1`,
+    );
+    brand = rows[0] || {};
+  } catch (error) {
+    if (!menuSchemaUnavailable(error)) throw error;
+  }
+  try {
+    const publicRows = await dbRequest<Array<Record<string, unknown>>>(
+      "/rest/v1/jvg_restaurant_settings?tenant_id=" + filterEq(table.tenant_id) +
+      "&company_id=" + filterEq(table.company_id) +
+      "&select=qr_orders_enabled,website_orders_enabled,website_pickup_enabled,public_contact_phone,public_whatsapp,public_email,public_address,public_map_url,public_instagram_url,public_website_url&limit=1",
+    );
+    brand = { ...brand, ...(publicRows[0] || {}) };
+  } catch (error) {
+    if (!menuSchemaUnavailable(error)) throw error;
+  }
   if (!settings[0]?.qr_orders_enabled) {
     throw new JvgBackendError("Os pedidos por QR estão temporariamente desativados.", 404);
   }
   if (!await moduleAccessGranted({ tenant_id: table.tenant_id, company_id: table.company_id }, "restaurante")) {
     throw new JvgBackendError("Os pedidos por QR estão suspensos porque o módulo Restaurante não está liberado para esta empresa.", 402);
   }
+  if (!await moduleAccessGranted({ tenant_id: table.tenant_id, company_id: table.company_id }, "restaurante_online")) {
+    throw new JvgBackendError("O cardápio público e os pedidos por QR não estão liberados para esta empresa.", 402);
+  }
   await ensurePublicTenantAccess(table.tenant_id);
-  return { table, company: companies[0] };
+  return { table, company: companies[0], brand, tenant_id: table.tenant_id, company_id: table.company_id };
+}
+
+async function readPublicRestaurantBySlug(slugValue: string): Promise<PublicContext> {
+  const slug = slugValue.trim().toLowerCase();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length < 3 || slug.length > 60) {
+    throw new JvgBackendError("Endereço do restaurante inválido.", 404);
+  }
+  const rows = await dbRequest<Array<Record<string, unknown>>>(
+    "/rest/v1/jvg_restaurant_settings?public_slug=" + filterEq(slug) +
+    "&website_enabled=eq.true&select=tenant_id,company_id,website_orders_enabled,website_pickup_enabled,public_name,public_description,logo_path,cover_path,brand_color,opening_hours,public_contact_phone,public_whatsapp,public_email,public_address,public_map_url,public_instagram_url,public_website_url&limit=1",
+  );
+  const brand = rows[0];
+  if (!brand || typeof brand.tenant_id !== "string" || typeof brand.company_id !== "string") {
+    throw new JvgBackendError("Este site de restaurante não está publicado.", 404);
+  }
+  const tenantId = String(brand.tenant_id);
+  const companyId = String(brand.company_id);
+  const [companies, restaurantEnabled, onlineEnabled] = await Promise.all([
+    dbRequest<Array<{ trade_name: string | null; legal_name: string }>>(
+      "/rest/v1/jvg_companies?tenant_id=" + filterEq(tenantId) + "&id=" + filterEq(companyId) + "&status=eq.active&select=trade_name,legal_name&limit=1",
+    ),
+    moduleAccessGranted({ tenant_id: tenantId, company_id: companyId }, "restaurante"),
+    moduleAccessGranted({ tenant_id: tenantId, company_id: companyId }, "restaurante_online"),
+  ]);
+  if (!companies[0]) throw new JvgBackendError("Este restaurante não está disponível.", 404);
+  if (!restaurantEnabled || !onlineEnabled) throw new JvgBackendError("O site público está temporariamente indisponível para esta empresa.", 402);
+  await ensurePublicTenantAccess(tenantId);
+  return { tenant_id: tenantId, company_id: companyId, company: companies[0], brand };
+}
+
+async function readPublicMenu(scope: Pick<RestaurantScope, "tenant_id" | "company_id">) {
+  const products = await dbRequest<Product[]>(
+    `/rest/v1/jvg_products?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&active=eq.true&sale_price=gt.0&select=id,name,description,sku,category,unit,cost_price,sale_price,tracks_stock,active&order=category.asc,name.asc&limit=500`,
+  );
+  const items = await readMenuItems(scope, products.map((product) => product.id));
+  let categories: Category[] = [];
+  try {
+    categories = await dbRequest<Category[]>(`/rest/v1/jvg_restaurant_categories?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&active=eq.true&select=id,name,active,sort_order&order=sort_order.asc,name.asc&limit=500`);
+  } catch (error) {
+    if (!menuSchemaUnavailable(error)) throw error;
+  }
+  const itemByProduct = new Map(items.map((item) => [item.product_id, item]));
+  const visible = products.filter((product) => itemByProduct.get(product.id)?.public_active !== false);
+  const componentIds = [...new Set(visible.flatMap((product) => {
+    const components = normalizeMenuComponents(itemByProduct.get(product.id)?.combo_components ?? []);
+    return components?.map((component) => component.productId) || [];
+  }))];
+  const componentRows = componentIds.length ? await dbRequest<Array<{ id: string; name: string; unit: string }>>(
+    `/rest/v1/jvg_products?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=in.(${componentIds.join(",")})&select=id,name,unit&limit=100`,
+  ) : [];
+  const componentById = new Map(componentRows.map((product) => [product.id, product]));
+  const recipes = await currentRecipeSnapshots(scope, visible.map((product) => product.id));
+  const menu = visible.map((product) => {
+    const item = itemByProduct.get(product.id);
+    const options = normalizeMenuOptions(item?.options ?? []);
+    const components = normalizeMenuComponents(item?.combo_components ?? []);
+    const promotion = normalizeMenuPromotion(item?.promotion ?? null, Number(product.sale_price));
+    if (!options || !components || promotion === undefined) throw new JvgBackendError("Um item do cardápio precisa ser revisado antes de aceitar novos pedidos.", 409);
+    if (item?.is_combo && !components.length) throw new JvgBackendError("Um combo está sem seus produtos. Peça à equipe para revisar o cardápio.", 409);
+    return {
+      id: product.id, name: product.name, description: product.description || "", category: product.category || "",
+      unit: product.unit, sale_price: currentMenuPrice(Number(product.sale_price), promotion), base_price: Number(product.sale_price),
+      image_url: publicAssetUrl(item?.image_path), options, is_combo: item?.is_combo === true,
+      combo_components: components.map((component) => {
+        const detail = componentById.get(component.productId);
+        if (!detail) throw new JvgBackendError("Um produto de um combo não está mais disponível. Peça à equipe para revisar o cardápio.", 409);
+        return { product_id: detail.id, name: detail.name, quantity: component.quantity, unit: detail.unit };
+      }), promotion, tracks_stock: product.tracks_stock, recipeSnapshot: recipes.get(product.id) || null,
+    };
+  });
+  const needsByProduct = new Map(menu.map((product) => [product.id, stockNeedsForLine({
+    product_id: product.id, description: product.name, quantity: 1, tracks_stock: product.tracks_stock, recipeSnapshot: product.recipeSnapshot,
+  })]));
+  const stockIds = [...new Set([...needsByProduct.values()].flat().map((need) => need.productId))];
+  let balances: Map<string, number> | null = new Map();
+  if (stockIds.length) {
+    try { balances = await readInventoryBalances(scope, stockIds); }
+    catch (error) {
+      if (kitchenMigrationUnavailable(error)) balances = null;
+      else throw error;
+    }
+  }
+  const menuWithAvailability = menu.map((product) => {
+    const needs = needsByProduct.get(product.id) || [];
+    if (!needs.length) return { ...product, recipeSnapshot: undefined, available: true, availableQuantity: null, availabilityMessage: null };
+    if (!balances) return { ...product, recipeSnapshot: undefined, available: false, availableQuantity: 0, availabilityMessage: "A conferência de estoque ainda não está disponível. Peça ajuda à equipe do restaurante." };
+    const availableQuantity = Math.max(0, Math.floor(Math.min(...needs.map((need) => (balances!.get(need.productId) || 0) / need.quantity)) * 1000) / 1000);
+    return { ...product, recipeSnapshot: undefined, available: availableQuantity > 0, availableQuantity,
+      availabilityMessage: availableQuantity > 0 ? null : "Sem saldo disponível no estoque." };
+  });
+  const activeNames = new Set(categories.map((category) => category.name.toLocaleLowerCase("pt-BR")));
+  for (const name of [...new Set(menu.map((product) => product.category).filter(Boolean))]) {
+    if (!activeNames.has(name.toLocaleLowerCase("pt-BR"))) categories.push({ id: `legacy:${name}`, name, active: true, sort_order: 10000 });
+  }
+  return { categories: categories.sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name, "pt-BR")), menu: menuWithAvailability };
 }
 
 async function ensurePublicTenantAccess(tenantId: string) {
@@ -63,36 +230,230 @@ async function ensurePublicTenantAccess(tenantId: string) {
 
 function parseItems(value: unknown) {
   if (!Array.isArray(value) || value.length < 1 || value.length > 100) throw new JvgBackendError("Adicione pelo menos um item ao pedido.", 400);
-  const merged = new Map<string, number>();
+  const merged = new Map<string, OrderRequestItem>();
   for (const row of value) {
     if (!row || typeof row !== "object") throw new JvgBackendError("Um item do pedido está inválido.", 400);
     const item = row as Record<string, unknown>;
     const id = str(item.productId, 40);
     const quantity = Number(item.quantity);
+    const optionChoiceIds = Array.isArray(item.optionChoiceIds) ? [...new Set(item.optionChoiceIds.map((choice) => str(choice, 40)))] : [];
     if (!UUID.test(id) || !Number.isFinite(quantity) || quantity <= 0 || quantity > 999 || Math.round(quantity * 1000) !== quantity * 1000) {
       throw new JvgBackendError("Confira os produtos e as quantidades do pedido.", 400);
     }
-    merged.set(id, (merged.get(id) || 0) + quantity);
+    if (optionChoiceIds.some((choice) => !UUID.test(choice)) || optionChoiceIds.length > 40) throw new JvgBackendError("Uma opção do pedido está inválida. Atualize o cardápio e tente novamente.", 400);
+    const key = `${id}:${optionChoiceIds.sort().join(",")}`;
+    const prior = merged.get(key);
+    merged.set(key, { productId: id, quantity: (prior?.quantity || 0) + quantity, optionChoiceIds });
   }
-  return [...merged].map(([productId, quantity]) => ({ productId, quantity }));
+  return [...merged.values()];
 }
 
-async function calculateItems(scope: Pick<RestaurantScope, "tenant_id" | "company_id">, items: Array<{ productId: string; quantity: number }>) {
-  const ids = items.map((item) => item.productId);
+function kitchenMigrationUnavailable(error: unknown) {
+  return error instanceof JvgBackendError && ["42P01", "42703", "PGRST202", "PGRST204", "42883"].includes(error.databaseCode || "");
+}
+
+async function currentRecipeSnapshots(scope: Pick<RestaurantScope, "tenant_id" | "company_id">, menuIds: string[]) {
+  if (!menuIds.length) return new Map<string, Record<string, unknown>>();
+  try {
+    const versions = await dbRequest<Array<{ id: string; menu_product_id: string; version_no: number; yield_quantity: number | string; yield_unit: string }>>(
+      `/rest/v1/jvg_restaurant_recipe_versions?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&menu_product_id=in.(${menuIds.join(",")})&is_current=eq.true&select=id,menu_product_id,version_no,yield_quantity,yield_unit&limit=500`,
+    );
+    if (!versions.length) return new Map();
+    const versionIds = versions.map((version) => version.id);
+    const recipeItems = await dbRequest<Array<{ recipe_version_id: string; ingredient_product_id: string; quantity_per_yield: number | string; unit: string; conversion_to_stock_unit: number | string }>>(
+      `/rest/v1/jvg_restaurant_recipe_items?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&recipe_version_id=in.(${versionIds.join(",")})&select=recipe_version_id,ingredient_product_id,quantity_per_yield,unit,conversion_to_stock_unit&order=position.asc&limit=5000`,
+    );
+    const ingredientIds = [...new Set(recipeItems.map((item) => item.ingredient_product_id))];
+    const ingredients = ingredientIds.length ? await dbRequest<Array<{ id: string; name: string; unit: string; cost_price: number | string; active: boolean; tracks_stock: boolean }>>(
+      `/rest/v1/jvg_products?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=in.(${ingredientIds.join(",")})&select=id,name,unit,cost_price,active,tracks_stock&limit=5000`,
+    ) : [];
+    const ingredientById = new Map(ingredients.map((ingredient) => [ingredient.id, ingredient]));
+    return new Map(versions.map((version) => [version.menu_product_id, {
+      versionId: version.id,
+      versionNo: version.version_no,
+      yieldQuantity: Number(version.yield_quantity),
+      yieldUnit: version.yield_unit,
+      ingredients: recipeItems.filter((item) => item.recipe_version_id === version.id).map((item) => {
+        const ingredient = ingredientById.get(item.ingredient_product_id);
+        if (!ingredient) throw new JvgBackendError("Um ingrediente da ficha técnica não pertence mais a esta empresa. Revise a receita antes de criar pedidos.", 409);
+        const cost = Number(ingredient.cost_price);
+        return { productId: ingredient.id, name: ingredient.name, stockUnit: ingredient.unit, tracksStock: ingredient.tracks_stock,
+          quantityPerYield: Number(item.quantity_per_yield), unit: item.unit,
+          conversionToStockUnit: Number(item.conversion_to_stock_unit),
+          unitCostAtSale: Number.isFinite(cost) && cost > 0 ? cost : null };
+      }),
+    }]));
+  } catch (error) {
+    // Existing order entry remains available until the separately versioned migration is applied.
+    if (kitchenMigrationUnavailable(error)) return new Map();
+    throw error;
+  }
+}
+
+async function calculateItems(scope: Pick<RestaurantScope, "tenant_id" | "company_id">, items: OrderRequestItem[]) {
+  const ids = [...new Set(items.map((item) => item.productId))];
   const products = await dbRequest<Product[]>(
-    `/rest/v1/jvg_products?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=in.(${ids.join(",")})&active=eq.true&select=id,name,description,sku,category,unit,sale_price,active&limit=100`,
+    `/rest/v1/jvg_products?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=in.(${ids.join(",")})&active=eq.true&select=id,name,description,sku,category,unit,cost_price,sale_price,tracks_stock,active&limit=100`,
   );
   const byId = new Map(products.map((product) => [product.id, product]));
   if (byId.size !== ids.length) throw new JvgBackendError("Um produto foi removido ou está inativo. Atualize o cardápio e tente novamente.", 409);
+  const menuItems = await readMenuItems(scope, ids);
+  const menuByProduct = new Map(menuItems.map((item) => [item.product_id, item]));
+  const recipes = await currentRecipeSnapshots(scope, ids);
+  const componentIds = [...new Set(items.flatMap((item) => normalizeMenuComponents(menuByProduct.get(item.productId)?.combo_components ?? [])?.map((component) => component.productId) || []))];
+  const components = componentIds.length ? await dbRequest<Array<{ id: string; name: string; unit: string }>>(
+    `/rest/v1/jvg_products?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=in.(${componentIds.join(",")})&active=eq.true&select=id,name,unit&limit=100`,
+  ) : [];
+  const componentById = new Map(components.map((component) => [component.id, component]));
   let total = 0;
-  const snapshot = items.map((item) => {
+  const snapshot = items.map((item, index) => {
     const product = byId.get(item.productId)!;
-    const unitPrice = Number(product.sale_price);
+    const menuItem = menuByProduct.get(product.id);
+    const optionGroups = normalizeMenuOptions(menuItem?.options ?? []);
+    const comboComponents = normalizeMenuComponents(menuItem?.combo_components ?? []);
+    const promotion = normalizeMenuPromotion(menuItem?.promotion ?? null, Number(product.sale_price));
+    if (!optionGroups || !comboComponents || promotion === undefined) throw new JvgBackendError("Um item do cardÃ¡pio estÃ¡ com configuraÃ§Ã£o invÃ¡lida. PeÃ§a Ã  equipe para revisÃ¡-lo.", 409);
+    if (menuItem?.is_combo && !comboComponents.length) throw new JvgBackendError("Um combo estÃ¡ sem produtos associados. PeÃ§a Ã  equipe para revisar o cardÃ¡pio.", 409);
+    const resolved = resolveMenuChoices(optionGroups, item.optionChoiceIds);
+    if (!resolved.valid) throw new JvgBackendError(resolved.error, 400);
+    const basePrice = currentMenuPrice(Number(product.sale_price), promotion);
+    const unitPrice = Math.round((basePrice + resolved.extraPrice) * 100) / 100;
     const lineTotal = Math.round(unitPrice * item.quantity * 100) / 100;
     total += lineTotal;
-    return { product_id: product.id, sku: product.sku, description: product.name, unit: product.unit, quantity: item.quantity, unit_price: unitPrice, total: lineTotal };
+    const catalogCost = Number(product.cost_price);
+    return {
+      orderItemIndex: index + 1, product_id: product.id, sku: product.sku, description: product.name,
+      unit: product.unit, quantity: item.quantity, unit_price: unitPrice, total: lineTotal,
+      tracks_stock: product.tracks_stock,
+      unitCostAtSale: Number.isFinite(catalogCost) && catalogCost > 0 ? catalogCost : null,
+      selectedOptionIds: [...item.optionChoiceIds],
+      selectedOptions: resolved.selected.map((choice) => ({ name: choice.name, price: choice.price })),
+      isCombo: menuItem?.is_combo === true,
+      comboSnapshot: comboComponents.map((component) => {
+        const detail = componentById.get(component.productId);
+        if (!detail) throw new JvgBackendError("Um produto de um combo nÃ£o estÃ¡ mais disponÃ­vel. Revise o cardÃ¡pio.", 409);
+        return { productId: detail.id, name: detail.name, quantity: component.quantity, unit: detail.unit };
+      }),
+      promotionSnapshot: promotion && currentMenuPrice(Number(product.sale_price), promotion) !== Number(product.sale_price) ? promotion : null,
+      recipeSnapshot: recipes.get(product.id) || null,
+    };
   });
   return { snapshot, total: Math.round(total * 100) / 100 };
+}
+
+function stockNeedsForLine(item: Record<string, unknown>): StockNeed[] {
+  const quantity = Number(item.quantity);
+  const recipe = item.recipeSnapshot && typeof item.recipeSnapshot === "object" ? item.recipeSnapshot as Record<string, unknown> : null;
+  const ingredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients as Array<Record<string, unknown>> : null;
+  if (recipe && ingredients) {
+    const yieldQuantity = Number(recipe.yieldQuantity);
+    if (!Number.isFinite(yieldQuantity) || yieldQuantity <= 0) throw new JvgBackendError("A ficha técnica do produto tem rendimento inválido. Revise-a antes de aceitar pedidos.", 409);
+    if (ingredients.some((ingredient) => ingredient.tracksStock !== true)) {
+      const ingredient = ingredients.find((row) => row.tracksStock !== true);
+      throw new JvgBackendError(`Ative o controle de estoque do ingrediente ${String(ingredient?.name || "da ficha técnica")} antes de aceitar pedidos deste produto.`, 409);
+    }
+    return ingredients.map((ingredient) => ({
+      productId: String(ingredient.productId || ""), name: String(ingredient.name || "ingrediente"),
+      quantity: quantity * Number(ingredient.quantityPerYield) * Number(ingredient.conversionToStockUnit || 1) / yieldQuantity,
+    })).filter((need) => UUID.test(need.productId) && Number.isFinite(need.quantity) && need.quantity > 0);
+  }
+  return item.tracks_stock === true && UUID.test(String(item.product_id || ""))
+    ? [{ productId: String(item.product_id), name: String(item.description || "produto"), quantity }]
+    : [];
+}
+
+async function readInventoryBalances(scope: Pick<RestaurantScope, "tenant_id" | "company_id">, productIds: string[]) {
+  if (!productIds.length) return new Map<string, number>();
+  const rows = await dbRequest<Array<{ product_id: string; quantity_on_hand: number | string }>>(
+    "/rest/v1/rpc/jvg_restaurant_inventory_balances",
+    { method: "POST", body: JSON.stringify({ p_tenant_id: scope.tenant_id, p_company_id: scope.company_id, p_product_ids: productIds }) },
+  );
+  return new Map(rows.map((row) => [row.product_id, Number(row.quantity_on_hand) || 0]));
+}
+
+async function assertStockAvailable(scope: Pick<RestaurantScope, "tenant_id" | "company_id">, snapshot: Array<Record<string, unknown>>) {
+  const needs = new Map<string, StockNeed>();
+  for (const line of snapshot) for (const need of stockNeedsForLine(line)) {
+    const prior = needs.get(need.productId);
+    needs.set(need.productId, { ...need, quantity: (prior?.quantity || 0) + need.quantity });
+  }
+  if (!needs.size) return;
+  let balances: Map<string, number>;
+  try { balances = await readInventoryBalances(scope, [...needs.keys()]); }
+  catch (error) {
+    if (kitchenMigrationUnavailable(error)) throw new JvgBackendError("Não foi possível validar o estoque atual. A atualização de estoque do restaurante precisa ser aplicada antes de aceitar pedidos online.", 503);
+    throw error;
+  }
+  for (const need of needs.values()) {
+    const available = balances.get(need.productId) || 0;
+    if (available + 0.00001 < need.quantity) {
+      throw new JvgBackendError(`Estoque insuficiente para ${need.name}: necessário ${need.quantity.toLocaleString("pt-BR")} e disponível ${available.toLocaleString("pt-BR")}. Atualize o pedido ou fale com a equipe.`, 409);
+    }
+  }
+}
+
+function publicOrderItems(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.map((raw) => {
+    if (!raw || typeof raw !== "object") return null;
+    const item = raw as Record<string, unknown>;
+    const selectedOptions = Array.isArray(item.selectedOptions) ? item.selectedOptions.map((rawOption) => {
+      const option = rawOption as Record<string, unknown>;
+      return { name: str(option.name, 120), price: Number(option.price) || 0 };
+    }) : [];
+    const comboSnapshot = Array.isArray(item.comboSnapshot) ? item.comboSnapshot.map((rawComponent) => {
+      const component = rawComponent as Record<string, unknown>;
+      return { name: str(component.name, 160), quantity: Number(component.quantity) || 0, unit: str(component.unit, 40) };
+    }) : [];
+    const promotion = item.promotionSnapshot && typeof item.promotionSnapshot === "object" ? item.promotionSnapshot as Record<string, unknown> : null;
+    return {
+      product_id: str(item.product_id, 40), description: str(item.description, 200),
+      quantity: Number(item.quantity) || 0, unit_price: Number(item.unit_price) || 0, total: Number(item.total) || 0,
+      selectedOptionIds: Array.isArray(item.selectedOptionIds) ? item.selectedOptionIds.filter((id): id is string => typeof id === "string" && UUID.test(id)) : [],
+      selectedOptions,
+      comboSnapshot,
+      promotionSnapshot: promotion ? { label: str(promotion.label, 120), price: Number(promotion.price) || 0 } : null,
+    };
+  }).filter((item): item is NonNullable<typeof item> => Boolean(item));
+}
+
+async function readCustomerHistory(scope: Pick<RestaurantScope, "tenant_id" | "company_id">, customerId: string, limit: number) {
+  const base = `/rest/v1/jvg_restaurant_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&customer_id=${filterEq(customerId)}`;
+  let orders: Array<Record<string, unknown>>;
+  try {
+    orders = await dbRequest<Array<Record<string, unknown>>>(`${base}&select=id,order_number,table_id,customer_id,source,status,items,total,notes,created_at,customer_name_snapshot,phone_snapshot,fulfillment_type,payment_status&order=created_at.desc&limit=${limit}`);
+  } catch (error) {
+    if (!menuSchemaUnavailable(error)) throw error;
+    orders = await dbRequest<Array<Record<string, unknown>>>(`${base}&select=id,order_number,table_id,customer_id,source,status,items,total,notes,created_at,customer_name_snapshot,phone_snapshot&order=created_at.desc&limit=${limit}`);
+  }
+  return orders.map((order) => ({
+    id: order.id, order_number: order.order_number, table_id: order.table_id, customer_id: order.customer_id, source: order.source, status: order.status,
+    customer_name_snapshot: order.customer_name_snapshot || "", phone_snapshot: order.phone_snapshot || "",
+    items: publicOrderItems(order.items), total: Number(order.total) || 0, notes: str(order.notes, 1000),
+    created_at: order.created_at, fulfillment_type: order.fulfillment_type || null,
+    payment_status: order.payment_status === "paid" ? "paid" : order.payment_status === "pending" ? "pending" : "unknown",
+  }));
+}
+
+async function readRestaurantOrders(scope: Pick<RestaurantScope, "tenant_id" | "company_id">) {
+  const recent = encodeURIComponent(new Date(Date.now() - 3 * 86400000).toISOString());
+  const base = `/rest/v1/jvg_restaurant_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&created_at=gte.${recent}`;
+  try {
+    return await dbRequest<Array<Record<string, unknown>>>(`${base}&select=id,order_number,table_id,customer_id,source,status,items,customer_name_snapshot,phone_snapshot,total,notes,created_at,updated_at,payment_method,payment_status,payment_confirmed_at,payment_confirmed_by,fulfillment_type&order=created_at.desc&limit=200`);
+  } catch (error) {
+    if (!menuSchemaUnavailable(error)) throw error;
+    return await dbRequest<Array<Record<string, unknown>>>(`${base}&select=id,order_number,table_id,customer_id,source,status,items,customer_name_snapshot,phone_snapshot,total,notes,created_at,updated_at&order=created_at.desc&limit=200`);
+  }
+}
+
+async function readTableRequestQueue(scope: Pick<RestaurantScope, "tenant_id" | "company_id">) {
+  try {
+    const rows = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_restaurant_table_requests?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&status=eq.pending&select=id,table_id,request_type,status,created_at&order=created_at.asc&limit=100`);
+    return { available: true, rows };
+  } catch (error) {
+    if (menuSchemaUnavailable(error)) return { available: false, rows: [] };
+    throw error;
+  }
 }
 
 async function saveCustomer(scope: RestaurantScope, fullName: string, phoneInput: string, cpfInput: string, requireCpfMatch = false) {
@@ -127,16 +488,134 @@ async function saveCustomer(scope: RestaurantScope, fullName: string, phoneInput
   return { id: raced[0].id, name: raced[0].full_name, phone };
 }
 
+async function saveVerifiedCustomer(
+  scope: RestaurantScope,
+  identity: { userId: string; phone: string },
+  fullNameValue: string,
+  cpfValue: string,
+) {
+  const fullName = fullNameValue.trim();
+  const cpf = cpfValue.replace(/\D/g, "") || null;
+  if (fullName.length < 2 || fullName.length > 120) throw new JvgBackendError("Informe seu nome completo.", 400);
+  if (cpf && !validCpf(cpf)) throw new JvgBackendError("Informe um CPF válido com 11 dígitos.", 400);
+  const base = "/rest/v1/jvg_restaurant_customers?tenant_id=" + filterEq(scope.tenant_id) + "&company_id=" + filterEq(scope.company_id);
+  const byUser = await dbRequest<Array<{ id: string; full_name: string; cpf: string | null }>>(
+    base + "&auth_user_id=" + filterEq(identity.userId) + "&select=id,full_name,cpf&limit=1",
+  );
+  if (byUser[0]) {
+    const savedCpf = cpf || byUser[0].cpf;
+    if (!savedCpf) throw new JvgBackendError("Informe seu CPF para concluir o cadastro do cliente.", 400);
+    await dbRequest(base + "&id=" + filterEq(byUser[0].id), {
+      method: "PATCH",
+      body: JSON.stringify({ full_name: fullName, phone: identity.phone, cpf: savedCpf, updated_at: new Date().toISOString() }),
+    });
+    return { id: byUser[0].id, name: fullName, phone: identity.phone, cpf: savedCpf };
+  }
+
+  const byPhone = await dbRequest<Array<{ id: string; auth_user_id: string | null; cpf: string | null }>>(
+    base + "&phone=" + filterEq(identity.phone) + "&select=id,auth_user_id,cpf&limit=1",
+  );
+  if (byPhone[0]?.auth_user_id && byPhone[0].auth_user_id !== identity.userId) {
+    throw new JvgBackendError("Este telefone já está associado a outra conta. Fale com a equipe do restaurante para corrigir o cadastro.", 409);
+  }
+  if (byPhone[0]) {
+    if (cpf && byPhone[0].cpf && cpf !== byPhone[0].cpf) throw new JvgBackendError("O CPF informado não corresponde ao cadastro deste telefone. Confira os dados com a equipe.", 409);
+    const savedCpf = cpf || byPhone[0].cpf;
+    if (!savedCpf) throw new JvgBackendError("Informe seu CPF para concluir o cadastro do cliente.", 400);
+    await dbRequest(base + "&id=" + filterEq(byPhone[0].id), {
+      method: "PATCH",
+      body: JSON.stringify({ auth_user_id: identity.userId, full_name: fullName, cpf: savedCpf, updated_at: new Date().toISOString() }),
+    });
+    return { id: byPhone[0].id, name: fullName, phone: identity.phone, cpf: savedCpf };
+  }
+  if (!cpf) throw new JvgBackendError("Informe seu CPF para concluir o cadastro do cliente.", 400);
+  const inserted = await dbRequest<Array<{ id: string }>>("/rest/v1/jvg_restaurant_customers", {
+    method: "POST",
+    headers: { Prefer: "resolution=ignore-duplicates,return=representation" },
+    body: JSON.stringify({
+      tenant_id: scope.tenant_id, company_id: scope.company_id, auth_user_id: identity.userId,
+      full_name: fullName, phone: identity.phone, cpf,
+    }),
+  });
+  if (inserted[0]) return { id: inserted[0].id, name: fullName, phone: identity.phone, cpf };
+  const raced = await dbRequest<Array<{ id: string }>>(
+    base + "&auth_user_id=" + filterEq(identity.userId) + "&select=id&limit=1",
+  );
+  if (!raced[0]) throw new JvgBackendError("Não foi possível salvar o cadastro do cliente.", 409);
+  return { id: raced[0].id, name: fullName, phone: identity.phone, cpf };
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const token = url.searchParams.get("token");
-    if (token) {
-      const { table, company } = await readPublicTable(token);
-      const menu = await dbRequest<Product[]>(
-        `/rest/v1/jvg_products?tenant_id=${filterEq(table.tenant_id)}&company_id=${filterEq(table.company_id)}&active=eq.true&sale_price=gt.0&select=id,name,description,category,unit,sale_price&order=category.asc,name.asc&limit=500`,
+    const slug = url.searchParams.get("slug");
+    if (url.searchParams.get("account") === "1") {
+      const identity = await requireVerifiedRestaurantCustomer(request);
+      let context: PublicContext;
+      if (token) {
+        const result = await readPublicTable(token);
+        context = { tenant_id: result.tenant_id, company_id: result.company_id, company: result.company, brand: result.brand, table: result.table };
+      } else if (slug) context = await readPublicRestaurantBySlug(slug);
+      else throw new JvgBackendError("Informe o restaurante para consultar sua conta.", 400);
+
+      const scope = { tenant_id: context.tenant_id, company_id: context.company_id };
+      const customers = await dbRequest<Array<{ id: string; full_name: string; phone: string; cpf: string | null; loyalty_points: number }>>(
+        "/rest/v1/jvg_restaurant_customers?tenant_id=" + filterEq(scope.tenant_id) +
+        "&company_id=" + filterEq(scope.company_id) + "&auth_user_id=" + filterEq(identity.userId) +
+        "&select=id,full_name,phone,cpf,loyalty_points&limit=1",
       );
-      return apiJson({ company: company.trade_name || company.legal_name, table: table.label, tableOpen: table.service_status === "open", menu: menu.map((product) => ({ ...product, sale_price: Number(product.sale_price) })) });
+      if (!customers[0]) return apiJson({ profile: null, history: [] });
+      return apiJson({
+        profile: { id: customers[0].id, name: customers[0].full_name, phone: identity.phone, cpf: customers[0].cpf, loyaltyPoints: customers[0].loyalty_points },
+        history: await readCustomerHistory(scope, customers[0].id, 50),
+      });
+    }
+    if (slug) {
+      const context = await readPublicRestaurantBySlug(slug);
+      const scope = { tenant_id: context.tenant_id, company_id: context.company_id };
+      const { categories, menu } = await readPublicMenu(scope);
+      const brand = context.brand;
+      return apiJson({
+        mode: "website",
+        company: typeof brand.public_name === "string" && brand.public_name ? brand.public_name : context.company.trade_name || context.company.legal_name,
+        description: typeof brand.public_description === "string" ? brand.public_description : "",
+        logoUrl: publicAssetUrl(typeof brand.logo_path === "string" ? brand.logo_path : null),
+        coverUrl: publicAssetUrl(typeof brand.cover_path === "string" ? brand.cover_path : null),
+        brandColor: typeof brand.brand_color === "string" && /^#[0-9a-f]{6}$/i.test(brand.brand_color) ? brand.brand_color : "#1768d2",
+        openingHours: brand.opening_hours && typeof brand.opening_hours === "object" ? brand.opening_hours : {},
+        table: null, tableOpen: true, onlineOrdersEnabled: brand.website_orders_enabled === true && brand.website_pickup_enabled === true,
+        pickupEnabled: brand.website_pickup_enabled === true, categories, menu,
+        contactPhone: typeof brand.public_contact_phone === "string" ? brand.public_contact_phone : "",
+        whatsapp: typeof brand.public_whatsapp === "string" ? brand.public_whatsapp : "",
+        email: typeof brand.public_email === "string" ? brand.public_email : "",
+        address: typeof brand.public_address === "string" ? brand.public_address : "",
+        mapUrl: typeof brand.public_map_url === "string" ? brand.public_map_url : "",
+        instagramUrl: typeof brand.public_instagram_url === "string" ? brand.public_instagram_url : "",
+        websiteUrl: typeof brand.public_website_url === "string" ? brand.public_website_url : "",
+      });
+    }
+    if (token) {
+      const { table, company, brand } = await readPublicTable(token);
+      const { categories, menu } = await readPublicMenu({ tenant_id: table.tenant_id, company_id: table.company_id });
+      return apiJson({
+        mode: "table",
+        company: typeof brand.public_name === "string" && brand.public_name ? brand.public_name : company.trade_name || company.legal_name,
+        description: typeof brand.public_description === "string" ? brand.public_description : "",
+        logoUrl: publicAssetUrl(typeof brand.logo_path === "string" ? brand.logo_path : null),
+        coverUrl: publicAssetUrl(typeof brand.cover_path === "string" ? brand.cover_path : null),
+        brandColor: typeof brand.brand_color === "string" && /^#[0-9a-f]{6}$/i.test(brand.brand_color) ? brand.brand_color : "#1768d2",
+        openingHours: brand.opening_hours && typeof brand.opening_hours === "object" ? brand.opening_hours : {},
+        table: table.label, tableOpen: table.service_status === "open", onlineOrdersEnabled: brand.qr_orders_enabled === true,
+        pickupEnabled: false, categories, menu,
+        contactPhone: typeof brand.public_contact_phone === "string" ? brand.public_contact_phone : "",
+        whatsapp: typeof brand.public_whatsapp === "string" ? brand.public_whatsapp : "",
+        email: typeof brand.public_email === "string" ? brand.public_email : "",
+        address: typeof brand.public_address === "string" ? brand.public_address : "",
+        mapUrl: typeof brand.public_map_url === "string" ? brand.public_map_url : "",
+        instagramUrl: typeof brand.public_instagram_url === "string" ? brand.public_instagram_url : "",
+        websiteUrl: typeof brand.public_website_url === "string" ? brand.public_website_url : "",
+      });
     }
 
     const scope = await requireRestaurant();
@@ -145,16 +624,31 @@ export async function GET(request: Request) {
       const customers = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_restaurant_customers?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&phone=${filterEq(phoneSearch)}&select=id,full_name,phone,cpf,loyalty_points&limit=1`);
       const customer = customers[0];
       if (!customer) return apiJson({ customer: null, history: [] });
-      const history = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_restaurant_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&customer_id=${filterEq(String(customer.id))}&select=id,order_number,table_id,source,status,items,total,notes,created_at&order=created_at.desc&limit=100`);
-      return apiJson({ customer, history: history.map((order) => ({ ...order, total: Number(order.total) })) });
+      const history = await readCustomerHistory(scope, String(customer.id), 100);
+      return apiJson({ customer, history });
     }
-    const [settings, tables, products, orders] = await Promise.all([
+    const [settings, tables, products, orders, menuItems, tableRequests] = await Promise.all([
       dbRequest<Array<{ qr_orders_enabled: boolean; loyalty_enabled: boolean; loyalty_points_per_real: number | string }>>(`/rest/v1/jvg_restaurant_settings?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&select=qr_orders_enabled,loyalty_enabled,loyalty_points_per_real&limit=1`),
       dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_restaurant_tables?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&select=id,table_number,label,qr_token,active,service_status,opened_at,closed_at&order=table_number.asc&limit=500`),
       dbRequest<Product[]>(`/rest/v1/jvg_products?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&active=eq.true&select=id,name,description,sku,category,unit,sale_price&order=category.asc,name.asc&limit=500`),
-      dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_restaurant_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&created_at=gte.${encodeURIComponent(new Date(Date.now() - 3 * 86400000).toISOString())}&select=id,order_number,table_id,customer_id,source,status,items,customer_name_snapshot,phone_snapshot,total,notes,created_at,updated_at&order=created_at.desc&limit=200`),
+      readRestaurantOrders(scope),
+      readMenuItems(scope),
+      readTableRequestQueue(scope),
     ]);
-    return apiJson({ settings: settings[0] || { qr_orders_enabled: false, loyalty_enabled: false, loyalty_points_per_real: 1 }, tables, products: products.map((product) => ({ ...product, sale_price: Number(product.sale_price) })), orders: orders.map((order) => ({ ...order, total: Number(order.total) })) });
+    const menuByProduct = new Map(menuItems.map((item) => [item.product_id, item]));
+    const componentIds = [...new Set(menuItems.flatMap((item) => normalizeMenuComponents(item.combo_components)?.map((component) => component.productId) || []))];
+    const componentRows = componentIds.length ? await dbRequest<Array<{ id: string; name: string; unit: string }>>(
+      `/rest/v1/jvg_products?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=in.(${componentIds.join(",")})&select=id,name,unit&limit=100`,
+    ) : [];
+    const componentById = new Map(componentRows.map((product) => [product.id, product]));
+    return apiJson({ settings: settings[0] || { qr_orders_enabled: false, loyalty_enabled: false, loyalty_points_per_real: 1 }, tables, products: products.map((product) => {
+      const item = menuByProduct.get(product.id);
+      const options = normalizeMenuOptions(item?.options ?? []);
+      const components = normalizeMenuComponents(item?.combo_components ?? []);
+      const promotion = normalizeMenuPromotion(item?.promotion ?? null, Number(product.sale_price));
+      return { ...product, sale_price: Number(product.sale_price), current_price: currentMenuPrice(Number(product.sale_price), promotion === undefined ? null : promotion), image_url: publicAssetUrl(item?.image_path), options: options || [], is_combo: item?.is_combo === true, combo_components: (components || []).map((component) => ({ ...component, name: componentById.get(component.productId)?.name || "Produto indisponível", unit: componentById.get(component.productId)?.unit || "" })), public_active: item?.public_active !== false };
+    }), orders: orders.map((order) => ({ ...order, total: Number(order.total) })),
+      tableRequests: tableRequests.rows, tableRequestsAvailable: tableRequests.available });
   } catch (error) { return safeError(error); }
 }
 
@@ -163,19 +657,46 @@ export async function POST(request: Request) {
   try {
     const input = await request.json() as Record<string, unknown>;
     const publicToken = str(input.token, 40);
+    const publicSlug = str(input.slug, 60);
+    const kind = str(input.kind, 32);
     let scope: RestaurantScope;
     let tableId: string | null = null;
-    let source: "table" | "counter" | "qr" = "counter";
-    if (publicToken) {
+    let source: "table" | "counter" | "qr" | "website" = "counter";
+    let fulfillmentType: "table" | "pickup" | null = null;
+    let customerIdentity: { userId: string; phone: string } | null = null;
+    if (kind === "table-request") {
       const { table } = await readPublicTable(publicToken);
-      if (table.service_status !== "open") throw new JvgBackendError("Esta mesa ainda não foi aberta pela equipe. Peça ajuda para continuar.", 409);
-      scope = { tenant_id: table.tenant_id, company_id: table.company_id };
-      tableId = table.id;
-      source = "qr";
+      const requestType = str(input.requestType, 24);
+      if (!["call_waiter", "request_bill"].includes(requestType)) throw new JvgBackendError("Solicitação de mesa inválida.", 400);
+      if (table.service_status !== "open") throw new JvgBackendError("A mesa está fechada. Peça ajuda à equipe.", 409);
+      const created = await dbRequest<Record<string, unknown>>("/rest/v1/rpc/jvg_restaurant_create_table_request", {
+        method: "POST",
+        body: JSON.stringify({ p_tenant_id: table.tenant_id, p_company_id: table.company_id, p_table_id: table.id, p_request_type: requestType }),
+      });
+      return apiJson({ ok: true, request: { request_type: requestType, status: created.status, created_at: created.created_at } });
+    }
+    if (publicToken || publicSlug) {
+      if (publicToken) {
+        const { table, company, brand, tenant_id, company_id } = await readPublicTable(publicToken);
+        if (table.service_status !== "open" && kind !== "customer-profile") throw new JvgBackendError("Esta mesa ainda não foi aberta pela equipe. Peça ajuda para continuar.", 409);
+        scope = { tenant_id, company_id };
+        tableId = table.id;
+        source = "qr";
+        fulfillmentType = "table";
+        void company; void brand;
+      } else {
+        const context = await readPublicRestaurantBySlug(publicSlug);
+        scope = { tenant_id: context.tenant_id, company_id: context.company_id };
+        source = "website";
+        fulfillmentType = "pickup";
+        if (kind !== "customer-profile" && (context.brand.website_orders_enabled !== true || context.brand.website_pickup_enabled !== true)) {
+          throw new JvgBackendError("O restaurante ainda não habilitou pedidos para retirada pelo site.", 409);
+        }
+      }
+      customerIdentity = await requireVerifiedRestaurantCustomer(request);
     } else {
       scope = await requireRestaurant();
       requireWrite(scope);
-      const kind = str(input.kind, 20);
       if (kind === "settings") {
         const pointsRate = Number(input.loyaltyPointsPerReal ?? 1);
         if (!Number.isFinite(pointsRate) || pointsRate <= 0 || pointsRate > 100) throw new JvgBackendError("A pontuação precisa ser maior que zero e no máximo 100 pontos por real.", 400);
@@ -222,30 +743,60 @@ export async function POST(request: Request) {
       if (!tables[0]) throw new JvgBackendError("Selecione uma mesa ativa desta empresa.", 400);
       if (tables[0].service_status !== "open") throw new JvgBackendError("Abra a mesa antes de lançar um pedido nela.", 409);
     }
+    if (customerIdentity && kind === "customer-profile") {
+      const profile = await saveVerifiedCustomer(scope, customerIdentity, str(input.customerName, 120), str(input.cpf, 20));
+      return apiJson({ ok: true, profile });
+    }
+    if (customerIdentity && !["quote-order", "order"].includes(kind)) {
+      throw new JvgBackendError("Ação de cliente inválida.", 400);
+    }
     const items = parseItems(input.items);
     const calculated = await calculateItems(scope, items);
+    if (customerIdentity && kind === "quote-order") {
+      await assertStockAvailable(scope, calculated.snapshot);
+      return apiJson({ ok: true, total: calculated.total, items: publicOrderItems(calculated.snapshot) });
+    }
     const customerName = str(input.customerName, 120);
-    const phoneInput = str(input.phone, 30);
+    const phoneInput = customerIdentity?.phone || str(input.phone, 30);
     const cpfInput = str(input.cpf, 20);
     let customer: { id: string; name: string; phone: string } | null = null;
-    if (publicToken || phoneInput) customer = await saveCustomer(scope, customerName, phoneInput, cpfInput, Boolean(publicToken));
-    if (publicToken && !customer) throw new JvgBackendError("Informe seu nome e telefone com DDD para enviar o pedido.", 400);
+    if (customerIdentity) {
+      const profile = await saveVerifiedCustomer(scope, customerIdentity, customerName, cpfInput);
+      customer = { id: profile.id, name: profile.name, phone: profile.phone };
+    } else if (phoneInput) customer = await saveCustomer(scope, customerName, phoneInput, cpfInput);
     const requestKey = str(input.requestKey, 40);
     if (requestKey && !UUID.test(requestKey)) throw new JvgBackendError("Chave do pedido inválida.", 400);
+    if (customerIdentity && !requestKey) throw new JvgBackendError("Atualize o pedido antes de tentar enviá-lo novamente.", 400);
+    if (customerIdentity) {
+      const expectedTotal = Number(input.expectedTotal);
+      if (!Number.isFinite(expectedTotal) || Math.abs(expectedTotal - calculated.total) > 0.009) {
+        return apiJson({
+          error: "O preço foi atualizado. Confira o novo total e confirme novamente.",
+          requiresPriceConfirmation: true, total: calculated.total, items: publicOrderItems(calculated.snapshot),
+        }, 409);
+      }
+    }
     const existing = requestKey ? await dbRequest<Array<{ id: string; order_number: number | string; status: string }>>(
       `/rest/v1/jvg_restaurant_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&request_key=${filterEq(requestKey)}&select=id,order_number,status&limit=1`,
     ) : [];
     if (existing[0]) return apiJson({ ok: true, order: existing[0], duplicate: true });
+    if (customerIdentity) await assertStockAvailable(scope, calculated.snapshot);
     const order = await dbRequest<Array<Record<string, unknown>>>("/rest/v1/jvg_restaurant_orders", {
       method: "POST", body: JSON.stringify({
         tenant_id: scope.tenant_id, company_id: scope.company_id, table_id: tableId,
         customer_id: customer?.id || null, customer_name_snapshot: customer?.name || customerName,
         phone_snapshot: customer?.phone || phoneInput.replace(/\D/g, ""), source,
+        fulfillment_type: fulfillmentType, payment_method: "cashier", payment_status: "pending",
         status: "open", items: calculated.snapshot, total: calculated.total,
         notes: str(input.notes, 1000), request_key: requestKey || null,
       }),
     });
-    return apiJson({ ok: true, order: order[0] }, 201);
+    const created = order[0] || {};
+    return apiJson({ ok: true, order: {
+      id: created.id, order_number: created.order_number, status: created.status || "open",
+      payment_status: created.payment_status || "pending", fulfillment_type: created.fulfillment_type || fulfillmentType,
+      total: Number(created.total ?? calculated.total), created_at: created.created_at || new Date().toISOString(),
+    } }, 201);
   } catch (error) { return safeError(error); }
 }
 
@@ -256,6 +807,36 @@ export async function PATCH(request: Request) {
     requireWrite(scope);
     const input = await request.json() as Record<string, unknown>;
     const kind = str(input.kind, 20);
+    if (kind === "order-payment") {
+      const id = str(input.id, 40);
+      if (!UUID.test(id)) throw new JvgBackendError("Pedido inválido.", 400);
+      const existing = await dbRequest<Array<{ id: string; status: string; payment_method: string; payment_status: string }>>(
+        `/rest/v1/jvg_restaurant_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=${filterEq(id)}&select=id,status,payment_method,payment_status&limit=1`,
+      );
+      if (!existing[0]) throw new JvgBackendError("Pedido não encontrado nesta empresa.", 404);
+      if (existing[0].payment_status === "paid") return apiJson({ ok: true, alreadyPaid: true });
+      if (existing[0].status === "cancelled") throw new JvgBackendError("Não é possível registrar pagamento de um pedido cancelado.", 409);
+      if (existing[0].payment_method !== "cashier") throw new JvgBackendError("Este pedido não está configurado para pagamento no caixa.", 409);
+      const user = await getJvgUser();
+      if (!user) throw new JvgBackendError("Faça login novamente para registrar o recebimento.", 401);
+      const updated = await dbRequest<Array<{ id: string }>>(
+        `/rest/v1/jvg_restaurant_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=${filterEq(id)}&payment_status=eq.pending`,
+        { method: "PATCH", body: JSON.stringify({ payment_status: "paid", payment_confirmed_at: new Date().toISOString(), payment_confirmed_by: user.userId, updated_at: new Date().toISOString() }), headers: { Prefer: "return=representation" } },
+      );
+      if (!updated[0]) throw new JvgBackendError("O pedido mudou enquanto você registrava o pagamento. Atualize os pedidos e confira a situação.", 409);
+      return apiJson({ ok: true, payment_status: "paid", confirmation: "manual_cashier" });
+    }
+    if (kind === "table-request") {
+      const id = str(input.id, 40);
+      const status = str(input.status, 20);
+      if (!UUID.test(id) || !["attended", "cancelled"].includes(status)) throw new JvgBackendError("Solicitação de mesa inválida.", 400);
+      const updated = await dbRequest<Array<{ id: string }>>(
+        `/rest/v1/jvg_restaurant_table_requests?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=${filterEq(id)}&status=eq.pending`,
+        { method: "PATCH", body: JSON.stringify({ status, updated_at: new Date().toISOString() }), headers: { Prefer: "return=representation" } },
+      );
+      if (!updated[0]) throw new JvgBackendError("Solicitação não encontrada ou já atendida.", 409);
+      return apiJson({ ok: true, status });
+    }
     if (kind === "table") {
       const id = str(input.id, 40);
       if (!UUID.test(id)) throw new JvgBackendError("Mesa inválida.", 400);

@@ -78,6 +78,18 @@ function hasStockItems(value: unknown): boolean {
   return Array.isArray(value) && value.some(item => !!item && typeof item === "object" && (item as InboundNfeItem).trackStock === true);
 }
 
+async function kitchenMigrationAvailable(account: SiteAccount) {
+  try {
+    await dbRequest<Array<{ product_id: string; balance: number }>>("/rest/v1/rpc/jvg_restaurant_inventory_balances", {
+      method: "POST", body: JSON.stringify({ p_tenant_id: account.tenant_id, p_company_id: account.company_id }),
+    });
+    return true;
+  } catch (error) {
+    if (error instanceof JvgBackendError && ["42P01", "42703", "PGRST202", "PGRST204", "42883"].includes(error.databaseCode || "")) return false;
+    throw error;
+  }
+}
+
 function partyDocumentType(document: string): "cpf" | "cnpj" | null {
   const normalized = document.toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (/^[0-9]{11}$/.test(normalized)) return "cpf";
@@ -178,7 +190,7 @@ export async function GET(request: Request) {
       const savedByLine = new Map(items.map(item => [Number(item.lineNumber), item]));
       items = parsed.items.map(item => {
         const saved = savedByLine.get(item.lineNumber);
-        return { ...item, productId: saved?.productId || null, trackStock: saved?.trackStock === true };
+        return { ...item, productId: saved?.productId || null, trackStock: saved?.trackStock === true, conversionToStockUnit: saved?.conversionToStockUnit ?? null };
       });
       const stockMovements = row.status === "received"
         ? await dbRequest<Row[]>(
@@ -266,7 +278,7 @@ async function importXml(request: Request, account: SiteAccount, userId: string)
     ? await ensurePartyRole(account, parsed.carrier, "carrier")
     : { id: null as string | null, created: false, active: false };
   const products = await dbRequest<Row[]>(
-    "/rest/v1/jvg_products?" + scope(account) + "&active=eq.true&select=id,gtin,tracks_stock&limit=5000",
+    "/rest/v1/jvg_products?" + scope(account) + "&active=eq.true&select=id,gtin,tracks_stock,unit&limit=5000",
   );
   const productsByGtin = new Map<string, Row[]>();
   for (const product of products) {
@@ -277,7 +289,8 @@ async function importXml(request: Request, account: SiteAccount, userId: string)
   const items = parsed.items.map(item => {
     const matches = productsByGtin.get(item.gtin) || [];
     const match = matches.length === 1 ? matches[0] : null;
-    return { ...item, productId: match ? String(match.id) : null, trackStock: !!match && match.tracks_stock === true };
+    const sameUnit = !!match && String(match.unit || "").trim().toUpperCase() === item.unit.trim().toUpperCase();
+    return { ...item, productId: match ? String(match.id) : null, trackStock: !!match && match.tracks_stock === true, conversionToStockUnit: sameUnit ? 1 : null };
   });
 
   const inserted = await dbRequest<Row[]>("/rest/v1/jvg_inbound_nfe_documents", {
@@ -363,7 +376,30 @@ export async function POST(request: Request) {
     if (items.some(item => item.trackStock && !item.productId))
       throw new JvgBackendError("Associe um produto a todos os itens que vão movimentar o estoque.", 400);
 
+    const stockIds = [...new Set(items.filter(item => item.trackStock && item.productId).map(item => String(item.productId)))];
+    const linkedProducts = stockIds.length ? await dbRequest<Array<{ id: string; unit: string; tracks_stock: boolean }>>(
+      "/rest/v1/jvg_products?" + scope(account) + "&id=in.(" + stockIds.join(",") + ")&active=eq.true&select=id,unit,tracks_stock&limit=5000",
+    ) : [];
+    const linkedById = new Map(linkedProducts.map(product => [product.id, product]));
+    const normalizedItems = items.map(item => {
+      if (!item.trackStock || !item.productId) return item;
+      const product = linkedById.get(item.productId);
+      if (!product || !product.tracks_stock) throw new JvgBackendError(`Item ${item.lineNumber}: o produto precisa estar ativo e controlar estoque.`, 400);
+      const sameUnit = String(product.unit || "").trim().toUpperCase() === String(item.unit || "").trim().toUpperCase();
+      const factor = item.conversionToStockUnit == null ? (sameUnit ? 1 : null) : Number(item.conversionToStockUnit);
+      if (factor === null || !Number.isFinite(factor) || factor <= 0 || factor > 1000000)
+        throw new JvgBackendError(`Item ${item.lineNumber}: salve um fator de conversão confirmado entre ${item.unit} e ${product.unit}.`, 400);
+      if (sameUnit && factor !== 1) throw new JvgBackendError(`Item ${item.lineNumber}: unidades iguais exigem conversão 1.`, 400);
+      return { ...item, conversionToStockUnit: factor };
+    });
+    const needsNewMovementFields = normalizedItems.some(item => item.trackStock && (Number(item.conversionToStockUnit) !== 1 || (item.batches?.length || 0) > 0));
+    if (needsNewMovementFields && !await kitchenMigrationAvailable(account))
+      throw new JvgBackendError("A conversão de unidade e o registro de lotes exigem a migration 20261119_jvg_kitchen_live.sql antes de confirmar esta entrada.", 409);
+
     await ensurePrimaryLocation(account);
+    await dbRequest("/rest/v1/jvg_inbound_nfe_documents?" + scope(account) + "&id=" + filterEq(id) + "&status=eq.draft", {
+      method: "PATCH", body: JSON.stringify({ items: normalizedItems, updated_at: new Date().toISOString() }),
+    });
     const result = await dbRequest<Row>("/rest/v1/rpc/jvg_confirm_inbound_nfe", {
       method: "POST",
       body: JSON.stringify({
@@ -414,7 +450,7 @@ export async function PATCH(request: Request) {
     if (uniqueIds.length) {
       products = await dbRequest<Row[]>(
         "/rest/v1/jvg_products?" + scope(account) + "&id=in.(" + uniqueIds.join(",") +
-        ")&active=eq.true&select=id,tracks_stock&limit=5000",
+        ")&active=eq.true&select=id,tracks_stock,unit&limit=5000",
       );
     }
     const productsById = new Map<string, Row>(products.map(product => [String(product.id), product] as const));
@@ -429,7 +465,21 @@ export async function PATCH(request: Request) {
       if (productId && !productsById.has(productId)) throw new JvgBackendError("Produto não pertence a esta empresa ou está inativo.", 400);
       if (trackStock && productsById.get(productId as string)?.tracks_stock !== true)
         throw new JvgBackendError("O produto selecionado não está habilitado para controle de estoque.", 400);
-      return { ...line, productId, trackStock };
+      let conversionToStockUnit: number | null = null;
+      if (trackStock && productId) {
+        const product = productsById.get(productId)!;
+        const sameUnit = String(product.unit || "").trim().toUpperCase() === line.unit.trim().toUpperCase();
+        const rawConversion = requestedItem.conversionToStockUnit;
+        if ((rawConversion === null || rawConversion === undefined || rawConversion === "") && sameUnit) conversionToStockUnit = 1;
+        else {
+          conversionToStockUnit = Number(rawConversion);
+          if (!Number.isFinite(conversionToStockUnit) || conversionToStockUnit <= 0 || conversionToStockUnit > 1000000)
+            throw new JvgBackendError(`Item ${lineNumber}: informe quantas unidades de estoque correspondem a 1 ${line.unit}.`, 400);
+        }
+        if (sameUnit && conversionToStockUnit !== 1)
+          throw new JvgBackendError(`Item ${lineNumber}: as unidades são iguais; o fator de conversão deve ser 1.`, 400);
+      }
+      return { ...line, productId, trackStock, conversionToStockUnit };
     });
     await dbRequest("/rest/v1/jvg_inbound_nfe_documents?" + scope(account) + "&id=" + filterEq(id) + "&status=eq.draft", {
       method: "PATCH",

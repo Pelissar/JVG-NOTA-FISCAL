@@ -8,6 +8,7 @@ export const PLATFORM_MODULES = [
   { key: "nfce", label: "NFC-e", description: "Preparação e histórico de NFC-e." },
   { key: "contabilidade", label: "Contabilidade", description: "Consulta fiscal e relatórios para contador." },
   { key: "restaurante", label: "Restaurante", description: "Mesas, cozinha, pedidos e cardápio por QR Code." },
+  { key: "restaurante_online", label: "Site e pedidos online do restaurante", description: "Site público, cardápio compartilhado e pedidos por QR Code/retirada." },
 ] as const;
 
 export type PlatformModuleKey = (typeof PLATFORM_MODULES)[number]["key"];
