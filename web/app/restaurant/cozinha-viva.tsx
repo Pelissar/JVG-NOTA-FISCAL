@@ -220,13 +220,22 @@ export function CozinhaViva() {
   ];
 
   return <section className={styles.kitchenLive}>
-    <header className={styles.kitchenLiveHeader}><div><span className={styles.step}>OPERAÇÃO · DADOS RASTREÁVEIS</span><h2>Cozinha Viva</h2><p>Da compra ao prato entregue: custos, receitas versionadas, consumo, perdas e contagem.</p></div><button className={styles.refresh} disabled={loading || busy} onClick={() => void refresh()}>Atualizar dados</button></header>
+    <header className={styles.kitchenLiveHeader}><div><span className={styles.step}>COZINHA VIVA · ESTOQUE E CUSTOS</span><h2>Análise de consumo</h2><p>Da compra ao prato entregue: acompanhe ingredientes, fichas técnicas, custos, perdas e contagens.</p></div><button className={styles.refresh} disabled={loading || busy} onClick={() => void refresh()}>Atualizar dados</button></header>
     {error ? <div className={styles.alertError} role="alert">{error}</div> : null}
     {message ? <div className={styles.alertSuccess} role="status">{message}</div> : null}
 
-    <section className={styles.panel}>
+    <nav className={styles.liveNav} aria-label="Seções de estoque e custos">
+      <a href="#ingredients-section">Ingredientes</a><a href="#recipe-section">Fichas técnicas</a><a href="#cost-section">Compras e custos</a><a href="#count-section">Contagem</a><a href="#loss-section">Perdas</a><a href="#forecast-section">Estimativa</a><a href="#prep-section">Preparo</a><a href="#margin-section">Contribuição</a>
+    </nav>
+
+    <section className={styles.panel} id="summary-section">
       <div className={styles.panelHead}><div><span className={styles.step}>01 · ATENÇÃO DO GERENTE</span><h3>O que merece atenção hoje?</h3><p>Alertas factuais derivados do estoque, dos documentos e das fichas salvas. Nenhuma sugestão altera preço ou cardápio.</p></div></div>
       {alerts.length ? <div className={styles.liveAlerts}>{alerts.map((item) => <article key={item.key}><div><strong>{item.title}</strong><p>{item.detail}</p></div><a href={item.href}>{item.action}</a></article>)}</div> : <div className={styles.empty}>Não há alertas confirmados nos dados consultados.</div>}
+    </section>
+
+    <section className={styles.panel} id="ingredients-section">
+      <div className={styles.panelHead}><div><span className={styles.step}>INGREDIENTES</span><h3>Estoque de ingredientes</h3><p>Saldo e mínimo cadastrados para produtos que controlam estoque.</p></div><a href="/erp/index.html#products">Gerenciar produtos no ERP →</a></div>
+      {stockProducts.length ? <div className={styles.liveTable}>{stockProducts.map((product) => <article key={product.id}><div><strong>{product.name}</strong><small>{product.sku || "Sem SKU"} · custo cadastrado {money(product.cost_price)} por {product.unit} · mínimo {quantity(product.minimum_stock)} {product.unit}</small></div><strong>{quantity(product.balance)} {product.unit}</strong></article>)}</div> : <div className={styles.empty}>Nenhum produto está marcado para controle de estoque. Configure produtos no catálogo do ERP.</div>}
     </section>
 
     <div className={styles.twoCol}>
@@ -259,7 +268,7 @@ export function CozinhaViva() {
         {data?.recentSessions.filter((session) => session.status === "closed").length ? <details className={styles.liveHistory}><summary>Fechamentos recentes</summary><ul>{data.recentSessions.filter((session) => session.status === "closed").map((session) => <li key={session.id}>{session.label} · {dateTime(session.closed_at || session.opened_at)}</li>)}</ul></details> : null}
       </section>
 
-      <section className={styles.panel}>
+      <section className={styles.panel} id="loss-section">
         <div className={styles.panelHead}><div><span className={styles.step}>05 · PERDAS</span><h3>Registrar perda de ingrediente</h3><p>O movimento reduz o saldo e aparece na próxima contagem. O motivo é informado pela equipe.</p></div></div>
         <form className={styles.liveStack} onSubmit={(event) => { event.preventDefault(); void act("record-loss", { productId: lossProductId, quantity: Number(lossQuantity), reason: lossReason }).then((ok) => { if (ok) { setLossQuantity(""); setLossReason(""); } }); }}>
           <label>Ingrediente<select value={lossProductId} onChange={(event) => setLossProductId(event.target.value)} required><option value="">Selecione...</option>{stockProducts.map((product) => <option key={product.id} value={product.id}>{product.name} · saldo {quantity(product.balance)} {product.unit}</option>)}</select></label>
@@ -269,7 +278,7 @@ export function CozinhaViva() {
       </section>
     </div>
 
-    <section className={styles.panel}>
+    <section className={styles.panel} id="forecast-section">
       <div className={styles.panelHead}><div><span className={styles.step}>06 · PRÓXIMO PERÍODO</span><h3>Estimativa baseada em vendas do restaurante</h3><p>Calculada pela média de pedidos entregues no mesmo dia da semana, nas últimas oito ocorrências observadas. Não é uma ordem de preparo.</p></div></div>
       <label className={styles.liveDate}>Data planejada<input type="date" value={forecastDate} onChange={(event) => setForecastDate(event.target.value)}/></label>
       {!data?.salesWindowComplete ? <div className={styles.infoBox}>O limite de consulta foi atingido. A amostra está incompleta; não exibimos previsão para não induzir uma decisão com dados parciais.</div> : null}
@@ -277,7 +286,7 @@ export function CozinhaViva() {
     </section>
 
     <div className={styles.twoCol}>
-      <section className={styles.panel}>
+      <section className={styles.panel} id="prep-section">
         <div className={styles.panelHead}><div><span className={styles.step}>07 · REGISTRO DE PREPARO</span><h3>Preparado, vendido e sobra</h3><p>Registre o que foi produzido; vendas vêm dos pedidos entregues dentro do intervalo informado.</p></div></div>
         <form className={styles.liveStack} onSubmit={(event) => { event.preventDefault(); void act("record-prep", { menuProductId: prepProductId, shiftName: prepShift, startsAt: new Date(prepStart).toISOString(), endsAt: new Date(prepEnd).toISOString(), preparedQuantity: Number(prepQuantity), remainingQuantity: Number(prepLeftover), notes: prepNotes }).then((ok) => { if (ok) { setPrepQuantity(""); setPrepLeftover("0"); setPrepNotes(""); } }); }}>
           <label>Prato<select value={prepProductId || effectiveMenuId} onChange={(event) => setPrepProductId(event.target.value)} required><option value="">Selecione...</option>{recipeCostRows.map(({ product, recipe }) => product && <option key={recipe.id} value={product.id}>{product.name} · ficha v{recipe.version_no}</option>)}</select></label>
@@ -290,7 +299,7 @@ export function CozinhaViva() {
         <div className={styles.prepHistory}>{data?.prepRuns.slice(0, 20).map((run) => <article key={run.id}><strong>{run.menuProduct?.name || "Prato"} · {run.shift_name}</strong><p>{dateTime(run.starts_at)}–{dateTime(run.ends_at)} · preparado {quantity(run.prepared_quantity)} · vendas entregues {quantity(run.sold_quantity)} · sobra registrada {quantity(run.remaining_quantity)}</p><small>{run.unaccounted_quantity === 0 ? "Preparo, vendas e sobra conferem." : `Diferença a revisar: ${quantity(run.unaccounted_quantity)} ${run.menuProduct?.unit || "un."}; o sistema não atribui causa.`}</small></article>)}</div>
       </section>
 
-      <section className={styles.panel}>
+      <section className={styles.panel} id="margin-section">
         <div className={styles.panelHead}><div><span className={styles.step}>08 · CUSTO E CONTRIBUIÇÃO</span><h3>Margem estimada por prato e canal</h3><p>Por prato usa o custo cadastrado atual; por canal, o custo congelado em cada pedido. Não inclui tributos, embalagem, taxas, descontos ou outros custos que não estejam configurados.</p></div></div>
         <div className={styles.liveTable}>{recipeCostRows.map(({ recipe, product, costsKnown, costPerPortion, margin }) => <article key={recipe.id}><div><strong>{product?.name || "Prato"} · v{recipe.version_no}</strong><small>Preço cadastrado: {money(product?.sale_price || 0)} · custo cadastrado atual por porção: {costsKnown ? money(costPerPortion || 0) : "indisponível: custo de ingrediente não confirmado"}</small></div><strong>{margin === null ? "Contribuição pendente" : `Contribuição estimada ${money(margin)}`}</strong></article>)}{!recipeCostRows.length ? <div className={styles.empty}>Salve uma ficha técnica e confirme o custo dos ingredientes para calcular a contribuição.</div> : null}</div>
         <h4 className={styles.liveSubhead}>Vendas entregues por canal · últimos 90 dias</h4>
@@ -330,3 +339,4 @@ function CountEditor({ session, items, busy, onSave, onClose }: { session: Count
     <button className={styles.primaryButton} disabled={busy || !items.length || items.some((item) => item.counted_quantity === null && !values[item.id]?.quantity)} onClick={onClose}>Fechar contagem e registrar ajustes</button>
   </div>;
 }
+
