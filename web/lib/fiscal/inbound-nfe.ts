@@ -22,8 +22,10 @@ export type InboundNfeItem = {
   origin: string;
   /** Grupo imposto como veio no XML. Não é recalculado pelo ERP. */
   taxes: XmlObject | null;
+  batches: Array<{ lotNumber: string; manufacturedAt: string | null; expiresAt: string | null; quantity: number }>;
   productId: string | null;
   trackStock: boolean;
+  conversionToStockUnit: number | null;
 };
 
 export type InboundPartySnapshot = {
@@ -175,6 +177,16 @@ export function parseAuthorizedInboundNfe(xml: string, companyTaxId: string): Pa
     lineNumbers.add(lineNumber);
     const quantity = numeric(value(product, "qCom"), "quantidade", false);
     const taxes = line.imposto ? object(line.imposto) : null;
+    const rawBatches = product.rastro == null ? [] : Array.isArray(product.rastro) ? product.rastro : [product.rastro];
+    const batches = rawBatches.map(rawBatch => {
+      const batch = object(rawBatch);
+      return {
+        lotNumber: value(batch, "nLote").slice(0, 60),
+        manufacturedAt: value(batch, "dFab") || null,
+        expiresAt: value(batch, "dVal") || null,
+        quantity: numeric(value(batch, "qLote") || "0", "quantidade do lote"),
+      };
+    }).filter(batch => batch.lotNumber || batch.manufacturedAt || batch.expiresAt || batch.quantity > 0);
     const taxQuantityText = value(product, "qTrib");
     const taxUnitPriceText = value(product, "vUnTrib");
     return {
@@ -198,8 +210,10 @@ export function parseAuthorizedInboundNfe(xml: string, companyTaxId: string): Pa
       otherAmount: numeric(value(product, "vOutro") || "0", "outras despesas do item"),
       origin: findValue(taxes && taxes.ICMS, "orig").slice(0, 1),
       taxes,
+      batches,
       productId: null,
       trackStock: false,
+      conversionToStockUnit: null,
     };
   });
   if (items.some(item => !item.description || !item.unit)) throw new Error("Há item sem descrição ou unidade no XML.");

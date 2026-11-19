@@ -219,3 +219,65 @@
   .printTarget button, .printTarget .qrActions, .printTarget .qrUrl, .printTarget .tableCardHead button { display: none !important; }
   .printTarget .qrImage { width: 220px; height: 220px; }
 }
+
+.kitchenLive { display: grid; gap: 18px; max-width: 1440px; margin: 0 auto; min-width: 0; }
+.kitchenLiveHeader { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; padding: 4px 2px; }
+.kitchenLiveHeader h2 { margin: 7px 0 4px; font-size: clamp(24px, 3vw, 32px); letter-spacing: -.035em; }
+.kitchenLiveHeader p { margin: 0; color: var(--muted); line-height: 1.5; }
+.kitchenLive h3 { margin: 5px 0; font-size: 18px; }
+.kitchenLive h4 { margin: 18px 0 10px; }
+.liveAlerts, .liveTable, .prepHistory { display: grid; gap: 9px; min-width: 0; }
+.liveAlerts article, .costCandidate, .liveTable article, .prepHistory article { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-muted); }
+.liveAlerts article p, .costCandidate p, .liveTable small, .prepHistory p, .prepHistory small { display: block; margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.liveAlerts article > span { flex: 0 0 auto; align-self: center; color: var(--blue); font-size: 11px; font-weight: 800; }
+.liveSelect, .liveDate { max-width: 440px; margin-bottom: 14px; }
+.liveStack { display: grid; gap: 13px; min-width: 0; }
+.liveStack input, .liveStack select, .liveFormRow input, .liveFormRow select, .recipeLine input, .recipeLine select, .countRow input, .countRow select, .liveSelect select, .liveDate input { width: 100%; min-width: 0; min-height: 40px; border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; color: var(--text); background: var(--surface); font: inherit; }
+.liveStack label, .liveFormRow label, .recipeLine label, .countRow label { display: grid; align-content: start; gap: 6px; min-width: 0; color: var(--text); font-size: 12px; font-weight: 700; }
+.liveFormRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; min-width: 0; }
+.liveSectionTitle { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 9px; margin: 12px 0; }
+.recipeRows { display: grid; gap: 9px; min-width: 0; }
+.recipeLine { display: grid; grid-template-columns: minmax(150px, 1.3fr) minmax(110px, .8fr) minmax(95px, .8fr) minmax(120px, .9fr) auto; align-items: end; gap: 9px; min-width: 0; padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-muted); }
+.recipeLine small { color: var(--muted); font-weight: 500; line-height: 1.4; }
+.liveHistory { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; color: var(--text); }
+.liveHistory summary { color: var(--blue); cursor: pointer; font-size: 12px; font-weight: 800; }
+.liveHistory ul { display: grid; gap: 6px; padding-left: 18px; color: var(--muted); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.costCandidate { margin: 9px 0; }
+.costCandidate > div { min-width: 0; }
+.costCandidate > div:last-child { display: grid; justify-items: end; gap: 8px; flex: 0 0 auto; }
+.costCandidate small { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.countRow { display: grid; grid-template-columns: minmax(125px, 1fr) minmax(110px, .75fr) minmax(150px, 1fr) minmax(130px, 1fr) auto; align-items: end; gap: 10px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-muted); }
+.countRow > div { min-width: 0; }
+.countRow > div small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.countHint { grid-column: 1 / -1; color: var(--amber); font-size: 11px; }
+.forecastList { display: grid; gap: 9px; }
+.forecastList article { min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-muted); }
+.forecastList p, .forecastList small { display: block; margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.liveTable article { align-items: center; }
+.liveTable article > div { min-width: 0; display: grid; gap: 4px; }
+.liveTable article > strong { flex: 0 0 auto; text-align: right; }
+.liveSubhead { font-size: 13px; }
+.kitchenLive .note { margin: 0; }
+.kitchenLive button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.kitchenLive .infoBox, .kitchenLive .alertError, .kitchenLive .alertSuccess, .kitchenLive .empty { overflow-wrap: anywhere; }
+.liveAlerts article > a { flex: 0 0 auto; color: var(--accent); font-size: 11px; font-weight: 800; text-decoration: underline; text-underline-offset: 2px; }
+.liveAlerts article > a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+.costCandidate > div:first-child > a { display: inline-block; margin-top: 7px; color: var(--accent); font-size: 11px; font-weight: 800; text-decoration: underline; text-underline-offset: 2px; }
+
+@media (max-width: 900px) {
+  .recipeLine { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .countRow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .countRow > div, .countHint { grid-column: 1 / -1; }
+}
+
+@media (max-width: 640px) {
+  .kitchenLiveHeader { align-items: stretch; flex-direction: column; }
+  .kitchenLiveHeader > button { width: 100%; }
+  .liveFormRow, .recipeLine, .countRow { grid-template-columns: minmax(0, 1fr); }
+  .costCandidate, .liveTable article, .liveAlerts article { align-items: stretch; flex-direction: column; }
+  .costCandidate > div:last-child { justify-items: stretch; }
+  .liveTable article > strong { text-align: left; }
+  .liveAlerts article > span { align-self: flex-start; }
+  .liveSectionTitle { align-items: stretch; flex-direction: column; }
+  .liveSectionTitle > button { width: 100%; }
+}

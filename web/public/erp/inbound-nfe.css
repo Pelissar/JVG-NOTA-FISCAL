@@ -101,6 +101,10 @@ body{background:var(--canvas);color:var(--ink)}
 .stock-choice{display:flex;align-items:center;gap:7px;color:var(--ink-soft);font-size:11px;font-weight:700}
 .stock-choice input,.confirmation-check input{accent-color:var(--accent);width:16px;height:16px}
 .stock-choice input:disabled{opacity:.45}
+.stock-conversion-field{margin:10px 0;padding:12px;border:1px solid var(--line-strong);border-radius:9px;background:var(--surface-muted)}
+.stock-conversion-field input{width:100%;min-width:0;min-height:40px;padding:9px 10px;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface);color:var(--ink);font-size:12px}
+.stock-conversion-field small,.stock-conversion-note{color:var(--muted);font-size:11px;line-height:1.5}
+.stock-conversion-note{display:block;margin:0 0 12px}
 .confirmation-check{display:flex;align-items:flex-start;gap:10px;margin-top:18px;padding:13px;border:1px solid var(--line);border-radius:10px;color:var(--ink-soft);font-size:11px;line-height:1.6}
 .confirmation-check input{flex:0 0 auto;margin-top:1px}
 .review-footer{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:17px 22px;border-top:1px solid var(--line);background:var(--surface-soft)}

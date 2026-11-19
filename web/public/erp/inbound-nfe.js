@@ -20,7 +20,8 @@
       return {
         lineNumber:Number(row.dataset.line),
         productId:row.querySelector('[name="productId"]').value||null,
-        trackStock:row.querySelector('[name="trackStock"]').checked
+        trackStock:row.querySelector('[name="trackStock"]').checked,
+        conversionToStockUnit:row.querySelector('[name="conversionToStockUnit"]')?.value||null
       };
     });
   }
@@ -89,8 +90,9 @@
       '<label class="review-field"><span>CEST (XML)</span><input name="newProductCest" maxlength="7" inputmode="numeric" value="'+escapeHtml(cest)+'" placeholder="Não informado"></label>'+
       '<label class="review-field"><span>Origem da mercadoria (XML)</span><select name="newProductOrigin"><option value="">Não informada</option>'+['0','1','2','3','4','5','6','7','8'].map(function(value){return '<option value="'+value+'" '+(String(item.origin||'')===value?'selected':'')+'>'+escapeHtml(value+' · '+originText(value))+'</option>';}).join('')+'</select></label>'+
       '<label class="review-field"><span>Categoria</span><input name="newProductCategory" maxlength="80" placeholder="Opcional"></label>'+
-      '<label class="review-field"><span>Custo unitário conforme XML (R$)</span><input name="newProductCostPrice" type="number" min="0" step="0.0001" value="'+Number(item.unitPrice||0).toFixed(4)+'"></label>'+
-      '<label class="review-field"><span>Preço de venda (R$) *</span><input name="newProductSalePrice" type="number" min="0" step="0.01" value="0.00"></label></div><fieldset class="product-tax-defaults"><legend>Tributação padrão para vendas · opcional</legend><p>O XML mostra os dados fiscais do fornecedor. Eles não definem automaticamente os códigos de venda da sua empresa. Informe apenas os códigos confirmados para este produto.</p>'+taxDefaultsNotice+'<div class="product-create-grid"><label class="review-field"><span>CSOSN padrão</span><input name="newProductDefaultCsosn" maxlength="3" inputmode="numeric" placeholder="3 dígitos" '+taxDefaultsDisabled+'></label><label class="review-field"><span>CST padrão do PIS</span><input name="newProductDefaultPisCst" maxlength="2" inputmode="numeric" placeholder="2 dígitos" '+taxDefaultsDisabled+'></label><label class="review-field"><span>CST padrão da Cofins</span><input name="newProductDefaultCofinsCst" maxlength="2" inputmode="numeric" placeholder="2 dígitos" '+taxDefaultsDisabled+'></label></div></fieldset><label class="stock-choice create-stock-choice"><input name="newProductTracksStock" type="checkbox" checked><span>Controlar este produto no estoque e lançar a quantidade desta nota</span></label><div class="product-create-actions"><button class="primary-button" type="button" data-save-product>Salvar produto, vincular e preparar entrada</button><button class="secondary-button" type="button" data-cancel-product>Cancelar</button></div></div>';
+      '<label class="review-field"><span>Custo da unidade de compra no XML (R$)</span><input name="newProductCostPrice" type="number" min="0" step="0.0001" value="'+Number(item.unitPrice||0).toFixed(4)+'"></label>'+
+      '<label class="review-field"><span>Preço de venda (R$) *</span><input name="newProductSalePrice" type="number" min="0" step="0.01" value="0.00"></label></div><small class="stock-conversion-note">Se a unidade do produto diferir da unidade do XML, informe a conversão na conferência. O custo do cadastro ficará em R$ 0,00 até a confirmação do custo da compra.</small><fieldset class="product-tax-defaults"><legend>Tributação padrão para vendas · opcional</legend><p>O XML mostra os dados fiscais do fornecedor. Eles não definem automaticamente os códigos de venda da sua empresa. Informe apenas os códigos confirmados para este produto.</p>'+taxDefaultsNotice+'<div class="product-create-grid"><label class="review-field"><span>CSOSN padrão</span><input name="newProductDefaultCsosn" maxlength="3" inputmode="numeric" placeholder="3 dígitos" '+taxDefaultsDisabled+'></label><label class="review-field"><span>CST padrão do PIS</span><input name="newProductDefaultPisCst" maxlength="2" inputmode="numeric" placeholder="2 dígitos" '+taxDefaultsDisabled+'></label><label class="review-field"><span>CST padrão da Cofins</span><input name="newProductDefaultCofinsCst" maxlength="2" inputmode="numeric" placeholder="2 dígitos" '+taxDefaultsDisabled+'></label></div></fieldset><label class="stock-choice create-stock-choice"><input name="newProductTracksStock" type="checkbox" checked><span>Controlar este produto no estoque e lançar a quantidade desta nota</span></label><div class="product-create-actions"><button class="primary-button" type="button" data-save-product>Salvar produto, vincular e preparar entrada</button><button class="secondary-button" type="button" data-cancel-product>Cancelar</button></div></div>';
+    if(!item.productId)createProduct+='<small class="stock-conversion-note">O custo do XML é apenas uma referência. O cadastro começa em R$ 0,00; após receber a NF-e, confirme o custo na Cozinha Viva. Se as unidades diferirem, confirme também o fator na conferência.</small>';
     var stockControl=!item.productId?'<small class="stock-hint">Cadastre ou selecione o produto para habilitar a entrada.</small>':!canTrack?'<button class="secondary-button enable-stock-button" type="button" data-enable-stock>Habilitar controle de estoque neste produto</button>':'';
     var quantity=item.quantity||0,unit=item.unit||'';
     var values=[['Quantidade comprada',String(quantity)+' '+unit],['Valor unitário',money(item.unitPrice)],['Desconto',money(item.discount||0)],['Frete do item',money(item.freight||0)],['Seguro',money(item.insurance||0)],['Outras despesas',money(item.otherAmount||0)],['Total do produto no XML',money(item.total)]];
@@ -99,6 +101,18 @@
     return '<article class="review-item" data-line="'+escapeHtml(item.lineNumber)+'"><header class="review-item-title"><div><span class="item-number">Item '+escapeHtml(item.lineNumber)+'</span><strong>'+escapeHtml(item.description)+'</strong><small>Referência do fornecedor: '+escapeHtml(item.supplierCode||'Não informada')+'</small></div><strong class="item-total">'+money(item.total)+'</strong></header><div class="item-review-grid"><label class="review-field product-link-field"><span>Produto vinculado no seu estoque</span><select name="productId">'+productOptions(item.productId)+'</select></label>'+values.map(function(field){return '<div class="item-value"><small>'+escapeHtml(field[0])+'</small><strong>'+escapeHtml(field[1])+'</strong></div>';}).join('')+'</div>'+fiscalProductData(item)+catalogProductData(product,item)+'<label class="stock-choice item-stock-choice"><input type="checkbox" name="trackStock" '+(item.trackStock&&canTrack?'checked':'')+' '+(canTrack?'':'disabled')+'><span>Incluir '+escapeHtml(String(quantity)+' '+unit)+' no estoque ao confirmar</span></label>'+stockControl+createProduct+classificationImport+itemTaxMarkup(item.taxes)+'</article>';
   }
   function totalRowsMarkup(title,group){group=xmlObject(group);var labels={vBC:'Base de cálculo ICMS',vICMS:'ICMS',vICMSDeson:'ICMS desonerado',vFCP:'FCP',vBCST:'Base ICMS-ST',vST:'ICMS-ST',vFCPST:'FCP-ST',vProd:'Produtos',vFrete:'Frete',vSeg:'Seguro',vDesc:'Descontos',vII:'Imposto de Importação',vIPI:'IPI',vIPIDevol:'IPI devolvido',vPIS:'PIS',vCOFINS:'Cofins',vOutro:'Outras despesas',vNF:'Total da NF-e',vTotTrib:'Tributos aproximados informados'};var rows=Object.keys(labels).filter(function(key){return group[key]!==undefined&&group[key]!==null&&String(group[key])!=='';});if(!rows.length)return '';return '<section class="invoice-tax-total"><h4>'+escapeHtml(title)+'</h4><div class="tax-value-grid">'+rows.map(function(key){return taxValueMarkup(key,group[key]);}).join('')+'</div></section>';}
+  var baseItemMarkup=itemMarkup;
+  itemMarkup=function(item){
+    var markup=baseItemMarkup(item),product=products.find(function(row){return row.id===item.productId;});
+    if(!item.trackStock||!product||!product.tracksStock)return markup;
+    var sourceUnit=String(item.unit||''),stockUnit=String(product.unit||''),same=sourceUnit.trim().toUpperCase()===stockUnit.trim().toUpperCase();
+    var conversion=Number(item.conversionToStockUnit);
+    var value=Number.isFinite(conversion)&&conversion>0?conversion:(same?1:'');
+    var conversionMarkup='<label class="review-field stock-conversion-field"><span>Conversão confirmada: 1 '+escapeHtml(sourceUnit)+' equivale a</span><input name="conversionToStockUnit" type="number" min="0.00000001" max="1000000" step="0.00000001" value="'+value+'" required><small>Fator aplicado à quantidade recebida e ao custo unitário convertido para '+escapeHtml(stockUnit)+'.</small></label>';
+    var batches=Array.isArray(item.batches)?item.batches:[];
+    var lotMarkup=batches.length?'<p class="stock-hint">Lotes informados no XML: '+batches.map(function(batch){return escapeHtml(batch.lotNumber||'lote sem número')+(batch.expiresAt?' · validade '+escapeHtml(batch.expiresAt):'');}).join(' | ')+'</p>':'';
+    return markup.replace(/(<label class="stock-choice item-stock-choice">[\s\S]*?<\/label>)/,function(match){return match+conversionMarkup+lotMarkup;});
+  };
   function render(){
     var root=$('documents'),activeDocs=docs.filter(function(doc){return doc.status!=='cancelled';});
     if(!activeDocs.length){root.innerHTML='<p class="empty-documents">Nenhuma NF-e pendente ou recebida nesta empresa. Para lançar novamente uma nota cancelada, importe o XML outra vez.</p>';return;}
@@ -257,7 +271,7 @@
   $('documents').addEventListener('click',function(event){var button=event.target.closest('[data-open]');if(button)openReview(button.dataset.open);});
   $('reviewItems').addEventListener('change',function(event){
     if(!selectedDoc||selectedDoc.status==='cancelled')return;
-    if(event.target.name!=='productId'&&event.target.name!=='trackStock')return;
+    if(event.target.name!=='productId'&&event.target.name!=='trackStock'&&event.target.name!=='conversionToStockUnit')return;
     var row=event.target.closest('[data-line]');
     var lineNumber=Number(row&&row.dataset.line);
     var item=(selectedDoc&&selectedDoc.items||[]).find(function(entry){return Number(entry.lineNumber)===lineNumber;});
@@ -266,8 +280,19 @@
       var product=products.find(function(entry){return entry.id===event.target.value;});
       item.productId=product?String(product.id):null;
       item.trackStock=!!product&&product.tracksStock;
+      item.conversionToStockUnit=product&&String(product.unit||'').trim().toUpperCase()===String(item.unit||'').trim().toUpperCase()?1:null;
       row.outerHTML=itemMarkup(item);
-    }else item.trackStock=event.target.checked;
+    }else if(event.target.name==='trackStock'){
+      item.trackStock=event.target.checked;
+      var selectedProduct=products.find(function(entry){return entry.id===item.productId;});
+      item.conversionToStockUnit=selectedProduct&&String(selectedProduct.unit||'').trim().toUpperCase()===String(item.unit||'').trim().toUpperCase()?1:null;
+      row.outerHTML=itemMarkup(item);
+    }else item.conversionToStockUnit=event.target.value||null;
+    var stockProduct=products.find(function(entry){return entry.id===item.productId;});
+    if(item.trackStock&&stockProduct&&String(stockProduct.unit||'').trim().toUpperCase()!==String(item.unit||'').trim().toUpperCase()&&!Number(item.conversionToStockUnit)){
+      setStatus('Informe o fator de conversão entre a unidade do XML e a unidade do estoque para salvar este vínculo.',true);
+      return;
+    }
     persistReviewDraft().then(function(){
       setStatus('Vínculo do produto e seleção de estoque salvos na conferência. A quantidade só entra após confirmar a entrada.',false);
     }).catch(function(error){setStatus(error.message,true);});
@@ -359,9 +384,11 @@
       var name=String(nameInput.value||'').trim().slice(0,160);
       var unit=String(unitInput.value||'').trim().slice(0,8);
       var category=String(categoryInput&&categoryInput.value||'').trim();
-      var cost=Number(costInput&&costInput.value);
-      if(!Number.isFinite(cost)||cost<0)throw new Error('Informe um custo unitário válido.');
+      var declaredXmlCost=Number(costInput&&costInput.value);
+      if(!Number.isFinite(declaredXmlCost)||declaredXmlCost<0)throw new Error('Confira o custo unitário informado no XML.');
+      var cost=0;
       var tracksStock=tracksStockInput.checked;
+      var sameUnit=unit.trim().toUpperCase()===String(item.unit||'').trim().toUpperCase();
       var taxDefaults={};
       if(defaultCsosn&&!defaultCsosn.disabled)taxDefaults.defaultCsosn=defaultCsosn.value.trim();
       if(defaultPisCst&&!defaultPisCst.disabled)taxDefaults.defaultPisCst=defaultPisCst.value.trim();
@@ -373,6 +400,7 @@
       products.push(createdProduct);
       item.productId=createdProduct.id;
       item.trackStock=tracksStock;
+      item.conversionToStockUnit=tracksStock&&sameUnit?1:null;
       row.outerHTML=itemMarkup(item);
       var linkedRow=Array.from($('reviewItems').querySelectorAll('[data-line]')).find(function(entry){return Number(entry.dataset.line)===lineNumber;});
       var linkedItems=collectReviewItems();

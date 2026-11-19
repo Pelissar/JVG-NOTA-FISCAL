@@ -3,7 +3,7 @@ import { apiJson, dbRequest, filterEq, getSiteAccount, isSameOrigin, JvgBackendE
 
 export const dynamic = "force-dynamic";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-type Product = { id: string; name: string; description: string | null; sku: string; category: string | null; unit: string; sale_price: number | string; active: boolean };
+type Product = { id: string; name: string; description: string | null; sku: string; category: string | null; unit: string; cost_price: number | string; sale_price: number | string; tracks_stock: boolean; active: boolean };
 type RestaurantScope = { tenant_id: string; company_id: string; role?: string };
 
 async function requireRestaurant(): Promise<RestaurantScope> {
@@ -77,20 +77,64 @@ function parseItems(value: unknown) {
   return [...merged].map(([productId, quantity]) => ({ productId, quantity }));
 }
 
+function kitchenMigrationUnavailable(error: unknown) {
+  return error instanceof JvgBackendError && ["42P01", "42703", "PGRST202", "PGRST204", "42883"].includes(error.databaseCode || "");
+}
+
+async function currentRecipeSnapshots(scope: Pick<RestaurantScope, "tenant_id" | "company_id">, menuIds: string[]) {
+  if (!menuIds.length) return new Map<string, Record<string, unknown>>();
+  try {
+    const versions = await dbRequest<Array<{ id: string; menu_product_id: string; version_no: number; yield_quantity: number | string; yield_unit: string }>>(
+      `/rest/v1/jvg_restaurant_recipe_versions?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&menu_product_id=in.(${menuIds.join(",")})&is_current=eq.true&select=id,menu_product_id,version_no,yield_quantity,yield_unit&limit=500`,
+    );
+    if (!versions.length) return new Map();
+    const versionIds = versions.map((version) => version.id);
+    const recipeItems = await dbRequest<Array<{ recipe_version_id: string; ingredient_product_id: string; quantity_per_yield: number | string; unit: string; conversion_to_stock_unit: number | string }>>(
+      `/rest/v1/jvg_restaurant_recipe_items?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&recipe_version_id=in.(${versionIds.join(",")})&select=recipe_version_id,ingredient_product_id,quantity_per_yield,unit,conversion_to_stock_unit&order=position.asc&limit=5000`,
+    );
+    const ingredientIds = [...new Set(recipeItems.map((item) => item.ingredient_product_id))];
+    const ingredients = ingredientIds.length ? await dbRequest<Array<{ id: string; name: string; unit: string; cost_price: number | string; active: boolean; tracks_stock: boolean }>>(
+      `/rest/v1/jvg_products?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=in.(${ingredientIds.join(",")})&select=id,name,unit,cost_price,active,tracks_stock&limit=5000`,
+    ) : [];
+    const ingredientById = new Map(ingredients.map((ingredient) => [ingredient.id, ingredient]));
+    return new Map(versions.map((version) => [version.menu_product_id, {
+      versionId: version.id,
+      versionNo: version.version_no,
+      yieldQuantity: Number(version.yield_quantity),
+      yieldUnit: version.yield_unit,
+      ingredients: recipeItems.filter((item) => item.recipe_version_id === version.id).map((item) => {
+        const ingredient = ingredientById.get(item.ingredient_product_id);
+        if (!ingredient) throw new JvgBackendError("Um ingrediente da ficha técnica não pertence mais a esta empresa. Revise a receita antes de criar pedidos.", 409);
+        const cost = Number(ingredient.cost_price);
+        return { productId: ingredient.id, name: ingredient.name, stockUnit: ingredient.unit,
+          quantityPerYield: Number(item.quantity_per_yield), unit: item.unit,
+          conversionToStockUnit: Number(item.conversion_to_stock_unit),
+          unitCostAtSale: Number.isFinite(cost) && cost > 0 ? cost : null };
+      }),
+    }]));
+  } catch (error) {
+    // Existing order entry remains available until the separately versioned migration is applied.
+    if (kitchenMigrationUnavailable(error)) return new Map();
+    throw error;
+  }
+}
+
 async function calculateItems(scope: Pick<RestaurantScope, "tenant_id" | "company_id">, items: Array<{ productId: string; quantity: number }>) {
   const ids = items.map((item) => item.productId);
   const products = await dbRequest<Product[]>(
-    `/rest/v1/jvg_products?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=in.(${ids.join(",")})&active=eq.true&select=id,name,description,sku,category,unit,sale_price,active&limit=100`,
+    `/rest/v1/jvg_products?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=in.(${ids.join(",")})&active=eq.true&select=id,name,description,sku,category,unit,cost_price,sale_price,tracks_stock,active&limit=100`,
   );
   const byId = new Map(products.map((product) => [product.id, product]));
   if (byId.size !== ids.length) throw new JvgBackendError("Um produto foi removido ou está inativo. Atualize o cardápio e tente novamente.", 409);
+  const recipes = await currentRecipeSnapshots(scope, ids);
   let total = 0;
-  const snapshot = items.map((item) => {
+  const snapshot = items.map((item, index) => {
     const product = byId.get(item.productId)!;
     const unitPrice = Number(product.sale_price);
     const lineTotal = Math.round(unitPrice * item.quantity * 100) / 100;
     total += lineTotal;
-    return { product_id: product.id, sku: product.sku, description: product.name, unit: product.unit, quantity: item.quantity, unit_price: unitPrice, total: lineTotal };
+    const catalogCost = Number(product.cost_price);
+    return { orderItemIndex: index + 1, product_id: product.id, sku: product.sku, description: product.name, unit: product.unit, quantity: item.quantity, unit_price: unitPrice, total: lineTotal, unitCostAtSale: Number.isFinite(catalogCost) && catalogCost > 0 ? catalogCost : null, recipeSnapshot: recipes.get(product.id) || null };
   });
   return { snapshot, total: Math.round(total * 100) / 100 };
 }
