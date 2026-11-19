@@ -148,6 +148,7 @@ export async function POST(request: Request) {
       company,
       items,
       cpf: cleanText(body.cpf, 20),
+      recipientName: cleanText(body.recipientName, 120),
       paymentMethod: cleanText(body.paymentMethod, 2),
       naturezaOperacao: cleanText(body.naturezaOperacao, 60),
       localDestino: cleanText(body.localDestino, 1),

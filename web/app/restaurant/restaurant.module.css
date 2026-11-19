@@ -210,7 +210,7 @@
 }
 
 @media print {
-  :global(body) { background: #fff !important; }
+  :global(body):has(.page) { background: #fff !important; }
   .page { padding: 0; background: white !important; color: #111 !important; }
   .page * { visibility: hidden !important; }
   .printTarget, .printTarget * { visibility: visible !important; }

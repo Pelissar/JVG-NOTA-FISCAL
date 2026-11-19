@@ -22,6 +22,7 @@ export type NfceBuildInput = {
   company: Record<string, unknown>;
   items: NfceItemInput[];
   cpf: string;
+  recipientName: string;
   paymentMethod: string;
   naturezaOperacao: string;
   localDestino: string;
@@ -73,6 +74,8 @@ export function buildNfceHomologacaoPayload(input: NfceBuildInput): { payload: R
   if (!new Set(["1", "4"]).has(input.presencaComprador)) issues.push("Selecione a presença do comprador conforme a operação.");
   const cpf = digits(input.cpf);
   if (cpf && !isValidCpf(cpf)) issues.push("CPF do consumidor inválido; confira os dígitos verificadores ou deixe o campo vazio.");
+  const recipientName = text(input.recipientName, 120);
+  if (recipientName && !cpf) issues.push("Para identificar um consumidor pelo nome, informe também o CPF. Se preferir, deixe os dois campos vazios.");
   if (!PAYMENTS.has(input.paymentMethod)) issues.push("Selecione uma forma de pagamento válida.");
   if (!text(place.street, 120) || !text(place.city, 60) || !/^[A-Z]{2}$/.test(text(place.state, 2).toUpperCase())) {
     issues.push("Complete o endereço fiscal da empresa antes de emitir a NFC-e.");
@@ -161,6 +164,9 @@ export function buildNfceHomologacaoPayload(input: NfceBuildInput): { payload: R
     items,
     formas_pagamento: [{ forma_pagamento: input.paymentMethod, valor_pagamento: money(Math.max(totalCents, 0)) }],
   };
-  if (/^\d{11}$/.test(cpf)) payload.cpf_destinatario = cpf;
+  if (/^\d{11}$/.test(cpf)) {
+    payload.cpf_destinatario = cpf;
+    if (recipientName) payload.nome_destinatario = recipientName;
+  }
   return { payload, issues: [...new Set(issues)], totalCents };
 }

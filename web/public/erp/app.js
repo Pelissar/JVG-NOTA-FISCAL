@@ -56,7 +56,7 @@
       ['Preparar NF-e','Monte uma nota para homologação','file','/erp/nfe.html','Fiscal'],
       ['Ver estoque','Consulte saldos e movimentações','warehouse','/erp/index.html#inventory','Operação']
     ];
-    return '<section class="dashboard-hero"><div class="dashboard-hero-copy"><span class="dashboard-overline">SIGMAFISCAL · GESTÃO EMPRESARIAL</span><h1>Seu negócio, em um só lugar.</h1><p>Acompanhe os números da empresa e continue o trabalho sem trocar de módulo.</p><div class="dashboard-hero-actions"><a class="dashboard-primary-link" href="/erp/sales.html">'+ico('cash')+' Nova venda</a><a class="dashboard-secondary-link" href="/erp/nfe.html">'+ico('file')+' Preparar NF-e</a></div></div><div class="dashboard-flow-card"><span>FLUXO DE TRABALHO</span><strong>Da proposta à entrega</strong><div class="dashboard-flow-line"><b>Proposta</b><i>→</i><b>Pedido</b><i>→</i><b>Venda</b></div><small>Assistência e emissão fiscal em áreas próprias.</small></div></section>'+
+    return '<section class="dashboard-hero"><div class="dashboard-hero-copy"><span class="dashboard-overline">GESTÃO EMPRESARIAL</span><h1>Tudo da sua empresa, em um só lugar.</h1><p>Acesse vendas, estoque, assistência e fiscal com as informações organizadas por empresa.</p><div class="dashboard-hero-actions"><a class="dashboard-primary-link" href="/erp/sales.html">'+ico('cash')+' Abrir vendas</a><a class="dashboard-secondary-link" href="/erp/nfe.html">'+ico('file')+' Preparar NF-e</a></div></div><div class="dashboard-flow-card"><span>FLUXO COMERCIAL</span><strong>Da proposta à venda</strong><div class="dashboard-flow-line"><b>Orçamento</b><i>→</i><b>Pedido</b><i>→</i><b>Venda</b></div><small>Assistência e documentos fiscais ficam em seus módulos.</small></div></section>'+
       banner()+
       '<section class="dashboard-metrics" aria-label="Resumo da empresa">'+stat('Produtos cadastrados',productCount,'box','','Itens no catálogo')+stat('Clientes cadastrados',clientCount,'users','blue','Pessoas e empresas')+stat('Unidades em estoque',num(totalStock),'warehouse','purple',low+' produto(s) com estoque baixo')+stat('Custo estimado do estoque',money(valuation),'cash','amber','Com base nos itens cadastrados')+'</section>'+
       '<section class="dashboard-section"><div class="dashboard-section-heading"><div><span class="eyebrow">ACESSO RÁPIDO</span><h2>O que você quer fazer?</h2><p>Abra uma tarefa comum em um clique.</p></div><a href="/erp/index.html#clients">Ver cadastros '+ico('arrow')+'</a></div><div class="dashboard-action-grid">'+quick.map(function(x){return '<a class="dashboard-action-card" href="'+x[3]+'"><span class="dashboard-action-icon">'+ico(x[2])+'</span><span class="dashboard-action-copy"><small>'+x[4]+'</small><strong>'+x[0]+'</strong><span>'+x[1]+'</span></span><span class="dashboard-action-arrow" aria-hidden="true">'+ico('arrow')+'</span></a>';}).join('')+'</div></section>'+
@@ -83,7 +83,7 @@
   }
   function inventory(){
     var rows=state.products.filter(function(p){return matches(p,['sku','name','category']);});
-    var body=rows.length?'<div class="table-wrap"><table><thead><tr><th>Produto</th><th>SKU</th><th>Saldo</th><th>Custo un.</th><th>Valor de custo</th><th>Situação</th><th class="text-right">Ação</th></tr></thead><tbody>'+rows.map(function(p){var low=Number(p.stock)<=10;return '<tr><td><strong>'+h(p.name)+'</strong></td><td class="mono">'+h(p.sku)+'</td><td><strong>'+num(p.stock)+'</strong> '+h(p.unit)+'</td><td>'+money(p.cost)+'</td><td class="inline-price">'+money(Number(p.stock)*Number(p.cost))+'</td><td><span class="badge '+(low?'amber':'green')+'">'+(low?'Estoque baixo':'Disponível')+'</span></td><td><div class="table-actions"><button class="btn sm" data-action="adjust-stock" data-id="'+h(p.id)+'">Ajustar saldo</button></div></td></tr>';}).join('')+'</tbody></table></div>':empty('warehouse','Sem produtos em estoque','Cadastre produtos para fazer ajustes locais.','new-product','Cadastrar produto');
+    var body=rows.length?'<div class="table-wrap"><table><thead><tr><th>Produto</th><th>SKU</th><th>Saldo</th><th>Custo un.</th><th>Valor de custo</th><th>Situação</th><th class="text-right">Ações</th></tr></thead><tbody>'+rows.map(function(p){var low=Number(p.stock)<=10;return '<tr><td><strong>'+h(p.name)+'</strong></td><td class="mono">'+h(p.sku)+'</td><td><strong>'+num(p.stock)+'</strong> '+h(p.unit)+'</td><td>'+money(p.cost)+'</td><td class="inline-price">'+money(Number(p.stock)*Number(p.cost))+'</td><td><span class="badge '+(low?'amber':'green')+'">'+(low?'Estoque baixo':'Disponível')+'</span></td><td><div class="table-actions"><button class="btn sm" data-action="adjust-stock" data-id="'+h(p.id)+'">Ajustar saldo</button>'+(p.tracksStock?'<button class="btn sm" data-action="internal-consumption" data-id="'+h(p.id)+'">Registrar consumo</button>':'')+'</div></td></tr>';}).join('')+'</tbody></table></div>':empty('warehouse','Sem produtos em estoque','Cadastre produtos para fazer ajustes locais.','new-product','Cadastrar produto');
     return heading('Controle de estoque','Visualize saldos e registre ajustes reais da sua empresa.','new-product','Cadastrar produto')+banner()+tableShell('Buscar SKU ou descrição...',body,rows.length,'products');
   }
   function fiscal(){
@@ -503,6 +503,22 @@
     // A janela de ajuste nao fecha ao tocar fora dela.
     document.getElementById('stockDelta').focus();
   }
+  function internalConsumption(recordId){
+    var p=state.products.find(function(x){return x.id===recordId;});if(!p)return;
+    if(!p.tracksStock){toast('Este produto não controla estoque.','error');return;}
+    modalRoot.innerHTML='<div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><h2 id="modalTitle">Registrar consumo interno</h2><p>'+h(p.name)+' · Saldo atual: '+num(p.stock)+' '+h(p.unit)+'</p></div><button class="icon-btn" type="button" data-action="close-modal">'+ico('x')+'</button></div><form id="internalConsumptionForm" data-id="'+h(recordId)+'"><div class="modal-body"><div class="form-grid"><div class="field"><label for="consumptionQuantity">Quantidade consumida *</label><input id="consumptionQuantity" name="quantity" type="number" min="0.001" max="'+h(p.stock)+'" step="0.001" required placeholder="Ex.: 1"></div><div class="field"><label for="consumptionReason">Motivo *</label><input id="consumptionReason" name="reason" maxlength="90" required placeholder="Ex.: uso interno / demonstração"></div></div><p class="small-note">Esta ação dá baixa no estoque e registra o motivo. Não emite NFC-e nem cria lançamento em contas a pagar.</p></div><div class="modal-footer"><small>O saldo não poderá ficar negativo.</small><div class="modal-footer-actions"><button class="btn" type="button" data-action="close-modal">Voltar</button><button class="btn primary" type="submit">Confirmar consumo</button></div></div></form></div></div>';
+    document.getElementById('consumptionQuantity').focus();
+  }
+  async function saveInternalConsumption(form){
+    if(cloud.status!=='ready'){toast('Consumo indisponível sem conexão com o banco.','error');return;}
+    var p=state.products.find(function(x){return x.id===form.dataset.id;});if(!p)return;
+    var data=Object.fromEntries(new FormData(form).entries()),quantity=Number(data.quantity),reason=String(data.reason||'').trim();
+    if(!Number.isFinite(quantity)||quantity<=0){toast('Informe uma quantidade consumida válida.','error');return;}
+    if(quantity>Number(p.stock)){toast('A quantidade supera o saldo disponível. Atualize o estoque e confira novamente.','error');return;}
+    if(reason.length<3){toast('Descreva o motivo do consumo interno.','error');return;}
+    try{await callApi('/api/stock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:p.id,delta:-quantity,reason:'Consumo interno: '+reason.slice(0,96)})});closeModal();await refreshCloud(scopeForView(view),true);toast('Saída por consumo interno registrada; o saldo foi atualizado.');}
+    catch(error){toast(error.message,'error');}
+  }
   async function saveStock(form){
     if(cloud.status!=='ready'){toast('Ajuste indisponível sem conexão com o banco.','error');return;}
     var p=state.products.find(function(x){return x.id===form.dataset.id;});if(!p)return;
@@ -567,10 +583,11 @@ function exportCsv(kind){
     if(a.indexOf('export-')===0){exportCsv(a.substring(7));return;}
     if(a==='tax-advisor-report'){printTaxAdvisorReport();return;}
     if(a==='adjust-stock'){adjustStock(recordId);return;}
+    if(a==='internal-consumption'){internalConsumption(recordId);return;}
     if(a.indexOf('goto-')===0){setView(a.substring(5));return;}
   });
   document.addEventListener('change',function(e){if(e.target.matches('[name="isSupplier"], [name="type"]'))updatePartyRequirements(e.target.form);});
-  document.addEventListener('submit',function(e){if(e.target.id==='recordForm'){e.preventDefault();saveRecord(e.target);}if(e.target.id==='stockForm'){e.preventDefault();saveStock(e.target);}if(e.target.id==='companyForm'){e.preventDefault();saveCompany(e.target);}if(e.target.id==='profileForm'){e.preventDefault();saveProfile(e.target);}if(e.target.id==='passwordForm'){e.preventDefault();savePassword(e.target);}if(e.target.id==='logoForm'){e.preventDefault();uploadCompanyLogo(e.target);}});
+  document.addEventListener('submit',function(e){if(e.target.id==='recordForm'){e.preventDefault();saveRecord(e.target);}if(e.target.id==='stockForm'){e.preventDefault();saveStock(e.target);}if(e.target.id==='internalConsumptionForm'){e.preventDefault();saveInternalConsumption(e.target);}if(e.target.id==='companyForm'){e.preventDefault();saveCompany(e.target);}if(e.target.id==='profileForm'){e.preventDefault();saveProfile(e.target);}if(e.target.id==='passwordForm'){e.preventDefault();savePassword(e.target);}if(e.target.id==='logoForm'){e.preventDefault();uploadCompanyLogo(e.target);}});
   document.addEventListener('input',function(e){
     if(e.target.id==='globalSearch'){var searchText=e.target.value;if(view==='dashboard'){setView('products');query=searchText;render();}else{query=searchText;render();}return;}
     if(e.target.hasAttribute('data-search-input')){query=e.target.value;var pos=e.target.selectionStart;render();var next=document.querySelector('[data-search-input]');if(next){next.focus();next.setSelectionRange(pos,pos);}}

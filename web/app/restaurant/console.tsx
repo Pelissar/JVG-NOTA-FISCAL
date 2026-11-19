@@ -1,6 +1,7 @@
 "use client";
 
 import QRCode from "qrcode";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./restaurant.module.css";
 
@@ -27,6 +28,7 @@ export function RestaurantConsole() {
   const [data, setData] = useState<Data>(initial);
   const [tab, setTab] = useState<Tab>("service");
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -49,20 +51,41 @@ export function RestaurantConsole() {
     const payload = await response.json() as Data & { error?: string };
     if (!response.ok) throw new Error(payload.error || "Não foi possível abrir o atendimento.");
     setData(payload);
+    setError("");
+    setLoaded(true);
     setPointsRate(String(payload.settings.loyalty_points_per_real || 1));
   }, []);
 
-  useEffect(() => { void refresh().catch((reason: Error) => setError(reason.message)); }, [refresh]);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/restaurant", { cache: "no-store" })
+      .then(async (response) => {
+        const payload = await response.json() as Data & { error?: string };
+        if (!response.ok) throw new Error(payload.error || "Não foi possível abrir o atendimento.");
+        return payload;
+      })
+      .then((payload) => {
+        if (!active) return;
+        setData(payload);
+        setError("");
+        setLoaded(true);
+        setPointsRate(String(payload.settings.loyalty_points_per_real || 1));
+      })
+      .catch((reason: Error) => { if (active) setError(reason.message); });
+    return () => { active = false; };
+  }, []);
 
   async function send(path: string, method: "POST" | "PATCH", body: Record<string, unknown>) {
     setBusy(true); setError(""); setMessage("");
     try {
       const response = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const payload = await response.json() as { error?: string; order?: { order_number: number; id: string }; tables?: Table[] };
+      const payload = await response.json() as { error?: string; order?: { order_number: number; id: string }; tables?: Table[]; createdCount?: number; skippedCount?: number };
       if (!response.ok) throw new Error(payload.error || "Não foi possível concluir a ação.");
       if (payload.order?.order_number) setMessage(`Pedido #${payload.order.order_number} registrado.`);
+      else if (typeof payload.createdCount === "number") setMessage(payload.createdCount ? `${payload.createdCount} mesa(s) criada(s).${payload.skippedCount ? ` ${payload.skippedCount} já existia(m) e foi(ram) mantida(s).` : ""}` : "Essas mesas já estavam cadastradas; nada foi duplicado.");
       else setMessage("Alteração salva.");
-      await refresh();
+      try { await refresh(); }
+      catch (reason) { setError(`A ação foi salva, mas a tela não conseguiu atualizar os dados: ${reason instanceof Error ? reason.message : "erro de leitura"}`); }
       return payload;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Não foi possível concluir a ação.");
@@ -117,6 +140,9 @@ export function RestaurantConsole() {
       <div className={styles.headerActions}><a className={styles.back} href="/erp/index.html">Voltar ao ERP</a><button className={styles.refresh} onClick={() => void refresh().catch((reason: Error) => setError(reason.message))}>Atualizar pedidos</button></div>
     </header>
 
+    {!loaded ? <section className={styles.panel} role={error ? "alert" : "status"}>
+      {error ? <><p>{error}</p><button className={styles.refresh} onClick={() => void refresh().catch((reason: Error) => setError(reason.message))}>Tentar novamente</button></> : <p>Carregando mesas, produtos e pedidos…</p>}
+    </section> : <>
     {error ? <div className={styles.alertError} role="alert">{error}</div> : null}
     {message ? <div className={styles.alertSuccess} role="status">{message}</div> : null}
 
@@ -152,6 +178,7 @@ export function RestaurantConsole() {
     {tab === "customers" ? <div className={styles.twoCol}><section className={styles.panel}><div className={styles.panelHead}><div><span className={styles.step}>RELACIONAMENTO</span><h2>Histórico do cliente</h2><p>Pesquise pelo telefone cadastrado para ver pedidos anteriores e pontuação.</p></div></div><form className={styles.searchCustomer} onSubmit={(event) => void findCustomer(event)}><label>Telefone com DDD<input value={phoneSearch} onChange={(event) => setPhoneSearch(event.target.value)} placeholder="Ex.: (18) 99999-9999" inputMode="tel" required/></label><button className={styles.primaryButton}>Consultar histórico</button></form>{customer ? <div className={styles.customerCard}><div><span>CLIENTE</span><h3>{customer.full_name}</h3><p>{customer.phone}{customer.cpf ? ` · CPF ${customer.cpf}` : ""}</p></div><strong>{data.settings.loyalty_enabled ? `${customer.loyalty_points} pontos` : "Fidelidade desligada"}</strong></div> : null}</section><section className={styles.panel}><div className={styles.panelHead}><div><span className={styles.step}>PEDIDOS</span><h2>Compras anteriores</h2></div></div>{customer ? <OrderList orders={history} tableById={tableById} busy={busy} printId={printId} onStatus={() => undefined} onPrint={printOrder} readOnly/> : <div className={styles.empty}>Pesquise um cliente para consultar o histórico.</div>}</section></div> : null}
 
     {tab === "settings" ? <section className={styles.panel}><div className={styles.panelHead}><div><span className={styles.step}>PREFERÊNCIAS</span><h2>Configurações do restaurante</h2><p>Ative somente os recursos que sua equipe vai utilizar.</p></div></div><form key={`${data.settings.qr_orders_enabled}-${data.settings.loyalty_enabled}`} className={styles.settingsForm} onSubmit={(event) => void saveSettings(event)}><label className={styles.checkRow}><input name="qrOrdersEnabled" type="checkbox" defaultChecked={data.settings.qr_orders_enabled}/> Aceitar pedidos pelo QR das mesas</label><div className={styles.loyaltyBox}><label className={styles.checkRow}><input name="loyaltyEnabled" type="checkbox" defaultChecked={data.settings.loyalty_enabled}/> Ativar programa de fidelidade</label><label>Pontos por R$ 1,00<input type="number" min="0.01" max="100" step="0.01" value={pointsRate} onChange={(event) => setPointsRate(event.target.value)}/></label><small>Os pontos são adicionados uma única vez quando a equipe marca o pedido como entregue. A regra é configurável por esta empresa.</small></div><button className={styles.primaryButton} disabled={busy}>Salvar configurações</button></form></section> : null}
+    </>}
   </main>;
 }
 
@@ -162,8 +189,15 @@ function OrderList({ orders, tableById, busy, printId, onStatus, onPrint, readOn
 
 function TableCard({ table, busy, qrEnabled, onToggle, onSession }: { table: Table; busy: boolean; qrEnabled: boolean; onToggle: (active: boolean) => void; onSession: (status: "open" | "closed") => void }) {
   const [qr, setQr] = useState("");
-  const [url, setUrl] = useState("");
   const [printing, setPrinting] = useState(false);
-  useEffect(() => { const value = `${window.location.origin}/restaurant/qr/${table.qr_token}`; setUrl(value); void QRCode.toDataURL(value, { width: 240, margin: 1, color: { dark: "#12304a", light: "#ffffff" } }).then(setQr).catch(() => setQr("")); }, [table.qr_token]);
-  return <article className={`${styles.tableCard} ${printing ? styles.printTarget : ""}`}><div className={styles.tableCardHead}><div><strong>{table.label}</strong><small>Mesa {table.table_number} · {table.active ? (table.service_status === "open" ? "Aberta" : "Fechada") : "Desativada"}</small></div><button className={styles.buttonGhost} disabled={busy} onClick={() => onToggle(!table.active)}>{table.active ? "Desativar QR" : "Ativar mesa"}</button></div><button className={table.service_status === "open" ? styles.buttonDanger : styles.primaryButton} disabled={busy || !table.active} onClick={() => onSession(table.service_status === "open" ? "closed" : "open")}>{table.service_status === "open" ? "Fechar mesa" : "Abrir mesa"}</button>{qr ? <img className={styles.qrImage} src={qr} alt={`QR Code de ${table.label}`}/> : null}<label className={styles.qrUrl}>Link do cardápio<input readOnly value={url}/></label><div className={styles.qrActions}><button className={styles.buttonGhost} onClick={() => void navigator.clipboard.writeText(url)}>Copiar link</button><button className={styles.buttonGhost} onClick={() => { setPrinting(true); window.setTimeout(() => { window.print(); setPrinting(false); }, 100); }}>Imprimir QR</button><a className={styles.buttonGhost} href={url} target="_blank" rel="noreferrer">Abrir</a></div>{qrEnabled && table.active ? <small className={styles.qrReady}>QR habilitado · {table.service_status === "open" ? "recebendo pedidos" : "aguardando abertura da mesa"}</small> : null}</article>;
+  const url = `/restaurant/qr/${table.qr_token}`;
+  useEffect(() => {
+    let active = true;
+    const absoluteUrl = new URL(url, window.location.origin).toString();
+    QRCode.toDataURL(absoluteUrl, { width: 240, margin: 1, color: { dark: "#12304a", light: "#ffffff" } })
+      .then((value) => { if (active) setQr(value); })
+      .catch(() => { if (active) setQr(""); });
+    return () => { active = false; };
+  }, [table.qr_token, url]);
+  return <article className={`${styles.tableCard} ${printing ? styles.printTarget : ""}`}><div className={styles.tableCardHead}><div><strong>{table.label}</strong><small>Mesa {table.table_number} · {table.active ? (table.service_status === "open" ? "Aberta" : "Fechada") : "Desativada"}</small></div><button className={styles.buttonGhost} disabled={busy} onClick={() => onToggle(!table.active)}>{table.active ? "Desativar QR" : "Ativar mesa"}</button></div><button className={table.service_status === "open" ? styles.buttonDanger : styles.primaryButton} disabled={busy || !table.active} onClick={() => onSession(table.service_status === "open" ? "closed" : "open")}>{table.service_status === "open" ? "Fechar mesa" : "Abrir mesa"}</button>{qr ? <Image className={styles.qrImage} src={qr} width={150} height={150} unoptimized alt={`QR Code de ${table.label}`}/> : null}<label className={styles.qrUrl}>Link do cardápio<input readOnly value={url}/></label><div className={styles.qrActions}><button className={styles.buttonGhost} onClick={() => void navigator.clipboard.writeText(new URL(url, window.location.origin).toString())}>Copiar link</button><button className={styles.buttonGhost} onClick={() => { setPrinting(true); window.setTimeout(() => { window.print(); setPrinting(false); }, 100); }}>Imprimir QR</button><a className={styles.buttonGhost} href={url} target="_blank" rel="noreferrer">Abrir</a></div>{qrEnabled && table.active ? <small className={styles.qrReady}>QR habilitado · {table.service_status === "open" ? "recebendo pedidos" : "aguardando abertura da mesa"}</small> : null}</article>;
 }

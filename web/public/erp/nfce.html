@@ -12,8 +12,8 @@
   <link rel="stylesheet" href="/erp/nfce-workspace.css?v=20261117-1">
   <script src="/erp/theme-switch.js"></script>
   <script defer src="/erp/erp-page-nav.js?v=20261117-navigation-2"></script>
-  <script defer src="/erp/nfce.js?v=20261117-1"></script>
-  <link rel="stylesheet" href="/erp/site-refresh.css?v=20261117-navigation-2">
+  <script defer src="/erp/nfce.js?v=20261119-consumer-identification"></script>
+  <link rel="stylesheet" href="/erp/site-refresh.css?v=20261119-dashboard-consumption">
 </head>
 <body>
   <div id="erpGlobalNav"></div>
@@ -52,7 +52,9 @@
             <fieldset>
               <legend>Consumidor e pagamento</legend>
               <div class="nfce-form-grid nfce-payment-grid">
-                <label>CPF do consumidor <span class="optional">opcional</span><input id="nfceCpf" inputmode="numeric" maxlength="14" placeholder="Somente se informado na venda"></label>
+                <label>Nome do consumidor <span class="optional">opcional</span><input id="nfceRecipientName" maxlength="120" autocomplete="name" placeholder="Preencha se a venda for identificada"></label>
+                <label>CPF do consumidor <span class="optional">opcional</span><input id="nfceCpf" inputmode="numeric" maxlength="14" placeholder="Informe se quiser identificar no cupom"></label>
+                <p class="nfce-help">Para informar um consumidor diferente do cadastro habitual, preencha o nome e o CPF dele. Sem identificação, deixe os dois campos vazios.</p>
                 <label>Forma de pagamento <span class="required">*</span><select id="nfcePayment" required><option value="">Selecione</option><option value="01">Dinheiro</option><option value="17">Pix</option><option value="03">Cartão de crédito</option><option value="04">Cartão de débito</option><option value="99">Outro</option></select></label>
               </div>
             </fieldset>

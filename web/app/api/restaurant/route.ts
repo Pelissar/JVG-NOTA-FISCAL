@@ -11,12 +11,8 @@ async function requireRestaurant(): Promise<RestaurantScope> {
   if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
   const scope = await getSiteAccount(user, { requiredModule: "restaurante" });
   if (!scope) throw new JvgBackendError("Não encontramos uma empresa ativa para este usuário.", 409);
-  const companies = await dbRequest<Array<{ business_type: string | null }>>(
-    `/rest/v1/jvg_companies?tenant_id=${filterEq(scope.tenant_id)}&id=${filterEq(scope.company_id)}&select=business_type&limit=1`,
-  );
-  if (companies[0]?.business_type !== "restaurante") {
-    throw new JvgBackendError("O atendimento por mesas está disponível para empresas cadastradas como restaurante.", 403);
-  }
+  // A liberação por empresa no painel administrativo é a fonte de acesso.
+  // business_type classifica o cadastro, mas não pode bloquear um módulo liberado.
   return scope;
 }
 
@@ -33,9 +29,9 @@ async function readPublicTable(token: string) {
   if (!table) throw new JvgBackendError("Esta mesa não está disponível. Peça ajuda à equipe.", 404);
   const [settings, companies] = await Promise.all([
     dbRequest<Array<{ qr_orders_enabled: boolean }>>(`/rest/v1/jvg_restaurant_settings?tenant_id=${filterEq(table.tenant_id)}&company_id=${filterEq(table.company_id)}&select=qr_orders_enabled&limit=1`),
-    dbRequest<Array<{ business_type: string; trade_name: string | null; legal_name: string }>>(`/rest/v1/jvg_companies?tenant_id=${filterEq(table.tenant_id)}&id=${filterEq(table.company_id)}&select=business_type,trade_name,legal_name&limit=1`),
+    dbRequest<Array<{ trade_name: string | null; legal_name: string }>>(`/rest/v1/jvg_companies?tenant_id=${filterEq(table.tenant_id)}&id=${filterEq(table.company_id)}&select=trade_name,legal_name&limit=1`),
   ]);
-  if (!settings[0]?.qr_orders_enabled || companies[0]?.business_type !== "restaurante") {
+  if (!settings[0]?.qr_orders_enabled) {
     throw new JvgBackendError("Os pedidos por QR estão temporariamente desativados.", 404);
   }
   if (!await moduleAccessGranted({ tenant_id: table.tenant_id, company_id: table.company_id }, "restaurante")) {
@@ -109,8 +105,13 @@ async function saveCustomer(scope: RestaurantScope, fullName: string, phoneInput
     `/rest/v1/jvg_restaurant_customers?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&phone=${filterEq(phone)}&select=id,full_name,cpf&limit=1`,
   );
   if (existing[0]) {
-    if (requireCpfMatch && (!existing[0].cpf || existing[0].cpf !== cpf)) {
-      throw new JvgBackendError("Esse telefone já está cadastrado com outro CPF. Peça à equipe para atualizar seus dados.", 409);
+    if (requireCpfMatch && cpf && existing[0].cpf && existing[0].cpf !== cpf) {
+      throw new JvgBackendError("O CPF informado não corresponde ao cadastro deste telefone. Confira os dados ou peça ajuda à equipe.", 409);
+    }
+    if (requireCpfMatch && cpf && !existing[0].cpf) {
+      await dbRequest(`/rest/v1/jvg_restaurant_customers?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=${filterEq(existing[0].id)}`, {
+        method: "PATCH", body: JSON.stringify({ cpf, updated_at: new Date().toISOString() }),
+      });
     }
     return { id: existing[0].id, name: existing[0].full_name, phone };
   }
@@ -203,8 +204,12 @@ export async function POST(request: Request) {
           tenant_id: scope.tenant_id, company_id: scope.company_id,
           table_number: firstNumber + index, label: `Mesa ${firstNumber + index}`,
         }));
-        const tables = await dbRequest<Array<Record<string, unknown>>>("/rest/v1/jvg_restaurant_tables", { method: "POST", body: JSON.stringify(rows) });
-        return apiJson({ ok: true, tables }, 201);
+        const tables = await dbRequest<Array<Record<string, unknown>>>("/rest/v1/jvg_restaurant_tables?on_conflict=tenant_id,company_id,table_number", {
+          method: "POST",
+          headers: { Prefer: "resolution=ignore-duplicates,return=representation" },
+          body: JSON.stringify(rows),
+        });
+        return apiJson({ ok: true, tables, createdCount: tables.length, skippedCount: count - tables.length }, 201);
       }
       if (kind !== "order") throw new JvgBackendError("Ação de restaurante inválida.", 400);
       source = input.tableId ? "table" : "counter";
@@ -222,7 +227,6 @@ export async function POST(request: Request) {
     const customerName = str(input.customerName, 120);
     const phoneInput = str(input.phone, 30);
     const cpfInput = str(input.cpf, 20);
-    if (publicToken && !cpfInput.replace(/\D/g, "")) throw new JvgBackendError("Informe o CPF para identificar o pedido.", 400);
     let customer: { id: string; name: string; phone: string } | null = null;
     if (publicToken || phoneInput) customer = await saveCustomer(scope, customerName, phoneInput, cpfInput, Boolean(publicToken));
     if (publicToken && !customer) throw new JvgBackendError("Informe seu nome e telefone com DDD para enviar o pedido.", 400);

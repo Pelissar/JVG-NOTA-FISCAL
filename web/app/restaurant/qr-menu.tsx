@@ -79,9 +79,9 @@ export function RestaurantQrMenu({ token }: { token: string }) {
         <div className={styles.qrTotals}><span>Total do pedido</span><strong>{money(total)}</strong></div>
         <label>Seu nome<input value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={120} autoComplete="name" required/></label>
         <label>Telefone com DDD<input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="(00) 00000-0000" inputMode="tel" autoComplete="tel" required/></label>
-        <label>CPF<input value={cpf} onChange={(event) => setCpf(event.target.value)} placeholder="000.000.000-00" inputMode="numeric" autoComplete="off" required/></label>
+        <label>CPF <span>(opcional)</span><input value={cpf} onChange={(event) => setCpf(event.target.value)} placeholder="Informe se quiser identificar a compra" inputMode="numeric" autoComplete="off"/></label>
         <label>Observação para a cozinha (opcional)<input value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={1000} placeholder="Ex.: sem cebola"/></label>
-        <p className={styles.qrNotice}>Nome, telefone e CPF serão vinculados ao pedido para identificação pela equipe. Por segurança, o histórico completo do cliente fica visível apenas para a equipe autenticada.</p>
+        <p className={styles.qrNotice}>Nome e telefone são usados para identificar o pedido. O CPF é opcional. O histórico completo do cliente fica visível apenas para a equipe autenticada.</p>
         <button type="submit" disabled={sending || !data.tableOpen}>{sending ? "Enviando pedido…" : "Enviar pedido para confirmação"}</button>
       </form> : null}
     </> : null}
