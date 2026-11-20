@@ -45,6 +45,17 @@ function publicAssetUrl(path: string | null | undefined) {
   return `${runtime.supabaseUrl}/storage/v1/object/public/${logoBucket}/${path.split("/").map(encodeURIComponent).join("/")}`;
 }
 
+function safeFiscalFileUrl(value: string | null | undefined) {
+  if (!value?.startsWith("https://")) return false;
+  try {
+    const candidate = new URL(value);
+    const configuredSupabaseHost = jvgRuntime().supabaseUrl ? new URL(jvgRuntime().supabaseUrl!).hostname : "";
+    const isFocusHost = candidate.hostname === "focusnfe.com.br" || candidate.hostname.endsWith(".focusnfe.com.br");
+    const isConfiguredStorageObject = Boolean(configuredSupabaseHost && candidate.hostname === configuredSupabaseHost && candidate.pathname.startsWith("/storage/v1/object/"));
+    return candidate.protocol === "https:" && (!candidate.port || candidate.port === "443") && !candidate.username && !candidate.password && (isFocusHost || isConfiguredStorageObject);
+  } catch { return false; }
+}
+
 async function readMenuItems(scope: Pick<RestaurantScope, "tenant_id" | "company_id">, productIds?: string[]) {
   if (productIds && !productIds.length) return [];
   const ids = productIds?.length ? `&product_id=in.(${productIds.join(",")})` : "";
@@ -426,12 +437,45 @@ async function readCustomerHistory(scope: Pick<RestaurantScope, "tenant_id" | "c
     if (!menuSchemaUnavailable(error)) throw error;
     orders = await dbRequest<Array<Record<string, unknown>>>(`${base}&select=id,order_number,table_id,customer_id,source,status,items,total,notes,created_at,customer_name_snapshot,phone_snapshot&order=created_at.desc&limit=${limit}`);
   }
+  const documentLinks = new Map<string, Array<Record<string, unknown>>>();
+  const orderIds = orders.map((order) => String(order.id)).filter((id) => UUID.test(id));
+  if (orderIds.length) {
+    try {
+      const links = await dbRequest<Array<{ id: string; restaurant_order_id: string; fiscal_document_id: string; authorized_at: string; customer_available_until: string }>>(
+        `/rest/v1/jvg_restaurant_order_documents?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&restaurant_order_id=in.(${orderIds.join(",")})&customer_available_until=gt.${encodeURIComponent(new Date().toISOString())}&select=id,restaurant_order_id,fiscal_document_id,authorized_at,customer_available_until&order=created_at.desc&limit=100`,
+      );
+      const documentIds = [...new Set(links.map((link) => link.fiscal_document_id))];
+      const documents = documentIds.length ? await dbRequest<Array<Record<string, unknown>>>(
+        `/rest/v1/jvg_fiscal_documents?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=in.(${documentIds.join(",")})&environment=eq.producao&status=eq.authorized&select=id,document_type,document_number,series,access_key,authorized_at,pdf_storage_path,xml_storage_path&limit=100`,
+      ) : [];
+      const documentById = new Map(documents.map((document) => [String(document.id), document]));
+      for (const link of links) {
+        const document = documentById.get(link.fiscal_document_id);
+        if (!document) continue;
+        const formats = [
+          typeof document.pdf_storage_path === "string" && safeFiscalFileUrl(document.pdf_storage_path) ? "pdf" : null,
+          typeof document.xml_storage_path === "string" && safeFiscalFileUrl(document.xml_storage_path) ? "xml" : null,
+        ].filter((format): format is string => Boolean(format));
+        if (!formats.length) continue;
+        const rows = documentLinks.get(link.restaurant_order_id) || [];
+        rows.push({
+          id: link.id, documentType: document.document_type, number: document.document_number,
+          series: document.series, accessKey: document.access_key, authorizedAt: document.authorized_at || link.authorized_at,
+          availableUntil: link.customer_available_until, formats,
+        });
+        documentLinks.set(link.restaurant_order_id, rows);
+      }
+    } catch (error) {
+      if (!menuSchemaUnavailable(error)) throw error;
+    }
+  }
   return orders.map((order) => ({
     id: order.id, order_number: order.order_number, table_id: order.table_id, customer_id: order.customer_id, source: order.source, status: order.status,
     customer_name_snapshot: order.customer_name_snapshot || "", phone_snapshot: order.phone_snapshot || "",
     items: publicOrderItems(order.items), total: Number(order.total) || 0, notes: str(order.notes, 1000),
     created_at: order.created_at, fulfillment_type: order.fulfillment_type || null,
     payment_status: order.payment_status === "paid" ? "paid" : order.payment_status === "pending" ? "pending" : "unknown",
+    fiscalDocuments: documentLinks.get(String(order.id)) || [],
   }));
 }
 
@@ -550,8 +594,70 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const token = url.searchParams.get("token");
     const slug = url.searchParams.get("slug");
+    if (url.searchParams.get("document") === "1") {
+      const identity = await requireVerifiedRestaurantCustomer(request);
+      const documentLinkId = url.searchParams.get("id") || "";
+      const format = url.searchParams.get("format");
+      if (!UUID.test(documentLinkId) || !["pdf", "xml"].includes(format || "")) throw new JvgBackendError("Documento solicitado inválido.", 400);
+      let context: PublicContext;
+      if (token) {
+        const result = await readPublicTable(token);
+        context = { tenant_id: result.tenant_id, company_id: result.company_id, company: result.company, brand: result.brand, table: result.table };
+      } else if (slug) context = await readPublicRestaurantBySlug(slug);
+      else throw new JvgBackendError("Informe o restaurante para acessar o documento.", 400);
+      const scope = { tenant_id: context.tenant_id, company_id: context.company_id };
+      const customers = await dbRequest<Array<{ id: string; phone: string }>>(
+        `/rest/v1/jvg_restaurant_customers?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&auth_user_id=${filterEq(identity.userId)}&select=id,phone&limit=1`,
+      );
+      const customer = customers[0];
+      if (!customer || customer.phone !== identity.phone) throw new JvgBackendError("Confirme sua conta para acessar este documento.", 403);
+      const links = await dbRequest<Array<{ restaurant_order_id: string; fiscal_document_id: string; customer_available_until: string }>>(
+        `/rest/v1/jvg_restaurant_order_documents?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=${filterEq(documentLinkId)}&customer_available_until=gt.${encodeURIComponent(new Date().toISOString())}&select=restaurant_order_id,fiscal_document_id,customer_available_until&limit=1`,
+      );
+      const link = links[0];
+      if (!link) throw new JvgBackendError("O acesso à cópia deste documento expirou ou não está disponível.", 410);
+      const orders = await dbRequest<Array<{ id: string }>>(
+        `/rest/v1/jvg_restaurant_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=${filterEq(link.restaurant_order_id)}&customer_id=${filterEq(customer.id)}&select=id&limit=1`,
+      );
+      if (!orders[0]) throw new JvgBackendError("Este documento não pertence à sua conta neste restaurante.", 403);
+      const documents = await dbRequest<Array<{ document_type: string; status: string; environment: string; document_number: number | null; pdf_storage_path: string | null; xml_storage_path: string | null }>>(
+        `/rest/v1/jvg_fiscal_documents?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=${filterEq(link.fiscal_document_id)}&status=eq.authorized&environment=eq.producao&document_type=in.(nfe,nfce)&select=document_type,status,environment,document_number,pdf_storage_path,xml_storage_path&limit=1`,
+      );
+      const document = documents[0];
+      const source = format === "pdf" ? document?.pdf_storage_path : document?.xml_storage_path;
+      if (!document || !source || !source.startsWith("https://")) throw new JvgBackendError("O arquivo deste documento ainda não está disponível para consulta.", 404);
+      const fileUrl = new URL(source);
+      if (!safeFiscalFileUrl(source)) {
+        throw new JvgBackendError("O provedor não disponibilizou o arquivo em um endereço permitido.", 502);
+      }
+      let file: Response;
+      try { file = await fetch(fileUrl, { cache: "no-store", redirect: "error", signal: AbortSignal.timeout(12000) }); }
+      catch { throw new JvgBackendError("Não foi possível obter o arquivo fiscal do provedor. Tente novamente mais tarde.", 502); }
+      if (!file.ok) throw new JvgBackendError("O provedor ainda não disponibilizou este arquivo fiscal.", 502);
+      const maxBytes = format === "pdf" ? 15 * 1024 * 1024 : 20 * 1024 * 1024;
+      const contentLength = Number(file.headers.get("content-length") || 0);
+      if (contentLength > maxBytes) throw new JvgBackendError("O arquivo fiscal excede o limite de consulta.", 413);
+      const bytes = await file.arrayBuffer();
+      if (bytes.byteLength > maxBytes) throw new JvgBackendError("O arquivo fiscal excede o limite de consulta.", 413);
+      const prefix = new Uint8Array(bytes.slice(0, 256));
+      if (format === "pdf") {
+        if (new TextDecoder().decode(prefix.slice(0, 5)) !== "%PDF-") throw new JvgBackendError("O provedor retornou um arquivo que não é PDF.", 502);
+      } else if (!new TextDecoder().decode(prefix).trimStart().startsWith("<")) {
+        throw new JvgBackendError("O provedor retornou um arquivo que não é XML.", 502);
+      }
+      const expectedType = format === "pdf" ? "application/pdf" : "application/xml";
+      const filename = `${document.document_type}-${document.document_number || "documento"}.${format}`;
+      return new Response(bytes, { headers: {
+        "Content-Type": expectedType,
+        "Content-Disposition": `${format === "pdf" ? "inline" : "attachment"}; filename="${filename}"`,
+        "Cache-Control": "private, no-store, max-age=0",
+        "X-Content-Type-Options": "nosniff",
+      } });
+    }
     if (url.searchParams.get("account") === "1") {
       const identity = await requireVerifiedRestaurantCustomer(request);
+      const requestedCpf = (url.searchParams.get("cpf") || "").replace(/\D/g, "");
+      if (requestedCpf && !validCpf(requestedCpf)) throw new JvgBackendError("Confira o CPF informado.", 400);
       let context: PublicContext;
       if (token) {
         const result = await readPublicTable(token);
@@ -565,10 +671,39 @@ export async function GET(request: Request) {
         "&company_id=" + filterEq(scope.company_id) + "&auth_user_id=" + filterEq(identity.userId) +
         "&select=id,full_name,phone,cpf,loyalty_points&limit=1",
       );
-      if (!customers[0]) return apiJson({ profile: null, history: [] });
+      let customer = customers[0];
+      if (customer && customer.phone !== identity.phone) throw new JvgBackendError("Confirme novamente o telefone associado a esta conta.", 409);
+
+      if (!customer) {
+        const byPhone = await dbRequest<Array<{ id: string; full_name: string; phone: string; cpf: string | null; loyalty_points: number; auth_user_id: string | null }>>(
+          "/rest/v1/jvg_restaurant_customers?tenant_id=" + filterEq(scope.tenant_id) +
+          "&company_id=" + filterEq(scope.company_id) + "&phone=" + filterEq(identity.phone) +
+          "&select=id,full_name,phone,cpf,loyalty_points,auth_user_id&limit=1",
+        );
+        const phoneRecord = byPhone[0];
+        if (phoneRecord?.auth_user_id && phoneRecord.auth_user_id !== identity.userId) {
+          throw new JvgBackendError("Este telefone já está associado a outra conta. Fale com o restaurante para revisar o cadastro.", 409);
+        }
+        if (phoneRecord && (!requestedCpf || !phoneRecord.cpf || phoneRecord.cpf !== requestedCpf)) {
+          throw new JvgBackendError("Para recuperar o cadastro, informe o CPF vinculado ao telefone confirmado.", 409);
+        }
+        if (phoneRecord) {
+          const claimed = await dbRequest<Array<{ id: string }>>(
+            "/rest/v1/jvg_restaurant_customers?tenant_id=" + filterEq(scope.tenant_id) +
+            "&company_id=" + filterEq(scope.company_id) + "&id=" + filterEq(phoneRecord.id) + "&auth_user_id=is.null&phone=" + filterEq(identity.phone),
+            { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify({ auth_user_id: identity.userId, updated_at: new Date().toISOString() }) },
+          );
+          if (!claimed[0]) throw new JvgBackendError("Não foi possível associar a conta. Atualize e tente novamente.", 409);
+          customer = phoneRecord;
+        }
+      }
+      if (!customer) return apiJson({ profile: null, history: [] });
+      if (requestedCpf && customer.cpf && customer.cpf !== requestedCpf) {
+        throw new JvgBackendError("O CPF não corresponde ao cadastro deste telefone.", 409);
+      }
       return apiJson({
-        profile: { id: customers[0].id, name: customers[0].full_name, phone: identity.phone, cpf: customers[0].cpf, loyaltyPoints: customers[0].loyalty_points },
-        history: await readCustomerHistory(scope, customers[0].id, 50),
+        profile: { id: customer.id, name: customer.full_name, phone: identity.phone, cpf: customer.cpf, loyaltyPoints: customer.loyalty_points },
+        history: await readCustomerHistory(scope, customer.id, 50),
       });
     }
     if (slug) {
@@ -616,6 +751,26 @@ export async function GET(request: Request) {
         instagramUrl: typeof brand.public_instagram_url === "string" ? brand.public_instagram_url : "",
         websiteUrl: typeof brand.public_website_url === "string" ? brand.public_website_url : "",
       });
+    }
+
+    if (url.searchParams.get("fiscalDocuments") === "1") {
+      const scope = await requireRestaurant();
+      if (!await moduleAccessGranted(scope, "fiscal_nfe")) throw new JvgBackendError("O módulo Fiscal/NF-e precisa estar liberado para vincular documentos aos pedidos.", 403);
+      const documents = await dbRequest<Array<Record<string, unknown>>>(
+        `/rest/v1/jvg_fiscal_documents?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&environment=eq.producao&status=eq.authorized&document_type=in.(nfe,nfce)&authorized_at=not.is.null&select=id,document_type,document_number,series,recipient_document,authorized_at,pdf_storage_path,xml_storage_path&order=authorized_at.desc&limit=300`,
+      );
+      const minimumDate = Date.now() - 30 * 86400000;
+      return apiJson({ documents: documents.filter((document) => {
+        const authorizedTime = Date.parse(String(document.authorized_at || ""));
+        return Number.isFinite(authorizedTime) && authorizedTime >= minimumDate && authorizedTime <= Date.now() &&
+          (typeof document.pdf_storage_path === "string" && safeFiscalFileUrl(document.pdf_storage_path) ||
+            typeof document.xml_storage_path === "string" && safeFiscalFileUrl(document.xml_storage_path));
+      }).map((document) => ({
+        id: document.id, type: document.document_type, number: document.document_number, series: document.series,
+        recipient: document.recipient_document, authorizedAt: document.authorized_at,
+        hasPdf: typeof document.pdf_storage_path === "string" && safeFiscalFileUrl(document.pdf_storage_path),
+        hasXml: typeof document.xml_storage_path === "string" && safeFiscalFileUrl(document.xml_storage_path),
+      })) });
     }
 
     const scope = await requireRestaurant();
@@ -697,6 +852,76 @@ export async function POST(request: Request) {
     } else {
       scope = await requireRestaurant();
       requireWrite(scope);
+      if (kind === "link-fiscal-document") {
+        if (!await moduleAccessGranted(scope, "fiscal_nfe")) throw new JvgBackendError("O módulo Fiscal/NF-e precisa estar liberado para vincular documentos aos pedidos.", 403);
+        const orderId = str(input.orderId, 40);
+        const documentId = str(input.fiscalDocumentId, 40);
+        if (!UUID.test(orderId) || !UUID.test(documentId)) throw new JvgBackendError("Selecione um pedido e um documento fiscal válidos.", 400);
+        const orders = await dbRequest<Array<{ id: string; source: string; customer_id: string | null }>>(
+          `/rest/v1/jvg_restaurant_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=${filterEq(orderId)}&select=id,source,customer_id&limit=1`,
+        );
+        const order = orders[0];
+        if (!order || !order.customer_id || !["qr", "website"].includes(order.source)) {
+          throw new JvgBackendError("Vincule documentos apenas a pedidos digitais com conta de cliente.", 409);
+        }
+        const customers = await dbRequest<Array<{ id: string; cpf: string | null }>>(
+          `/rest/v1/jvg_restaurant_customers?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=${filterEq(order.customer_id)}&select=id,cpf&limit=1`,
+        );
+        const customer = customers[0];
+        if (!customer?.cpf || !validCpf(customer.cpf)) throw new JvgBackendError("O cliente precisa ter CPF válido cadastrado para associar um documento fiscal à conta.", 409);
+        const documents = await dbRequest<Array<{ id: string; document_type: string; recipient_document: string | null; authorized_at: string | null; pdf_storage_path: string | null; xml_storage_path: string | null }>>(
+          `/rest/v1/jvg_fiscal_documents?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=${filterEq(documentId)}&environment=eq.producao&status=eq.authorized&document_type=in.(nfe,nfce)&select=id,document_type,recipient_document,authorized_at,pdf_storage_path,xml_storage_path&limit=1`,
+        );
+        const document = documents[0];
+        if (!document) throw new JvgBackendError("Só é possível compartilhar uma NF-e ou NFC-e autorizada em produção.", 409);
+        if (document.recipient_document?.replace(/\D/g, "") !== customer.cpf) {
+          throw new JvgBackendError("O CPF do destinatário da nota não corresponde ao cadastro deste cliente. O documento não foi vinculado.", 409);
+        }
+        if (!(safeFiscalFileUrl(document.pdf_storage_path) || safeFiscalFileUrl(document.xml_storage_path))) {
+          throw new JvgBackendError("O provedor ainda não disponibilizou o XML nem o PDF desta nota.", 409);
+        }
+        const authorizedAt = document.authorized_at;
+        const authorizedTime = authorizedAt ? Date.parse(authorizedAt) : Number.NaN;
+        if (!Number.isFinite(authorizedTime) || authorizedTime > Date.now() + 5 * 60 * 1000) {
+          throw new JvgBackendError("A data de autorização não está disponível para validar o prazo de acesso do cliente.", 409);
+        }
+        const availableUntil = new Date(authorizedTime + 30 * 86400000);
+        if (availableUntil.getTime() <= Date.now()) throw new JvgBackendError("Já passaram 30 dias da autorização; o documento permanece no histórico fiscal do ERP, mas não pode ser adicionado à conta do cliente.", 410);
+        let existing: Array<{ id: string; restaurant_order_id: string }>;
+        try {
+          existing = await dbRequest<Array<{ id: string; restaurant_order_id: string }>>(
+            `/rest/v1/jvg_restaurant_order_documents?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&fiscal_document_id=${filterEq(documentId)}&select=id,restaurant_order_id&limit=1`,
+          );
+        } catch (error) {
+          if (menuSchemaUnavailable(error)) throw new JvgBackendError("A associação de notas aos pedidos depende da migration local 20261119_jvg_restaurant_order_documents.sql. Ela ainda não foi aplicada.", 503);
+          throw error;
+        }
+        if (existing[0]) {
+          if (existing[0].restaurant_order_id !== order.id) throw new JvgBackendError("Este documento já está associado a outro pedido.", 409);
+          return apiJson({ ok: true, alreadyLinked: true, id: existing[0].id });
+        }
+        const user = await getJvgUser();
+        let linked: Array<{ id: string }>;
+        try {
+          linked = await dbRequest<Array<{ id: string }>>("/rest/v1/jvg_restaurant_order_documents", {
+            method: "POST", headers: { Prefer: "resolution=ignore-duplicates,return=representation" },
+            body: JSON.stringify({
+              tenant_id: scope.tenant_id, company_id: scope.company_id, restaurant_order_id: order.id,
+              fiscal_document_id: document.id, authorized_at: new Date(authorizedTime).toISOString(),
+              customer_available_until: availableUntil.toISOString(), linked_by: user?.userId || null,
+            }),
+          });
+        } catch (error) {
+          if (menuSchemaUnavailable(error)) throw new JvgBackendError("A associação de notas aos pedidos depende da migration local 20261119_jvg_restaurant_order_documents.sql. Ela ainda não foi aplicada.", 503);
+          throw error;
+        }
+        if (linked[0]) return apiJson({ ok: true, id: linked[0].id, availableUntil: availableUntil.toISOString() }, 201);
+        const raced = await dbRequest<Array<{ id: string; restaurant_order_id: string }>>(
+          `/rest/v1/jvg_restaurant_order_documents?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&fiscal_document_id=${filterEq(documentId)}&select=id,restaurant_order_id&limit=1`,
+        );
+        if (raced[0]?.restaurant_order_id === order.id) return apiJson({ ok: true, alreadyLinked: true, id: raced[0].id });
+        throw new JvgBackendError("Este documento já está associado a outro pedido.", 409);
+      }
       if (kind === "settings") {
         const pointsRate = Number(input.loyaltyPointsPerReal ?? 1);
         if (!Number.isFinite(pointsRate) || pointsRate <= 0 || pointsRate > 100) throw new JvgBackendError("A pontuação precisa ser maior que zero e no máximo 100 pontos por real.", 400);

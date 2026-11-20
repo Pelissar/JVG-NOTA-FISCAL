@@ -46,6 +46,22 @@ const toDraft = (product: MenuProduct): ProductDraft => ({
 
 function newId() { return crypto.randomUUID(); }
 
+function contrastRatio(hex: string, foreground: "#ffffff" | "#142a43") {
+  const value = Number.parseInt(hex.replace("#", ""), 16);
+  if (!Number.isFinite(value)) return 1;
+  const channels = [(value >> 16) & 255, (value >> 8) & 255, value & 255].map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+  const other = foreground === "#ffffff" ? 1 : 0.022;
+  return (Math.max(luminance, other) + 0.05) / (Math.min(luminance, other) + 0.05);
+}
+
+function readableAccent(hex: string) {
+  return contrastRatio(hex, "#ffffff") >= contrastRatio(hex, "#142a43") ? "#ffffff" : "#142a43";
+}
+
 export function RestaurantMenuManager() {
   const [data, setData] = useState<MenuData | null>(null);
   const [draft, setDraft] = useState<ProductDraft | null>(null);
@@ -96,6 +112,21 @@ export function RestaurantMenuManager() {
     const term = search.trim().toLocaleLowerCase("pt-BR");
     return (data?.products || []).filter((product) => !term || `${product.name} ${product.category} ${product.sku}`.toLocaleLowerCase("pt-BR").includes(term));
   }, [data?.products, search]);
+  const publicPreviewProducts = useMemo(() => (data?.products || []).map((product) => {
+    if (!draft || draft.id !== product.id) return product;
+    const price = Number(draft.salePrice);
+    const promotionPrice = Number(draft.promotion?.price);
+    const start = draft.promotion?.startsAt ? new Date(draft.promotion.startsAt).getTime() : null;
+    const end = draft.promotion?.endsAt ? new Date(draft.promotion.endsAt).getTime() : null;
+    const promotionActive = Boolean(draft.promotion && Number.isFinite(promotionPrice) && promotionPrice > 0 && promotionPrice < price &&
+      (start === null || start <= Date.now()) && (end === null || end >= Date.now()));
+    return {
+      ...product, name: draft.name || product.name, description: draft.description,
+      category: draft.category, salePrice: price, currentPrice: promotionActive ? promotionPrice : price,
+      imageUrl: draft.imageUrl, publicActive: draft.publicActive, promotion: promotionActive ? draft.promotion : null,
+      isCombo: draft.isCombo, comboComponents: draft.comboComponents,
+    };
+  }).filter((product) => product.active && product.publicActive), [data?.products, draft]);
 
   async function post(body: Record<string, unknown>) {
     const response = await fetch("/api/restaurant/menu", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -307,11 +338,22 @@ export function RestaurantMenuManager() {
         </div>
         <div className={styles.brandImages}><div className={styles.uploadTile}>{brand.logoUrl ? <Image src={brand.logoUrl} alt="Logo salva" width={90} height={90} unoptimized/> : <div className={styles.photoPlaceholder}>Logo</div>}<div><strong>Logo do restaurante</strong><small>PNG, JPEG ou WebP · até 2 MB</small><label className={styles.secondary}>Enviar logo<input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={(event) => void upload(event, "logo")}/></label></div></div><div className={styles.uploadTile}>{brand.coverUrl ? <Image className={styles.coverThumb} src={brand.coverUrl} alt="Capa salva" width={180} height={90} unoptimized/> : <div className={styles.coverPlaceholder}>Capa</div>}<div><strong>Imagem de capa</strong><small>PNG, JPEG ou WebP · até 2 MB</small><label className={styles.secondary}>Enviar capa<input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={(event) => void upload(event, "cover")}/></label></div></div></div>
         <section className={styles.hoursEditor}><div><h4>Horário de atendimento</h4><p>Os horários salvos aparecem no site e no cardápio por QR.</p></div><div className={styles.hoursList}>{dayLabels.map(([key, label]) => <div key={key} className={styles.hoursRow}><label className={styles.inlineCheck}><input type="checkbox" checked={brand.openingHours[key]?.open || false} onChange={(event) => setBrand((current) => ({ ...current, openingHours: { ...current.openingHours, [key]: { ...current.openingHours[key], open: event.target.checked, from: current.openingHours[key]?.from || "09:00", to: current.openingHours[key]?.to || "18:00" } } }))}/>{label}</label><label>Abre<input type="time" value={brand.openingHours[key]?.from || ""} disabled={!brand.openingHours[key]?.open} onChange={(event) => setBrand((current) => ({ ...current, openingHours: { ...current.openingHours, [key]: { ...current.openingHours[key], from: event.target.value } } }))}/></label><label>Fecha<input type="time" value={brand.openingHours[key]?.to || ""} disabled={!brand.openingHours[key]?.open} onChange={(event) => setBrand((current) => ({ ...current, openingHours: { ...current.openingHours, [key]: { ...current.openingHours[key], to: event.target.value } } }))}/></label></div>)}</div></section>
-        <div className={styles.themeActions}><button type="button" className={styles.secondary} onClick={() => setBrand((current) => ({ ...current, brandColor: "#1768d2" }))}>Restaurar cor padrão na prévia</button><small>Salve para aplicar o tema no site público.</small></div>
+        <div className={styles.themeActions}><button type="button" className={styles.secondary} onClick={() => setBrand((current) => ({ ...current, brandColor: "#1768d2" }))}>Restaurar tema padrão</button><small>Restaura a cor principal sem remover logo, capa ou horários. Salve para publicar.</small></div>
       </form>
-      <aside className={styles.publicPreview} style={{ "--preview-color": brand.brandColor } as CSSProperties}>
+      <aside className={styles.publicPreview} style={{ "--preview-color": brand.brandColor, "--preview-foreground": readableAccent(brand.brandColor) } as CSSProperties}>
+        <div className={styles.previewLabel}><span className={styles.eyebrow}>PRÉ-VISUALIZAÇÃO AO VIVO</span><small>Inclui alterações ainda não salvas</small></div>
         {brand.coverUrl ? <Image className={styles.previewCover} src={brand.coverUrl} alt="Prévia da capa" width={640} height={190} unoptimized/> : <div className={styles.previewCoverEmpty}/>}
-        <div className={styles.previewBody}>{brand.logoUrl ? <Image className={styles.previewLogo} src={brand.logoUrl} alt="Prévia da logo" width={52} height={52} unoptimized/> : null}<span className={styles.eyebrow}>PRÉVIA DA MARCA</span><h3>{brand.publicName || "Nome público do restaurante"}</h3><p>{brand.publicDescription || "A descrição aparecerá nesta área."}</p>{brand.publicAddress ? <p>{brand.publicAddress}</p> : null}<strong>Horários</strong><ul>{dayLabels.filter(([key]) => brand.openingHours[key]?.open).map(([key, label]) => <li key={key}>{label}: {brand.openingHours[key].from}–{brand.openingHours[key].to}</li>)}</ul>{!dayLabels.some(([key]) => brand.openingHours[key]?.open) ? <small>Horários ainda não informados.</small> : null}</div>
+        <div className={styles.previewBody}>{brand.logoUrl ? <Image className={styles.previewLogo} src={brand.logoUrl} alt="Prévia da logo" width={52} height={52} unoptimized/> : null}<span className={styles.eyebrow}>CARDÁPIO DO RESTAURANTE</span><h3>{brand.publicName || "Nome do restaurante"}</h3>{brand.publicDescription ? <p>{brand.publicDescription}</p> : null}{brand.publicAddress ? <p>{brand.publicAddress}</p> : null}{brand.mapUrl ? <a href={brand.mapUrl} target="_blank" rel="noreferrer">Abrir mapa</a> : null}{dayLabels.some(([key]) => brand.openingHours[key]?.open) ? <><strong>Horários</strong><ul>{dayLabels.filter(([key]) => brand.openingHours[key]?.open).map(([key, label]) => <li key={key}>{label}: {brand.openingHours[key].from}–{brand.openingHours[key].to}</li>)}</ul></> : null}</div>
+        <div className={styles.previewMenu}>
+          <div className={styles.previewMenuHeading}><strong>Cardápio</strong><span>{publicPreviewProducts.length} item(ns) visível(is)</span></div>
+          {data.categories.filter((category) => category.active).length ? <div className={styles.previewChips}>{data.categories.filter((category) => category.active).map((category) => <span key={category.id}>{category.name}</span>)}</div> : null}
+          {publicPreviewProducts.length ? publicPreviewProducts.slice(0, 5).map((product) => <article className={styles.previewProduct} key={product.id}>
+            {product.imageUrl ? <Image src={product.imageUrl} alt="" width={48} height={48} unoptimized/> : <span className={styles.previewProductPlaceholder} aria-hidden="true">{product.name.slice(0, 1).toUpperCase()}</span>}
+            <div><strong>{product.name}</strong><small>{product.category || "Outros"}{product.isCombo ? " · Combo" : ""}{product.promotion ? " · " + product.promotion.label : ""}</small><b>{money(product.currentPrice)}</b></div>
+          </article>) : <p className={styles.previewEmpty}>Cadastre e publique produtos ativos para exibi-los aqui.</p>}
+          {publicPreviewProducts.length > 5 ? <small className={styles.previewMore}>Mais {publicPreviewProducts.length - 5} item(ns) no cardápio.</small> : null}
+        </div>
+        <p className={styles.contrastInfo}>Contraste do botão principal: {contrastRatio(brand.brandColor, readableAccent(brand.brandColor)).toFixed(2)}:1 · {contrastRatio(brand.brandColor, readableAccent(brand.brandColor)) >= 4.5 ? "adequado" : "revise a cor"}</p>
         {brand.websiteEnabled && brand.publicSlug ? <Link href={"/r/" + brand.publicSlug} target="_blank" rel="noopener noreferrer" className={styles.secondary}>Abrir site público salvo</Link> : <p className={styles.note}>Salve e publique o endereço para abrir a página pública.</p>}
         {data.previewTable && brand.qrOrdersEnabled ? <Link href={"/restaurant/qr/" + data.previewTable.qr_token} target="_blank" rel="noopener noreferrer" className={styles.secondary}>Pré-visualizar QR de mesa</Link> : data.previewTable ? <p className={styles.note}>Pedidos por QR estão desativados nas Configurações.</p> : <p className={styles.note}>Crie uma mesa na área Salão e mesas para gerar o QR.</p>}
       </aside>

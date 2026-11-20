@@ -3,7 +3,7 @@
 import QRCode from "qrcode";
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./restaurant.module.css";
 import { CozinhaViva } from "./cozinha-viva";
 import { RestaurantMenuManager } from "./menu-manager";
@@ -15,6 +15,7 @@ type OrderItem = { product_id: string; description: string; quantity: number; un
 type Order = { id: string; order_number: number; table_id: string | null; customer_id: string | null; source: string; status: string; items: OrderItem[]; customer_name_snapshot: string; phone_snapshot: string; total: number; notes: string; created_at: string; payment_method?: string; payment_status?: "pending" | "paid" | "unknown"; payment_confirmed_at?: string | null; fulfillment_type?: "table" | "pickup" | null };
 type Settings = { qr_orders_enabled: boolean; loyalty_enabled: boolean; loyalty_points_per_real: number };
 type TableRequest = { id: string; table_id: string; request_type: "call_waiter" | "request_bill"; status: string; created_at: string };
+type FiscalDocumentCandidate = { id: string; type: "nfe" | "nfce"; number: number | null; series: string | null; recipient: string | null; authorizedAt: string; hasPdf: boolean; hasXml: boolean };
 type Data = { settings: Settings; tables: Table[]; products: Product[]; orders: Order[]; tableRequests: TableRequest[]; tableRequestsAvailable: boolean };
 type Customer = { id: string; full_name: string; phone: string; cpf: string | null; loyalty_points: number };
 type HistoryOrder = Order & { created_at: string };
@@ -62,6 +63,10 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [orderSourceFilter, setOrderSourceFilter] = useState("all");
   const [orderQuery, setOrderQuery] = useState("");
+  const [fiscalDocumentOrder, setFiscalDocumentOrder] = useState<Order | null>(null);
+  const [fiscalDocumentCandidates, setFiscalDocumentCandidates] = useState<FiscalDocumentCandidate[]>([]);
+  const [fiscalDocumentSelection, setFiscalDocumentSelection] = useState("");
+  const [fiscalDocumentLoading, setFiscalDocumentLoading] = useState(false);
 
   const refresh = useCallback(async () => {
     const response = await fetch("/api/restaurant", { cache: "no-store" });
@@ -96,12 +101,14 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
     setBusy(true); setError(""); setMessage("");
     try {
       const response = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const payload = await response.json() as { error?: string; order?: { order_number: number; id: string }; tables?: Table[]; createdCount?: number; skippedCount?: number };
+      const payload = await response.json() as { error?: string; order?: { order_number: number; id: string }; tables?: Table[]; createdCount?: number; skippedCount?: number; availableUntil?: string; alreadyLinked?: boolean };
       if (!response.ok) throw new Error(payload.error || "Não foi possível concluir a ação.");
       if ((payload as { payment_status?: string }).payment_status === "paid") setMessage("Pagamento confirmado manualmente no caixa e registrado com usuário e horário.");
       else if ((payload as { alreadyPaid?: boolean }).alreadyPaid) setMessage("Este pedido já está marcado como pago no caixa.");
       else if ((payload as { status?: string }).status === "attended") setMessage("Solicitação marcada como atendida.");
       else if ((payload as { status?: string }).status === "cancelled") setMessage("Solicitação encerrada.");
+      else if (payload.availableUntil) setMessage(`Documento fiscal autorizado vinculado. O cliente poderá consultar até ${new Date(payload.availableUntil).toLocaleDateString("pt-BR")}.`);
+      else if (payload.alreadyLinked) setMessage("Este documento já está vinculado a este pedido.");
       else if (payload.order?.order_number) setMessage(`Pedido #${payload.order.order_number} registrado.`);
       else if (typeof payload.createdCount === "number") setMessage(payload.createdCount ? `${payload.createdCount} mesa(s) criada(s).${payload.skippedCount ? ` ${payload.skippedCount} já existia(m) e foi(ram) mantida(s).` : ""}` : "Essas mesas já estavam cadastradas; nada foi duplicado.");
       else setMessage("Alteração salva.");
@@ -202,6 +209,28 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
     await send("/api/restaurant", "PATCH", { kind: "order-payment", id: order.id });
   }
 
+  async function chooseFiscalDocument(order: Order) {
+    setError(""); setMessage(""); setFiscalDocumentLoading(true);
+    try {
+      const response = await fetch("/api/restaurant?fiscalDocuments=1", { cache: "no-store" });
+      const payload = await response.json() as { documents?: FiscalDocumentCandidate[]; error?: string };
+      if (!response.ok) throw new Error(payload.error || "Não foi possível consultar as notas autorizadas desta empresa.");
+      const candidates = payload.documents || [];
+      if (!candidates.length) throw new Error("Não há NF-e/NFC-e autorizada em produção com XML ou PDF disponível para vincular.");
+      setFiscalDocumentCandidates(candidates);
+      setFiscalDocumentSelection("");
+      setFiscalDocumentOrder(order);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Não foi possível consultar os documentos fiscais."); }
+    finally { setFiscalDocumentLoading(false); }
+  }
+
+  async function linkFiscalDocument(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!fiscalDocumentOrder || !fiscalDocumentSelection) return;
+    const result = await send("/api/restaurant", "POST", { kind: "link-fiscal-document", orderId: fiscalDocumentOrder.id, fiscalDocumentId: fiscalDocumentSelection });
+    if (result) { setFiscalDocumentOrder(null); setFiscalDocumentSelection(""); }
+  }
+
   function printOrder(order: Order) {
     setPrintId(order.id);
     window.setTimeout(() => { window.print(); setPrintId(""); }, 100);
@@ -236,6 +265,8 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
         {loaded && error ? <div className={styles.alertError} role="alert">{error}</div> : null}
         {loaded && message ? <div className={styles.alertSuccess} role="status">{message}</div> : null}
 
+        {fiscalDocumentOrder ? <div className={styles.documentOverlay} onClick={() => setFiscalDocumentOrder(null)}><section className={styles.documentDialog} role="dialog" aria-modal="true" aria-labelledby="restaurant-document-title" onClick={(event) => event.stopPropagation()}><span className={styles.sectionKicker}>CONTA DO CLIENTE</span><h2 id="restaurant-document-title">Vincular documento fiscal</h2><p>Pedido #{fiscalDocumentOrder.order_number}. Só aparece ao cliente uma NF-e/NFC-e autorizada em produção cujo CPF do destinatário corresponda ao CPF do cadastro. A consulta expira 30 dias após a autorização; o registro fiscal do ERP é mantido.</p><form onSubmit={(event) => void linkFiscalDocument(event)}><label>Nota autorizada<select value={fiscalDocumentSelection} onChange={(event) => setFiscalDocumentSelection(event.target.value)} required><option value="">Selecione uma nota</option>{fiscalDocumentCandidates.map((document) => <option key={document.id} value={document.id}>{document.type.toUpperCase()} {document.number || ""}{document.series ? ` · Série ${document.series}` : ""} · {dateTime(document.authorizedAt)}{document.recipient ? ` · Destinatário ${document.recipient}` : ""}{document.hasPdf ? " · PDF" : ""}{document.hasXml ? " · XML" : ""}</option>)}</select></label><div><button type="button" className={styles.buttonGhost} onClick={() => setFiscalDocumentOrder(null)}>Cancelar</button><button type="submit" className={styles.primaryButton} disabled={busy || !fiscalDocumentSelection}>{busy ? "Vinculando…" : "Vincular com segurança"}</button></div></form></section></div> : null}
+
         {!loaded ? <section className={styles.loadPanel} role={error ? "alert" : "status"}>
           <span className={styles.loadIcon} aria-hidden="true">{error ? "!" : "…"}</span>
           <div><strong>{error ? "Não foi possível carregar os dados" : "Carregando a operação"}</strong><p>{error || "Buscando pedidos, mesas e produtos desta empresa."}</p></div>
@@ -264,7 +295,7 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
               </section>
               <section className={styles.sectionPanel}>
                 <div className={styles.sectionHeading}><div><span className={styles.sectionKicker}>PRECISAM DE ATENÇÃO</span><h2>Pedidos em andamento</h2></div><Link href="/restaurant/pedidos">Ver pedidos</Link></div>
-                {attentionOrders.length ? <OrderList orders={attentionOrders} tableById={tableById} busy={busy} printId={printId} onStatus={(order, status) => void send("/api/restaurant", "PATCH", { kind: "order", id: order.id, status })} onPayment={confirmCashPayment} onPrint={printOrder}/> : <div className={styles.emptyState}><span>✓</span><strong>Nenhum pedido pendente agora</strong><p>Quando houver pedidos aguardando ou em preparo, eles aparecerão aqui.</p></div>}
+                {attentionOrders.length ? <OrderList orders={attentionOrders} tableById={tableById} busy={busy} fiscalDocumentLoading={fiscalDocumentLoading} printId={printId} onStatus={(order, status) => void send("/api/restaurant", "PATCH", { kind: "order", id: order.id, status })} onPayment={confirmCashPayment} onLinkFiscalDocument={(order) => void chooseFiscalDocument(order)} onPrint={printOrder}/> : <div className={styles.emptyState}><span>✓</span><strong>Nenhum pedido pendente agora</strong><p>Quando houver pedidos aguardando ou em preparo, eles aparecerão aqui.</p></div>}
               </section>
             </div>
             <p className={styles.dataScope}>Resumo atualizado com pedidos dos últimos 3 dias (até 200 registros), conforme os dados disponíveis no atendimento.</p>
@@ -304,7 +335,7 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
             <section className={styles.sectionPanel}>
               <div className={styles.sectionHeading}><div><span className={styles.sectionKicker}>ACOMPANHAMENTO</span><h2>Pedidos recentes</h2><p>Consulte e atualize a situação dos pedidos recebidos.</p></div></div>
               <div className={styles.orderFilters}><label>Buscar<input value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Número, cliente ou telefone"/></label><label>Situação<select value={orderStatusFilter} onChange={(event) => setOrderStatusFilter(event.target.value)}><option value="all">Todas</option>{Object.entries(statuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Origem<select value={orderSourceFilter} onChange={(event) => setOrderSourceFilter(event.target.value)}><option value="all">Todas</option><option value="table">Salão</option><option value="qr">QR</option><option value="website">Site público</option><option value="counter">Balcão</option></select></label></div>
-              {filteredOrders.length ? <OrderList orders={filteredOrders} tableById={tableById} busy={busy} printId={printId} onStatus={(order, status) => void send("/api/restaurant", "PATCH", { kind: "order", id: order.id, status })} onPayment={confirmCashPayment} onPrint={printOrder}/> : <div className={styles.emptyState}><strong>Nenhum pedido encontrado</strong><p>Altere os filtros ou registre um novo pedido.</p></div>}
+              {filteredOrders.length ? <OrderList orders={filteredOrders} tableById={tableById} busy={busy} fiscalDocumentLoading={fiscalDocumentLoading} printId={printId} onStatus={(order, status) => void send("/api/restaurant", "PATCH", { kind: "order", id: order.id, status })} onPayment={confirmCashPayment} onLinkFiscalDocument={(order) => void chooseFiscalDocument(order)} onPrint={printOrder}/> : <div className={styles.emptyState}><strong>Nenhum pedido encontrado</strong><p>Altere os filtros ou registre um novo pedido.</p></div>}
               <p className={styles.dataScope}>A API mostra pedidos dos últimos 3 dias, com limite de 200 registros.</p>
             </section>
           </div> : null}
@@ -319,7 +350,7 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
 
           {section === "tables" ? <section className={styles.sectionPanel}><div className={styles.sectionHeading}><div><span className={styles.sectionKicker}>PEDIDOS DE ATENDIMENTO</span><h2>Chamados das mesas</h2><p>Pedidos para chamar a equipe e solicitar a conta enviados pelos QR Codes.</p></div><button type="button" className={styles.refresh} onClick={() => void refresh().catch((reason: Error) => setError(reason.message))}>Atualizar fila</button></div>{!data.tableRequestsAvailable ? <div className={styles.infoBox}>A fila de chamados depende da atualização do banco do restaurante; ela ainda não está disponível neste ambiente.</div> : data.tableRequests.length ? <div className={styles.orderList}>{data.tableRequests.map((request) => { const table = tableById.get(request.table_id); return <article className={styles.orderCard} key={request.id}><div className={styles.orderTop}><div><strong>{request.request_type === "call_waiter" ? "Chamar garçom" : "Solicitar conta"}</strong><span>{table?.label || "Mesa"} · {dateTime(request.created_at)}</span></div><span className={styles.status}>Pendente</span></div><div className={styles.orderBottom}><span>Enviado pelo QR da mesa</span><div><button type="button" className={styles.buttonGhost} disabled={busy} onClick={() => void send("/api/restaurant", "PATCH", { kind: "table-request", id: request.id, status: "cancelled" })}>Encerrar</button><button type="button" className={styles.primaryButton} disabled={busy} onClick={() => void send("/api/restaurant", "PATCH", { kind: "table-request", id: request.id, status: "attended" })}>Marcar atendido</button></div></div></article>; })}</div> : <div className={styles.emptyState}><strong>Nenhum chamado pendente</strong><p>As novas solicitações aparecerão aqui.</p></div>}</section> : null}
 
-          {section === "kitchen" ? <section className={styles.sectionPanel}><div className={styles.sectionHeading}><div><span className={styles.sectionKicker}>PREPARO</span><h2>Fila da cozinha</h2><p>Pedidos recebidos, em preparo, prontos e entregues. Os pedidos aguardando confirmação ficam em Pedidos.</p></div><Link href="/restaurant/pedidos">Abrir pedidos</Link></div><div className={styles.kitchenGrid}>{[["sent_to_kitchen", "Recebidos"], ["preparing", "Em preparo"], ["ready", "Prontos"], ["delivered", "Entregues"]].map(([status, label]) => { const items = data.orders.filter((order) => order.status === status); return <section className={styles.kitchenColumn} key={status}><h3>{label}<span>{items.length}</span></h3><OrderList orders={items} tableById={tableById} busy={busy} printId={printId} onStatus={(order, next) => void send("/api/restaurant", "PATCH", { kind: "order", id: order.id, status: next })} onPayment={confirmCashPayment} onPrint={printOrder}/></section>; })}</div><p className={styles.dataScope}>Pedidos exibidos: últimos 3 dias, até 200 registros. Use “Imprimir comanda” para selecionar uma impressora instalada no dispositivo.</p></section> : null}
+          {section === "kitchen" ? <section className={styles.sectionPanel}><div className={styles.sectionHeading}><div><span className={styles.sectionKicker}>PREPARO</span><h2>Fila da cozinha</h2><p>Pedidos recebidos, em preparo, prontos e entregues. Os pedidos aguardando confirmação ficam em Pedidos.</p></div><Link href="/restaurant/pedidos">Abrir pedidos</Link></div><div className={styles.kitchenGrid}>{[["sent_to_kitchen", "Recebidos"], ["preparing", "Em preparo"], ["ready", "Prontos"], ["delivered", "Entregues"]].map(([status, label]) => { const items = data.orders.filter((order) => order.status === status); return <section className={styles.kitchenColumn} key={status}><h3>{label}<span>{items.length}</span></h3><OrderList orders={items} tableById={tableById} busy={busy} fiscalDocumentLoading={fiscalDocumentLoading} printId={printId} onStatus={(order, next) => void send("/api/restaurant", "PATCH", { kind: "order", id: order.id, status: next })} onPayment={confirmCashPayment} onLinkFiscalDocument={(order) => void chooseFiscalDocument(order)} onPrint={printOrder}/></section>; })}</div><p className={styles.dataScope}>Pedidos exibidos: últimos 3 dias, até 200 registros. Use “Imprimir comanda” para selecionar uma impressora instalada no dispositivo.</p></section> : null}
 
           {section === "menu" ? <RestaurantMenuManager/> : null}
           {section === "stock" ? <section className={styles.sectionPanel}><div className={styles.sectionHeading}><div><span className={styles.sectionKicker}>CUSTO, CONSUMO E ESTOQUE</span><h2>Estoque e custos</h2><p>A análise de consumo Cozinha Viva acompanha fichas técnicas, compras, contagens, perdas e preparo.</p></div></div><CozinhaViva/></section> : null}
@@ -343,15 +374,17 @@ function MetricCard({ label, value, hint, tone }: { label: string; value: string
 }
 
 function OrderList({
-  orders, tableById, busy, printId, onStatus, onPrint, onPayment, readOnly = false,
+  orders, tableById, busy, fiscalDocumentLoading = false, printId, onStatus, onPrint, onPayment, onLinkFiscalDocument, readOnly = false,
 }: {
   orders: Array<Order | HistoryOrder>;
   tableById: Map<string, Table>;
   busy: boolean;
+  fiscalDocumentLoading?: boolean;
   printId: string;
   onStatus: (order: Order, status: string) => void;
   onPrint: (order: Order) => void;
   onPayment?: (order: Order) => void;
+  onLinkFiscalDocument?: (order: Order) => void;
   readOnly?: boolean;
 }) {
   if (!orders.length) return <div className={styles.empty}>Nenhum pedido nesta etapa.</div>;
@@ -369,6 +402,7 @@ function OrderList({
         <button type="button" className={styles.buttonGhost} onClick={() => onPrint(order as Order)}>Imprimir comanda</button>
         {!readOnly && next ? <button type="button" className={styles.primaryButton} disabled={busy} onClick={() => onStatus(order as Order, next[0])}>{next[1]}</button> : null}
         {!readOnly && onPayment && order.payment_status === "pending" && order.status !== "cancelled" ? <button type="button" className={styles.primaryButton} disabled={busy} onClick={() => onPayment(order as Order)}>Registrar pagamento no caixa</button> : null}
+        {!readOnly && onLinkFiscalDocument && order.customer_id && ["qr", "website"].includes(order.source) ? <button type="button" className={styles.buttonGhost} disabled={busy || fiscalDocumentLoading} onClick={() => onLinkFiscalDocument(order as Order)}>{fiscalDocumentLoading ? "Consultando notas…" : "Vincular nota autorizada"}</button> : null}
         {!readOnly && ["open", "sent_to_kitchen", "preparing", "ready"].includes(order.status) ? <button type="button" className={styles.cancelButton} disabled={busy} onClick={() => onStatus(order as Order, "cancelled")}>Cancelar</button> : null}
       </div></div>
     </article>;
