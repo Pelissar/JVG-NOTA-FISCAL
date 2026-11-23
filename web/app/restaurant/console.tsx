@@ -16,6 +16,7 @@ type Order = { id: string; order_number: number; table_id: string | null; custom
 type Settings = { qr_orders_enabled: boolean; loyalty_enabled: boolean; loyalty_points_per_real: number };
 type TableRequest = { id: string; table_id: string; table_label?: string; request_type: "call_waiter" | "request_bill"; status: string; created_at: string };
 type TableCallNotice = { id: string; title: string; details: string };
+type KitchenNotice = { id: string; title: string; details: string };
 type FiscalDocumentCandidate = { id: string; type: "nfe" | "nfce"; number: number | null; series: string | null; recipient: string | null; authorizedAt: string; hasPdf: boolean; hasXml: boolean };
 type Data = { settings: Settings; tables: Table[]; products: Product[]; orders: Order[]; tableRequests: TableRequest[]; tableRequestsAvailable: boolean };
 type Customer = { id: string; full_name: string; phone: string; cpf: string | null; loyalty_points: number };
@@ -71,11 +72,18 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
   const [tableCallNotice, setTableCallNotice] = useState<TableCallNotice | null>(null);
   const [callSoundEnabled, setCallSoundEnabled] = useState(false);
   const [tableRequestsError, setTableRequestsError] = useState("");
+  const [kitchenNotice, setKitchenNotice] = useState<KitchenNotice | null>(null);
+  const [kitchenUpdatedAt, setKitchenUpdatedAt] = useState("");
+  const [kitchenMonitorError, setKitchenMonitorError] = useState("");
+  const [kitchenFullscreen, setKitchenFullscreen] = useState(false);
   const pendingCallIdsRef = useRef<Set<string> | null>(null);
+  const pendingKitchenOrderIdsRef = useRef<Set<string> | null>(null);
   const callSoundEnabledRef = useRef(false);
   const callAudioRef = useRef<AudioContext | null>(null);
   const noticeTimeoutRef = useRef<number | null>(null);
+  const kitchenNoticeTimeoutRef = useRef<number | null>(null);
   const tableLabelsRef = useRef<Map<string, string>>(new Map());
+  const kitchenMonitorRef = useRef<HTMLElement | null>(null);
 
   const playCallChime = useCallback(() => {
     if (!callSoundEnabledRef.current || typeof window === "undefined") return;
@@ -146,13 +154,31 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
     const response = await fetch("/api/restaurant", { cache: "no-store" });
     const payload = await response.json() as Data & { error?: string };
     if (!response.ok) throw new Error(payload.error || "Não foi possível abrir o atendimento.");
+    const activeKitchenOrders = payload.orders.filter((order) => ["sent_to_kitchen", "preparing", "ready"].includes(order.status));
+    const previousKitchenIds = pendingKitchenOrderIdsRef.current;
+    if (section === "kitchen" && previousKitchenIds) {
+      const arrivals = activeKitchenOrders.filter((order) => order.status === "sent_to_kitchen" && !previousKitchenIds.has(order.id));
+      if (arrivals.length) {
+        const first = arrivals.sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))[0];
+        const table = payload.tables.find((item) => item.id === first.table_id)?.label;
+        const context = table || (first.fulfillment_type === "pickup" ? "Retirada" : "Balcão");
+        const count = first.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        setKitchenNotice({ id: first.id, title: arrivals.length === 1 ? `Pedido #${first.order_number} recebido` : `${arrivals.length} novos pedidos`, details: `${context} · ${count} item(ns) na fila` });
+        if (kitchenNoticeTimeoutRef.current !== null) window.clearTimeout(kitchenNoticeTimeoutRef.current);
+        kitchenNoticeTimeoutRef.current = window.setTimeout(() => setKitchenNotice(null), 12000);
+        playCallChime();
+      }
+    }
+    pendingKitchenOrderIdsRef.current = new Set(activeKitchenOrders.map((order) => order.id));
     setData(payload);
     setError("");
+    setKitchenMonitorError("");
     setLoaded(true);
+    setKitchenUpdatedAt(new Date().toISOString());
     setPointsRate(String(payload.settings.loyalty_points_per_real || 1));
     tableLabelsRef.current = new Map(payload.tables.map((table) => [table.id, table.label]));
     pendingCallIdsRef.current = new Set((payload.tableRequests || []).map((request) => request.id));
-  }, []);
+  }, [playCallChime, section]);
 
   useEffect(() => {
     let active = true;
@@ -170,6 +196,8 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
         setPointsRate(String(payload.settings.loyalty_points_per_real || 1));
         tableLabelsRef.current = new Map(payload.tables.map((table) => [table.id, table.label]));
         pendingCallIdsRef.current = new Set((payload.tableRequests || []).map((request) => request.id));
+        pendingKitchenOrderIdsRef.current = new Set(payload.orders.filter((order) => ["sent_to_kitchen", "preparing", "ready"].includes(order.status)).map((order) => order.id));
+        setKitchenUpdatedAt(new Date().toISOString());
       })
       .catch((reason: Error) => { if (active) setError(reason.message); });
     return () => { active = false; };
@@ -189,10 +217,34 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
     };
   }, [loaded, refreshTableRequests]);
 
+  useEffect(() => {
+    if (!loaded || section !== "kitchen") return;
+    let active = true;
+    const update = () => void refresh().catch((reason: Error) => { if (active) setKitchenMonitorError(reason.message); });
+    const timer = window.setInterval(update, 5000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [loaded, refresh, section]);
+
   useEffect(() => () => {
     if (noticeTimeoutRef.current !== null) window.clearTimeout(noticeTimeoutRef.current);
+    if (kitchenNoticeTimeoutRef.current !== null) window.clearTimeout(kitchenNoticeTimeoutRef.current);
     void callAudioRef.current?.close();
   }, []);
+
+  useEffect(() => {
+    const syncFullscreen = () => setKitchenFullscreen(document.fullscreenElement === kitchenMonitorRef.current);
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
+
+  async function toggleKitchenMonitor() {
+    const target = kitchenMonitorRef.current;
+    if (!target) return;
+    try {
+      if (document.fullscreenElement === target) await document.exitFullscreen();
+      else await target.requestFullscreen();
+    } catch { setKitchenMonitorError("O navegador não permitiu abrir a tela cheia. A fila continua disponível nesta página."); }
+  }
 
   async function send(path: string, method: "POST" | "PATCH", body: Record<string, unknown>) {
     setBusy(true); setError(""); setMessage("");
@@ -459,7 +511,21 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
 
           {section === "tables" ? <section className={styles.sectionPanel}><div className={styles.sectionHeading}><div><span className={styles.sectionKicker}>PEDIDOS DE ATENDIMENTO</span><h2>Chamados das mesas</h2><p>Pedidos para chamar a equipe e solicitar a conta enviados pelos QR Codes.</p></div><button type="button" className={styles.refresh} onClick={() => void refresh().catch((reason: Error) => setError(reason.message))}>Atualizar fila</button></div>{!data.tableRequestsAvailable ? <div className={styles.infoBox}>A fila de chamados depende da atualização do banco do restaurante; ela ainda não está disponível neste ambiente.</div> : data.tableRequests.length ? <div className={styles.orderList}>{data.tableRequests.map((request) => { const table = tableById.get(request.table_id); return <article className={styles.orderCard} key={request.id}><div className={styles.orderTop}><div><strong>{request.request_type === "call_waiter" ? "Chamar garçom" : "Solicitar conta"}</strong><span>{table?.label || "Mesa"} · {dateTime(request.created_at)}</span></div><span className={styles.status}>Pendente</span></div><div className={styles.orderBottom}><span>Enviado pelo QR da mesa</span><div><button type="button" className={styles.buttonGhost} disabled={busy} onClick={() => void send("/api/restaurant", "PATCH", { kind: "table-request", id: request.id, status: "cancelled" })}>Encerrar</button><button type="button" className={styles.primaryButton} disabled={busy} onClick={() => void send("/api/restaurant", "PATCH", { kind: "table-request", id: request.id, status: "attended" })}>Marcar atendido</button></div></div></article>; })}</div> : <div className={styles.emptyState}><strong>Nenhum chamado pendente</strong><p>As novas solicitações aparecerão aqui.</p></div>}</section> : null}
 
-          {section === "kitchen" ? <section className={styles.sectionPanel}><div className={styles.sectionHeading}><div><span className={styles.sectionKicker}>PREPARO</span><h2>Fila da cozinha</h2><p>Pedidos recebidos, em preparo, prontos e entregues. Os pedidos aguardando confirmação ficam em Pedidos.</p></div><Link href="/restaurant/pedidos">Abrir pedidos</Link></div><div className={styles.kitchenGrid}>{[["sent_to_kitchen", "Recebidos"], ["preparing", "Em preparo"], ["ready", "Prontos"], ["delivered", "Entregues"]].map(([status, label]) => { const items = data.orders.filter((order) => order.status === status); return <section className={styles.kitchenColumn} key={status}><h3>{label}<span>{items.length}</span></h3><OrderList orders={items} tableById={tableById} busy={busy} fiscalDocumentLoading={fiscalDocumentLoading} printId={printId} onStatus={(order, next) => void send("/api/restaurant", "PATCH", { kind: "order", id: order.id, status: next })} onPayment={confirmCashPayment} onLinkFiscalDocument={(order) => void chooseFiscalDocument(order)} onPrint={printOrder}/></section>; })}</div><p className={styles.dataScope}>Pedidos exibidos: últimos 3 dias, até 200 registros. Use “Imprimir comanda” para selecionar uma impressora instalada no dispositivo.</p></section> : null}
+          {section === "kitchen" ? <section ref={kitchenMonitorRef} className={`${styles.sectionPanel} ${styles.kitchenMonitor}`}>
+            <div className={styles.sectionHeading}>
+              <div><span className={styles.sectionKicker}>MONITOR DE PREPARO</span><h2>Fila da cozinha</h2><p>Pedidos aparecem nesta tela em sequência assim que a equipe os envia para preparo. Atualização automática a cada 5 segundos.</p></div>
+              <div className={styles.kitchenControls}>
+                <span className={styles.kitchenLive}><i aria-hidden="true"/> Ao vivo {kitchenUpdatedAt ? `· ${new Date(kitchenUpdatedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : ""}</span>
+                {callSoundEnabled ? <button type="button" className={styles.buttonGhost} onClick={() => { callSoundEnabledRef.current = false; setCallSoundEnabled(false); }}>Silenciar som</button> : <button type="button" className={styles.buttonGhost} onClick={enableCallSound}>Ativar aviso sonoro</button>}
+                <button type="button" className={styles.buttonGhost} onClick={() => void refresh().catch((reason: Error) => setKitchenMonitorError(reason.message))}>Atualizar fila</button>
+                <button type="button" className={styles.primaryButton} onClick={() => void toggleKitchenMonitor()}>{kitchenFullscreen ? "Sair da tela cheia" : "Tela cheia"}</button>
+              </div>
+            </div>
+            {kitchenMonitorError ? <div className={styles.alertError} role="alert">{kitchenMonitorError} A fila já carregada continua visível.</div> : null}
+            {kitchenNotice ? <div key={kitchenNotice.id} className={styles.kitchenArrival} role="status"><span aria-hidden="true">✓</span><div><strong>{kitchenNotice.title}</strong><small>{kitchenNotice.details}</small></div><button type="button" className={styles.buttonGhost} onClick={() => setKitchenNotice(null)}>Dispensar</button></div> : null}
+            <div className={styles.kitchenGrid}>{[["sent_to_kitchen", "Recebidos"], ["preparing", "Em preparo"], ["ready", "Prontos"], ["delivered", "Entregues"]].map(([status, label]) => { const items = data.orders.filter((order) => order.status === status).sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at)); return <section className={styles.kitchenColumn} key={status}><h3>{label}<span>{items.length}</span></h3><OrderList orders={items} tableById={tableById} busy={busy} fiscalDocumentLoading={fiscalDocumentLoading} printId={printId} onStatus={(order, next) => void send("/api/restaurant", "PATCH", { kind: "order", id: order.id, status: next })} onPayment={confirmCashPayment} onLinkFiscalDocument={(order) => void chooseFiscalDocument(order)} onPrint={printOrder}/></section>; })}</div>
+            <p className={styles.dataScope}>A fila mostra pedidos dos últimos 3 dias, até 200 registros, do mais antigo ao mais recente. “Imprimir comanda” abre a impressão do navegador para escolher a impressora instalada. Impressão automática em rede exige uma ponte local de impressão no computador da cozinha.</p>
+          </section> : null}
 
           {section === "menu" ? <RestaurantMenuManager/> : null}
           {section === "stock" ? <section className={styles.sectionPanel}><div className={styles.sectionHeading}><div><span className={styles.sectionKicker}>CUSTO, CONSUMO E ESTOQUE</span><h2>Estoque e custos</h2><p>A análise de consumo Cozinha Viva acompanha fichas técnicas, compras, contagens, perdas e preparo.</p></div></div><CozinhaViva/></section> : null}

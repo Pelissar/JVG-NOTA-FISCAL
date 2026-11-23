@@ -15,6 +15,7 @@ type SettingsRow = {
   qr_orders_enabled: boolean; public_name: string | null; public_description: string | null;
   logo_path: string | null; cover_path: string | null; brand_color: string | null; opening_hours: unknown;
   public_slug: string | null; website_enabled: boolean; website_orders_enabled: boolean; website_pickup_enabled: boolean;
+  public_highlight_mode: "popular" | "promotions" | "manual"; public_highlight_title: string; public_highlight_product_ids: string[];
   public_contact_phone: string | null; public_whatsapp: string | null; public_email: string | null;
   public_address: string | null; public_map_url: string | null; public_instagram_url: string | null; public_website_url: string | null;
 };
@@ -101,6 +102,7 @@ export async function GET() {
     let settings: SettingsRow = {
       qr_orders_enabled: false, public_name: null, public_description: null, logo_path: null, cover_path: null, brand_color: null, opening_hours: {},
       public_slug: null, website_enabled: false, website_orders_enabled: false, website_pickup_enabled: false,
+      public_highlight_mode: "popular", public_highlight_title: "Mais pedidos", public_highlight_product_ids: [],
       public_contact_phone: null, public_whatsapp: null, public_email: null, public_address: null, public_map_url: null, public_instagram_url: null, public_website_url: null,
     };
     let schemaReady = true;
@@ -108,7 +110,7 @@ export async function GET() {
     const [categoryResult, menuResult, settingsResult] = await Promise.allSettled([
       dbRequest<CategoryRow[]>(`/rest/v1/jvg_restaurant_categories?${scoped}&select=id,name,active,sort_order&order=sort_order.asc,name.asc&limit=500`),
       dbRequest<MenuRow[]>(`/rest/v1/jvg_restaurant_menu_items?${scoped}&select=product_id,image_path,options,is_combo,combo_components,promotion,public_active,sort_order&limit=1000`),
-      dbRequest<SettingsRow[]>("/rest/v1/jvg_restaurant_settings?" + scoped + "&select=qr_orders_enabled,public_name,public_description,logo_path,cover_path,brand_color,opening_hours,public_slug,website_enabled,website_orders_enabled,website_pickup_enabled,public_contact_phone,public_whatsapp,public_email,public_address,public_map_url,public_instagram_url,public_website_url&limit=1"),
+      dbRequest<SettingsRow[]>("/rest/v1/jvg_restaurant_settings?" + scoped + "&select=qr_orders_enabled,public_name,public_description,logo_path,cover_path,brand_color,opening_hours,public_slug,website_enabled,website_orders_enabled,website_pickup_enabled,public_highlight_mode,public_highlight_title,public_highlight_product_ids,public_contact_phone,public_whatsapp,public_email,public_address,public_map_url,public_instagram_url,public_website_url&limit=1"),
     ]);
     for (const result of [categoryResult, menuResult, settingsResult]) {
       if (result.status === "rejected" && !missingMenuSchema(result.reason)) throw result.reason;
@@ -142,6 +144,9 @@ export async function GET() {
         websiteEnabled: settings.website_enabled,
         websiteOrdersEnabled: settings.website_orders_enabled,
         websitePickupEnabled: settings.website_pickup_enabled,
+        highlightMode: settings.public_highlight_mode || "popular",
+        highlightTitle: settings.public_highlight_title || "Mais pedidos",
+        highlightProductIds: Array.isArray(settings.public_highlight_product_ids) ? settings.public_highlight_product_ids : [],
         contactPhone: settings.public_contact_phone || "",
         whatsapp: settings.public_whatsapp || "",
         publicEmail: settings.public_email || "",
@@ -247,6 +252,9 @@ export async function POST(request: Request) {
       const websiteEnabled = input.websiteEnabled === true;
       const websiteOrdersEnabled = input.websiteOrdersEnabled === true;
       const websitePickupEnabled = input.websitePickupEnabled === true;
+      const highlightMode = input.highlightMode === "promotions" || input.highlightMode === "manual" ? input.highlightMode : input.highlightMode === "popular" || input.highlightMode == null ? "popular" : null;
+      const highlightTitle = str(input.highlightTitle, 60).trim();
+      const highlightProductIds = Array.isArray(input.highlightProductIds) ? [...new Set(input.highlightProductIds.filter((value): value is string => typeof value === "string"))] : [];
       const contactPhone = str(input.contactPhone, 24).replace(/\D/g, "");
       const whatsapp = str(input.whatsapp, 24).replace(/\D/g, "");
       const publicEmail = str(input.publicEmail, 160);
@@ -264,23 +272,41 @@ export async function POST(request: Request) {
       const instagramUrl = safeUrl(input.instagramUrl, "o Instagram");
       const publicWebsiteUrl = safeUrl(input.publicWebsiteUrl, "o site");
       const openingHours = normalizeOpeningHours(input.openingHours);
-      if ((publicName && publicName.length < 2) || (brandColor && !/^#[0-9a-f]{6}$/i.test(brandColor)) || openingHours === null ||
-          (publicSlug && (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(publicSlug) || publicSlug.length < 3)) ||
-          (websiteEnabled && !publicSlug) || (websiteOrdersEnabled && (!websiteEnabled || !websitePickupEnabled)) ||
-          (contactPhone && !/^\d{10,13}$/.test(contactPhone)) || (whatsapp && !/^\d{10,13}$/.test(whatsapp)) ||
-          (publicEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(publicEmail))) {
-        throw new JvgBackendError("Confira o nome, o endereço público, contato, cor, horários e as opções de pedido.", 400);
+      if (publicName && publicName.length < 2) throw new JvgBackendError("Nome público: informe pelo menos 2 caracteres.", 400);
+      if (!/^#[0-9a-f]{6}$/i.test(brandColor)) throw new JvgBackendError("Cor de destaque: selecione uma cor válida.", 400);
+      if (openingHours === null) throw new JvgBackendError("Horários: confira os dias abertos e informe horários válidos de abertura e fechamento.", 400);
+      if (highlightMode === null) throw new JvgBackendError("Destaques: selecione Mais pedidos, Promoções ou Escolha manual.", 400);
+      if (highlightTitle.length < 2) throw new JvgBackendError("Título dos destaques: informe pelo menos 2 caracteres.", 400);
+      if (highlightProductIds.length > 12 || highlightProductIds.some((id) => !UUID.test(id))) throw new JvgBackendError("Destaques manuais: selecione até 12 produtos válidos.", 400);
+      if (publicSlug && (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(publicSlug) || publicSlug.length < 3)) throw new JvgBackendError("Endereço público: use ao menos 3 caracteres, com letras minúsculas, números e hífens.", 400);
+      if (websiteEnabled && !publicSlug) throw new JvgBackendError("Endereço público: informe o endereço antes de publicar o site.", 400);
+      if (websiteOrdersEnabled && (!websiteEnabled || !websitePickupEnabled)) throw new JvgBackendError("Pedidos pelo site exigem o site publicado e a opção de retirada ativada.", 400);
+      if (contactPhone && !/^\d{10,13}$/.test(contactPhone)) throw new JvgBackendError("Telefone de contato: informe DDD e número com 10 ou 11 dígitos.", 400);
+      if (whatsapp && !/^\d{10,13}$/.test(whatsapp)) throw new JvgBackendError("WhatsApp: informe DDD e número com 10 ou 11 dígitos.", 400);
+      if (publicEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(publicEmail)) throw new JvgBackendError("E-mail público: informe um endereço válido.", 400);
+
+      if (highlightMode === "manual" && highlightProductIds.length) {
+        const allowedProducts = await dbRequest<Array<{ id: string }>>(`/rest/v1/jvg_products?${scopeQuery(scope)}&id=in.(${highlightProductIds.join(",")})&active=eq.true&sale_price=gt.0&select=id&limit=12`);
+        let hiddenIds = new Set<string>();
+        try {
+          const menuRows = await dbRequest<Array<{ product_id: string }>>(`/rest/v1/jvg_restaurant_menu_items?${scopeQuery(scope)}&product_id=in.(${highlightProductIds.join(",")})&public_active=eq.false&select=product_id&limit=12`);
+          hiddenIds = new Set(menuRows.map((row) => row.product_id));
+        } catch (error) { if (!missingMenuSchema(error)) throw error; }
+        const allowedIds = new Set(allowedProducts.filter((product) => !hiddenIds.has(product.id)).map((product) => product.id));
+        if (highlightProductIds.some((id) => !allowedIds.has(id))) throw new JvgBackendError("Destaques manuais: escolha apenas produtos ativos e publicados no cardápio desta empresa.", 400);
       }
-      if (websiteEnabled && !await moduleAccessGranted(scope, "restaurante_online")) {
-        throw new JvgBackendError("O módulo Site e pedidos online do restaurante ainda não está liberado para esta empresa. Solicite a ativação no painel administrativo.", 402);
-      }
+
+      const moduleAvailable = !websiteEnabled || await moduleAccessGranted(scope, "restaurante_online");
+      const published = websiteEnabled && moduleAvailable;
       try { await dbRequest("/rest/v1/jvg_restaurant_settings?on_conflict=tenant_id,company_id", {
         method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
         body: JSON.stringify({
           tenant_id: scope.tenant_id, company_id: scope.company_id, public_name: publicName || null,
           public_description: description || null, brand_color: brandColor || null, opening_hours: openingHours,
-          public_slug: publicSlug || null, website_enabled: websiteEnabled,
-          website_orders_enabled: websiteOrdersEnabled, website_pickup_enabled: websitePickupEnabled,
+          public_slug: publicSlug || null, website_enabled: published,
+          website_orders_enabled: published && websiteOrdersEnabled, website_pickup_enabled: published && websitePickupEnabled,
+          public_highlight_mode: highlightMode, public_highlight_title: highlightTitle,
+          public_highlight_product_ids: highlightProductIds,
           public_contact_phone: contactPhone || null, public_whatsapp: whatsapp || null, public_email: publicEmail || null,
           public_address: publicAddress || null, public_map_url: mapUrl, public_instagram_url: instagramUrl,
           public_website_url: publicWebsiteUrl, updated_at: new Date().toISOString(),
@@ -291,7 +317,7 @@ export async function POST(request: Request) {
         }
         throw error;
       }
-      return apiJson({ ok: true, publicUrl: websiteEnabled ? "/r/" + publicSlug : null });
+      return apiJson({ ok: true, saved: true, published, publicationBlocked: websiteEnabled && !moduleAvailable, publicUrl: published ? "/r/" + publicSlug : null });
     }
 
     throw new JvgBackendError("Ação de cardápio inválida.", 400);

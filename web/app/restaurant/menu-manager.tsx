@@ -19,6 +19,7 @@ type Brand = {
   qrOrdersEnabled: boolean; publicName: string; publicDescription: string;
   logoPath: string | null; logoUrl: string | null; coverPath: string | null; coverUrl: string | null;
   brandColor: string; openingHours: Hours; publicSlug: string; websiteEnabled: boolean;
+  highlightMode: "popular" | "promotions" | "manual"; highlightTitle: string; highlightProductIds: string[];
   websiteOrdersEnabled: boolean; websitePickupEnabled: boolean; contactPhone: string;
   whatsapp: string; publicEmail: string; publicAddress: string; mapUrl: string;
   instagramUrl: string; publicWebsiteUrl: string;
@@ -62,6 +63,17 @@ function readableAccent(hex: string) {
   return contrastRatio(hex, "#ffffff") >= contrastRatio(hex, "#142a43") ? "#ffffff" : "#142a43";
 }
 
+async function readApiPayload(response: Response) {
+  const body = await response.text();
+  if (!body.trim()) return {} as { error?: string; [key: string]: unknown };
+  try { return JSON.parse(body) as { error?: string; [key: string]: unknown }; }
+  catch {
+    throw new Error(response.ok
+      ? "O servidor respondeu em um formato inesperado. Atualize a página e tente novamente."
+      : `Não foi possível salvar. O servidor retornou o erro ${response.status}.`);
+  }
+}
+
 const colorSuggestions: Array<[string, string]> = [["Azul", "#1768d2"], ["Verde", "#287a50"], ["Terracota", "#b65d3f"], ["Vinho", "#8d3f54"], ["Ameixa", "#704f91"]];
 
 export function RestaurantMenuManager() {
@@ -79,6 +91,7 @@ export function RestaurantMenuManager() {
   const [brand, setBrand] = useState<Brand>({
     qrOrdersEnabled: false, publicName: "", publicDescription: "", logoPath: null, logoUrl: null,
     coverPath: null, coverUrl: null, brandColor: "#1768d2", openingHours: emptyHours(),
+    highlightMode: "popular", highlightTitle: "Mais pedidos", highlightProductIds: [],
     publicSlug: "", websiteEnabled: false, websiteOrdersEnabled: false, websitePickupEnabled: false,
     contactPhone: "", whatsapp: "", publicEmail: "", publicAddress: "", mapUrl: "",
     instagramUrl: "", publicWebsiteUrl: "",
@@ -92,10 +105,16 @@ export function RestaurantMenuManager() {
     setError("");
     try {
       const response = await fetch("/api/restaurant/menu", { cache: "no-store" });
-      const payload = await response.json() as MenuData & { error?: string };
+      const payload = await readApiPayload(response) as unknown as MenuData & { error?: string };
       if (!response.ok) throw new Error(payload.error || "Não foi possível carregar o cardápio.");
       setData(payload);
-      setBrand({ ...payload.settings, openingHours: { ...emptyHours(), ...(payload.settings.openingHours || {}) } });
+      setBrand({
+        ...payload.settings,
+        highlightMode: payload.settings.highlightMode || "popular",
+        highlightTitle: payload.settings.highlightTitle || "Mais pedidos",
+        highlightProductIds: payload.settings.highlightProductIds || [],
+        openingHours: { ...emptyHours(), ...(payload.settings.openingHours || {}) },
+      });
       setCategoryEdits(Object.fromEntries(payload.categories.map((category) => [category.id, category.name])));
       const product = payload.products.find((item) => item.id === selectedIdRef.current) || payload.products[0];
       setSelectedId(product?.id || "");
@@ -129,11 +148,20 @@ export function RestaurantMenuManager() {
       isCombo: draft.isCombo, comboComponents: draft.comboComponents,
     };
   }).filter((product) => product.active && product.publicActive), [data?.products, draft]);
+  const featuredPreviewProducts = useMemo(() => {
+    if (brand.highlightMode === "manual") return brand.highlightProductIds.flatMap((id) => {
+      const product = publicPreviewProducts.find((item) => item.id === id);
+      return product ? [product] : [];
+    });
+    if (brand.highlightMode === "promotions") return publicPreviewProducts.filter((product) => product.promotion);
+    return publicPreviewProducts.slice(0, 5);
+  }, [brand.highlightMode, brand.highlightProductIds, publicPreviewProducts]);
 
   async function post(body: Record<string, unknown>) {
     const response = await fetch("/api/restaurant/menu", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const payload = await response.json() as { error?: string };
+    const payload = await readApiPayload(response);
     if (!response.ok) throw new Error(payload.error || "Não foi possível salvar as alterações.");
+    return payload;
   }
 
   function changeProduct<K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) {
@@ -185,15 +213,20 @@ export function RestaurantMenuManager() {
   async function saveBrand(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError(""); setMessage("");
     try {
-      await post({
+      const result = await post({
         action: "save-brand", publicName: brand.publicName, publicDescription: brand.publicDescription,
         brandColor: brand.brandColor, openingHours: brand.openingHours, publicSlug: brand.publicSlug,
+        highlightMode: brand.highlightMode, highlightTitle: brand.highlightTitle, highlightProductIds: brand.highlightProductIds,
         websiteEnabled: brand.websiteEnabled, websiteOrdersEnabled: brand.websiteOrdersEnabled,
         websitePickupEnabled: brand.websitePickupEnabled, contactPhone: brand.contactPhone,
         whatsapp: brand.whatsapp, publicEmail: brand.publicEmail, publicAddress: brand.publicAddress,
         mapUrl: brand.mapUrl, instagramUrl: brand.instagramUrl, publicWebsiteUrl: brand.publicWebsiteUrl,
       });
-      setMessage("Identidade, descrição e horários do cardápio foram salvos.");
+      setMessage(result.publicationBlocked === true
+        ? "Configurações salvas. O site continua privado porque o módulo Site e pedidos online ainda não está liberado para esta empresa."
+        : result.published === true
+          ? "Site, cardápio e identidade salvos e publicados."
+          : "Configurações, identidade e destaques do cardápio salvos. O site permanece privado até você publicar.");
       await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Não foi possível salvar a identidade do restaurante."); }
     finally { setBusy(false); }
@@ -339,6 +372,17 @@ export function RestaurantMenuManager() {
           {colorSuggestions.map(([label, color]) => <button key={color} type="button" aria-label={`Usar cor ${label}`} aria-pressed={brand.brandColor.toLowerCase() === color} title={label} style={{ "--swatch": color } as CSSProperties} className={brand.brandColor.toLowerCase() === color ? styles.colorSwatchActive : styles.colorSwatch} onClick={() => setBrand((current) => ({ ...current, brandColor: color }))}><span aria-hidden="true"/></button>)}
           <code>{brand.brandColor.toUpperCase()}</code>
         </div>
+        <section className={styles.highlightSettings} aria-labelledby="highlight-settings-title">
+          <div><span className={styles.eyebrow}>VITRINE DO CARDÁPIO</span><h4 id="highlight-settings-title">Destaques em movimento</h4><p>Escolha quais produtos aparecem na faixa animada do site e do QR. Não há produtos de exemplo.</p></div>
+          <div className={styles.highlightFields}>
+            <label>O que destacar<select value={brand.highlightMode} onChange={(event) => setBrand((current) => ({ ...current, highlightMode: event.target.value as Brand["highlightMode"], highlightTitle: event.target.value === "popular" ? "Mais pedidos" : event.target.value === "promotions" ? "Ofertas especiais" : "Destaques do restaurante" }))}><option value="popular">Mais pedidos · pedidos entregues nos últimos 30 dias</option><option value="promotions">Promoções vigentes</option><option value="manual">Escolher produtos manualmente</option></select></label>
+            <label>Título da seção<input value={brand.highlightTitle} maxLength={60} onChange={(event) => setBrand((current) => ({ ...current, highlightTitle: event.target.value }))} placeholder="Ex.: Os favoritos da casa"/></label>
+          </div>
+          {brand.highlightMode === "manual" ? <div className={styles.highlightProductPicker}>
+            {data.products.filter((product) => product.active && product.publicActive).length ? data.products.filter((product) => product.active && product.publicActive).map((product) => <label key={product.id}><input type="checkbox" checked={brand.highlightProductIds.includes(product.id)} disabled={!brand.highlightProductIds.includes(product.id) && brand.highlightProductIds.length >= 12} onChange={(event) => setBrand((current) => ({ ...current, highlightProductIds: event.target.checked ? [...current.highlightProductIds, product.id] : current.highlightProductIds.filter((id) => id !== product.id) }))}/><span>{product.name}</span><small>{money(product.currentPrice)}</small></label>) : <p className={styles.note}>Não há produtos ativos e publicados para selecionar. Publique itens na aba Produtos.</p>}
+            <small>Selecione até 12 produtos. Selecionados: {brand.highlightProductIds.length}/12.</small>
+          </div> : <p className={styles.note}>{brand.highlightMode === "popular" ? "A faixa usa quantidades reais dos pedidos entregues nos últimos 30 dias. Ela fica oculta quando ainda não há vendas." : "A faixa inclui somente produtos com uma promoção vigente no cadastro do cardápio."}</p>}
+        </section>
         <div className={styles.siteControls}>
           <label className={styles.inlineCheck}><input type="checkbox" checked={brand.websiteEnabled} onChange={(event) => setBrand((current) => ({ ...current, websiteEnabled: event.target.checked, websiteOrdersEnabled: event.target.checked && current.websiteOrdersEnabled }))}/> Publicar site e cardápio</label>
           <label className={styles.inlineCheck}><input type="checkbox" checked={brand.websiteOrdersEnabled} disabled={!brand.websiteEnabled} onChange={(event) => setBrand((current) => ({ ...current, websiteOrdersEnabled: event.target.checked, websitePickupEnabled: event.target.checked || current.websitePickupEnabled }))}/> Receber pedidos pelo site</label>
@@ -362,6 +406,7 @@ export function RestaurantMenuManager() {
           </article>) : <p className={styles.previewEmpty}>Cadastre e publique produtos ativos para exibi-los aqui.</p>}
           {publicPreviewProducts.length > 5 ? <small className={styles.previewMore}>Mais {publicPreviewProducts.length - 5} item(ns) no cardápio.</small> : null}
         </div>
+        {featuredPreviewProducts.length ? <div className={styles.previewHighlights}><span className={styles.eyebrow}>FAIXA DE DESTAQUES</span><strong>{brand.highlightTitle || "Destaques do restaurante"}</strong>{featuredPreviewProducts.slice(0, 3).map((product) => <article key={product.id}>{product.imageUrl ? <Image src={product.imageUrl} alt="" width={42} height={42} unoptimized/> : <span className={styles.previewProductPlaceholder}>{product.name.slice(0, 1).toUpperCase()}</span>}<span><b>{product.name}</b><small>{money(product.currentPrice)}</small></span></article>)}<small>{brand.highlightMode === "popular" ? "A publicação ordena por vendas entregues reais." : brand.highlightMode === "promotions" ? "A publicação considera apenas ofertas vigentes." : "Ordem escolhida no editor."}</small></div> : null}
         <p className={styles.contrastInfo}>Contraste do botão principal: {contrastRatio(brand.brandColor, readableAccent(brand.brandColor)).toFixed(2)}:1 · {contrastRatio(brand.brandColor, readableAccent(brand.brandColor)) >= 4.5 ? "adequado" : "revise a cor"}</p>
         {brand.websiteEnabled && brand.publicSlug ? <Link href={"/r/" + brand.publicSlug} target="_blank" rel="noopener noreferrer" className={styles.secondary}>Abrir site público salvo</Link> : <p className={styles.note}>Salve e publique o endereço para abrir a página pública.</p>}
         {data.previewTable && brand.qrOrdersEnabled ? <Link href={"/restaurant/qr/" + data.previewTable.qr_token} target="_blank" rel="noopener noreferrer" className={styles.secondary}>Pré-visualizar QR de mesa</Link> : data.previewTable ? <p className={styles.note}>Pedidos por QR estão desativados nas Configurações.</p> : <p className={styles.note}>Crie uma mesa na área Salão e mesas para gerar o QR.</p>}

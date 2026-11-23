@@ -219,6 +219,48 @@ async function readPublicMenu(scope: Pick<RestaurantScope, "tenant_id" | "compan
   return { categories: categories.sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name, "pt-BR")), menu: menuWithAvailability };
 }
 
+async function readPublicHighlights(scope: Pick<RestaurantScope, "tenant_id" | "company_id">, menu: Array<Record<string, unknown>>) {
+  let mode: "popular" | "promotions" | "manual" = "popular";
+  let title = "Mais pedidos";
+  let selectedIds: string[] = [];
+  try {
+    const rows = await dbRequest<Array<{ public_highlight_mode: string; public_highlight_title: string; public_highlight_product_ids: string[] }>>(
+      `/rest/v1/jvg_restaurant_settings?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&select=public_highlight_mode,public_highlight_title,public_highlight_product_ids&limit=1`,
+    );
+    const settings = rows[0];
+    if (settings?.public_highlight_mode === "promotions" || settings?.public_highlight_mode === "manual") mode = settings.public_highlight_mode;
+    if (typeof settings?.public_highlight_title === "string" && settings.public_highlight_title.trim()) title = settings.public_highlight_title.trim().slice(0, 60);
+    if (Array.isArray(settings?.public_highlight_product_ids)) selectedIds = settings.public_highlight_product_ids.filter((id) => typeof id === "string" && UUID.test(id));
+  } catch (error) {
+    if (!menuSchemaUnavailable(error)) throw error;
+  }
+
+  const menuRows = menu as Array<{ id: string; promotion?: unknown; available?: boolean }>;
+  const visibleById = new Map(menuRows.map((product) => [String(product.id), product]));
+  if (mode === "manual") return { mode, title, products: selectedIds.flatMap((id) => {
+    const product = visibleById.get(id);
+    return product ? [{ id, orderCount: null }] : [];
+  }) };
+  if (mode === "promotions") return {
+    mode, title,
+    products: menuRows.filter((product) => product.promotion && product.available !== false).slice(0, 8).map((product) => ({ id: String(product.id), orderCount: null })),
+  };
+
+  try {
+    const since = new Date(Date.now() - 30 * 86400000).toISOString();
+    const popular = await dbRequest<Array<{ product_id: string; quantity: number | string }>>("/rest/v1/rpc/jvg_restaurant_public_menu_popularity", {
+      method: "POST", body: JSON.stringify({ p_tenant_id: scope.tenant_id, p_company_id: scope.company_id, p_since: since }),
+    });
+    return {
+      mode, title,
+      products: popular.flatMap((row) => visibleById.has(row.product_id) ? [{ id: row.product_id, orderCount: Number(row.quantity) }] : []),
+    };
+  } catch {
+    // O cardápio continua disponível mesmo se a consulta operacional de popularidade falhar.
+    return { mode, title, products: [] as Array<{ id: string; orderCount: number | null }> };
+  }
+}
+
 async function ensurePublicTenantAccess(tenantId: string) {
   const subscriptions = await dbRequest<Array<{ plan_code: string; status: string; current_period_ends_at: string | null; trial_ends_at: string | null; temporary_access_until: string | null }>>(
     `/rest/v1/jvg_subscriptions?tenant_id=${filterEq(tenantId)}&select=plan_code,status,current_period_ends_at,trial_ends_at,temporary_access_until&limit=1`,
@@ -723,6 +765,7 @@ export async function GET(request: Request) {
       const context = await readPublicRestaurantBySlug(slug);
       const scope = { tenant_id: context.tenant_id, company_id: context.company_id };
       const { categories, menu } = await readPublicMenu(scope);
+      const highlights = await readPublicHighlights(scope, menu);
       const brand = context.brand;
       return apiJson({
         mode: "website",
@@ -734,6 +777,7 @@ export async function GET(request: Request) {
         openingHours: brand.opening_hours && typeof brand.opening_hours === "object" ? brand.opening_hours : {},
         table: null, tableOpen: true, onlineOrdersEnabled: brand.website_orders_enabled === true && brand.website_pickup_enabled === true,
         pickupEnabled: brand.website_pickup_enabled === true, categories, menu,
+        highlightMode: highlights.mode, highlightTitle: highlights.title, highlightProducts: highlights.products,
         contactPhone: typeof brand.public_contact_phone === "string" ? brand.public_contact_phone : "",
         whatsapp: typeof brand.public_whatsapp === "string" ? brand.public_whatsapp : "",
         email: typeof brand.public_email === "string" ? brand.public_email : "",
@@ -745,7 +789,9 @@ export async function GET(request: Request) {
     }
     if (token) {
       const { table, company, brand } = await readPublicTable(token);
-      const { categories, menu } = await readPublicMenu({ tenant_id: table.tenant_id, company_id: table.company_id });
+      const scope = { tenant_id: table.tenant_id, company_id: table.company_id };
+      const { categories, menu } = await readPublicMenu(scope);
+      const highlights = await readPublicHighlights(scope, menu);
       return apiJson({
         mode: "table",
         company: typeof brand.public_name === "string" && brand.public_name ? brand.public_name : company.trade_name || company.legal_name,
@@ -756,6 +802,7 @@ export async function GET(request: Request) {
         openingHours: brand.opening_hours && typeof brand.opening_hours === "object" ? brand.opening_hours : {},
         table: table.label, tableOpen: table.service_status === "open", onlineOrdersEnabled: brand.qr_orders_enabled === true,
         pickupEnabled: false, categories, menu,
+        highlightMode: highlights.mode, highlightTitle: highlights.title, highlightProducts: highlights.products,
         contactPhone: typeof brand.public_contact_phone === "string" ? brand.public_contact_phone : "",
         whatsapp: typeof brand.public_whatsapp === "string" ? brand.public_whatsapp : "",
         email: typeof brand.public_email === "string" ? brand.public_email : "",

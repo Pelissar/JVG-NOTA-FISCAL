@@ -109,6 +109,18 @@
 .brandFields input[type="color"] { min-height: 42px !important; padding: 3px !important; }
 .siteControls { display: grid; gap: 10px; padding: 13px; border: 1px solid var(--menu-line); border-radius: 12px; background: var(--menu-soft); }
 .siteControls p { margin: 0; color: var(--menu-muted); font-size: 10px; line-height: 1.5; }
+.highlightSettings { display: grid; gap: 12px; padding: 14px; border: 1px solid color-mix(in srgb, var(--menu-blue) 20%, var(--menu-line)); border-radius: 13px; background: linear-gradient(135deg, color-mix(in srgb, var(--menu-blue) 5%, var(--menu-surface)), var(--menu-surface)); }
+.highlightSettings h4 { margin: 4px 0; color: var(--menu-text); font-size: 15px; }
+.highlightSettings > div:first-child > p { margin: 0; color: var(--menu-muted); font-size: 11px; line-height: 1.5; }
+.highlightFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.highlightFields > label { display: grid; gap: 6px; min-width: 0; color: var(--menu-muted); font-size: 10px; font-weight: 800; }
+.highlightProductPicker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; max-height: 260px; overflow: auto; padding: 3px; }
+.highlightProductPicker > label { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-width: 0; padding: 8px; border: 1px solid var(--menu-line); border-radius: 9px; background: var(--menu-surface); }
+.highlightProductPicker input { width: 16px; height: 16px; accent-color: var(--menu-blue); }
+.highlightProductPicker span { overflow-wrap: anywhere; color: var(--menu-text); font-size: 10px; font-weight: 750; }
+.highlightProductPicker small { color: var(--menu-muted); font-size: 9px; white-space: nowrap; }
+.highlightProductPicker > small { grid-column: 1 / -1; color: var(--menu-muted); font-size: 10px; }
+.highlightProductPicker > p { grid-column: 1 / -1; }
 .themeActions { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; padding-top: 4px; }
 .themeActions small { color: var(--menu-muted); font-size: 10px; }
 .brandImages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -145,6 +157,14 @@
 .previewProduct small { color: var(--menu-muted); font-size: 9px; overflow-wrap: anywhere; }
 .previewProduct b { color: var(--preview-color); font-size: 11px; }
 .previewEmpty { margin: 0; padding: 14px 0; color: var(--menu-muted); font-size: 11px; line-height: 1.45; }
+.previewHighlights { display: grid; gap: 8px; margin: 0 15px 14px; padding: 12px; border: 1px solid color-mix(in srgb, var(--preview-color) 24%, var(--menu-line)); border-radius: 12px; background: color-mix(in srgb, var(--preview-color) 6%, var(--menu-surface)); }
+.previewHighlights > strong { color: var(--menu-text); font-size: 13px; }
+.previewHighlights > article { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 9px; min-width: 0; padding: 7px; border-radius: 9px; background: var(--menu-surface); }
+.previewHighlights img, .previewHighlights .previewProductPlaceholder { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; }
+.previewHighlights .previewProductPlaceholder { display: grid; place-items: center; color: var(--preview-foreground); background: var(--preview-color); font-weight: 850; }
+.previewHighlights article > span:last-child { display: grid; min-width: 0; gap: 3px; }
+.previewHighlights article b { color: var(--menu-text); font-size: 10px; overflow-wrap: anywhere; }
+.previewHighlights article small, .previewHighlights > small { color: var(--menu-muted); font-size: 9px; line-height: 1.4; }
 .contrastInfo { margin: 0 15px 14px; padding: 8px 10px; border-radius: 8px; color: var(--menu-muted); background: var(--menu-soft); font-size: 10px; line-height: 1.45; }
 .publicPreview > .secondary { display: flex; margin: 0 15px 15px; }
 .publicPreview > .note { margin: 0 15px 15px; }
@@ -205,6 +225,7 @@
   .editorHeader { align-items: stretch; flex-direction: column; }
   .editorHeader > button { width: 100%; }
   .basicGrid, .promotionGrid { grid-template-columns: minmax(0, 1fr); }
+  .highlightFields, .highlightProductPicker { grid-template-columns: minmax(0, 1fr); }
   .full { grid-column: auto; }
   .photoSection { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
   .photoSection > div:first-child { grid-column: 1 / -1; }

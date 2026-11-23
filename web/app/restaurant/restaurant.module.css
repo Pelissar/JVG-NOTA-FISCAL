@@ -590,6 +590,7 @@
   background: color-mix(in srgb, var(--qr-accent, #1768d2) 5%, #f7f4ed);
 }
 .qrPage.publicWebsite > .qrBrand,
+.qrPage.publicWebsite > .qrHighlights,
 .qrPage.publicWebsite > .qrAccount,
 .qrPage.publicWebsite > .qrSuccess,
 .qrPage.publicWebsite > .qrNotice,
@@ -818,6 +819,72 @@
 .qrPage.tableMenu .qrTableActions,
 .qrPage.tableMenu .qrCheckout { border-radius: 15px; box-shadow: 0 5px 18px rgb(35 51 41 / 4%); }
 .qrPage.tableMenu .qrFloatingCart { bottom: calc(10px + env(safe-area-inset-bottom)); width: min(calc(100vw - 24px), 580px); }
+
+.qrHighlights { position: relative; width: 100%; margin: 20px auto; padding: clamp(14px, 2.5vw, 24px); overflow: hidden; border: 1px solid color-mix(in srgb, var(--qr-accent, #1768d2) 15%, var(--line)); border-radius: 22px; background: linear-gradient(125deg, color-mix(in srgb, var(--qr-accent, #1768d2) 8%, #fffefa), #fffefa 58%); box-shadow: 0 12px 30px rgb(35 51 41 / 5%); }
+.qrPage.publicWebsite > .qrHighlights { width: min(100%, 1320px); }
+.qrHighlightsHead { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+.qrHighlightsHead > div:first-child { min-width: 0; }
+.qrHighlightsHead > div:first-child > span { color: var(--qr-accent-text, #1052ad); font-size: 9px; font-weight: 900; letter-spacing: .14em; }
+.qrHighlightsHead h2 { margin: 5px 0 3px; font-size: clamp(20px, 2.5vw, 28px); line-height: 1.15; letter-spacing: -.025em; }
+.qrHighlightsHead p { margin: 0; font-size: 12px; }
+.qrHighlightControls { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
+.qrHighlightControls span { color: var(--muted); font-size: 11px; font-weight: 800; white-space: nowrap; }
+.qrHighlightControls button { display: grid; width: 36px; height: 36px; place-items: center; padding: 0; font-size: 23px; line-height: 1; }
+.qrHighlightViewport { position: relative; min-height: 270px; overflow: hidden; border-radius: 16px; }
+.qrHighlightCard { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: #fff; transition: transform 480ms cubic-bezier(.22,.75,.28,1); }
+.qrHighlightPhoto, .qrHighlightPhotoEmpty { display: block; width: 100%; height: 270px; object-fit: cover; background: linear-gradient(135deg, #eee9dd, #e6eadf); }
+.qrHighlightPhotoEmpty { display: grid; place-items: center; }
+.qrHighlightPhotoEmpty span { display: grid; width: 78px; height: 78px; place-items: center; border: 1px solid color-mix(in srgb, var(--qr-accent, #1768d2) 25%, white); border-radius: 24px; color: var(--qr-accent-text, #1052ad); background: color-mix(in srgb, var(--qr-accent, #1768d2) 10%, white); font-size: 32px; font-weight: 850; }
+.qrHighlightBody { display: flex; min-width: 0; flex-direction: column; justify-content: center; gap: 9px; padding: clamp(17px, 3vw, 34px); }
+.qrHighlightTag { align-self: flex-start; max-width: 100%; padding: 6px 9px; border-radius: 99px; color: var(--qr-accent-text, #1052ad); background: color-mix(in srgb, var(--qr-accent, #1768d2) 10%, white); font-size: 9px; font-weight: 900; letter-spacing: .08em; overflow-wrap: anywhere; }
+.qrHighlightBody h3 { margin: 0; color: #233329; font-size: clamp(21px, 3vw, 32px); line-height: 1.12; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.qrHighlightBody > p { margin: 0; color: #68766b; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.qrHighlightBottom { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-top: 5px; }
+.qrHighlightBottom > div { display: grid; gap: 4px; }
+.qrHighlightBottom strong { color: var(--qr-accent-text, #1052ad); font-size: 21px; }
+.qrHighlightBottom small { color: var(--muted); font-size: 10px; }
+.qrHighlightBottom > button { min-height: 42px; padding: 0 14px; border: 0; border-radius: 11px; color: var(--qr-accent-contrast, #fff); background: var(--qr-accent, #1768d2); font-size: 11px; font-weight: 850; box-shadow: 0 8px 18px color-mix(in srgb, var(--qr-accent, #1768d2) 19%, transparent); }
+.qrHighlightDots { display: flex; justify-content: center; gap: 7px; padding-top: 12px; }
+.qrHighlightDots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 99px; background: color-mix(in srgb, var(--qr-accent, #1768d2) 25%, white); transition: width .2s ease, background-color .2s ease; }
+.qrHighlightDots button[aria-current="true"] { width: 24px; background: var(--qr-accent, #1768d2); }
+.kitchenControls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.kitchenLive { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid #c9ead6; border-radius: 99px; color: #17643b; background: #f0fbf4; font-size: 10px; font-weight: 850; white-space: nowrap; }
+.kitchenLive i { width: 8px; height: 8px; border-radius: 50%; background: #159455; box-shadow: 0 0 0 3px rgb(21 148 85 / 12%); }
+.kitchenArrival { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid #b8e3c7; border-radius: 14px; color: #174d32; background: linear-gradient(100deg, #eaf8ef, #fbfffc); box-shadow: 0 8px 22px rgb(20 90 50 / 7%); animation: kitchen-arrival 200ms ease-out; }
+.kitchenArrival > span { display: grid; flex: 0 0 36px; width: 36px; height: 36px; place-items: center; border-radius: 12px; color: #fff; background: #218653; font-weight: 900; }
+.kitchenArrival > div { display: grid; flex: 1; min-width: 0; gap: 3px; }
+.kitchenArrival small { color: #50715d; font-size: 11px; }
+.kitchenMonitor:fullscreen { width: 100%; height: 100%; overflow: auto; padding: 22px; border: 0; border-radius: 0; background: #f4f7fb; }
+.kitchenMonitor:fullscreen .kitchenGrid { grid-template-columns: repeat(4, minmax(250px, 1fr)); min-height: 65vh; }
+.kitchenMonitor:fullscreen .kitchenColumn { max-height: calc(100vh - 185px); overflow: auto; }
+@keyframes kitchen-arrival { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 760px) {
+  .qrHighlights { margin: 14px auto; padding: 12px; border-radius: 17px; }
+  .qrHighlightsHead { align-items: flex-start; }
+  .qrHighlightsHead p { font-size: 11px; }
+  .qrHighlightViewport { min-height: 0; overflow: visible; }
+  .qrHighlightCard { position: relative; inset: auto; grid-template-columns: minmax(0, 1fr); border-radius: 13px; }
+  .qrHighlightCard { transition: opacity 260ms ease, transform 260ms ease; }
+  .qrHighlightCard[aria-hidden="true"] { position: absolute; inset: 0; opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(6px) !important; }
+  .qrHighlightCard[aria-hidden="false"] { position: relative; inset: auto; opacity: 1; visibility: visible; transform: translateY(0) !important; }
+  .qrHighlightPhoto, .qrHighlightPhotoEmpty { height: clamp(150px, 48vw, 230px); }
+  .qrHighlightPhotoEmpty span { width: 62px; height: 62px; border-radius: 19px; font-size: 26px; }
+  .qrHighlightBody { gap: 7px; padding: 14px; }
+  .qrHighlightBody h3 { font-size: 22px; }
+  .qrHighlightBody > p { font-size: 12px; }
+  .qrHighlightBottom strong { font-size: 18px; }
+  .qrHighlightBottom > button { min-height: 39px; padding-inline: 11px; }
+  .kitchenControls { justify-content: stretch; }
+  .kitchenControls > * { flex: 1 1 auto; }
+  .kitchenLive { justify-content: center; }
+  .kitchenMonitor:fullscreen { padding: 12px; }
+  .kitchenMonitor:fullscreen .kitchenGrid { grid-template-columns: minmax(0, 1fr); }
+  .kitchenMonitor:fullscreen .kitchenColumn { max-height: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qrHighlightCard, .qrHighlightDots button, .kitchenArrival { transition: none; animation: none; }
+}
 
 @media (max-width: 1000px) {
   .qrPage.publicWebsite { padding-right: 22px; padding-left: 22px; }

@@ -17,6 +17,8 @@ type Product = {
 type Menu = {
   mode: "website" | "table"; company: string; description: string; table: string | null; tableOpen: boolean;
   logoUrl: string | null; coverUrl: string | null; brandColor: string;
+  highlightMode?: "popular" | "promotions" | "manual"; highlightTitle?: string;
+  highlightProducts?: Array<{ id: string; orderCount: number | null }>;
   openingHours: Record<string, { open: boolean; from: string; to: string }>;
   categories: Array<{ id: string; name: string; active: boolean; sort_order: number }>;
   menu: Product[]; onlineOrdersEnabled: boolean; pickupEnabled: boolean;
@@ -107,6 +109,8 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
   const [profileCpf, setProfileCpf] = useState("");
   const [editingProfile, setEditingProfile] = useState(false);
   const [category, setCategory] = useState("all");
+  const [highlightIndex, setHighlightIndex] = useState(0);
+  const [highlightPaused, setHighlightPaused] = useState(false);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<Record<string, CartLine>>({});
   const [customizing, setCustomizing] = useState("");
@@ -200,6 +204,16 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
     return data?.menu.filter((item) => (category === "all" || item.category === category) &&
       (!term || (item.name + " " + item.description + " " + item.category).toLocaleLowerCase("pt-BR").includes(term))) || [];
   }, [data, search, category]);
+  const highlightCards = useMemo(() => (data?.highlightProducts || []).flatMap((highlight) => {
+    const product = data?.menu.find((item) => item.id === highlight.id);
+    return product ? [{ product, orderCount: highlight.orderCount }] : [];
+  }), [data]);
+  const activeHighlightIndex = highlightCards.length ? highlightIndex % highlightCards.length : 0;
+  useEffect(() => {
+    if (highlightCards.length < 2 || highlightPaused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => setHighlightIndex((current) => (current + 1) % highlightCards.length), 5200);
+    return () => window.clearInterval(timer);
+  }, [highlightCards.length, highlightPaused]);
   const cartItems = Object.entries(cart).filter(([, item]) => item.quantity > 0).map(([key, item]) => ({ key, ...item }));
   const productFor = (item: CartLine) => data?.menu.find((product) => product.id === item.productId);
   const linePrice = (item: CartLine) => {
@@ -477,6 +491,17 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
           <details className={styles.qrHours}><summary>Horário de atendimento</summary><ul>{Object.entries(data.openingHours || {}).filter(([, hours]) => hours.open).map(([day, hours]) => <li key={day}>{days[day] || day}: {hours.from}–{hours.to}</li>)}</ul>{!Object.values(data.openingHours || {}).some((hours) => hours.open) ? <small>Horário não informado.</small> : null}</details>
         </div>
       </header>
+
+        {highlightCards.length ? <section className={styles.qrHighlights} aria-label={data.highlightTitle || "Destaques do restaurante"} onMouseEnter={() => setHighlightPaused(true)} onMouseLeave={() => setHighlightPaused(false)} onFocus={() => setHighlightPaused(true)} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHighlightPaused(false); }}>
+          <div className={styles.qrHighlightsHead}><div><span>{data.highlightMode === "popular" ? "ESCOLHIDOS PELOS CLIENTES" : data.highlightMode === "promotions" ? "OFERTAS DA CASA" : "SELEÇÃO DO RESTAURANTE"}</span><h2>{data.highlightTitle || "Destaques do restaurante"}</h2><p>{data.highlightMode === "popular" ? "Produtos mais pedidos, com base nas vendas entregues recentes." : data.highlightMode === "promotions" ? "Confira os produtos que estão com promoção vigente." : "Uma seleção especial do cardápio."}</p></div>{highlightCards.length > 1 ? <div className={styles.qrHighlightControls}><button type="button" className={styles.buttonGhost} aria-label="Destaque anterior" onClick={() => setHighlightIndex((current) => (current + highlightCards.length - 1) % highlightCards.length)}>‹</button><span>{activeHighlightIndex + 1} / {highlightCards.length}</span><button type="button" className={styles.buttonGhost} aria-label="Próximo destaque" onClick={() => setHighlightIndex((current) => (current + 1) % highlightCards.length)}>›</button></div> : null}</div>
+          <div className={styles.qrHighlightViewport}>
+            {highlightCards.map(({ product, orderCount }, index) => <article key={product.id} className={styles.qrHighlightCard} aria-hidden={index !== activeHighlightIndex} style={{ transform: `translateX(${(index - activeHighlightIndex) * 100}%)` }}>
+              {product.image_url ? <Image className={styles.qrHighlightPhoto} src={product.image_url} alt={product.name} width={560} height={360} unoptimized/> : <div className={styles.qrHighlightPhotoEmpty} aria-hidden="true"><span>{product.name.slice(0, 1).toUpperCase()}</span></div>}
+              <div className={styles.qrHighlightBody}><span className={styles.qrHighlightTag}>{product.is_combo ? "Combo" : product.category || "Destaque"}</span><h3>{product.name}</h3>{product.description ? <p>{product.description}</p> : <p>Disponível no cardápio deste restaurante.</p>}<div className={styles.qrHighlightBottom}><div><strong>{money(product.sale_price)}</strong>{data.highlightMode === "popular" && orderCount ? <small>{orderCount} unidades em pedidos entregues</small> : null}{!product.available ? <small className={styles.qrAvailabilityText}>Indisponível no momento</small> : null}</div><button type="button" tabIndex={index === activeHighlightIndex ? 0 : -1} onClick={() => document.getElementById(`qr-product-${product.id}`)?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" })}>Ver no cardápio</button></div></div>
+            </article>)}
+          </div>
+          {highlightCards.length > 1 ? <div className={styles.qrHighlightDots} aria-label="Selecionar destaque">{highlightCards.map((entry, index) => <button key={entry.product.id} type="button" aria-label={`Mostrar destaque ${index + 1}`} aria-current={activeHighlightIndex === index ? "true" : undefined} onClick={() => setHighlightIndex(index)}/>)}</div> : null}
+        </section> : null}
       {error ? <div className={styles.qrError} role="alert">{error}</div> : null}
       {notice ? <div className={styles.qrNotice} role="status">{notice}</div> : null}
       {success ? <section className={styles.qrSuccess} role="status"><h2>Pedido recebido pela equipe</h2><p>Pedido <strong>#{success.number}</strong> · {statuses[success.status] || "Aguardando confirmação"}</p><p>Pagamento pendente no caixa. A equipe vai confirmar o pedido e encaminhar para preparo.</p><button type="button" className={styles.buttonGhost} onClick={() => setSuccess(null)}>Voltar ao cardápio</button></section> : null}
@@ -505,7 +530,7 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
       <div className={styles.qrMenuHeading} id="qr-menu-heading"><div><span>MENU</span><h2>Escolha seus itens</h2></div><label className={styles.qrSearch}>Buscar no cardápio<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nome do produto"/></label></div>
       <nav className={styles.qrCategories} aria-label="Categorias do cardápio"><button type="button" className={category === "all" ? styles.qrCategoryActive : ""} onClick={() => setCategory("all")}>Todos</button>{data.categories.filter((item) => item.active).map((item) => <button type="button" key={item.id} className={category === item.name ? styles.qrCategoryActive : ""} onClick={() => setCategory(item.name)}>{item.name}</button>)}</nav>
       <section className={styles.qrMenu} aria-label="Produtos do cardápio">
-        {visibleMenu.map((product) => <article className={styles.qrProduct + (!product.available ? " " + styles.qrProductUnavailable : "")} key={product.id}>
+        {visibleMenu.map((product) => <article id={`qr-product-${product.id}`} className={styles.qrProduct + (!product.available ? " " + styles.qrProductUnavailable : "")} key={product.id}>
           {product.image_url ? <Image className={styles.qrProductPhoto} src={product.image_url} alt={product.name} width={720} height={480} unoptimized/> : <div className={styles.qrProductPhotoEmpty} aria-hidden="true"><svg viewBox="0 0 48 48" focusable="false"><rect x="6.5" y="8" width="35" height="32" rx="5"/><circle cx="18" cy="19" r="3.5"/><path d="m9 35 10-10 7 6 5-5 8 9"/></svg></div>}
           <div className={styles.qrProductBody}><div className={styles.qrProductMeta}>{product.is_combo ? <span>Combo</span> : product.category ? <span>{product.category}</span> : <span>{product.unit}</span>}{product.promotion ? <b>{product.promotion.label}</b> : null}{!product.available ? <b className={styles.qrUnavailableBadge}>Indisponível</b> : null}</div><h3>{product.name}</h3>{product.description ? <p>{product.description}</p> : null}
             {product.is_combo && product.combo_components.length ? <ul className={styles.qrCombo}>{product.combo_components.map((component) => <li key={component.product_id}>{component.quantity} × {component.name}</li>)}</ul> : null}
