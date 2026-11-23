@@ -573,18 +573,52 @@ async function readKitchenOrders(scope: Pick<RestaurantScope, "tenant_id" | "com
 
 async function readTableRequestQueue(scope: Pick<RestaurantScope, "tenant_id" | "company_id">): Promise<{
   available: boolean;
-  rows: Array<Record<string, unknown> & { table_id: string; customer_name: string | null }>;
+  rows: Array<Record<string, unknown> & {
+    table_id: string;
+    customer_name: string | null;
+    bill_orders?: Array<{ order_number: number; status: string; payment_status: "paid" | "pending" | "unknown"; total: number; items: Array<{ description: string; quantity: number; total: number }> }>;
+    bill_total?: number;
+    bill_due?: number;
+  }>;
 }> {
   try {
     const rows = await dbRequest<Array<Record<string, unknown> & { table_id: string; customer_id: string | null }>>(`/rest/v1/jvg_restaurant_table_requests?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&status=eq.pending&select=id,table_id,customer_id,request_type,status,created_at&order=created_at.asc&limit=100`);
     const customerIds = [...new Set(rows.map((row) => typeof row.customer_id === "string" ? row.customer_id : "").filter(Boolean))];
+    const billTableIds = [...new Set(rows.filter((row) => row.request_type === "request_bill").map((row) => row.table_id).filter((id) => UUID.test(id)))];
+    const billTables = billTableIds.length ? await dbRequest<Array<{ id: string; opened_at: string | null }>>(
+      `/rest/v1/jvg_restaurant_tables?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=in.(${billTableIds.join(",")})&select=id,opened_at&limit=100`,
+    ) : [];
+    const openedAtByTable = new Map(billTables.map((table) => [table.id, table.opened_at]));
     const customers = customerIds.length ? await dbRequest<Array<{ id: string; full_name: string }>>(
       `/rest/v1/jvg_restaurant_customers?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=in.(${customerIds.join(",")})&select=id,full_name&limit=100`,
     ) : [];
+    const billOrders = billTableIds.length ? await dbRequest<Array<Record<string, unknown>>>(
+      `/rest/v1/jvg_restaurant_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&table_id=in.(${billTableIds.join(",")})&status=not.eq.cancelled&select=table_id,order_number,status,payment_status,total,items,created_at&order=created_at.asc&limit=500`,
+    ) : [];
     const customerById = new Map(customers.map((customer) => [customer.id, customer]));
+    const billOrdersByTable = new Map<string, Array<{ order_number: number; status: string; payment_status: "paid" | "pending" | "unknown"; total: number; items: Array<{ description: string; quantity: number; total: number }> }>>();
+    for (const order of billOrders) {
+      const tableId = typeof order.table_id === "string" ? order.table_id : "";
+      if (!UUID.test(tableId)) continue;
+      const openedAt = openedAtByTable.get(tableId);
+      const openedAtMs = openedAt ? Date.parse(openedAt) : Number.NaN;
+      const createdAtMs = typeof order.created_at === "string" ? Date.parse(order.created_at) : Number.NaN;
+      if (Number.isFinite(openedAtMs) && (!Number.isFinite(createdAtMs) || createdAtMs < openedAtMs)) continue;
+      const items = publicOrderItems(order.items).map((item) => ({ description: item.description, quantity: item.quantity, total: item.total }));
+      const totalValue = Number(order.total);
+      const total = Number.isFinite(totalValue) && totalValue >= 0 ? totalValue : items.reduce((sum, item) => sum + item.total, 0);
+      const paymentStatus = order.payment_status === "paid" ? "paid" : order.payment_status === "pending" ? "pending" : "unknown";
+      const list = billOrdersByTable.get(tableId) || [];
+      list.push({ order_number: Number(order.order_number) || 0, status: str(order.status, 30), payment_status: paymentStatus, total, items });
+      billOrdersByTable.set(tableId, list);
+    }
     const enrichedRows = rows.map((row) => {
       const customer = typeof row.customer_id === "string" ? customerById.get(row.customer_id) : null;
-      return { ...row, customer_name: customer?.full_name || null };
+      if (row.request_type !== "request_bill") return { ...row, customer_name: customer?.full_name || null };
+      const orders = billOrdersByTable.get(row.table_id) || [];
+      const total = orders.reduce((sum, order) => sum + order.total, 0);
+      const due = orders.reduce((sum, order) => sum + (order.payment_status === "paid" ? 0 : order.total), 0);
+      return { ...row, customer_name: customer?.full_name || null, bill_orders: orders, bill_total: total, bill_due: due };
     });
     return { available: true, rows: enrichedRows };
   } catch (error) {

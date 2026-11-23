@@ -949,6 +949,20 @@
 .tableCallText strong { color: #182a3e; font-size: 15px; }
 .tableCallText span { color: #66758a; font-size: 12px; line-height: 1.45; }
 .tableCallText small { color: #536579; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+.tableBillSummary { display: grid; gap: 8px; min-width: 0; margin: 10px 0 6px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-muted); }
+.tableBillOrder { display: grid; gap: 7px; min-width: 0; padding: 2px 0 9px; border-bottom: 1px solid var(--line); }
+.tableBillOrderHeading, .tableBillOrderTotal, .tableBillTotals, .tableBillDue { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-width: 0; }
+.tableBillOrderHeading { flex-wrap: wrap; }
+.tableBillOrderHeading strong, .tableBillOrderTotal strong, .tableBillTotals strong, .tableBillDue strong { text-align: right; }
+.tableBillOrderHeading span, .tableBillSummary small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+.tableBillOrder ul { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.tableBillOrder li { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; min-width: 0; font-size: 12px; line-height: 1.4; }
+.tableBillOrder li span { min-width: 0; overflow-wrap: anywhere; }
+.tableBillOrder li strong { flex: 0 0 auto; white-space: nowrap; }
+.tableBillOrderTotal { font-size: 12px; }
+.tableBillTotals { padding-top: 3px; font-size: 13px; font-weight: 800; }
+.tableBillDue { color: var(--muted); font-size: 12px; }
+.tableBillEmpty { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
 .tableCallPending { padding: 5px 9px; border-radius: 999px; color: #875200; background: #fff3d7; font-size: 11px; font-weight: 800; white-space: nowrap; }
 .tableCallEmpty { display: flex; align-items: center; gap: 12px; padding: 15px; border: 1px dashed #cddbd2; border-radius: 14px; background: #f8fcf9; }
 .tableCallEmpty > span { display: grid; flex: 0 0 34px; width: 34px; height: 34px; place-items: center; border-radius: 50%; color: #187143; background: #e5f5e9; font-weight: 900; }
