@@ -1,6 +1,7 @@
 import { getJvgUser } from "../../../jvg-auth";
 import { apiJson, dbRequest, filterEq, getCompany, getSiteAccount, isSameOrigin, JvgBackendError, safeError, type SiteAccount } from "../../../../lib/jvg-backend";
 import { buildNfceHomologacaoPayload, type NfceItemInput, type NfcePaymentInput } from "../../../../lib/fiscal/nfce-payload";
+import { focusTaxFieldNames } from "../../../../lib/fiscal/focus-tax-fields";
 import { focusReferenceForFiscalDocument } from "../../../../lib/focus/client";
 import { focusRuntimeEnv } from "../../../../lib/focus/runtime-env";
 
@@ -60,6 +61,47 @@ function safeProviderResponse(value: unknown): Row {
   return output;
 }
 
+function safeDraftReview(value: unknown): Row {
+  const payload = obj(value);
+  const items = Array.isArray(payload.items) ? payload.items.slice(0, 20).map(value => {
+    const item = obj(value);
+    const quantity = Number(item.quantidade_comercial);
+    const focusTaxes: Row = {};
+    for (const field of focusTaxFieldNames) {
+      const amount = item[field];
+      if (typeof amount === "number" && Number.isFinite(amount) && amount >= 0) focusTaxes[field] = amount;
+    }
+    return {
+      name: cleanText(item.descricao, 120),
+      quantity: Number.isFinite(quantity) ? quantity : 0,
+      unitPrice: cleanText(item.valor_unitario_comercial, 20),
+      total: cleanText(item.valor_bruto, 20),
+      cfop: cleanText(item.cfop, 4),
+      ncm: cleanText(item.codigo_ncm, 8),
+      cest: cleanText(item.cest, 7),
+      origin: cleanText(item.icms_origem, 1),
+      csosn: cleanText(item.icms_situacao_tributaria, 3),
+      pisCst: cleanText(item.pis_situacao_tributaria, 2),
+      cofinsCst: cleanText(item.cofins_situacao_tributaria, 2),
+      focusTaxes,
+    };
+  }) : [];
+  const payments = Array.isArray(payload.formas_pagamento) ? payload.formas_pagamento.slice(0, 20).map(value => {
+    const payment = obj(value);
+    return {
+      method: cleanText(payment.forma_pagamento, 2),
+      indicator: cleanText(payment.indicador_pagamento, 1),
+      amount: cleanText(payment.valor_pagamento, 20),
+      description: cleanText(payment.descricao_pagamento, 60),
+    };
+  }) : [];
+  return {
+    nature: cleanText(payload.natureza_operacao, 60),
+    items,
+    payments,
+  };
+}
+
 export async function GET() {
   try {
     const site = await account();
@@ -80,6 +122,7 @@ export async function GET() {
         return {
           ...publicRow,
           totalCents: Number.isSafeInteger(stored.totalCents) ? stored.totalCents : 0,
+          draftReview: row.status === "draft" ? safeDraftReview(stored.payload) : null,
           provider_response: safeProviderResponse(obj(row.provider_response).response),
         };
       }),

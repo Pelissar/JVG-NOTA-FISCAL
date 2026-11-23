@@ -477,6 +477,40 @@
     return available ? '<button type="button" data-file-kind="' + safe(kind) + '" data-file-id="' + safe(row.id) + '">' + safe(label) + '</button>' : '';
   }
 
+  function renderDraftReview(review) {
+    if (!review || !Array.isArray(review.items)) return '';
+    const originNames = ['Nacional', 'Estrangeira · importação direta', 'Estrangeira · mercado interno', 'Nacional · conteúdo importado acima de 40%', 'Nacional · processo produtivo básico', 'Nacional · conteúdo importado até 40%', 'Estrangeira · sem similar nacional', 'Estrangeira · mercado interno sem similar nacional', 'Nacional · conteúdo importado acima de 70%'];
+    const rtcTaxLabels = {
+      ibs_cbs_base_calculo: 'Base IBS/CBS (R$)', ibs_uf_aliquota: 'Alíquota IBS estadual (%)',
+      ibs_uf_valor: 'IBS estadual (R$)', ibs_mun_aliquota: 'Alíquota IBS municipal (%)',
+      ibs_mun_valor: 'IBS municipal (R$)', cbs_aliquota: 'Alíquota CBS (%)', cbs_valor: 'CBS (R$)',
+    };
+    const items = review.items.map(item => {
+      const origin = String(item.origin || '');
+      const focusTaxes = item.focusTaxes && typeof item.focusTaxes === 'object' ? item.focusTaxes : {};
+      const taxValues = Object.entries(focusTaxes).map(([field, value]) => '<li><span>' + safe(taxLabels[field] || rtcTaxLabels[field] || field) + '</span><strong>' + safe(value) + '</strong></li>').join('');
+      const fiscal = [
+        'CFOP ' + (item.cfop || '—'), 'NCM ' + (item.ncm || '—'),
+        'Origem ' + (origin ? origin + ' · ' + (originNames[Number(origin)] || 'código informado') : 'pendente'),
+        'CSOSN ' + (item.csosn || '—'), 'PIS CST ' + (item.pisCst || '—'),
+        'Cofins CST ' + (item.cofinsCst || '—'),
+      ];
+      if (item.cest) fiscal.push('CEST ' + item.cest);
+      return '<li><div><strong>' + safe(item.quantity) + ' × ' + safe(item.name || 'Produto') + '</strong><span>' + money(Number(item.unitPrice)) + ' cada · ' + money(Number(item.total)) + '</span></div><small>' + safe(fiscal.join(' · ')) + '</small>' +
+        '<details class="nfce-draft-tax-review"><summary>Valores tributários numéricos</summary>' + (taxValues ? '<ul>' + taxValues + '</ul>' : '<span>Nenhum valor numérico adicional consta no payload.</span>') + '</details></li>';
+    }).join('');
+    const payments = Array.isArray(review.payments) ? review.payments.map(payment => {
+      const method = paymentOptions.find(([code]) => code === payment.method)?.[1] || ('Forma ' + (payment.method || 'não informada'));
+      const timing = payment.indicator === '1' ? 'a prazo' : 'à vista';
+      const description = payment.description ? ' · ' + safe(payment.description) : '';
+      return '<li>' + safe(method) + ' · ' + timing + ' · ' + money(Number(payment.amount)) + description + '</li>';
+    }).join('') : '';
+    return '<details class="nfce-draft-review"><summary>Conferir itens, impostos e pagamento</summary><div class="nfce-draft-review-body">' +
+      '<p><strong>' + safe(review.nature || 'Natureza não informada') + '</strong></p>' +
+      '<ul class="nfce-draft-review-items">' + items + '</ul>' +
+      '<strong>Pagamentos</strong><ul class="nfce-draft-review-payments">' + (payments || '<li>Nenhum pagamento informado</li>') + '</ul></div></details>';
+  }
+
   function setCapabilities(capabilities = {}) {
     state.canIssue = capabilities.canIssue === true;
     state.canCancel = capabilities.canCancel === true;
@@ -501,7 +535,7 @@
       const action = row.status === 'processing'
         ? '<button type="button" data-reconcile="' + safe(row.id) + '">Consultar status</button>'
         : row.status === 'draft'
-          ? '<button type="button" data-resume="' + safe(row.id) + '" data-total="' + safe(row.totalCents || 0) + '" data-reference="' + safe(reference) + '">Selecionar rascunho</button>'
+          ? '<button type="button" data-resume="' + safe(row.id) + '" data-total="' + safe(row.totalCents || 0) + '" data-reference="' + safe(reference) + '">Selecionar rascunho</button>' + renderDraftReview(row.draftReview)
           : row.status === 'authorized' && state.canCancel
             ? '<button type="button" data-cancel="' + safe(row.id) + '">Cancelar cupom</button>' : '';
       return '<tr><td>' + safe(row.document_number || '—') + (row.series ? ' · série ' + safe(row.series) : '') + '<small>' + safe(new Date(row.created_at).toLocaleString('pt-BR')) + '</small></td>' +
