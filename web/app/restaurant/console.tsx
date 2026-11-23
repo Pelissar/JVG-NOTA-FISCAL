@@ -180,6 +180,32 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
     pendingCallIdsRef.current = new Set((payload.tableRequests || []).map((request) => request.id));
   }, [playCallChime, section]);
 
+  const refreshKitchenQueue = useCallback(async () => {
+    const response = await fetch("/api/restaurant?kitchenQueue=1", { cache: "no-store" });
+    const payload = await response.json() as { orders?: Order[]; error?: string };
+    if (!response.ok) throw new Error(payload.error || "N\u00e3o foi poss\u00edvel atualizar a fila da cozinha.");
+    const orders = payload.orders || [];
+    const activeKitchenOrders = orders.filter((order) => ["sent_to_kitchen", "preparing", "ready"].includes(order.status));
+    const previousKitchenIds = pendingKitchenOrderIdsRef.current;
+    if (previousKitchenIds) {
+      const arrivals = activeKitchenOrders.filter((order) => order.status === "sent_to_kitchen" && !previousKitchenIds.has(order.id));
+      if (arrivals.length) {
+        const first = arrivals.sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))[0];
+        const table = tableLabelsRef.current.get(first.table_id || "");
+        const context = table || (first.fulfillment_type === "pickup" ? "Retirada" : "Balc\u00e3o");
+        const count = first.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        setKitchenNotice({ id: first.id, title: arrivals.length === 1 ? `Pedido #${first.order_number} recebido` : `${arrivals.length} novos pedidos`, details: `${context} \u00b7 ${count} item(ns) na fila` });
+        if (kitchenNoticeTimeoutRef.current !== null) window.clearTimeout(kitchenNoticeTimeoutRef.current);
+        kitchenNoticeTimeoutRef.current = window.setTimeout(() => setKitchenNotice(null), 12000);
+        playCallChime();
+      }
+    }
+    pendingKitchenOrderIdsRef.current = new Set(activeKitchenOrders.map((order) => order.id));
+    setData((current) => ({ ...current, orders }));
+    setKitchenMonitorError("");
+    setKitchenUpdatedAt(new Date().toISOString());
+  }, [playCallChime]);
+
   useEffect(() => {
     let active = true;
     fetch("/api/restaurant", { cache: "no-store" })
@@ -220,10 +246,11 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
   useEffect(() => {
     if (!loaded || section !== "kitchen") return;
     let active = true;
-    const update = () => void refresh().catch((reason: Error) => { if (active) setKitchenMonitorError(reason.message); });
+    const update = () => void refreshKitchenQueue().catch((reason: Error) => { if (active) setKitchenMonitorError(reason.message); });
+    update();
     const timer = window.setInterval(update, 5000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [loaded, refresh, section]);
+  }, [loaded, refreshKitchenQueue, section]);
 
   useEffect(() => () => {
     if (noticeTimeoutRef.current !== null) window.clearTimeout(noticeTimeoutRef.current);
@@ -517,7 +544,7 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
               <div className={styles.kitchenControls}>
                 <span className={styles.kitchenLive}><i aria-hidden="true"/> Ao vivo {kitchenUpdatedAt ? `· ${new Date(kitchenUpdatedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : ""}</span>
                 {callSoundEnabled ? <button type="button" className={styles.buttonGhost} onClick={() => { callSoundEnabledRef.current = false; setCallSoundEnabled(false); }}>Silenciar som</button> : <button type="button" className={styles.buttonGhost} onClick={enableCallSound}>Ativar aviso sonoro</button>}
-                <button type="button" className={styles.buttonGhost} onClick={() => void refresh().catch((reason: Error) => setKitchenMonitorError(reason.message))}>Atualizar fila</button>
+                <button type="button" className={styles.buttonGhost} onClick={() => void refreshKitchenQueue().catch((reason: Error) => setKitchenMonitorError(reason.message))}>Atualizar fila</button>
                 <button type="button" className={styles.primaryButton} onClick={() => void toggleKitchenMonitor()}>{kitchenFullscreen ? "Sair da tela cheia" : "Tela cheia"}</button>
               </div>
             </div>

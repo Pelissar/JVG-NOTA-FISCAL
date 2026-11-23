@@ -532,6 +532,21 @@ async function readRestaurantOrders(scope: Pick<RestaurantScope, "tenant_id" | "
   }
 }
 
+async function readKitchenOrders(scope: Pick<RestaurantScope, "tenant_id" | "company_id">) {
+  const recent = encodeURIComponent(new Date(Date.now() - 3 * 86400000).toISOString());
+  const base = `/rest/v1/jvg_restaurant_orders?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&status=in.(sent_to_kitchen,preparing,ready,delivered)&created_at=gte.${recent}`;
+  try {
+    return await dbRequest<Array<Record<string, unknown>>>(
+      `${base}&select=id,order_number,table_id,customer_id,source,status,items,customer_name_snapshot,phone_snapshot,total,notes,created_at,payment_method,payment_status,payment_confirmed_at,payment_confirmed_by,fulfillment_type&order=created_at.desc&limit=200`,
+    );
+  } catch (error) {
+    if (!menuSchemaUnavailable(error)) throw error;
+    return dbRequest<Array<Record<string, unknown>>>(
+      `${base}&select=id,order_number,table_id,customer_id,source,status,items,customer_name_snapshot,phone_snapshot,total,notes,created_at&order=created_at.desc&limit=200`,
+    );
+  }
+}
+
 async function readTableRequestQueue(scope: Pick<RestaurantScope, "tenant_id" | "company_id">) {
   try {
     const rows = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_restaurant_table_requests?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&status=eq.pending&select=id,table_id,request_type,status,created_at&order=created_at.asc&limit=100`);
@@ -636,6 +651,11 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const token = url.searchParams.get("token");
     const slug = url.searchParams.get("slug");
+    if (url.searchParams.get("kitchenQueue") === "1") {
+      const scope = await requireRestaurant();
+      const orders = await readKitchenOrders(scope);
+      return apiJson({ orders: orders.map((order) => ({ ...order, total: Number(order.total) || 0, items: Array.isArray(order.items) ? order.items : [] })) });
+    }
     if (url.searchParams.get("tableRequests") === "1") {
       const scope = await requireRestaurant();
       const queue = await readTableRequestQueue(scope);
