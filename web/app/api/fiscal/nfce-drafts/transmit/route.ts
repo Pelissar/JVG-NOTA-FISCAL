@@ -9,7 +9,7 @@ type Row = Record<string, unknown>;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const allowedResponseFields = new Set([
   "status", "status_sefaz", "mensagem_sefaz", "ref", "chave_nfe", "numero", "serie", "protocolo",
-  "numero_protocolo", "codigo_status", "erro", "mensagem", "caminho_xml_nota_fiscal", "caminho_danfe", "eventos",
+  "numero_protocolo", "codigo_status", "erro", "mensagem", "caminho_xml_nota_fiscal", "caminho_danfe", "caminho_xml_cancelamento", "eventos",
 ]);
 
 function obj(value: unknown): Row { return value && typeof value === "object" && !Array.isArray(value) ? value as Row : {}; }
@@ -80,7 +80,9 @@ export async function POST(request: Request) {
     if (!user) throw new JvgBackendError("Faça login para continuar.", 401);
     const account = await getSiteAccount(user, { requiredModule: "nfce" });
     if (!account) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
-    if (account.role === "viewer") throw new JvgBackendError("Seu perfil não transmite NFC-e.", 403);
+    if (!["owner", "admin", "manager", "operator"].includes(String(account.member_role || account.role))) {
+      throw new JvgBackendError("Seu perfil pode consultar documentos, mas não pode transmitir cupons fiscais.", 403);
+    }
     const body = await request.json() as Row;
     if (body.confirmHomologation !== true) throw new JvgBackendError("Confirme que este envio é somente de homologação.", 400);
     const id = typeof body.id === "string" ? body.id.trim() : "";
@@ -142,12 +144,12 @@ export async function POST(request: Request) {
       });
       try { await logEvent(account, id, definiteRejection ? "error" : "status_update", next, { ...provider, httpStatus: apiError?.httpStatus, ref: reference }); }
       catch { /* Mantém o estado primário do documento quando a trilha secundária falha. */ }
-      if (credentialFailure) throw new JvgBackendError("A Focus não aceitou a credencial de homologação. O rascunho foi preservado para nova tentativa após corrigir o token.", 502);
+      if (credentialFailure) throw new JvgBackendError("O serviço fiscal não aceitou a credencial de homologação. O rascunho foi preservado para nova tentativa após corrigir a configuração.", 502);
       if (definiteRejection) {
         const reason = text(provider.mensagem_sefaz || provider.mensagem || provider.erro, 400);
-        throw new JvgBackendError(reason ? "NFC-e rejeitada pela Focus: " + reason : "NFC-e rejeitada pela Focus. Abra o histórico para ver o motivo retornado.", 502);
+        throw new JvgBackendError(reason ? "NFC-e rejeitada pela autorização fiscal: " + reason : "NFC-e rejeitada. Abra o histórico para ver o motivo retornado.", 502);
       }
-      throw new JvgBackendError("Não foi possível confirmar o resultado do envio. A NFC-e permanece em processamento para evitar duplicidade; consulte a Focus no histórico antes de qualquer nova ação.", 502);
+      throw new JvgBackendError("Não foi possível confirmar o resultado do envio. A NFC-e permanece em processamento para evitar duplicidade; consulte o status no histórico antes de qualquer nova ação.", 502);
     }
   } catch (error) { return safeError(error); }
 }

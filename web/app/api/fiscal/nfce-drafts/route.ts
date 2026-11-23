@@ -1,6 +1,6 @@
 import { getJvgUser } from "../../../jvg-auth";
 import { apiJson, dbRequest, filterEq, getCompany, getSiteAccount, isSameOrigin, JvgBackendError, safeError, type SiteAccount } from "../../../../lib/jvg-backend";
-import { buildNfceHomologacaoPayload, type NfceItemInput } from "../../../../lib/fiscal/nfce-payload";
+import { buildNfceHomologacaoPayload, type NfceItemInput, type NfcePaymentInput } from "../../../../lib/fiscal/nfce-payload";
 import { focusReferenceForFiscalDocument } from "../../../../lib/focus/client";
 import { focusRuntimeEnv } from "../../../../lib/focus/runtime-env";
 
@@ -15,6 +15,10 @@ async function account(): Promise<SiteAccount> {
   if (!site) throw new JvgBackendError("Cadastre sua empresa primeiro.", 409);
   if (site.role === "viewer") throw new JvgBackendError("Seu perfil não prepara NFC-e.", 403);
   return site;
+}
+
+function canManageNfce(site: SiteAccount): boolean {
+  return ["owner", "admin", "manager", "operator"].includes(String(site.member_role || site.role));
 }
 
 function scope(site: SiteAccount): string {
@@ -45,7 +49,7 @@ function profileRule(profile: Row | undefined, operation: "interna" | "interesta
 function safeProviderResponse(value: unknown): Row {
   const source = obj(value);
   const allowed = ["status", "status_sefaz", "mensagem_sefaz", "ref", "chave_nfe", "numero", "serie", "protocolo",
-    "numero_protocolo", "codigo_status", "erro", "mensagem", "caminho_xml_nota_fiscal", "caminho_danfe", "eventos"];
+    "numero_protocolo", "codigo_status", "erro", "mensagem", "caminho_xml_nota_fiscal", "caminho_danfe", "caminho_xml_cancelamento", "eventos"];
   const output: Row = {};
   for (const key of allowed) {
     const item = source[key];
@@ -61,7 +65,7 @@ export async function GET() {
     const site = await account();
     const [documents, products, profiles, company] = await Promise.all([
       dbRequest<Row[]>(`/rest/v1/jvg_fiscal_documents?${scope(site)}&document_type=eq.nfce&environment=eq.homologacao&select=id,status,document_number,series,access_key,focus_reference,provider_response,xml_storage_path,pdf_storage_path,fiscal_payload,created_at,updated_at&order=created_at.desc&limit=30`),
-      dbRequest<Row[]>(`/rest/v1/jvg_products?${scope(site)}&active=eq.true&select=id,tax_profile_id&limit=1000`),
+      dbRequest<Row[]>(`/rest/v1/jvg_products?${scope(site)}&active=eq.true&select=id,tax_profile_id,default_csosn,default_pis_cst,default_cofins_cst&limit=1000`),
       dbRequest<Row[]>(`/rest/v1/jvg_tax_profiles?${scope(site)}&document_type=eq.nfe&select=id,name,rules,review_status&order=created_at.desc&limit=200`),
       getCompany(site),
     ]);
@@ -80,7 +84,11 @@ export async function GET() {
         };
       }),
       productProfileIds: Object.fromEntries(products.map(product => [String(product.id), String(product.tax_profile_id || "")])),
+      productTaxDefaults: Object.fromEntries(products.map(product => [String(product.id), {
+        csosn: String(product.default_csosn || ""), pisCst: String(product.default_pis_cst || ""), cofinsCst: String(product.default_cofins_cst || ""),
+      }])),
       profiles,
+      capabilities: { canIssue: canManageNfce(site), canCancel: canManageNfce(site) },
       defaults: { isJvgPilot, simplesNacionalConfirmado: company ? simpleConfirmed(company) : false },
     });
   } catch (error) { return safeError(error); }
@@ -90,6 +98,7 @@ export async function POST(request: Request) {
   if (!isSameOrigin(request)) return apiJson({ error: "Origem não autorizada." }, 403);
   try {
     const site = await account();
+    if (!canManageNfce(site)) throw new JvgBackendError("Seu perfil pode consultar dados fiscais, mas não preparar ou alterar cupons.", 403);
     const body = await request.json() as Row;
     const company = await getCompany(site);
     if (!company) throw new JvgBackendError("Empresa emitente não encontrada.", 404);
@@ -99,7 +108,7 @@ export async function POST(request: Request) {
     if (productIds.some(id => !uuidPattern.test(id))) throw new JvgBackendError("Selecione um produto cadastrado em cada item.", 400);
     const uniqueIds = [...new Set(productIds)];
     const products = await dbRequest<Row[]>(
-      `/rest/v1/jvg_products?${scope(site)}&id=in.(${uniqueIds.join(",")})&active=eq.true&select=id,sku,name,ncm,cest,unit,origin,default_cfop,sale_price,tax_profile_id&limit=20`,
+      `/rest/v1/jvg_products?${scope(site)}&id=in.(${uniqueIds.join(",")})&active=eq.true&select=id,sku,name,ncm,cest,unit,origin,default_cfop,sale_price,tax_profile_id,default_csosn,default_pis_cst,default_cofins_cst&limit=20`,
     );
     const byId = new Map(products.map(product => [String(product.id), product]));
     if (productIds.some(id => !byId.has(id))) throw new JvgBackendError("Um produto não pertence a esta empresa ou está inativo. Atualize a seleção e tente novamente.", 400);
@@ -121,7 +130,8 @@ export async function POST(request: Request) {
       const entered = (key: string) => cleanText(input[key], key === "focusFields" ? 2000 : 20);
       const choose = (key: "csosn" | "pisCst" | "cofinsCst", fallback = "") => {
         if (manual.has(key)) return entered(key);
-        return entered(key) || cleanText(rule[key], 20) || fallback;
+        const productDefault = key === "csosn" ? product.default_csosn : key === "pisCst" ? product.default_pis_cst : product.default_cofins_cst;
+        return entered(key) || cleanText(productDefault, 20) || cleanText(rule[key], 20) || fallback;
       };
       const csosn = choose("csosn", canUseJvgDefault && ["5101", "5102", "6101", "6102"].includes(cfop) ? "102" : "");
       const pisCst = choose("pisCst");
@@ -144,12 +154,27 @@ export async function POST(request: Request) {
         csosn, pisCst, cofinsCst, focusFields: mergedFocusFields,
       };
     });
+    const payments: NfcePaymentInput[] = (Array.isArray(body.payments) ? body.payments : []).slice(0, 20).map(value => {
+      const payment = obj(value);
+      return {
+        method: cleanText(payment.method, 2),
+        indicatorPayment: cleanText(payment.indicatorPayment, 1),
+        amount: Number(payment.amount),
+        description: cleanText(payment.description, 60),
+        integrationType: cleanText(payment.integrationType, 1),
+        acquirerCnpj: cleanText(payment.acquirerCnpj, 24),
+        cardBrand: cleanText(payment.cardBrand, 2),
+        authorization: cleanText(payment.authorization, 128),
+      };
+    });
     const built = buildNfceHomologacaoPayload({
       company,
       items,
       cpf: cleanText(body.cpf, 20),
+      cnpj: cleanText(body.cnpj, 24),
       recipientName: cleanText(body.recipientName, 120),
-      paymentMethod: cleanText(body.paymentMethod, 2),
+      payments,
+      changeAmount: Number(body.changeAmount || 0),
       naturezaOperacao: cleanText(body.naturezaOperacao, 60),
       localDestino: cleanText(body.localDestino, 1),
       presencaComprador: cleanText(body.presencaComprador, 1),

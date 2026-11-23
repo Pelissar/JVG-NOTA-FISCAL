@@ -1,6 +1,7 @@
 import { isOfficialCfopCode } from "./cfop";
 import { filterFocusTaxFieldsForRule, inspectFocusTaxFields, reviewFocusTaxRule } from "./focus-tax-fields";
 import { isValidCpf } from "./cpf";
+import { validCnpj } from "../fiscal-company-profile";
 
 export type NfceItemInput = {
   sku: string;
@@ -22,19 +23,38 @@ export type NfceBuildInput = {
   company: Record<string, unknown>;
   items: NfceItemInput[];
   cpf: string;
+  cnpj: string;
   recipientName: string;
-  paymentMethod: string;
+  payments: NfcePaymentInput[];
+  changeAmount: number;
   naturezaOperacao: string;
   localDestino: string;
   presencaComprador: string;
 };
 
-const PAYMENTS = new Set(["01", "03", "04", "17", "99"]);
+export type NfcePaymentInput = {
+  method: string;
+  indicatorPayment: string;
+  amount: number;
+  description: string;
+  integrationType: string;
+  acquirerCnpj: string;
+  cardBrand: string;
+  authorization: string;
+};
+
+const PAYMENTS = new Set(["01", "02", "03", "04", "05", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "91", "99"]);
+const CARD_PAYMENTS = new Set(["03", "04", "17"]);
+const CARD_BRANDS = new Set(["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "99"]);
 const CSOSN = new Set(["101", "102", "103", "201", "202", "203", "300", "400", "500", "900"]);
 const ST_CSOSN = new Set(["201", "202", "203", "500"]);
 
 function digits(value: unknown): string {
   return typeof value === "string" ? value.replace(/\D/g, "") : "";
+}
+
+function cnpjValue(value: unknown): string {
+  return typeof value === "string" ? value.toUpperCase().replace(/[^A-Z0-9]/g, "") : "";
 }
 
 function text(value: unknown, max: number): string {
@@ -73,13 +93,17 @@ export function buildNfceHomologacaoPayload(input: NfceBuildInput): { payload: R
   if (!new Set(["1", "2"]).has(input.localDestino)) issues.push("Selecione se a operação é interna ou interestadual.");
   if (!new Set(["1", "4"]).has(input.presencaComprador)) issues.push("Selecione a presença do comprador conforme a operação.");
   const cpf = digits(input.cpf);
+  const recipientCnpj = cnpjValue(input.cnpj);
   if (cpf && !isValidCpf(cpf)) issues.push("CPF do consumidor inválido; confira os dígitos verificadores ou deixe o campo vazio.");
+  if (recipientCnpj && !validCnpj(recipientCnpj)) issues.push("CNPJ do consumidor inválido; confira os dígitos verificadores ou deixe o campo vazio.");
+  if (recipientCnpj && !/^\d{14}$/.test(recipientCnpj)) issues.push("O contrato atual do serviço fiscal documenta CNPJ do destinatário com 14 dígitos numéricos. Use o CNPJ numérico ou aguarde confirmação de suporte ao CNPJ alfanumérico.");
+  if (cpf && recipientCnpj) issues.push("Informe CPF ou CNPJ do consumidor, não os dois no mesmo cupom.");
   const recipientName = text(input.recipientName, 120);
-  if (recipientName && !cpf) issues.push("Para identificar um consumidor pelo nome, informe também o CPF. Se preferir, deixe os dois campos vazios.");
-  if (!PAYMENTS.has(input.paymentMethod)) issues.push("Selecione uma forma de pagamento válida.");
+  if (recipientName && !cpf && !recipientCnpj) issues.push("Para identificar o consumidor pelo nome, informe também o CPF ou CNPJ. Para venda sem identificação, deixe os campos vazios.");
   if (!text(place.street, 120) || !text(place.city, 60) || !/^[A-Z]{2}$/.test(text(place.state, 2).toUpperCase())) {
     issues.push("Complete o endereço fiscal da empresa antes de emitir a NFC-e.");
   }
+  if (!text(company.state_registration, 14)) issues.push("Inscrição estadual do emitente ausente. Corrija o cadastro fiscal da empresa antes de emitir o cupom.");
 
   let totalCents = 0;
   const items = input.items.map((item, index) => {
@@ -141,6 +165,66 @@ export function buildNfceHomologacaoPayload(input: NfceBuildInput): { payload: R
     return focusItem;
   });
 
+  const paymentRows = Array.isArray(input.payments) ? input.payments : [];
+  if (!paymentRows.length || paymentRows.length > 20) issues.push("Inclua de 1 a 20 formas de pagamento para o cupom.");
+  let paidCents = 0;
+  const paymentPayload = paymentRows.slice(0, 20).map((payment, index) => {
+    const label = `Pagamento ${index + 1}`;
+    const method = text(payment.method, 2);
+    if (!PAYMENTS.has(method)) issues.push(`${label}: selecione uma forma de pagamento válida.`);
+    const indicator = text(payment.indicatorPayment, 1);
+    if (!new Set(["0", "1"]).has(indicator)) issues.push(`${label}: selecione se o pagamento é à vista ou a prazo.`);
+    if (method === "91" && indicator !== "1") issues.push(`${label}: “Pagamento posterior” precisa ser informado como pagamento a prazo.`);
+    const amountCents = Math.round(Number(payment.amount) * 100);
+    if (!Number.isSafeInteger(amountCents) || amountCents < 0) {
+      issues.push(`${label}: informe um valor válido, sem centavos fracionados.`);
+    } else if (method === "91") {
+      if (amountCents !== 0) issues.push(`${label}: “Pagamento posterior” deve ser enviado com valor R$ 0,00; ele indica que o total ficará pendente.`);
+    } else if (amountCents <= 0) {
+      issues.push(`${label}: informe um valor maior que zero.`);
+    } else {
+      paidCents += amountCents;
+    }
+    const row: Record<string, unknown> = {
+      indicador_pagamento: indicator,
+      forma_pagamento: method,
+      valor_pagamento: money(Math.max(amountCents, 0)),
+    };
+    const description = text(payment.description, 60);
+    if (method === "99") {
+      if (description.length < 2) issues.push(`${label}: descreva a forma de pagamento escolhida em “Outros”.`);
+      else row.descricao_pagamento = description;
+    }
+    if (CARD_PAYMENTS.has(method)) {
+      const integrationType = text(payment.integrationType, 1);
+      if (!new Set(["1", "2"]).has(integrationType)) issues.push(`${label}: informe se o cartão é integrado ao sistema ou usado em POS.`);
+      else row.tipo_integracao = integrationType;
+      const acquirerCnpj = cnpjValue(payment.acquirerCnpj);
+      const authorization = text(payment.authorization, 128);
+      const cardBrand = text(payment.cardBrand, 2);
+      if (integrationType === "1") {
+        if (!/^\d{14}$/.test(acquirerCnpj) || !validCnpj(acquirerCnpj)) issues.push(`${label}: para pagamento integrado, informe o CNPJ numérico válido da credenciadora ou instituição de pagamento.`);
+        else row.cnpj_credenciadora = acquirerCnpj;
+        if (!authorization) issues.push(`${label}: para pagamento integrado, informe o código de autorização da transação.`);
+      }
+      if (cardBrand && !CARD_BRANDS.has(cardBrand)) issues.push(`${label}: selecione um código de bandeira válido.`);
+      if (cardBrand) row.bandeira_operadora = cardBrand;
+      if (authorization) row.numero_autorizacao = authorization;
+    }
+    return row;
+  });
+  const changeCents = Math.round(Number(input.changeAmount || 0) * 100);
+  if (!Number.isSafeInteger(changeCents) || changeCents < 0) issues.push("Informe um valor de troco válido.");
+  if (changeCents > 0 && !paymentRows.some(payment => payment.method === "01")) {
+    issues.push("Informe troco somente quando houver pagamento em dinheiro.");
+  }
+  const hasPaymentLater = paymentRows.some(payment => payment.method === "91");
+  if (hasPaymentLater ? paidCents - Math.max(changeCents, 0) > totalCents : paidCents - Math.max(changeCents, 0) !== totalCents) {
+    issues.push(hasPaymentLater
+      ? "Pagamentos já recebidos, descontado o troco, não podem superar o total dos itens quando parte ficou para pagamento posterior."
+      : "A soma dos pagamentos, descontado o troco, precisa ser igual ao total dos itens.");
+  }
+
   const payload: Record<string, unknown> = {
     natureza_operacao: natureza,
     data_emissao: brazilNow(),
@@ -162,11 +246,11 @@ export function buildNfceHomologacaoPayload(input: NfceBuildInput): { payload: R
     cep_emitente: digits(place.postalCode),
     indicador_inscricao_estadual_destinatario: "9",
     items,
-    formas_pagamento: [{ forma_pagamento: input.paymentMethod, valor_pagamento: money(Math.max(totalCents, 0)) }],
+    formas_pagamento: paymentPayload,
   };
-  if (/^\d{11}$/.test(cpf)) {
-    payload.cpf_destinatario = cpf;
-    if (recipientName) payload.nome_destinatario = recipientName;
-  }
+  if (/^\d{11}$/.test(cpf)) payload.cpf_destinatario = cpf;
+  if (/^[A-Z0-9]{14}$/.test(recipientCnpj)) payload.cnpj_destinatario = recipientCnpj;
+  if (recipientName && (cpf || recipientCnpj)) payload.nome_destinatario = recipientName;
+  if (changeCents > 0) payload.valor_troco = money(changeCents);
   return { payload, issues: [...new Set(issues)], totalCents };
 }

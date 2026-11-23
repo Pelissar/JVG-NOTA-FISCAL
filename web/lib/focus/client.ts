@@ -185,6 +185,60 @@ export async function queryFocusNfceHomologacao(
   return { httpStatus: response.status, body };
 }
 
+/** Cancela uma NFC-e autorizada somente no ambiente fixo de homologação. */
+export async function cancelFocusNfceHomologacao(
+  token: string,
+  reference: string,
+  justificativa: string,
+): Promise<FocusNfeApiResult> {
+  if (!focusReferencePattern.test(reference)) throw new Error("Referência fiscal inválida.");
+  const normalizedReason = justificativa.trim().replace(/\s+/g, " ");
+  if (normalizedReason.length < 15 || normalizedReason.length > 255) {
+    throw new Error("A justificativa precisa ter entre 15 e 255 caracteres.");
+  }
+  const response = await fetch(`${FOCUS_HOMOLOGACAO}/v2/nfce/${encodeURIComponent(reference)}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: focusAuthorization(token),
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ justificativa: normalizedReason }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(15000),
+  });
+  const raw = await response.text();
+  let body: Record<string, unknown> = {};
+  try {
+    const parsed: unknown = raw ? JSON.parse(raw) : {};
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) body = parsed as Record<string, unknown>;
+  } catch { /* Não expor resposta HTML ou texto arbitrário do provedor. */ }
+  if (!response.ok) throw new FocusNfeApiError(response.status, body);
+  return { httpStatus: response.status, body };
+}
+
+/** Baixa um arquivo de NFC-e de homologação sem expor o token ao navegador. */
+export async function downloadFocusNfceHomologacao(
+  token: string,
+  path: string,
+): Promise<Response> {
+  let url: URL;
+  try {
+    url = new URL(path, `${FOCUS_HOMOLOGACAO}/`);
+  } catch {
+    throw new Error("Caminho do documento fiscal inválido.");
+  }
+  if (url.protocol !== "https:" || url.hostname !== "homologacao.focusnfe.com.br" || url.username || url.password) {
+    throw new Error("O documento não pertence ao ambiente de homologação.");
+  }
+  return fetch(url, {
+    method: "GET",
+    headers: { Authorization: focusAuthorization(token), Accept: "application/xml, application/pdf, text/html, */*" },
+    cache: "no-store",
+    signal: AbortSignal.timeout(20000),
+  });
+}
+
 /**
  * Verifica um token de homologacao sem emitir ou alterar documentos fiscais.
  * Segundo a Focus, GET /v2/nfe/{ref} retorna 401 sem autenticacao e 404 se

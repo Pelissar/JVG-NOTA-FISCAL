@@ -7,7 +7,7 @@ import { homologationToken, licenseView } from "../../../../../lib/licensing";
 export const dynamic = "force-dynamic";
 type Row = Record<string, unknown>;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const safeFields = ["status", "status_sefaz", "mensagem_sefaz", "ref", "chave_nfe", "numero", "serie", "protocolo", "numero_protocolo", "codigo_status", "erro", "mensagem", "caminho_xml_nota_fiscal", "caminho_danfe", "eventos"];
+const safeFields = ["status", "status_sefaz", "mensagem_sefaz", "ref", "chave_nfe", "numero", "serie", "protocolo", "numero_protocolo", "codigo_status", "erro", "mensagem", "caminho_xml_nota_fiscal", "caminho_danfe", "caminho_xml_cancelamento", "eventos"];
 function obj(value: unknown): Row { return value && typeof value === "object" && !Array.isArray(value) ? value as Row : {}; }
 function text(value: unknown, max = 2000): string { return typeof value === "string" || typeof value === "number" ? String(value).trim().slice(0, max) : ""; }
 function safeEvents(value: unknown): Array<string | Row> {
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     const siteToken = focusRuntimeEnv("JVG_FOCUS_HOMOLOGACAO_TOKEN") || focusRuntimeEnv("FOCUS_NFE_HOMOLOGACAO_TOKEN");
     const token = await homologationToken(account, siteToken);
     const scoped = scope(account);
-    const documents = await dbRequest<Row[]>("/rest/v1/jvg_fiscal_documents?" + scoped + "&id=" + filterEq(id) + "&document_type=eq.nfce&environment=eq.homologacao&select=id,status,focus_reference&limit=1");
+    const documents = await dbRequest<Row[]>("/rest/v1/jvg_fiscal_documents?" + scoped + "&id=" + filterEq(id) + "&document_type=eq.nfce&environment=eq.homologacao&select=id,status,focus_reference,authorized_at&limit=1");
     const document = documents[0];
     if (!document) throw new JvgBackendError("NFC-e não encontrada nesta empresa e em homologação.", 404);
     const reference = text(document.focus_reference, 50);
@@ -81,8 +81,8 @@ export async function POST(request: Request) {
       const provider = error instanceof FocusNfeApiError ? safeResponse(error.body) : {};
       try { await logEvent(account, id, "error", "consultation_error", { ...provider, httpStatus: error instanceof FocusNfeApiError ? error.httpStatus : undefined, ref: reference }); } catch { /* Mantém a falha observável para quem consultou. */ }
       if (error instanceof FocusNfeApiError && error.httpStatus === 404)
-        throw new JvgBackendError("A Focus não encontrou esta referência. O documento continua no histórico para conferência.", 404);
-      throw new JvgBackendError("Não foi possível consultar o retorno da Focus. O status local foi preservado; tente novamente.", 502);
+        throw new JvgBackendError("O serviço fiscal não encontrou esta referência. O documento continua no histórico para conferência.", 404);
+      throw new JvgBackendError("Não foi possível consultar o retorno do serviço fiscal. O status local foi preservado; tente novamente.", 502);
     }
     const provider = safeResponse(result.body);
     const next = statusFromFocus(result.body.status);
@@ -101,14 +101,14 @@ export async function POST(request: Request) {
     const pdf = text(result.body.caminho_danfe, 2000);
     if (xml) values.xml_storage_path = xml;
     if (pdf) values.pdf_storage_path = pdf;
-    if (next === "authorized") values.authorized_at = new Date().toISOString();
+    if (next === "authorized" && !document.authorized_at) values.authorized_at = new Date().toISOString();
     await dbRequest("/rest/v1/jvg_fiscal_documents?" + scoped + "&id=" + filterEq(id) + "&document_type=eq.nfce&environment=eq.homologacao", {
       method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(values),
     });
     const eventType = next === "authorized" ? "authorization" : next === "cancelled" ? "cancellation" : next === "rejected" || next === "denied" ? "error" : "status_update";
     let logWarning = "";
     try { await logEvent(account, id, eventType, next, provider); } catch { logWarning = " O status foi atualizado, mas o evento fiscal não pôde ser gravado."; }
-    const message = text(result.body.mensagem_sefaz || result.body.mensagem, 500) || "Consulta concluída: " + (next === "processing" ? "a Focus ainda está processando a NFC-e." : labelsFor(next)) + ".";
+    const message = text(result.body.mensagem_sefaz || result.body.mensagem, 500) || "Consulta concluída: " + (next === "processing" ? "o serviço fiscal ainda está processando a NFC-e." : labelsFor(next)) + ".";
     return apiJson({ ok: true, status: next, message: message + logWarning });
   } catch (error) { return safeError(error); }
 }
