@@ -9,10 +9,10 @@
   <link rel="stylesheet" href="/erp/styles.css">
   <link rel="stylesheet" href="/erp/unified-pages.css">
   <link rel="stylesheet" href="/erp/erp-design-v2.css">
-  <link rel="stylesheet" href="/erp/nfce-workspace.css?v=20261123-cupom-intermediador">
+  <link rel="stylesheet" href="/erp/nfce-workspace.css?v=20261123-item-fiscal-ux">
   <script src="/erp/theme-switch.js"></script>
   <script defer src="/erp/erp-page-nav.js?v=20261117-navigation-2"></script>
-  <script defer src="/erp/nfce.js?v=20261123-cupom-intermediador"></script>
+  <script defer src="/erp/nfce.js?v=20261123-item-fiscal-ux"></script>
   <link rel="stylesheet" href="/erp/site-refresh.css?v=20261119-dashboard-consumption">
 </head>
 <body>
@@ -33,7 +33,7 @@
       <div class="nfce-main-column">
         <section class="panel nfce-compose-panel" aria-labelledby="nfceFormTitle">
           <div class="nfce-card-heading">
-            <div><span class="section-kicker">NOVA NFC-e</span><h2 id="nfceFormTitle">Dados da venda</h2><p>Preencha a operação, o consumidor, os itens e as formas de pagamento. Os dados fiscais do produto e do perfil são sugestões editáveis.</p></div>
+            <div><span class="section-kicker">NOVA NFC-e</span><h2 id="nfceFormTitle">Dados da venda</h2><p>Informe a operação, o consumidor, os itens e os pagamentos. Os dados fiscais cadastrados no produto são aplicados primeiro; ajustes do item ficam restritos a esta venda.</p></div>
           </div>
           <form id="nfceForm" class="nfce-form">
             <fieldset>
@@ -82,7 +82,7 @@
             <fieldset>
               <legend>Item da NFC-e</legend>
               <div id="nfceItems" class="nfce-items" aria-live="polite"></div>
-              <div class="nfce-item-toolbar"><p id="nfceTaxHint" class="nfce-help">Dados fiscais do produto e do perfil são sugestões. O que você ajustar aqui será enviado para este item.</p><button id="nfceAddItem" class="button-secondary" type="button">+ Adicionar item</button></div>
+              <div class="nfce-item-toolbar"><p id="nfceTaxHint" class="nfce-help">O cadastro fiscal do produto preenche os itens. Abra os ajustes do item somente para corrigir uma exceção nesta venda.</p><button id="nfceAddItem" class="button-secondary" type="button">+ Adicionar item</button></div>
             </fieldset>
             <fieldset>
               <legend>Consumidor e pagamento</legend>
@@ -112,7 +112,7 @@
       </div>
 
       <aside class="nfce-side-column">
-        <section class="panel nfce-review-card"><span class="section-kicker">CONFERÊNCIA</span><h2>Antes de enviar</h2><ul><li>Confira CFOP, CSOSN, CEST e NCM de cada produto.</li><li>Confirme CST de PIS/Cofins e valores condicionais para a operação.</li><li>Os códigos fiscais precisam refletir a orientação contábil da empresa.</li></ul><p>Perfis fiscais são opcionais. Os dados ajustados no item prevalecem sobre as sugestões.</p></section>
+        <section class="panel nfce-review-card"><span class="section-kicker">CONFERÊNCIA</span><h2>Antes de enviar</h2><ul><li>Confira os dados fiscais usados em cada item; o cadastro do produto é a fonte principal.</li><li>Abra os ajustes do item apenas para registrar uma exceção desta venda.</li><li>Valores numéricos de tributos são solicitados somente quando a regra fiscal aplicável exigir.</li></ul><p>Se faltar um dado obrigatório, a conferência indicará o item, o campo e onde corrigi-lo. Perfis fiscais continuam opcionais.</p></section>
         <section class="panel nfce-preview-card"><span class="section-kicker">DOCUMENTO ATUAL</span><h2>Resumo</h2><dl><div><dt>Ambiente</dt><dd>Homologação</dd></div><div><dt>Valor total</dt><dd id="nfceTotal">R$ 0,00</dd></div><div><dt>Referência</dt><dd id="nfceReference">Ainda não preparado</dd></div></dl><div id="nfceIssues" class="nfce-issues" hidden></div></section>
       </aside>
     </section>

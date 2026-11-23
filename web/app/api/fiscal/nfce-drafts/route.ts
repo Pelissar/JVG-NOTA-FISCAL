@@ -122,22 +122,26 @@ export async function POST(request: Request) {
     const rawNfeItems = rawItems.map(obj);
     const items: NfceItemInput[] = rawNfeItems.map((input, index) => {
       const product = byId.get(productIds[index])!;
-      const cfop = cleanText(input.cfop, 4) || cleanText(product.default_cfop, 4);
-      const operation = operationForCfop(cfop);
-      const rule = profileRule(byProfile.get(String(product.tax_profile_id || "")), operation);
       const manual = new Set(Array.isArray(input.manualTaxFields)
         ? input.manualTaxFields.filter((field): field is string => typeof field === "string") : []);
       const entered = (key: string) => cleanText(input[key], key === "focusFields" ? 2000 : 20);
+      const cfop = manual.has("cfop")
+        ? entered("cfop")
+        : entered("cfop") || cleanText(product.default_cfop, 4);
+      const operation = operationForCfop(cfop);
+      const rule = profileRule(byProfile.get(String(product.tax_profile_id || "")), operation);
       const choose = (key: "csosn" | "pisCst" | "cofinsCst", fallback = "") => {
         if (manual.has(key)) return entered(key);
         const productDefault = key === "csosn" ? product.default_csosn : key === "pisCst" ? product.default_pis_cst : product.default_cofins_cst;
-        return entered(key) || cleanText(productDefault, 20) || cleanText(rule[key], 20) || fallback;
+        return cleanText(productDefault, 20) || cleanText(rule[key], 20) || fallback;
       };
       const csosn = choose("csosn", canUseJvgDefault && ["5101", "5102"].includes(cfop) ? "102" : "");
       const pisCst = choose("pisCst");
       const cofinsCst = choose("cofinsCst");
       const productCest = cleanText(product.cest, 20).replace(/\D/g, "");
       const enteredCest = cleanText(input.cest, 20).replace(/\D/g, "");
+      const itemField = (key: "ncm" | "cest" | "origin", productValue: unknown) =>
+        manual.has(key) ? entered(key) : cleanText(productValue, 20);
       const focusFields = obj(input.focusFields);
       const profileFocusFields = obj(rule.focusFields);
       const mergedFocusFields: Row = { ...profileFocusFields, ...focusFields };
@@ -148,8 +152,8 @@ export async function POST(request: Request) {
       }
       return {
         sku: cleanText(product.sku, 60), name: cleanText(product.name, 120),
-        ncm: cleanText(input.ncm, 20) || cleanText(product.ncm, 20), cest: enteredCest || productCest,
-        cfop, unit: cleanText(product.unit, 6), origin: cleanText(input.origin, 3) || cleanText(product.origin, 3),
+        ncm: itemField("ncm", product.ncm), cest: manual.has("cest") ? enteredCest : productCest,
+        cfop, unit: cleanText(product.unit, 6), origin: itemField("origin", product.origin),
         quantity: Number(input.quantity), unitPrice: Number(input.unitPrice ?? product.sale_price),
         csosn, pisCst, cofinsCst, focusFields: mergedFocusFields,
       };

@@ -171,21 +171,21 @@ export function buildNfceHomologacaoPayload(input: NfceBuildInput): { payload: R
     if (!Number.isSafeInteger(lineCents) || lineCents <= 0) issues.push(`${label}: total inválido.`);
     else totalCents += lineCents;
     const ncm = digits(item.ncm);
-    if (!/^\d{8}$/.test(ncm)) issues.push(`${label}: NCM de 8 dígitos ausente; corrija o cadastro do produto ou este item.`);
+    if (!/^\d{8}$/.test(ncm)) issues.push(`${label}: campo NCM obrigatório (8 dígitos) ausente. Preencha em Cadastros > Produtos > Dados fiscais ou abra “Ajustes fiscais deste item” para uma exceção desta venda.`);
     const cfop = digits(item.cfop);
     if (!/^5\d{3}$/.test(cfop) || !isOfficialCfopCode(cfop)) issues.push(`${label}: NFC-e exige CFOP oficial de saída iniciado por 5 para operação dentro do estado. Para venda interestadual, use NF-e.`);
     if (!text(item.name, 120)) issues.push(`${label}: descrição ausente.`);
     if (!text(item.unit, 6)) issues.push(`${label}: unidade comercial ausente.`);
     const origin = digits(item.origin);
-    if (!/^[0-8]$/.test(origin)) issues.push(`${label}: origem da mercadoria precisa ser informada no cadastro do produto.`);
+    if (!/^[0-8]$/.test(origin)) issues.push(`${label}: campo Origem da mercadoria obrigatório. Informe o código aplicável em Cadastros > Produtos > Dados fiscais ou ajuste este item conforme a orientação fiscal.`);
     const csosn = text(item.csosn, 3);
     const pisCst = text(item.pisCst, 2);
     const cofinsCst = text(item.cofinsCst, 2);
     const cest = digits(item.cest);
-    if (!CSOSN.has(csosn)) issues.push(`${label}: informe o CSOSN orientado para este produto e operação.`);
-    if (ST_CSOSN.has(csosn) && !/^\d{7}$/.test(cest)) issues.push(`${label}: CSOSN ${csosn} exige CEST de 7 dígitos; informe o CEST aplicável ao produto.`);
-    if (!/^\d{2}$/.test(pisCst)) issues.push(`${label}: CST do PIS não configurado para esta operação.`);
-    if (!/^\d{2}$/.test(cofinsCst)) issues.push(`${label}: CST da Cofins não configurado para esta operação.`);
+    if (!CSOSN.has(csosn)) issues.push(`${label}: campo CSOSN inválido ou ausente. Cadastre o padrão do produto em Dados fiscais ou abra “Ajustes fiscais deste item” e informe o código orientado para esta operação.`);
+    if (ST_CSOSN.has(csosn) && !/^\d{7}$/.test(cest)) issues.push(`${label}: campo CEST obrigatório para o CSOSN ${csosn}. Cadastre o CEST aplicável em Cadastros > Produtos > Dados fiscais ou informe a exceção neste item.`);
+    if (!/^\d{2}$/.test(pisCst)) issues.push(`${label}: campo CST do PIS ausente ou inválido. Cadastre o padrão do produto em Dados fiscais ou informe uma exceção neste item, conforme a orientação contábil.`);
+    if (!/^\d{2}$/.test(cofinsCst)) issues.push(`${label}: campo CST da Cofins ausente ou inválido. Cadastre o padrão do produto em Dados fiscais ou informe uma exceção neste item, conforme a orientação contábil.`);
 
     const inspected = inspectFocusTaxFields(item.focusFields);
     if (inspected.invalid.length) issues.push(`${label}: corrija os campos tributários numéricos inválidos (${inspected.invalid.join(", ")}).`);

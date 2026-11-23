@@ -213,6 +213,67 @@
     if (input) input.value = value == null ? '' : String(value);
   }
 
+  function updateTaxSummary(item) {
+    const summary = item.querySelector('.nfce-item-tax-summary');
+    const product = state.products.find(row => row.id === item.querySelector('[data-field="product"]').value);
+    if (!summary || !product) {
+      if (summary) { summary.hidden = true; summary.replaceChildren(); }
+      return;
+    }
+    const get = name => item.querySelector('[data-field="' + name + '"]')?.value?.trim() || '';
+    const cfop = get('cfop'), ncm = get('ncm'), origin = get('origin');
+    const csosn = get('csosn'), pis = get('pisCst'), cofins = get('cofinsCst'), cest = get('cest');
+    const requiresCest = ['201', '202', '203', '500'].includes(csosn);
+    const originNames = ['Nacional', 'Estrangeira · importação direta', 'Estrangeira · mercado interno', 'Nacional · conteúdo importado acima de 40%', 'Nacional · processo produtivo básico', 'Nacional · conteúdo importado até 40%', 'Estrangeira · sem similar nacional', 'Estrangeira · mercado interno sem similar nacional', 'Nacional · conteúdo importado acima de 70%'];
+    const missing = [];
+    if (!/^\d{4}$/.test(cfop)) missing.push('CFOP');
+    if (!/^\d{8}$/.test(ncm)) missing.push('NCM');
+    if (!/^[0-8]$/.test(origin)) missing.push('origem da mercadoria');
+    if (!csosnOptions.some(([code]) => code === csosn)) missing.push('CSOSN');
+    if (requiresCest && !/^\d{7}$/.test(cest)) missing.push('CEST exigido pelo CSOSN ' + csosn);
+    if (!cstOptions.some(([code]) => code === pis)) missing.push('CST do PIS');
+    if (!cstOptions.some(([code]) => code === cofins)) missing.push('CST da Cofins');
+    const chips = [
+      ['CFOP', cfop, !/^\d{4}$/.test(cfop)],
+      ['NCM', ncm, !/^\d{8}$/.test(ncm)],
+      ['Origem', origin ? origin + ' · ' + (originNames[Number(origin)] || 'código informado') : '', !/^[0-8]$/.test(origin)],
+      ['CSOSN', csosn, !csosnOptions.some(([code]) => code === csosn)],
+      ['PIS CST', pis, !cstOptions.some(([code]) => code === pis)],
+      ['Cofins CST', cofins, !cstOptions.some(([code]) => code === cofins)],
+      ['CEST', cest || 'não informado', requiresCest && !/^\d{7}$/.test(cest)],
+    ];
+    let message = '<p class="nfce-tax-summary-ready">Padrões carregados. Confira se correspondem à operação e ao produto.</p>';
+    if (missing.length) {
+      const productMissing = missing.filter(name => name !== 'CFOP');
+      message = '<div class="nfce-tax-summary-alert" role="status"><strong>Faltam dados para conferir:</strong><span>' +
+        safe(missing.join(', ')) + (productMissing.length ? '. Configure os dados do produto em Cadastros &gt; Produtos ou ajuste uma exceção neste item, conforme orientação contábil.' : '. Informe o CFOP de saída para esta operação.') +
+        '</span>' + (productMissing.length ? '<a href="/erp/index.html#products" target="_blank" rel="noopener">Abrir cadastro de produtos</a>' : '') + '</div>';
+    }
+    summary.innerHTML = '<div class="nfce-tax-summary-heading"><strong>Dados fiscais usados neste item</strong><span>produto primeiro; sugestão compatível quando cadastrada</span></div>' +
+      '<div class="nfce-tax-badges">' + chips.map(([label, value, isMissing]) =>
+        '<span class="nfce-tax-badge' + (isMissing ? ' is-missing' : '') + '"><strong>' + safe(label) + '</strong> ' + safe(value || 'pendente') + '</span>'
+      ).join('') + '</div>' + message;
+    summary.hidden = false;
+  }
+
+  function refreshOperationSuggestion(item) {
+    const product = state.products.find(row => row.id === item.querySelector('[data-field="product"]').value);
+    const field = item.querySelector('[data-field="csosn"]');
+    if (!product || !field || field.dataset.manual === 'true') return;
+    const rule = profileRule(product);
+    const configured = product.defaultCsosn || rule.csosn || '';
+    if (configured) {
+      field.value = configured;
+      field.dataset.source = product.defaultCsosn ? 'product' : 'profile';
+    } else if (jvgSuggestion(item.querySelector('[data-field="cfop"]').value)) {
+      field.value = '102';
+      field.dataset.source = 'jvg';
+    } else if (field.dataset.source === 'jvg') {
+      field.value = '';
+      delete field.dataset.source;
+    }
+  }
+
   function applyProduct(item, keepManual = false) {
     const product = state.products.find(row => row.id === item.querySelector('[data-field="product"]').value);
     if (!product) return;
@@ -223,25 +284,40 @@
       const suggested = String(fromProfile || product.defaultCfop || '').replace(/\D/g, '').slice(0, 4);
       cfopInput.value = suggested;
       cfopInput.dataset.source = suggested ? (fromProfile ? 'profile' : 'product') : '';
+      if (!keepManual) delete cfopInput.dataset.manual;
     }
     if (!keepManual) {
       setField(item, 'ncm', product.ncm || '');
       setField(item, 'origin', product.origin || '');
       setField(item, 'cest', product.cest || '');
       setField(item, 'price', product.price ?? '');
+      ['ncm', 'origin', 'cest'].forEach(name => {
+        const field = item.querySelector('[data-field="' + name + '"]');
+        if (field) delete field.dataset.manual;
+      });
     }
     const defaults = {
       csosn: product.defaultCsosn || rule.csosn || (jvgSuggestion(cfopInput.value) ? '102' : ''),
       pisCst: product.defaultPisCst || rule.pisCst || '',
       cofinsCst: product.defaultCofinsCst || rule.cofinsCst || '',
     };
+    const sources = {
+      csosn: product.defaultCsosn ? 'product' : rule.csosn ? 'profile' : defaults.csosn ? 'jvg' : '',
+      pisCst: product.defaultPisCst ? 'product' : rule.pisCst ? 'profile' : '',
+      cofinsCst: product.defaultCofinsCst ? 'product' : rule.cofinsCst ? 'profile' : '',
+    };
     for (const [name, value] of Object.entries(defaults)) {
       const field = item.querySelector('[data-field="' + name + '"]');
-      if (field && (!keepManual || field.dataset.manual !== 'true')) field.value = value;
+      if (field && (!keepManual || field.dataset.manual !== 'true')) {
+        field.value = value;
+        field.dataset.source = sources[name];
+        if (!keepManual) delete field.dataset.manual;
+      }
     }
     const facts = [product.ncm ? 'NCM ' + product.ncm : 'NCM pendente', product.origin !== '' ? 'Origem ' + product.origin : 'Origem pendente', product.cest ? 'CEST ' + product.cest : 'CEST não cadastrado'];
     item.querySelector('.nfce-product-facts').textContent = facts.join(' · ');
     renderAdvanced(item, true);
+    updateTaxSummary(item);
     updateTotal();
   }
 
@@ -255,13 +331,15 @@
       '<div class="nfce-form-grid nfce-item-grid"><label class="nfce-product-field">Produto <span class="required">*</span><select data-field="product" required><option value="">Selecione um produto ativo</option>' + state.products.map(p => '<option value="' + safe(p.id) + '">' + safe(p.sku ? p.sku + ' · ' : '') + safe(p.name) + '</option>').join('') + '</select></label>' +
       '<label>Quantidade <span class="required">*</span><input data-field="quantity" type="number" min="0.001" max="9999" step="0.001" value="1" required></label>' +
       '<label>Preço unitário (R$) <span class="required">*</span><input data-field="price" type="number" min="0.01" step="0.01" required></label>' +
-      '<label>CFOP do item <span class="required">*</span><input data-field="cfop" inputmode="numeric" minlength="4" maxlength="4" pattern="[0-9]{4}" placeholder="4 dígitos" required><small>Sugestão editável, conforme a operação</small></label>' +
-      '<label>NCM <span class="required">*</span><input data-field="ncm" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" required></label>' +
+      '<label>CFOP do item <span class="required">*</span><input data-field="cfop" inputmode="numeric" maxlength="4" placeholder="4 dígitos" aria-required="true"><small>Sugestão editável; a conferência informa se falta ou não é compatível com a NFC-e.</small></label>' +
+      '</div><div class="nfce-item-tax-summary" hidden></div>' +
+      '<details class="nfce-item-tax-config"><summary>Ajustes fiscais deste item <span>exceções ao cadastro do produto</span></summary><p class="nfce-help">Os campos começam com os dados cadastrados no produto ou com sugestões fiscais disponíveis. Altere somente quando a operação exigir; esta mudança vale apenas para este item.</p>' +
+      '<div class="nfce-form-grid nfce-item-tax-grid"><label>NCM <span class="optional">padrão do produto</span><input data-field="ncm" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" placeholder="8 dígitos"></label>' +
       '<label>CEST <span class="optional">quando aplicável</span><input data-field="cest" inputmode="numeric" maxlength="7" placeholder="7 dígitos"></label>' +
-      '<label>Origem da mercadoria <span class="required">*</span><select data-field="origin" required><option value="">Selecione</option>' + Array.from({ length: 9 }, (_, i) => '<option value="' + i + '">' + i + ' · ' + safe(['Nacional', 'Estrangeira · importação direta', 'Estrangeira · adquirida no mercado interno', 'Nacional · conteúdo de importação superior a 40%', 'Nacional · processos produtivos básicos', 'Nacional · conteúdo de importação inferior ou igual a 40%', 'Estrangeira · importação direta sem similar nacional', 'Estrangeira · mercado interno sem similar nacional', 'Nacional · conteúdo de importação superior a 70%'][i]) + '</option>').join('') + '</select></label>' +
-      '<label>CSOSN <span class="required">*</span><select data-field="csosn" required>' + selectOptions(csosnOptions, 'Selecione conforme a operação') + '</select></label>' +
-      '<label>CST do PIS <span class="required">*</span><select data-field="pisCst" required>' + selectOptions(cstOptions, 'Selecione a regra da operação') + '</select></label>' +
-      '<label>CST da Cofins <span class="required">*</span><select data-field="cofinsCst" required>' + selectOptions(cstOptions, 'Selecione a regra da operação') + '</select></label></div>' +
+      '<label>Origem da mercadoria <span class="optional">padrão do produto</span><select data-field="origin"><option value="">Selecione</option>' + Array.from({ length: 9 }, (_, i) => '<option value="' + i + '">' + i + ' · ' + safe(['Nacional', 'Estrangeira · importação direta', 'Estrangeira · adquirida no mercado interno', 'Nacional · conteúdo de importação superior a 40%', 'Nacional · processos produtivos básicos', 'Nacional · conteúdo de importação inferior ou igual a 40%', 'Estrangeira · importação direta sem similar nacional', 'Estrangeira · mercado interno sem similar nacional', 'Nacional · conteúdo de importação superior a 70%'][i]) + '</option>').join('') + '</select></label>' +
+      '<label>CSOSN <span class="optional">padrão do produto</span><select data-field="csosn">' + selectOptions(csosnOptions, 'Selecione conforme a orientação fiscal') + '</select></label>' +
+      '<label>CST do PIS <span class="optional">padrão do produto</span><select data-field="pisCst">' + selectOptions(cstOptions, 'Selecione conforme a orientação fiscal') + '</select></label>' +
+      '<label>CST da Cofins <span class="optional">padrão do produto</span><select data-field="cofinsCst">' + selectOptions(cstOptions, 'Selecione conforme a orientação fiscal') + '</select></label></div></details>' +
       '<details class="nfce-advanced"><summary>Valores fiscais condicionais <span>Preencha somente se exigidos para este CST/CSOSN</span></summary><div class="nfce-tax-fields"></div></details>';
     const product = item.querySelector('[data-field="product"]');
     product.addEventListener('change', () => {
@@ -269,13 +347,28 @@
       item.querySelector('.nfce-line-title').textContent = found?.name || 'Selecione um produto';
       applyProduct(item);
     });
-    item.querySelector('[data-field="cfop"]').addEventListener('input', event => { event.currentTarget.dataset.manual = 'true'; renderAdvanced(item); });
+    item.querySelector('[data-field="cfop"]').addEventListener('input', event => {
+      event.currentTarget.dataset.manual = 'true';
+      refreshOperationSuggestion(item);
+      renderAdvanced(item);
+      updateTaxSummary(item);
+    });
     ['csosn', 'pisCst', 'cofinsCst'].forEach(name => item.querySelector('[data-field="' + name + '"]').addEventListener('change', event => {
-      event.currentTarget.dataset.manual = 'true'; renderAdvanced(item);
+      event.currentTarget.dataset.manual = 'true';
+      event.currentTarget.dataset.source = 'manual';
+      renderAdvanced(item);
+      updateTaxSummary(item);
     }));
+    ['ncm', 'cest'].forEach(name => item.querySelector('[data-field="' + name + '"]').addEventListener('input', event => {
+      event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, name === 'ncm' ? 8 : 7);
+      event.currentTarget.dataset.manual = 'true';
+      updateTaxSummary(item);
+    }));
+    item.querySelector('[data-field="origin"]').addEventListener('change', event => {
+      event.currentTarget.dataset.manual = 'true';
+      updateTaxSummary(item);
+    });
     ['quantity', 'price'].forEach(name => item.querySelector('[data-field="' + name + '"]').addEventListener('input', updateTotal));
-    item.querySelector('[data-field="cest"]').addEventListener('input', event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 7); });
-    item.querySelector('[data-field="ncm"]').addEventListener('input', event => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, '').slice(0, 8); });
     item.querySelector('.nfce-remove-item').addEventListener('click', () => { item.remove(); updateTotal(); });
     $('nfceItems').append(item);
     if (state.products.length === 1) { product.value = state.products[0].id; product.dispatchEvent(new Event('change')); }
@@ -349,7 +442,7 @@
     const values = {};
     row.querySelectorAll('[data-tax]').forEach(input => { if (input.value.trim() !== '') values[input.dataset.tax] = Number(input.value); });
     const manualFocus = [...row.querySelectorAll('[data-tax]')].filter(input => input.dataset.manual === 'true').map(input => input.dataset.tax);
-    const manualTaxFields = ['csosn', 'pisCst', 'cofinsCst'].filter(name => row.querySelector('[data-field="' + name + '"]')?.dataset.manual === 'true');
+    const manualTaxFields = ['cfop', 'ncm', 'cest', 'origin', 'csosn', 'pisCst', 'cofinsCst'].filter(name => row.querySelector('[data-field="' + name + '"]')?.dataset.manual === 'true');
     return {
       productId: row.querySelector('[data-field="product"]').value,
       quantity: Number(row.querySelector('[data-field="quantity"]').value),
