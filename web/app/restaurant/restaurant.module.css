@@ -161,7 +161,7 @@
 .qrSuccess h2 { font-size: 24px; }
 .qrError { padding: 12px; border: 1px solid #f1b5bd; border-radius: 10px; color: #9d2434; background: #fff2f4; }
 
-.page, .qrPage { width: 100%; max-width: 100%; min-width: 0; overflow-x: clip; }
+.page, .qrPage { box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow-x: clip; }
 .tabs, .kitchenGrid { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
 .tabs { scrollbar-width: thin; }
 .kitchenGrid { min-width: 0; }
