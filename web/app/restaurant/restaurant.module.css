@@ -198,6 +198,7 @@
 .qrProductPrice strong { color: var(--qr-accent-text, #1052ad); font-size: 15px; }
 .qrCombo { display: grid; gap: 3px; margin: 0; padding-left: 16px; color: var(--muted); font-size: 10px; }
 .qrAddButton, .qrOptionActions > button:last-child { min-height: 35px; align-self: start; justify-self: start; padding: 0 12px; border: 0; border-radius: 9px; color: var(--qr-accent-contrast, #fff); background: var(--qr-accent, #1768d2); font-size: 11px; font-weight: 800; }
+.qrProduct .qrAddButton, .qrProduct .qrOptionActions > button:last-child { width: auto; min-width: 0; max-width: 100%; height: auto; min-height: 38px; line-height: 1.25; white-space: normal; overflow-wrap: normal; }
 .qrOptions { display: grid; gap: 8px; margin-top: 5px; padding-top: 9px; border-top: 1px solid var(--line); }
 .qrOptions fieldset { display: grid; gap: 5px; margin: 0; padding: 7px; border: 1px solid var(--line); border-radius: 9px; }
 .qrOptions legend { padding: 0 4px; font-size: 11px; font-weight: 800; }
