@@ -624,4 +624,3 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
     </> : null}
   </main>;
 }
-

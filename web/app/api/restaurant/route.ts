@@ -1294,4 +1294,3 @@ export async function PATCH(request: Request) {
     throw new JvgBackendError("Ação de restaurante inválida.", 400);
   } catch (error) { return safeError(error); }
 }
-

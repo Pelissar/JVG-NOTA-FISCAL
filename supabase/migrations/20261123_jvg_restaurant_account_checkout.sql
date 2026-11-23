@@ -218,4 +218,3 @@ grant execute on function public.jvg_restaurant_set_table_status(uuid, uuid, uui
   to service_role;
 
 commit;
-
