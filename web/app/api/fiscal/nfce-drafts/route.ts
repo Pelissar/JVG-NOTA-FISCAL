@@ -133,7 +133,7 @@ export async function POST(request: Request) {
         const productDefault = key === "csosn" ? product.default_csosn : key === "pisCst" ? product.default_pis_cst : product.default_cofins_cst;
         return entered(key) || cleanText(productDefault, 20) || cleanText(rule[key], 20) || fallback;
       };
-      const csosn = choose("csosn", canUseJvgDefault && ["5101", "5102", "6101", "6102"].includes(cfop) ? "102" : "");
+      const csosn = choose("csosn", canUseJvgDefault && ["5101", "5102"].includes(cfop) ? "102" : "");
       const pisCst = choose("pisCst");
       const cofinsCst = choose("cofinsCst");
       const productCest = cleanText(product.cest, 20).replace(/\D/g, "");
@@ -172,11 +172,40 @@ export async function POST(request: Request) {
       items,
       cpf: cleanText(body.cpf, 20),
       cnpj: cleanText(body.cnpj, 24),
-      recipientName: cleanText(body.recipientName, 120),
+      recipientName: cleanText(body.recipientName, 60),
+      deliveryAddress: (() => {
+        const address = obj(body.deliveryAddress);
+        return {
+          street: cleanText(address.street, 60),
+          number: cleanText(address.number, 60),
+          complement: cleanText(address.complement, 60),
+          district: cleanText(address.district, 60),
+          city: cleanText(address.city, 60),
+          cityCode: cleanText(address.cityCode, 12),
+          state: cleanText(address.state, 2).toUpperCase(),
+          postalCode: cleanText(address.postalCode, 12),
+        };
+      })(),
+      transporter: (() => {
+        const transporter = obj(body.transporter);
+        return {
+          mode: cleanText(transporter.mode, 20),
+          cpf: cleanText(transporter.cpf, 20),
+          cnpj: cleanText(transporter.cnpj, 24),
+          name: cleanText(transporter.name, 60),
+          stateRegistration: cleanText(transporter.stateRegistration, 20),
+          address: cleanText(transporter.address, 60),
+          city: cleanText(transporter.city, 60),
+          state: cleanText(transporter.state, 2).toUpperCase(),
+        };
+      })(),
+      intermediaryIndicator: cleanText(body.intermediaryIndicator, 1),
+      intermediaryCnpj: cleanText(body.intermediaryCnpj, 24),
+      intermediaryId: cleanText(body.intermediaryId, 60),
       payments,
       changeAmount: Number(body.changeAmount || 0),
       naturezaOperacao: cleanText(body.naturezaOperacao, 60),
-      localDestino: cleanText(body.localDestino, 1),
+      localDestino: "1",
       presencaComprador: cleanText(body.presencaComprador, 1),
     });
     if (built.issues.length) return apiJson({ error: "A NFC-e não foi preparada. Corrija as pendências listadas.", issues: built.issues }, 400);

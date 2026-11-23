@@ -25,11 +25,26 @@ export type NfceBuildInput = {
   cpf: string;
   cnpj: string;
   recipientName: string;
+  deliveryAddress: NfceDeliveryAddressInput;
+  transporter: NfceTransporterInput;
+  intermediaryIndicator: string;
+  intermediaryCnpj: string;
+  intermediaryId: string;
   payments: NfcePaymentInput[];
   changeAmount: number;
   naturezaOperacao: string;
   localDestino: string;
   presencaComprador: string;
+};
+
+export type NfceDeliveryAddressInput = {
+  street: string; number: string; complement: string; district: string;
+  city: string; cityCode: string; state: string; postalCode: string;
+};
+
+export type NfceTransporterInput = {
+  mode: string; cpf: string; cnpj: string; name: string; stateRegistration: string;
+  address: string; city: string; state: string;
 };
 
 export type NfcePaymentInput = {
@@ -90,7 +105,7 @@ export function buildNfceHomologacaoPayload(input: NfceBuildInput): { payload: R
   const natureza = text(input.naturezaOperacao, 60);
   if (natureza.length < 3) issues.push("Informe a natureza da operação.");
   if (!input.items.length || input.items.length > 20) issues.push("Informe de 1 a 20 itens.");
-  if (!new Set(["1", "2"]).has(input.localDestino)) issues.push("Selecione se a operação é interna ou interestadual.");
+  if (input.localDestino !== "1") issues.push("NFC-e não permite operação interestadual ou com o exterior. Para esse destino, use a emissão de NF-e.");
   if (!new Set(["1", "4"]).has(input.presencaComprador)) issues.push("Selecione a presença do comprador conforme a operação.");
   const cpf = digits(input.cpf);
   const recipientCnpj = cnpjValue(input.cnpj);
@@ -100,6 +115,45 @@ export function buildNfceHomologacaoPayload(input: NfceBuildInput): { payload: R
   if (cpf && recipientCnpj) issues.push("Informe CPF ou CNPJ do consumidor, não os dois no mesmo cupom.");
   const recipientName = text(input.recipientName, 120);
   if (recipientName && !cpf && !recipientCnpj) issues.push("Para identificar o consumidor pelo nome, informe também o CPF ou CNPJ. Para venda sem identificação, deixe os campos vazios.");
+  const homeDelivery = input.presencaComprador === "4";
+  const hasIntermediaryRule = ["1", "4"].includes(input.presencaComprador);
+  if (hasIntermediaryRule && !new Set(["0", "1"]).has(text(input.intermediaryIndicator, 1))) {
+    issues.push("Informe o canal da venda: direta, sem intermediador, ou por plataforma de terceiros.");
+  }
+  if (hasIntermediaryRule && input.intermediaryIndicator === "1") {
+    const intermediaryCnpj = digits(input.intermediaryCnpj);
+    const intermediaryId = text(input.intermediaryId, 60);
+    if (!/^\d{14}$/.test(intermediaryCnpj) || !validCnpj(intermediaryCnpj)) issues.push("Intermediador: informe um CNPJ numérico válido da plataforma.");
+    if (intermediaryId.length < 2) issues.push("Intermediador: informe seu nome de loja ou identificação de perfil na plataforma.");
+  }
+  const delivery = input.deliveryAddress;
+  const deliveryState = text(delivery.state, 2).toUpperCase();
+  const issuerState = text(place.state, 2).toUpperCase();
+  if (homeDelivery) {
+    if (!recipientName || recipientName.length < 2) issues.push("Entrega a domicílio: informe o nome do consumidor.");
+    if (!cpf && !recipientCnpj) issues.push("Entrega a domicílio: informe o CPF ou CNPJ do consumidor.");
+    if (!text(delivery.street, 2)) issues.push("Entrega a domicílio: informe o logradouro do destinatário.");
+    if (!text(delivery.number, 1)) issues.push("Entrega a domicílio: informe o número do endereço.");
+    if (!text(delivery.district, 2)) issues.push("Entrega a domicílio: informe o bairro do destinatário.");
+    if (!text(delivery.city, 2)) issues.push("Entrega a domicílio: informe a cidade do destinatário.");
+    if (!/^[A-Z]{2}$/.test(deliveryState)) issues.push("Entrega a domicílio: selecione a UF do endereço.");
+    else if (issuerState && deliveryState !== issuerState) issues.push("NFC-e é limitada à operação interna neste fluxo. O endereço de entrega está em outra UF; use a emissão de NF-e.");
+    if (delivery.postalCode && !/^\d{8}$/.test(digits(delivery.postalCode))) issues.push("Entrega a domicílio: CEP deve conter 8 dígitos.");
+    if (delivery.cityCode && !/^\d{7}$/.test(digits(delivery.cityCode))) issues.push("Entrega a domicílio: código do município deve ter 7 dígitos.");
+    const carrier = input.transporter;
+    if (!new Set(["own", "third_party"]).has(text(carrier.mode, 20))) issues.push("Entrega a domicílio: informe se o transporte é próprio ou terceirizado.");
+    if (carrier.mode === "third_party") {
+      if (text(carrier.name, 60).length < 2) issues.push("Transportador: informe o nome ou razão social do entregador.");
+      const carrierCnpj = digits(carrier.cnpj), carrierCpf = digits(carrier.cpf);
+      if (carrierCnpj && carrierCpf) issues.push("Transportador: informe CPF ou CNPJ, não os dois.");
+      if (carrierCnpj && (!/^\d{14}$/.test(carrierCnpj) || !validCnpj(carrierCnpj))) issues.push("Transportador: CNPJ inválido.");
+      if (carrierCpf && !isValidCpf(carrierCpf)) issues.push("Transportador: CPF inválido.");
+      const hasCarrierAddress = Boolean(text(carrier.address, 60) || text(carrier.city, 60) || text(carrier.state, 2));
+      if (hasCarrierAddress && (!text(carrier.address, 60) || !text(carrier.city, 2) || !/^[A-Z]{2}$/.test(text(carrier.state, 2).toUpperCase()))) {
+        issues.push("Transportador: complete endereço, cidade e UF ou deixe esses três campos vazios.");
+      }
+    }
+  }
   if (!text(place.street, 120) || !text(place.city, 60) || !/^[A-Z]{2}$/.test(text(place.state, 2).toUpperCase())) {
     issues.push("Complete o endereço fiscal da empresa antes de emitir a NFC-e.");
   }
@@ -119,10 +173,7 @@ export function buildNfceHomologacaoPayload(input: NfceBuildInput): { payload: R
     const ncm = digits(item.ncm);
     if (!/^\d{8}$/.test(ncm)) issues.push(`${label}: NCM de 8 dígitos ausente; corrija o cadastro do produto ou este item.`);
     const cfop = digits(item.cfop);
-    if (!/^[56]\d{3}$/.test(cfop) || !isOfficialCfopCode(cfop)) issues.push(`${label}: informe um CFOP oficial de saída de 4 dígitos para esta operação.`);
-    else if ((input.localDestino === "1" && !cfop.startsWith("5")) || (input.localDestino === "2" && !cfop.startsWith("6"))) {
-      issues.push(`${label}: o primeiro dígito do CFOP não corresponde ao local da operação escolhido.`);
-    }
+    if (!/^5\d{3}$/.test(cfop) || !isOfficialCfopCode(cfop)) issues.push(`${label}: NFC-e exige CFOP oficial de saída iniciado por 5 para operação dentro do estado. Para venda interestadual, use NF-e.`);
     if (!text(item.name, 120)) issues.push(`${label}: descrição ausente.`);
     if (!text(item.unit, 6)) issues.push(`${label}: unidade comercial ausente.`);
     const origin = digits(item.origin);
@@ -232,8 +283,8 @@ export function buildNfceHomologacaoPayload(input: NfceBuildInput): { payload: R
     finalidade_emissao: "1",
     consumidor_final: "1",
     presenca_comprador: input.presencaComprador,
-    modalidade_frete: "9",
-    local_destino: input.localDestino,
+    modalidade_frete: homeDelivery ? (input.transporter.mode === "own" ? "3" : "2") : "9",
+    local_destino: "1",
     cnpj_emitente: cnpj,
     nome_emitente: text(company.legal_name || company.trade_name, 60),
     nome_fantasia_emitente: text(company.trade_name, 60),
@@ -242,15 +293,56 @@ export function buildNfceHomologacaoPayload(input: NfceBuildInput): { payload: R
     numero_emitente: text(place.number, 10) || "S/N",
     bairro_emitente: text(place.district, 60),
     municipio_emitente: text(place.city, 60),
-    uf_emitente: text(place.state, 2).toUpperCase(),
+    uf_emitente: issuerState,
     cep_emitente: digits(place.postalCode),
     indicador_inscricao_estadual_destinatario: "9",
     items,
     formas_pagamento: paymentPayload,
   };
+  if (hasIntermediaryRule) {
+    payload.indicador_intermediario = input.intermediaryIndicator;
+    if (input.intermediaryIndicator === "1") {
+      payload.cnpj_intermediario = digits(input.intermediaryCnpj);
+      payload.id_intermediario = text(input.intermediaryId, 60);
+    }
+  }
   if (/^\d{11}$/.test(cpf)) payload.cpf_destinatario = cpf;
   if (/^[A-Z0-9]{14}$/.test(recipientCnpj)) payload.cnpj_destinatario = recipientCnpj;
   if (recipientName && (cpf || recipientCnpj)) payload.nome_destinatario = recipientName;
+  if (homeDelivery) {
+    const postalCode = digits(delivery.postalCode);
+    const cityCode = digits(delivery.cityCode);
+    Object.assign(payload, {
+      logradouro_destinatario: text(delivery.street, 60),
+      numero_destinatario: text(delivery.number, 60),
+      bairro_destinatario: text(delivery.district, 60),
+      municipio_destinatario: text(delivery.city, 60),
+      uf_destinatario: deliveryState,
+    });
+    if (text(delivery.complement, 60)) payload.complemento_destinatario = text(delivery.complement, 60);
+    if (/^\d{7}$/.test(cityCode)) payload.codigo_municipio_destinatario = cityCode;
+    if (/^\d{8}$/.test(postalCode)) payload.cep_destinatario = postalCode;
+    if (input.transporter.mode === "own") {
+      const issuerName = text(company.trade_name || company.legal_name, 60);
+      const issuerAddress = [place.street, place.number, place.complement, place.district].map(value => text(value, 60)).filter(Boolean).join(", ").slice(0, 60);
+      payload.cnpj_transportador = cnpj;
+      if (issuerName) payload.nome_transportador = issuerName;
+      if (text(company.state_registration, 14)) payload.inscricao_estadual_transportador = text(company.state_registration, 14);
+      if (issuerAddress) payload.endereco_transportador = issuerAddress;
+      if (text(place.city, 60)) payload.municipio_transportador = text(place.city, 60);
+      if (issuerState) payload.uf_transportador = issuerState;
+    } else {
+      const carrier = input.transporter;
+      const carrierCnpj = digits(carrier.cnpj), carrierCpf = digits(carrier.cpf);
+      if (carrierCnpj) payload.cnpj_transportador = carrierCnpj;
+      if (carrierCpf) payload.cpf_transportador = carrierCpf;
+      if (text(carrier.name, 60)) payload.nome_transportador = text(carrier.name, 60);
+      if (text(carrier.stateRegistration, 14)) payload.inscricao_estadual_transportador = text(carrier.stateRegistration, 14);
+      if (text(carrier.address, 60)) payload.endereco_transportador = text(carrier.address, 60);
+      if (text(carrier.city, 60)) payload.municipio_transportador = text(carrier.city, 60);
+      if (/^[A-Z]{2}$/.test(text(carrier.state, 2).toUpperCase())) payload.uf_transportador = text(carrier.state, 2).toUpperCase();
+    }
+  }
   if (changeCents > 0) payload.valor_troco = money(changeCents);
   return { payload, issues: [...new Set(issues)], totalCents };
 }

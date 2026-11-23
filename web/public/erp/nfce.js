@@ -94,12 +94,12 @@
     const profile = state.profiles.find(item => item.id === product?.taxProfileId || item.id === state.productProfileIds?.[product?.id]);
     const rules = profile?.rules && typeof profile.rules === 'object' ? profile.rules : {};
     const operations = rules.operations && typeof rules.operations === 'object' ? rules.operations : {};
-    const direction = $('nfceDestination').value === '2' ? 'interestadual' : 'interna';
-    return operations[direction] && typeof operations[direction] === 'object' ? operations[direction] : {};
+    const direction = operations.interna;
+    return direction && typeof direction === 'object' ? direction : {};
   }
 
   function jvgSuggestion(cfop) {
-    return Boolean(state.defaults.isJvgPilot && state.defaults.simplesNacionalConfirmado && ['5101', '5102', '6101', '6102'].includes(String(cfop || '')));
+    return Boolean(state.defaults.isJvgPilot && state.defaults.simplesNacionalConfirmado && ['5101', '5102'].includes(String(cfop || '')));
   }
 
   function totalCents() {
@@ -435,6 +435,38 @@
       : docs.defaults?.isJvgPilot
       ? 'Cupom em ambiente de teste. As sugestões fiscais da empresa piloto podem ser alteradas por item.'
       : 'Cupom em ambiente de teste. Confira os dados fiscais de cada produto; não há padrões de outra empresa aplicados.');
+    updateDeliveryFields();
+  }
+
+  function updateDeliveryFields() {
+    const presence = $('nfcePresence').value;
+    const delivery = presence === '4';
+    const hasIntermediaryRule = ['1', '4'].includes(presence);
+    if (hasIntermediaryRule && !$('nfceIntermediary').value) $('nfceIntermediary').value = '0';
+    const marketplace = hasIntermediaryRule && $('nfceIntermediary').value === '1';
+    const thirdParty = delivery && $('nfceTransportMode').value === 'third_party';
+    $('nfceIntermediaryFields').hidden = !hasIntermediaryRule;
+    $('nfceDeliveryFields').hidden = !delivery;
+    $('nfceMarketplaceFields').hidden = !marketplace;
+    $('nfceThirdPartyFields').hidden = !thirdParty;
+    [
+      'nfceDeliveryStreet', 'nfceDeliveryNumber', 'nfceDeliveryDistrict', 'nfceDeliveryCity', 'nfceDeliveryState',
+    ].forEach(id => { $(id).required = delivery; });
+    $('nfceIntermediary').required = hasIntermediaryRule;
+    $('nfceTransportMode').required = delivery;
+    $('nfceIntermediaryCnpj').required = marketplace;
+    $('nfceIntermediaryId').required = marketplace;
+    $('nfceCarrierName').required = thirdParty;
+    $('nfceRecipientName').required = delivery;
+    const nameMarker = $('nfceRecipientName').closest('label').querySelector('[data-consumer-required]');
+    nameMarker.textContent = delivery ? 'obrigatório para entrega' : 'opcional';
+    nameMarker.className = delivery ? 'required' : 'optional';
+    $('nfceConsumerHelp').textContent = delivery
+      ? 'Para entrega a domicílio, informe o nome e um documento do consumidor: CPF ou CNPJ.'
+      : 'Para identificar outra pessoa ou empresa, informe o nome e apenas um documento. Para venda sem identificação, deixe esses campos vazios.';
+    const identificationMissing = delivery && !$('nfceCpf').value.trim() && !$('nfceCnpj').value.trim();
+    $('nfceCpf').setCustomValidity(identificationMissing ? 'Informe o CPF ou o CNPJ para entrega a domicílio.' : '');
+    $('nfceCnpj').setCustomValidity(identificationMissing ? 'Informe o CPF ou o CNPJ para entrega a domicílio.' : '');
   }
 
   async function prepare(event) {
@@ -453,9 +485,24 @@
       const result = await api('/api/fiscal/nfce-drafts', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          naturezaOperacao: $('nfceNature').value.trim(), localDestino: $('nfceDestination').value,
+          naturezaOperacao: $('nfceNature').value.trim(),
           presencaComprador: $('nfcePresence').value, recipientName: $('nfceRecipientName').value,
           cpf: $('nfceCpf').value, cnpj: $('nfceCnpj').value,
+          deliveryAddress: {
+            street: $('nfceDeliveryStreet').value, number: $('nfceDeliveryNumber').value,
+            complement: $('nfceDeliveryComplement').value, district: $('nfceDeliveryDistrict').value,
+            city: $('nfceDeliveryCity').value, state: $('nfceDeliveryState').value,
+            postalCode: $('nfceDeliveryPostalCode').value,
+          },
+          intermediaryIndicator: $('nfceIntermediary').value,
+          intermediaryCnpj: $('nfceIntermediaryCnpj').value,
+          intermediaryId: $('nfceIntermediaryId').value,
+          transporter: {
+            mode: $('nfceTransportMode').value, name: $('nfceCarrierName').value,
+            cnpj: $('nfceCarrierCnpj').value, cpf: $('nfceCarrierCpf').value,
+            address: $('nfceCarrierAddress').value, city: $('nfceCarrierCity').value,
+            state: $('nfceCarrierState').value,
+          },
           changeAmount: Number($('nfceChange').value || 0),
           payments: payments.map(paymentInput), items: rows.map(itemInput),
         }),
@@ -594,7 +641,10 @@
   $('nfceConfirm').addEventListener('change', () => { $('nfceSend').disabled = !state.canIssue || !draftId || !$('nfceConfirm').checked; });
   $('nfceSend').addEventListener('click', transmit);
   $('nfceRefresh').addEventListener('click', refresh);
-  $('nfceDestination').addEventListener('change', () => document.querySelectorAll('.nfce-line-item').forEach(row => applyProduct(row, true)));
+  $('nfcePresence').addEventListener('change', updateDeliveryFields);
+  $('nfceIntermediary').addEventListener('change', updateDeliveryFields);
+  $('nfceTransportMode').addEventListener('change', updateDeliveryFields);
+  ['nfceCpf', 'nfceCnpj'].forEach(id => $(id).addEventListener('input', updateDeliveryFields));
   $('nfceChange').addEventListener('input', updatePaymentTotal);
   $('nfceCancelClose').addEventListener('click', () => $('nfceCancelDialog').close());
   $('nfceCancelForm').addEventListener('submit', cancelDocument);

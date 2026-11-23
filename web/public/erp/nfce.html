@@ -9,10 +9,10 @@
   <link rel="stylesheet" href="/erp/styles.css">
   <link rel="stylesheet" href="/erp/unified-pages.css">
   <link rel="stylesheet" href="/erp/erp-design-v2.css">
-  <link rel="stylesheet" href="/erp/nfce-workspace.css?v=20261123-cupom-cancelamento">
+  <link rel="stylesheet" href="/erp/nfce-workspace.css?v=20261123-cupom-intermediador">
   <script src="/erp/theme-switch.js"></script>
   <script defer src="/erp/erp-page-nav.js?v=20261117-navigation-2"></script>
-  <script defer src="/erp/nfce.js?v=20261123-cupom-cancelamento"></script>
+  <script defer src="/erp/nfce.js?v=20261123-cupom-intermediador"></script>
   <link rel="stylesheet" href="/erp/site-refresh.css?v=20261119-dashboard-consumption">
 </head>
 <body>
@@ -40,8 +40,43 @@
               <legend>Operação</legend>
               <div class="nfce-form-grid nfce-operation-grid">
                 <label>Natureza da operação <span class="required">*</span><input id="nfceNature" maxlength="60" required value="VENDA AO CONSUMIDOR"></label>
-                <label>Local da operação <span class="required">*</span><select id="nfceDestination" required><option value="">Selecione</option><option value="1">Dentro do estado</option><option value="2">Interestadual</option></select></label>
                 <label>Presença do comprador <span class="required">*</span><select id="nfcePresence" required><option value="">Selecione</option><option value="1">Presencial</option><option value="4">Entrega a domicílio</option></select></label>
+              </div>
+              <p class="nfce-help nfce-operation-note">Esta emissão de NFC-e é para operação dentro do estado. Para venda interestadual, use a emissão de NF-e.</p>
+              <div id="nfceIntermediaryFields" class="nfce-conditional-fields" hidden>
+                <h3>Canal da venda</h3>
+                <p class="nfce-help">A regra fiscal pede esta indicação para a operação selecionada. Escolha plataforma de terceiros somente quando ela participou da venda.</p>
+                <div class="nfce-form-grid nfce-conditional-grid">
+                  <label>Intermediador da venda <span class="required">*</span><select id="nfceIntermediary"><option value="">Selecione</option><option value="0">Venda direta, sem intermediador</option><option value="1">Plataforma de terceiros / marketplace</option></select><small>Ex.: marketplace ou plataforma de delivery.</small></label>
+                </div>
+                <div id="nfceMarketplaceFields" class="nfce-form-grid nfce-conditional-grid" hidden>
+                  <label>CNPJ da plataforma <span class="required">*</span><input id="nfceIntermediaryCnpj" inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00"></label>
+                  <label>Seu cadastro na plataforma <span class="required">*</span><input id="nfceIntermediaryId" minlength="2" maxlength="60" placeholder="Nome da loja ou perfil"></label>
+                </div>
+              </div>
+              <div id="nfceDeliveryFields" class="nfce-conditional-fields" hidden>
+                <h3>Entrega a domicílio</h3>
+                <p class="nfce-help">Para este tipo de cupom, a SEFAZ exige identificação do consumidor, endereço de entrega e transportador.</p>
+                <div class="nfce-form-grid nfce-conditional-grid">
+                  <label>Logradouro <span class="required">*</span><input id="nfceDeliveryStreet" maxlength="60" autocomplete="street-address"></label>
+                  <label>Número <span class="required">*</span><input id="nfceDeliveryNumber" maxlength="60" autocomplete="address-line2"></label>
+                  <label>Complemento <span class="optional">opcional</span><input id="nfceDeliveryComplement" maxlength="60" autocomplete="address-line3"></label>
+                  <label>Bairro <span class="required">*</span><input id="nfceDeliveryDistrict" maxlength="60" autocomplete="address-level3"></label>
+                  <label>Cidade <span class="required">*</span><input id="nfceDeliveryCity" maxlength="60" autocomplete="address-level2"></label>
+                  <label>UF de entrega <span class="required">*</span><select id="nfceDeliveryState" autocomplete="address-level1"><option value="">Selecione</option><option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option><option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option><option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option><option>SE</option><option>TO</option></select></label>
+                  <label>CEP <span class="optional">opcional</span><input id="nfceDeliveryPostalCode" inputmode="numeric" maxlength="9" autocomplete="postal-code" placeholder="00000-000"></label>
+                </div>
+                <div class="nfce-form-grid nfce-conditional-grid nfce-delivery-choices">
+                  <label>Tipo de transporte <span class="required">*</span><select id="nfceTransportMode"><option value="">Selecione</option><option value="own">Entrega própria da empresa</option><option value="third_party">Transportador terceirizado</option></select><small>Na entrega própria, os dados da empresa serão usados como transportador.</small></label>
+                </div>
+                <div id="nfceThirdPartyFields" class="nfce-form-grid nfce-conditional-grid" hidden>
+                  <label>Transportador / entregador <span class="required">*</span><input id="nfceCarrierName" maxlength="60" placeholder="Nome ou razão social"></label>
+                  <label>CNPJ do transportador <span class="optional">opcional</span><input id="nfceCarrierCnpj" inputmode="numeric" maxlength="18" placeholder="Se possuir CNPJ"></label>
+                  <label>CPF do transportador <span class="optional">opcional</span><input id="nfceCarrierCpf" inputmode="numeric" maxlength="14" placeholder="Se for pessoa física"></label>
+                  <label>Endereço do transportador <span class="optional">opcional</span><input id="nfceCarrierAddress" maxlength="60"></label>
+                  <label>Cidade do transportador <span class="optional">opcional</span><input id="nfceCarrierCity" maxlength="60"></label>
+                  <label>UF do transportador <span class="optional">opcional</span><select id="nfceCarrierState"><option value="">Selecione</option><option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option><option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option><option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option><option>SE</option><option>TO</option></select></label>
+                </div>
               </div>
             </fieldset>
             <fieldset>
@@ -52,10 +87,10 @@
             <fieldset>
               <legend>Consumidor e pagamento</legend>
               <div class="nfce-form-grid nfce-payment-grid">
-                <label>Nome do consumidor <span class="optional">opcional</span><input id="nfceRecipientName" maxlength="120" autocomplete="name" placeholder="Preencha se a venda for identificada"></label>
+                <label>Nome do consumidor <span class="optional" data-consumer-required>opcional</span><input id="nfceRecipientName" maxlength="60" autocomplete="name" placeholder="Preencha se a venda for identificada"></label>
                 <label>CPF do consumidor <span class="optional">opcional</span><input id="nfceCpf" inputmode="numeric" maxlength="14" placeholder="Se quiser identificar no cupom"></label>
                 <label>CNPJ do consumidor <span class="optional">opcional</span><input id="nfceCnpj" inputmode="text" autocapitalize="characters" maxlength="18" placeholder="Informe CPF ou CNPJ"></label>
-                <p class="nfce-help nfce-consumer-help">Para identificar outra pessoa ou empresa, informe o nome e apenas um documento. Para venda sem identificação, deixe esses campos vazios.</p>
+                <p id="nfceConsumerHelp" class="nfce-help nfce-consumer-help">Para identificar outra pessoa ou empresa, informe o nome e apenas um documento. Para venda sem identificação, deixe esses campos vazios.</p>
               </div>
               <section class="nfce-payment-box" aria-labelledby="nfcePaymentTitle">
                 <div class="nfce-payment-heading"><div><h3 id="nfcePaymentTitle">Formas de pagamento <span class="required">*</span></h3><p>Adicione mais de uma forma quando o cliente dividir o pagamento.</p></div><button id="nfceAddPayment" class="button-secondary" type="button">+ Adicionar forma</button></div>
