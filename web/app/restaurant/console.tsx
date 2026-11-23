@@ -3,7 +3,7 @@
 import QRCode from "qrcode";
 import Image from "next/image";
 import Link from "next/link";
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./restaurant.module.css";
 import { CozinhaViva } from "./cozinha-viva";
 import { RestaurantMenuManager } from "./menu-manager";
@@ -14,7 +14,8 @@ type Table = { id: string; table_number: number; label: string; qr_token: string
 type OrderItem = { product_id: string; description: string; quantity: number; unit_price: number; total: number; selectedOptions?: Array<{ name: string; price: number }>; comboSnapshot?: Array<{ name: string; quantity: number; unit: string }>; recipeSnapshot?: { versionNo: number; yieldQuantity: number; yieldUnit: string; ingredients: Array<{ name: string; quantityPerYield: number; unit: string; stockUnit: string }> } | null };
 type Order = { id: string; order_number: number; table_id: string | null; customer_id: string | null; source: string; status: string; items: OrderItem[]; customer_name_snapshot: string; phone_snapshot: string; total: number; notes: string; created_at: string; payment_method?: string; payment_status?: "pending" | "paid" | "unknown"; payment_confirmed_at?: string | null; fulfillment_type?: "table" | "pickup" | null };
 type Settings = { qr_orders_enabled: boolean; loyalty_enabled: boolean; loyalty_points_per_real: number };
-type TableRequest = { id: string; table_id: string; request_type: "call_waiter" | "request_bill"; status: string; created_at: string };
+type TableRequest = { id: string; table_id: string; table_label?: string; request_type: "call_waiter" | "request_bill"; status: string; created_at: string };
+type TableCallNotice = { id: string; title: string; details: string };
 type FiscalDocumentCandidate = { id: string; type: "nfe" | "nfce"; number: number | null; series: string | null; recipient: string | null; authorizedAt: string; hasPdf: boolean; hasXml: boolean };
 type Data = { settings: Settings; tables: Table[]; products: Product[]; orders: Order[]; tableRequests: TableRequest[]; tableRequestsAvailable: boolean };
 type Customer = { id: string; full_name: string; phone: string; cpf: string | null; loyalty_points: number };
@@ -67,6 +68,79 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
   const [fiscalDocumentCandidates, setFiscalDocumentCandidates] = useState<FiscalDocumentCandidate[]>([]);
   const [fiscalDocumentSelection, setFiscalDocumentSelection] = useState("");
   const [fiscalDocumentLoading, setFiscalDocumentLoading] = useState(false);
+  const [tableCallNotice, setTableCallNotice] = useState<TableCallNotice | null>(null);
+  const [callSoundEnabled, setCallSoundEnabled] = useState(false);
+  const [tableRequestsError, setTableRequestsError] = useState("");
+  const pendingCallIdsRef = useRef<Set<string> | null>(null);
+  const callSoundEnabledRef = useRef(false);
+  const callAudioRef = useRef<AudioContext | null>(null);
+  const noticeTimeoutRef = useRef<number | null>(null);
+  const tableLabelsRef = useRef<Map<string, string>>(new Map());
+
+  const playCallChime = useCallback(() => {
+    if (!callSoundEnabledRef.current || typeof window === "undefined") return;
+    try {
+      const audio = callAudioRef.current || new AudioContext();
+      callAudioRef.current = audio;
+      if (audio.state === "suspended") void audio.resume();
+      const start = audio.currentTime;
+      [784, 988].forEach((frequency, index) => {
+        const oscillator = audio.createOscillator();
+        const volume = audio.createGain();
+        const at = start + index * 0.16;
+        oscillator.type = "sine";
+        oscillator.frequency.value = frequency;
+        volume.gain.setValueAtTime(0.0001, at);
+        volume.gain.exponentialRampToValueAtTime(0.12, at + 0.025);
+        volume.gain.exponentialRampToValueAtTime(0.0001, at + 0.22);
+        oscillator.connect(volume);
+        volume.connect(audio.destination);
+        oscillator.start(at);
+        oscillator.stop(at + 0.23);
+      });
+    } catch {
+      setTableRequestsError("O navegador não conseguiu reproduzir o aviso sonoro. A fila visual continua ativa.");
+    }
+  }, []);
+
+  function enableCallSound() {
+    if (typeof window === "undefined") return;
+    try {
+      const audio = callAudioRef.current || new AudioContext();
+      callAudioRef.current = audio;
+      if (audio.state === "suspended") void audio.resume();
+      callSoundEnabledRef.current = true;
+      setCallSoundEnabled(true);
+      playCallChime();
+    } catch {
+      setTableRequestsError("Este navegador não oferece áudio para os avisos. Você ainda pode acompanhar os chamados na tela.");
+    }
+  }
+
+  const refreshTableRequests = useCallback(async () => {
+    const response = await fetch("/api/restaurant?tableRequests=1", { cache: "no-store" });
+    const payload = await response.json() as { tableRequests?: TableRequest[]; tableRequestsAvailable?: boolean; error?: string };
+    if (!response.ok) throw new Error(payload.error || "Não foi possível atualizar os chamados das mesas.");
+    const requests = payload.tableRequests || [];
+    const previousIds = pendingCallIdsRef.current;
+    if (previousIds) {
+      const arrivals = requests.filter((request) => !previousIds.has(request.id));
+      if (arrivals.length) {
+        const titles = arrivals.slice(0, 3).map((request) => {
+          const table = request.table_label || tableLabelsRef.current.get(request.table_id) || "Mesa";
+          return `${table}: ${request.request_type === "call_waiter" ? "chamou o garçom" : "pediu a conta"}`;
+        });
+        const summary = arrivals.length > 3 ? `${titles.join(" · ")} · +${arrivals.length - 3} outro(s)` : titles.join(" · ");
+        setTableCallNotice({ id: arrivals[arrivals.length - 1].id, title: arrivals.length === 1 ? "Novo chamado de mesa" : `${arrivals.length} novos chamados`, details: summary });
+        if (noticeTimeoutRef.current !== null) window.clearTimeout(noticeTimeoutRef.current);
+        noticeTimeoutRef.current = window.setTimeout(() => setTableCallNotice(null), 10000);
+        playCallChime();
+      }
+    }
+    pendingCallIdsRef.current = new Set(requests.map((request) => request.id));
+    setData((current) => ({ ...current, tableRequests: requests, tableRequestsAvailable: payload.tableRequestsAvailable === true }));
+    setTableRequestsError("");
+  }, [playCallChime]);
 
   const refresh = useCallback(async () => {
     const response = await fetch("/api/restaurant", { cache: "no-store" });
@@ -76,6 +150,8 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
     setError("");
     setLoaded(true);
     setPointsRate(String(payload.settings.loyalty_points_per_real || 1));
+    tableLabelsRef.current = new Map(payload.tables.map((table) => [table.id, table.label]));
+    pendingCallIdsRef.current = new Set((payload.tableRequests || []).map((request) => request.id));
   }, []);
 
   useEffect(() => {
@@ -92,9 +168,30 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
         setError("");
         setLoaded(true);
         setPointsRate(String(payload.settings.loyalty_points_per_real || 1));
+        tableLabelsRef.current = new Map(payload.tables.map((table) => [table.id, table.label]));
+        pendingCallIdsRef.current = new Set((payload.tableRequests || []).map((request) => request.id));
       })
       .catch((reason: Error) => { if (active) setError(reason.message); });
     return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    let active = true;
+    const update = () => void refreshTableRequests().catch((reason: Error) => {
+      if (active) setTableRequestsError(reason.message);
+    });
+    update();
+    const timer = window.setInterval(update, 5000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [loaded, refreshTableRequests]);
+
+  useEffect(() => () => {
+    if (noticeTimeoutRef.current !== null) window.clearTimeout(noticeTimeoutRef.current);
+    void callAudioRef.current?.close();
   }, []);
 
   async function send(path: string, method: "POST" | "PATCH", body: Record<string, unknown>) {
@@ -262,6 +359,12 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
           </div>
         </header>
 
+        {tableCallNotice ? <aside className={styles.tableCallToast} role="status" aria-live="polite">
+          <span className={styles.tableCallToastIcon} aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span>
+          <div><strong>{tableCallNotice.title}</strong><p>{tableCallNotice.details}</p><Link href="/restaurant/pedidos#chamados">Abrir chamados</Link></div>
+          <button type="button" aria-label="Fechar aviso" onClick={() => setTableCallNotice(null)}>×</button>
+        </aside> : null}
+
         {loaded && error ? <div className={styles.alertError} role="alert">{error}</div> : null}
         {loaded && message ? <div className={styles.alertSuccess} role="status">{message}</div> : null}
 
@@ -300,6 +403,12 @@ export function RestaurantConsole({ section = "overview" }: { section?: Restaura
             </div>
             <p className={styles.dataScope}>Resumo atualizado com pedidos dos últimos 3 dias (até 200 registros), conforme os dados disponíveis no atendimento.</p>
           </> : null}
+
+          {section === "orders" ? <section className={styles.tableCallsPanel} id="chamados">
+            <div className={styles.sectionHeading}><div><span className={styles.sectionKicker}>ATENDIMENTO DE MESA</span><h2>Chamados do salão <span className={styles.tableCallCount}>{data.tableRequests.length}</span></h2><p>A fila atualiza sozinha a cada 5 segundos nesta tela e no salão.</p></div><div className={styles.tableCallControls}>{callSoundEnabled ? <button type="button" className={styles.buttonGhost} onClick={() => { callSoundEnabledRef.current = false; setCallSoundEnabled(false); }}>Silenciar som</button> : <button type="button" className={styles.primaryButton} onClick={enableCallSound}>Ativar aviso sonoro</button>}<button type="button" className={styles.refresh} onClick={() => void refreshTableRequests().catch((reason: Error) => setTableRequestsError(reason.message))}>Atualizar fila</button></div></div>
+            {tableRequestsError ? <div className={styles.alertError} role="alert">{tableRequestsError} A fila anterior permanece visível.</div> : null}
+            {!data.tableRequestsAvailable ? <div className={styles.infoBox}>A fila de chamados não está disponível nesta empresa.</div> : data.tableRequests.length ? <div className={styles.tableCallList}>{data.tableRequests.map((request) => { const table = tableById.get(request.table_id); return <article className={styles.tableCallCard} key={request.id}><span className={styles.tableCallCardIcon} aria-hidden="true">{request.request_type === "call_waiter" ? "☎" : "▤"}</span><div className={styles.tableCallText}><strong>{table?.label || request.table_label || "Mesa"}</strong><span>{request.request_type === "call_waiter" ? "Chamou o garçom" : "Pediu a conta"} · {dateTime(request.created_at)}</span></div><span className={styles.tableCallPending}>Pendente</span><button type="button" className={styles.primaryButton} disabled={busy} onClick={() => void send("/api/restaurant", "PATCH", { kind: "table-request", id: request.id, status: "attended" })}>Marcar atendido</button></article>; })}</div> : <div className={styles.tableCallEmpty}><span aria-hidden="true">✓</span><div><strong>Nenhum chamado aguardando</strong><p>Quando uma mesa pedir ajuda ou a conta, ela aparecerá aqui.</p></div></div>}
+          </section> : null}
 
           {section === "orders" ? <div className={styles.ordersLayout}>
             <section className={`${styles.sectionPanel} ${styles.orderComposer}`} id="novo-pedido">

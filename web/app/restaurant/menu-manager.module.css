@@ -5,7 +5,7 @@
 .manager button:disabled { cursor: not-allowed; opacity: .55; }
 .hero { position: relative; isolation: isolate; min-width: 0; overflow: hidden; border: 1px solid var(--menu-line); border-radius: 18px; background: var(--menu-surface); box-shadow: 0 12px 28px rgb(24 43 67 / 5%); }
 .heroCover, .heroCoverPlaceholder { display: block; width: 100%; height: clamp(110px, 19vw, 205px); object-fit: cover; background: linear-gradient(120deg, #dceaf8, #eef4fb 60%, #d3e1f1); }
-.heroCoverPlaceholder { background: radial-gradient(circle at 85% 18%, rgb(255 255 255 / 78%), transparent 25%), linear-gradient(120deg, #102c4b, #1768d2 68%, #68a8e3); }
+.heroCoverPlaceholder { background: linear-gradient(125deg, #f1eee6, #e6ebe4 54%, #f7f5f0); }
 .heroContent { position: relative; display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 15px; padding: 17px 20px; }
 .heroLogo { display: grid; place-items: center; width: 58px; height: 58px; overflow: hidden; border: 3px solid var(--menu-surface); border-radius: 16px; color: #fff; background: var(--menu-blue); font-size: 25px; font-weight: 900; box-shadow: 0 3px 10px rgb(24 43 67 / 14%); }
 .heroLogo img { width: 100%; height: 100%; object-fit: cover; }
@@ -121,10 +121,10 @@
 .hoursEditor { display: grid; gap: 11px; padding-top: 14px; border-top: 1px solid var(--menu-line); }
 .hoursList { display: grid; gap: 7px; }
 .hoursRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(110px, .45fr) minmax(110px, .45fr); align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--menu-line); border-radius: 9px; }
-.publicPreview { --preview-color: #1768d2; --preview-foreground: #fff; position: sticky; top: 14px; overflow: hidden; padding: 0; }
-.previewLabel { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 15px; background: var(--menu-surface); }
+.publicPreview { --preview-color: #1768d2; --preview-foreground: #fff; position: sticky; top: 14px; overflow: hidden; padding: 0; background: color-mix(in srgb, var(--preview-color) 5%, #f7f4ed); }
+.previewLabel { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 15px; background: transparent; }
 .previewLabel small { color: var(--menu-muted); font-size: 10px; }
-.previewCover, .previewCoverEmpty { display: block; width: 100%; height: 130px; object-fit: cover; background: linear-gradient(120deg, var(--preview-color), #8cb8e8); }
+.previewCover, .previewCoverEmpty { display: block; width: 100%; height: 130px; object-fit: cover; background: linear-gradient(135deg, #f0ede5, #e7ebe2); }
 .previewBody { padding: 15px; }
 .previewLogo { display: block; width: 52px; height: 52px; margin: -36px 0 9px; border: 3px solid var(--menu-surface); border-radius: 14px; object-fit: cover; }
 .previewBody .eyebrow { color: var(--preview-color); }
@@ -148,6 +148,26 @@
 .contrastInfo { margin: 0 15px 14px; padding: 8px 10px; border-radius: 8px; color: var(--menu-muted); background: var(--menu-soft); font-size: 10px; line-height: 1.45; }
 .publicPreview > .secondary { display: flex; margin: 0 15px 15px; }
 .publicPreview > .note { margin: 0 15px 15px; }
+.customizeNudge { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-width: 0; padding: 13px 15px; border: 1px solid color-mix(in srgb, var(--menu-blue) 18%, var(--menu-line)); border-radius: 13px; background: color-mix(in srgb, var(--menu-blue) 5%, var(--menu-surface)); }
+.customizeNudgeIcon { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 12px; color: var(--menu-blue); background: color-mix(in srgb, var(--menu-blue) 12%, white); font-size: 19px; }
+.customizeNudge strong { display: block; color: var(--menu-text); font-size: 12px; }
+.customizeNudge p { margin: 3px 0 0; color: var(--menu-muted); font-size: 10px; line-height: 1.45; }
+.colorSuggestions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--menu-line); border-radius: 11px; background: var(--menu-soft); }
+.colorSuggestions > span { flex: 1 1 220px; color: var(--menu-muted); font-size: 10px; line-height: 1.4; }
+.colorSuggestions code { padding: 5px 7px; border: 1px solid var(--menu-line); border-radius: 7px; color: var(--menu-text); background: var(--menu-surface); font-size: 10px; }
+.colorSwatch, .colorSwatchActive { display: grid; width: 29px; height: 29px; place-items: center; padding: 3px; border: 1px solid var(--menu-line); border-radius: 50%; background: var(--menu-surface); }
+.colorSwatch > span, .colorSwatchActive > span { width: 100%; height: 100%; border-radius: 50%; background: var(--swatch); }
+.colorSwatchActive { border: 2px solid var(--menu-text); box-shadow: 0 0 0 2px var(--menu-surface), 0 0 0 3px var(--menu-blue); }
+.colorSwatch:focus-visible, .colorSwatchActive:focus-visible { outline: 3px solid color-mix(in srgb, var(--menu-blue) 45%, transparent); outline-offset: 2px; }
+.brandFields label > small { color: var(--menu-muted); font-size: 9px; font-weight: 500; line-height: 1.4; }
+.uploadTile { align-items: center; min-height: 104px; }
+.uploadTile small { max-width: 240px; line-height: 1.4; }
+.coverPlaceholder { color: var(--menu-muted); background: linear-gradient(135deg, #f0ede5, #e7ebe2); }
+@media (max-width: 680px) {
+  .customizeNudge { grid-template-columns: 36px minmax(0, 1fr); padding: 11px; }
+  .customizeNudgeIcon { width: 36px; height: 36px; }
+  .customizeNudge > button { grid-column: 1 / -1; width: 100%; }
+}
 .load, .loadError { min-width: 0; padding: 19px; border: 1px solid var(--menu-line); border-radius: 14px; color: var(--menu-muted); background: var(--menu-surface); font-size: 12px; }
 .loadError strong { color: var(--menu-text); }
 .loadError p { overflow-wrap: anywhere; }

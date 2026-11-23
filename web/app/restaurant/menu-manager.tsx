@@ -62,6 +62,8 @@ function readableAccent(hex: string) {
   return contrastRatio(hex, "#ffffff") >= contrastRatio(hex, "#142a43") ? "#ffffff" : "#142a43";
 }
 
+const colorSuggestions: Array<[string, string]> = [["Azul", "#1768d2"], ["Verde", "#287a50"], ["Terracota", "#b65d3f"], ["Vinho", "#8d3f54"], ["Ameixa", "#704f91"]];
+
 export function RestaurantMenuManager() {
   const [data, setData] = useState<MenuData | null>(null);
   const [draft, setDraft] = useState<ProductDraft | null>(null);
@@ -240,9 +242,9 @@ export function RestaurantMenuManager() {
     <header className={styles.hero}>
       {brand.coverUrl ? <Image className={styles.heroCover} src={brand.coverUrl} alt="Capa do restaurante" width={1200} height={360} unoptimized/> : <div className={styles.heroCoverPlaceholder} aria-hidden="true"/>}
       <div className={styles.heroContent}>
-        <div className={styles.heroLogo}>{brand.logoUrl ? <Image src={brand.logoUrl} alt="Logo do restaurante" width={58} height={58} unoptimized/> : <span aria-hidden="true">S</span>}</div>
+        <div className={styles.heroLogo}>{brand.logoUrl ? <Image src={brand.logoUrl} alt="Logo do restaurante" width={58} height={58} unoptimized/> : <span aria-hidden="true">{brand.publicName.trim().slice(0, 1).toUpperCase() || "+"}</span>}</div>
         <div><span className={styles.eyebrow}>CARDAPIO DO RESTAURANTE</span><h2>{brand.publicName || "Organize o menu do seu restaurante"}</h2><p>Edite produtos do cadastro existente, configure opcoes e confira a versao publica salva.</p></div>
-        <div className={styles.heroActions}>{data.previewTable && brand.qrOrdersEnabled ? <Link href={"/restaurant/qr/" + data.previewTable.qr_token} target="_blank" rel="noopener noreferrer" className={styles.primary}>Pre-visualizar</Link> : data.previewTable ? <Link href="/restaurant/configuracoes" className={styles.secondary}>Ativar pedidos por QR</Link> : <Link href="/restaurant/salao" className={styles.secondary}>Criar QR no salao</Link>}<button type="button" className={styles.secondary} disabled={busy || loading} onClick={() => void load()}>Atualizar</button></div>
+        <div className={styles.heroActions}><button type="button" className={styles.primary} disabled={!data.schemaReady} onClick={() => setTab("brand")}>Editar fotos e cores</button>{data.previewTable && brand.qrOrdersEnabled ? <Link href={"/restaurant/qr/" + data.previewTable.qr_token} target="_blank" rel="noopener noreferrer" className={styles.secondary}>Pre-visualizar</Link> : data.previewTable ? <Link href="/restaurant/configuracoes" className={styles.secondary}>Ativar pedidos por QR</Link> : <Link href="/restaurant/salao" className={styles.secondary}>Criar QR no salao</Link>}<button type="button" className={styles.secondary} disabled={busy || loading} onClick={() => void load()}>Atualizar</button></div>
       </div>
     </header>
 
@@ -253,8 +255,10 @@ export function RestaurantMenuManager() {
     <nav className={styles.tabs} aria-label="Gerenciar cardapio">
       <button type="button" className={tab === "products" ? styles.tabActive : ""} onClick={() => setTab("products")}>Produtos <span>{data.products.length}</span></button>
       <button type="button" className={tab === "categories" ? styles.tabActive : ""} disabled={!data.schemaReady} onClick={() => setTab("categories")}>Categorias <span>{data.categories.length}</span></button>
-      <button type="button" className={tab === "brand" ? styles.tabActive : ""} disabled={!data.schemaReady} onClick={() => setTab("brand")}>Aparencia e horarios</button>
+      <button type="button" className={tab === "brand" ? styles.tabActive : ""} disabled={!data.schemaReady} onClick={() => setTab("brand")}>Identidade, fotos e cores</button>
     </nav>
+
+    {tab === "products" && data.schemaReady && (!brand.logoUrl || !brand.coverUrl) ? <aside className={styles.customizeNudge}><span className={styles.customizeNudgeIcon} aria-hidden="true">✦</span><div><strong>Deixe seu cardápio com a identidade da empresa</strong><p>Adicione sua logo e uma capa reais, escolha as cores e confira a prévia antes de publicar.</p></div><button type="button" className={styles.secondary} onClick={() => setTab("brand")}>Personalizar cardápio</button></aside> : null}
 
     {tab === "products" ? <div className={styles.catalogLayout}>
       <aside className={styles.catalogPanel}>
@@ -320,7 +324,7 @@ export function RestaurantMenuManager() {
         <div className={styles.brandFields}>
           <label>Endereço público<input value={brand.publicSlug} maxLength={60} pattern="[a-z0-9]+(-[a-z0-9]+)*" onChange={(event) => setBrand((current) => ({ ...current, publicSlug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }))} placeholder="meu-restaurante"/></label>
           <label>Nome público<input value={brand.publicName} maxLength={120} onChange={(event) => setBrand((current) => ({ ...current, publicName: event.target.value }))} placeholder="Usa o nome cadastrado se vazio"/></label>
-          <label>Cor principal<input type="color" value={brand.brandColor} onChange={(event) => setBrand((current) => ({ ...current, brandColor: event.target.value }))}/></label>
+          <label>Cor de destaque<input type="color" value={brand.brandColor} onChange={(event) => setBrand((current) => ({ ...current, brandColor: event.target.value }))}/><small>Atualiza botões, detalhes e o tom de fundo do cardápio público.</small></label>
           <label>Telefone de contato<input value={brand.contactPhone} inputMode="tel" maxLength={24} onChange={(event) => setBrand((current) => ({ ...current, contactPhone: event.target.value }))} placeholder="(00) 00000-0000"/></label>
           <label>WhatsApp<input value={brand.whatsapp} inputMode="tel" maxLength={24} onChange={(event) => setBrand((current) => ({ ...current, whatsapp: event.target.value }))} placeholder="(00) 00000-0000"/></label>
           <label>E-mail público<input type="email" value={brand.publicEmail} maxLength={160} onChange={(event) => setBrand((current) => ({ ...current, publicEmail: event.target.value }))}/></label>
@@ -329,6 +333,11 @@ export function RestaurantMenuManager() {
           <label>Link do mapa<input type="url" value={brand.mapUrl} onChange={(event) => setBrand((current) => ({ ...current, mapUrl: event.target.value }))} placeholder="https://…"/></label>
           <label>Instagram<input type="url" value={brand.instagramUrl} onChange={(event) => setBrand((current) => ({ ...current, instagramUrl: event.target.value }))} placeholder="https://…"/></label>
           <label className={styles.full}>Outro site<input type="url" value={brand.publicWebsiteUrl} onChange={(event) => setBrand((current) => ({ ...current, publicWebsiteUrl: event.target.value }))} placeholder="https://…"/></label>
+        </div>
+        <div className={styles.colorSuggestions} aria-label="Sugestões de cores">
+          <span>Escolha uma sugestão ou use a paleta para selecionar qualquer cor:</span>
+          {colorSuggestions.map(([label, color]) => <button key={color} type="button" aria-label={`Usar cor ${label}`} aria-pressed={brand.brandColor.toLowerCase() === color} title={label} style={{ "--swatch": color } as CSSProperties} className={brand.brandColor.toLowerCase() === color ? styles.colorSwatchActive : styles.colorSwatch} onClick={() => setBrand((current) => ({ ...current, brandColor: color }))}><span aria-hidden="true"/></button>)}
+          <code>{brand.brandColor.toUpperCase()}</code>
         </div>
         <div className={styles.siteControls}>
           <label className={styles.inlineCheck}><input type="checkbox" checked={brand.websiteEnabled} onChange={(event) => setBrand((current) => ({ ...current, websiteEnabled: event.target.checked, websiteOrdersEnabled: event.target.checked && current.websiteOrdersEnabled }))}/> Publicar site e cardápio</label>

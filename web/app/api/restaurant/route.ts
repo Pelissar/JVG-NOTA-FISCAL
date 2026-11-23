@@ -594,6 +594,19 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const token = url.searchParams.get("token");
     const slug = url.searchParams.get("slug");
+    if (url.searchParams.get("tableRequests") === "1") {
+      const scope = await requireRestaurant();
+      const queue = await readTableRequestQueue(scope);
+      if (!queue.available) return apiJson({ tableRequests: [], tableRequestsAvailable: false });
+      const tables = await dbRequest<Array<{ id: string; label: string }>>(
+        `/rest/v1/jvg_restaurant_tables?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&select=id,label&limit=500`,
+      );
+      const labels = new Map(tables.map((table) => [table.id, table.label]));
+      return apiJson({
+        tableRequests: queue.rows.map((row) => ({ ...row, table_label: labels.get(String(row.table_id || "")) || "Mesa" })),
+        tableRequestsAvailable: true,
+      });
+    }
     if (url.searchParams.get("document") === "1") {
       const identity = await requireVerifiedRestaurantCustomer(request);
       const documentLinkId = url.searchParams.get("id") || "";
