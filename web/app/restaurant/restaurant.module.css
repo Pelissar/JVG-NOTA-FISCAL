@@ -520,6 +520,9 @@
 .qrAccountHeading h2, .qrAccountHeading h3 { margin: 3px 0 0; overflow-wrap: anywhere; }
 .qrAccountHeading h3 { font-size: 15px; }
 .qrAuthForms, .qrAuthForm { display: grid; gap: 11px; min-width: 0; }
+.qrAuthSwitch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-muted); }
+.qrAuthSwitch button { min-width: 0; min-height: 38px; padding: 7px 10px; border: 0; border-radius: 8px; color: var(--muted); background: transparent; font-size: 11px; font-weight: 800; }
+.qrAuthSwitch .qrAuthSwitchActive { color: var(--qr-accent-contrast, #fff); background: var(--qr-accent, #1768d2); box-shadow: 0 2px 7px color-mix(in srgb, var(--qr-accent, #1768d2) 20%, transparent); }
 .qrAuthForm p { margin: 0; font-size: 11px; }
 .qrAuthForm input { min-width: 0; }
 .qrAuthForm > button, .qrTableActions button { min-height: 40px; padding: 8px 12px; border: 0; border-radius: 9px; color: var(--qr-accent-contrast, #fff); background: var(--qr-accent, #1768d2); font-size: 12px; font-weight: 800; }
@@ -945,6 +948,7 @@
 .tableCallText { display: grid; flex: 1; min-width: 0; gap: 3px; }
 .tableCallText strong { color: #182a3e; font-size: 15px; }
 .tableCallText span { color: #66758a; font-size: 12px; line-height: 1.45; }
+.tableCallText small { color: #536579; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
 .tableCallPending { padding: 5px 9px; border-radius: 999px; color: #875200; background: #fff3d7; font-size: 11px; font-weight: 800; white-space: nowrap; }
 .tableCallEmpty { display: flex; align-items: center; gap: 12px; padding: 15px; border: 1px dashed #cddbd2; border-radius: 14px; background: #f8fcf9; }
 .tableCallEmpty > span { display: grid; flex: 0 0 34px; width: 34px; height: 34px; place-items: center; border-radius: 50%; color: #187143; background: #e5f5e9; font-weight: 900; }
@@ -973,3 +977,4 @@
 @media (prefers-reduced-motion: reduce) {
   .tableCallToast { animation: none; }
 }
+

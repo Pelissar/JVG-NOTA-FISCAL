@@ -32,6 +32,30 @@ function validCpf(value: string) {
   return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
 }
 
+function customerPhoneE164(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) return "+" + digits;
+  if (digits.length === 10 || digits.length === 11) return "+55" + digits;
+  return null;
+}
+
+async function customerAuthRequest(path: "otp" | "verify", body: Record<string, unknown>) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/$/, "");
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+  if (!url || !key) throw new JvgBackendError("A autenticação por telefone não está configurada.", 503);
+  let response: Response;
+  try {
+    response = await fetch(`${url}/auth/v1/${path}`, {
+      method: "POST", headers: { apikey: key, "Content-Type": "application/json" },
+      body: JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(12000),
+    });
+  } catch {
+    throw new JvgBackendError("Não foi possível acessar a confirmação por SMS agora.", 503);
+  }
+  const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+  return { response, payload };
+}
+
 const logoBucket = "jvg-company-logos";
 
 function menuSchemaUnavailable(error: unknown) {
@@ -547,10 +571,22 @@ async function readKitchenOrders(scope: Pick<RestaurantScope, "tenant_id" | "com
   }
 }
 
-async function readTableRequestQueue(scope: Pick<RestaurantScope, "tenant_id" | "company_id">) {
+async function readTableRequestQueue(scope: Pick<RestaurantScope, "tenant_id" | "company_id">): Promise<{
+  available: boolean;
+  rows: Array<Record<string, unknown> & { table_id: string; customer_name: string | null }>;
+}> {
   try {
-    const rows = await dbRequest<Array<Record<string, unknown>>>(`/rest/v1/jvg_restaurant_table_requests?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&status=eq.pending&select=id,table_id,request_type,status,created_at&order=created_at.asc&limit=100`);
-    return { available: true, rows };
+    const rows = await dbRequest<Array<Record<string, unknown> & { table_id: string; customer_id: string | null }>>(`/rest/v1/jvg_restaurant_table_requests?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&status=eq.pending&select=id,table_id,customer_id,request_type,status,created_at&order=created_at.asc&limit=100`);
+    const customerIds = [...new Set(rows.map((row) => typeof row.customer_id === "string" ? row.customer_id : "").filter(Boolean))];
+    const customers = customerIds.length ? await dbRequest<Array<{ id: string; full_name: string }>>(
+      `/rest/v1/jvg_restaurant_customers?tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}&id=in.(${customerIds.join(",")})&select=id,full_name&limit=100`,
+    ) : [];
+    const customerById = new Map(customers.map((customer) => [customer.id, customer]));
+    const enrichedRows = rows.map((row) => {
+      const customer = typeof row.customer_id === "string" ? customerById.get(row.customer_id) : null;
+      return { ...row, customer_name: customer?.full_name || null };
+    });
+    return { available: true, rows: enrichedRows };
   } catch (error) {
     if (menuSchemaUnavailable(error)) return { available: false, rows: [] };
     throw error;
@@ -899,14 +935,68 @@ export async function POST(request: Request) {
     let source: "table" | "counter" | "qr" | "website" = "counter";
     let fulfillmentType: "table" | "pickup" | null = null;
     let customerIdentity: { userId: string; phone: string } | null = null;
+    if (kind === "customer-login") {
+      const action = str(input.action, 12);
+      const cpf = str(input.cpf, 20).replace(/\D/g, "");
+      if (!validCpf(cpf) || !["send", "verify"].includes(action)) {
+        throw new JvgBackendError("Informe um CPF válido e tente novamente.", 400);
+      }
+      let context: PublicContext;
+      if (publicToken) {
+        const result = await readPublicTable(publicToken);
+        context = { tenant_id: result.tenant_id, company_id: result.company_id, company: result.company, brand: result.brand, table: result.table };
+      } else if (publicSlug) context = await readPublicRestaurantBySlug(publicSlug);
+      else throw new JvgBackendError("Informe o restaurante para acessar a conta.", 400);
+      const customerRows = await dbRequest<Array<{ id: string; phone: string; auth_user_id: string | null; full_name: string; cpf: string | null }>>(
+        `/rest/v1/jvg_restaurant_customers?tenant_id=${filterEq(context.tenant_id)}&company_id=${filterEq(context.company_id)}&cpf=${filterEq(cpf)}&select=id,phone,auth_user_id,full_name,cpf&limit=1`,
+      );
+      const customer = customerRows[0];
+      const phoneNumber = customer ? customerPhoneE164(customer.phone) : null;
+      if (action === "send") {
+        if (customer && phoneNumber) {
+          try { await customerAuthRequest("otp", { phone: phoneNumber, create_user: !customer.auth_user_id }); }
+          catch { /* Keep the CPF lookup response uniform; the verify step reports an unavailable/invalid code. */ }
+        }
+        return apiJson({ ok: true, message: "Se houver cadastro, enviaremos um código ao telefone confirmado. Confira suas mensagens ou fale com o restaurante se ele não chegar." });
+      }
+      if (!customer || !phoneNumber) {
+        throw new JvgBackendError("Código inválido ou expirado. Confira o CPF e solicite outro código.", 401);
+      }
+      const { response, payload } = await customerAuthRequest("verify", { phone: phoneNumber, token: str(input.otp, 10), type: "sms" });
+      const authUser = payload.user && typeof payload.user === "object" ? payload.user as Record<string, unknown> : {};
+      if (!response.ok || typeof authUser.id !== "string" || customer.auth_user_id && authUser.id !== customer.auth_user_id || !authUser.phone_confirmed_at || customerPhoneE164(String(authUser.phone || "")) !== phoneNumber ||
+          typeof payload.access_token !== "string" || typeof payload.refresh_token !== "string") {
+        throw new JvgBackendError("Código inválido ou expirado. Confira o CPF e solicite outro código.", 401);
+      }
+      if (!customer.auth_user_id) {
+        const linked = await dbRequest<Array<{ id: string }>>(
+          `/rest/v1/jvg_restaurant_customers?tenant_id=${filterEq(context.tenant_id)}&company_id=${filterEq(context.company_id)}&id=${filterEq(customer.id)}&phone=${filterEq(customer.phone)}&cpf=${filterEq(cpf)}&auth_user_id=is.null&select=id`,
+          { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify({ auth_user_id: authUser.id, updated_at: new Date().toISOString() }) },
+        );
+        if (!linked[0]) throw new JvgBackendError("Não foi possível associar este cadastro após confirmar o telefone. Fale com o restaurante.", 409);
+      }
+      return apiJson({ ok: true, session: { access_token: payload.access_token, refresh_token: payload.refresh_token } });
+    }
     if (kind === "table-request") {
       const { table } = await readPublicTable(publicToken);
       const requestType = str(input.requestType, 24);
       if (!["call_waiter", "request_bill"].includes(requestType)) throw new JvgBackendError("Solicitação de mesa inválida.", 400);
       if (table.service_status !== "open") throw new JvgBackendError("A mesa está fechada. Peça ajuda à equipe.", 409);
-      const created = await dbRequest<Record<string, unknown>>("/rest/v1/rpc/jvg_restaurant_create_table_request", {
+      const identity = request.headers.has("authorization") ? await requireVerifiedRestaurantCustomer(request) : null;
+      let customerId: string | null = null;
+      if (identity) {
+        const customers = await dbRequest<Array<{ id: string; full_name: string; phone: string; cpf: string | null }>>(
+          `/rest/v1/jvg_restaurant_customers?tenant_id=${filterEq(table.tenant_id)}&company_id=${filterEq(table.company_id)}&auth_user_id=${filterEq(identity.userId)}&select=id,full_name,phone,cpf&limit=1`,
+        );
+        const customer = customers[0];
+        if (customer && customer.phone === identity.phone && customer.cpf && validCpf(customer.cpf) && customer.full_name.trim().length >= 2) customerId = customer.id;
+      }
+      if (requestType === "request_bill" && !customerId) {
+        throw new JvgBackendError("Para pedir a conta, entre com seu CPF ou complete seu cadastro com nome, telefone e CPF. O balcão mostrará seu nome.", 401);
+      }
+      const created = await dbRequest<Record<string, unknown>>("/rest/v1/rpc/jvg_restaurant_create_table_request_with_customer", {
         method: "POST",
-        body: JSON.stringify({ p_tenant_id: table.tenant_id, p_company_id: table.company_id, p_table_id: table.id, p_request_type: requestType }),
+        body: JSON.stringify({ p_tenant_id: table.tenant_id, p_company_id: table.company_id, p_table_id: table.id, p_request_type: requestType, p_customer_id: customerId }),
       });
       return apiJson({ ok: true, request: { request_type: requestType, status: created.status, created_at: created.created_at } });
     }
@@ -1112,6 +1202,28 @@ export async function PATCH(request: Request) {
     requireWrite(scope);
     const input = await request.json() as Record<string, unknown>;
     const kind = str(input.kind, 20);
+    if (kind === "close-table-account") {
+      const tableId = str(input.tableId, 40);
+      const requestId = str(input.requestId, 40);
+      if (!UUID.test(tableId) || !UUID.test(requestId)) throw new JvgBackendError("Mesa ou solicitação de conta inválida.", 400);
+      let closed: boolean;
+      try {
+        closed = await dbRequest<boolean>("/rest/v1/rpc/jvg_restaurant_close_table_account", {
+          method: "POST",
+          body: JSON.stringify({ p_tenant_id: scope.tenant_id, p_company_id: scope.company_id, p_table_id: tableId, p_request_id: requestId }),
+        });
+      } catch (error) {
+        if (error instanceof JvgBackendError && error.databaseCode === "23514") {
+          throw new JvgBackendError("Finalize ou cancele os pedidos e registre no caixa os pagamentos antes de fechar a conta.", 409);
+        }
+        if (error instanceof JvgBackendError && error.databaseCode === "P0002") {
+          throw new JvgBackendError("A solicitação já foi atendida ou a mesa já está fechada. Atualize a fila.", 409);
+        }
+        throw error;
+      }
+      if (closed !== true) throw new JvgBackendError("A mesa não foi encontrada nesta empresa.", 404);
+      return apiJson({ ok: true, closed: true, status: "attended" });
+    }
     if (kind === "order-payment") {
       const id = str(input.id, 40);
       if (!UUID.test(id)) throw new JvgBackendError("Pedido inválido.", 400);
@@ -1155,9 +1267,17 @@ export async function PATCH(request: Request) {
       const id = str(input.id, 40);
       const status = str(input.status, 10);
       if (!UUID.test(id) || !["open", "closed"].includes(status)) throw new JvgBackendError("Mesa ou situação inválida.", 400);
-      const ok = await dbRequest<boolean>("/rest/v1/rpc/jvg_restaurant_set_table_status", {
-        method: "POST", body: JSON.stringify({ p_tenant_id: scope.tenant_id, p_company_id: scope.company_id, p_table_id: id, p_status: status }),
-      });
+      let ok: boolean;
+      try {
+        ok = await dbRequest<boolean>("/rest/v1/rpc/jvg_restaurant_set_table_status", {
+          method: "POST", body: JSON.stringify({ p_tenant_id: scope.tenant_id, p_company_id: scope.company_id, p_table_id: id, p_status: status }),
+        });
+      } catch (error) {
+        if (status === "closed" && error instanceof JvgBackendError && error.databaseCode === "23514") {
+          throw new JvgBackendError("Finalize ou cancele os pedidos e registre no caixa os pagamentos antes de fechar a conta.", 409);
+        }
+        throw error;
+      }
       if (ok !== true) throw new JvgBackendError("Mesa não encontrada nesta empresa.", 404);
       return apiJson({ ok: true });
     }
@@ -1174,3 +1294,4 @@ export async function PATCH(request: Request) {
     throw new JvgBackendError("Ação de restaurante inválida.", 400);
   } catch (error) { return safeError(error); }
 }
+

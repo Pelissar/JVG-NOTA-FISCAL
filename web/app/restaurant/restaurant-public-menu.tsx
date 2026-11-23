@@ -66,6 +66,18 @@ function displayPhone(value: string) {
   return value;
 }
 
+function isValidCpf(value: string) {
+  const cpf = value.replace(/\D/g, "");
+  if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false;
+  const digit = (length: number) => {
+    let sum = 0;
+    for (let index = 0; index < length; index += 1) sum += Number(cpf[index]) * (length + 1 - index);
+    const result = (sum * 10) % 11;
+    return result === 10 ? 0 : result;
+  };
+  return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
+}
+
 function contrastRatio(hex: string, foreground: string) {
   const value = Number.parseInt(hex.replace("#", ""), 16);
   const foregroundValue = Number.parseInt(foreground.replace("#", ""), 16);
@@ -110,6 +122,7 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
   const [accountLoading, setAccountLoading] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -339,11 +352,22 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
     event.preventDefault(); setAuthError(""); setAuthBusy(true);
     if (!supabase) { setAuthError("A autenticação por telefone não está configurada neste ambiente."); setAuthBusy(false); return; }
     try {
-      if (profileCpf.replace(/\D/g, "").length !== 11) throw new Error("Informe os 11 dígitos do CPF para consultar seu cadastro após confirmar o telefone.");
-      const phoneNumber = e164(phone);
-      const { error: sendError } = await supabase.auth.signInWithOtp({ phone: phoneNumber });
-      if (sendError) throw sendError;
-      setPhone(phoneNumber); setOtpSent(true); setNotice("Enviamos um código de verificação por SMS.");
+      if (!isValidCpf(profileCpf)) throw new Error("Informe um CPF válido com 11 dígitos.");
+      if (authMode === "login") {
+        const response = await fetch("/api/restaurant", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, slug, kind: "customer-login", action: "send", cpf: profileCpf }),
+        });
+        const payload = await response.json() as { error?: string };
+        if (!response.ok) throw new Error(payload.error || "Não foi possível solicitar o código agora.");
+        setOtpSent(true); setNotice("Se houver cadastro, enviaremos um código ao telefone confirmado. Confira suas mensagens ou fale com o restaurante se ele não chegar.");
+      } else {
+        if (profileName.trim().length < 2) throw new Error("Informe seu nome completo para criar o cadastro.");
+        const phoneNumber = e164(phone);
+        const { error: sendError } = await supabase.auth.signInWithOtp({ phone: phoneNumber, options: { shouldCreateUser: true } });
+        if (sendError) throw sendError;
+        setPhone(phoneNumber); setOtpSent(true); setNotice("Enviamos um código de verificação por SMS.");
+      }
     } catch (reason) { setAuthError(reason instanceof Error ? reason.message : "Não foi possível enviar o código. Confira a configuração de SMS."); }
     finally { setAuthBusy(false); }
   }
@@ -352,14 +376,39 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
     event.preventDefault(); setAuthError(""); setAuthBusy(true);
     if (!supabase) { setAuthError("A autenticação por telefone não está configurada neste ambiente."); setAuthBusy(false); return; }
     try {
-      const { data: result, error: verifyError } = await supabase.auth.verifyOtp({ phone: e164(phone), token: otp.trim(), type: "sms" });
-      if (verifyError) throw verifyError;
-      if (!result.session) throw new Error("O provedor não confirmou a sessão. Solicite outro código.");
-      setAuthSession(result.session);
-      const account = await loadAccount(result.session.access_token, profileCpf);
-      setProfile(account.profile); setHistory(account.history);
-      if (account.profile) { setProfileName(account.profile.name); setProfileCpf(account.profile.cpf || ""); }
-      setOtpSent(false); setOtp(""); setNotice("Telefone confirmado para acessar sua conta neste restaurante.");
+      let nextSession: Session | null = null;
+      if (authMode === "login") {
+        const response = await fetch("/api/restaurant", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, slug, kind: "customer-login", action: "verify", cpf: profileCpf, otp: otp.trim() }),
+        });
+        const payload = await response.json() as { session?: { access_token: string; refresh_token: string }; error?: string };
+        if (!response.ok || !payload.session) throw new Error(payload.error || "Código inválido ou expirado. Confira o CPF e solicite outro código.");
+        const { data: result, error: sessionError } = await supabase.auth.setSession(payload.session);
+        if (sessionError) throw sessionError;
+        nextSession = result.session;
+      } else {
+        const { data: result, error: verifyError } = await supabase.auth.verifyOtp({ phone: e164(phone), token: otp.trim(), type: "sms" });
+        if (verifyError) throw verifyError;
+        nextSession = result.session;
+      }
+      if (!nextSession) throw new Error("O provedor não confirmou a sessão. Solicite outro código.");
+      setAuthSession(nextSession);
+      if (authMode === "register") {
+        const response = await fetch("/api/restaurant", {
+          method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + nextSession.access_token },
+          body: JSON.stringify({ token, slug, kind: "customer-profile", customerName: profileName, cpf: profileCpf }),
+        });
+        const payload = await response.json() as { profile?: CustomerProfile; error?: string };
+        if (!response.ok || !payload.profile) throw new Error(payload.error || "Não foi possível concluir o cadastro.");
+        setProfile(payload.profile); setHistory([]); setProfileName(payload.profile.name); setProfileCpf(payload.profile.cpf || "");
+      } else {
+        const account = await loadAccount(nextSession.access_token, profileCpf);
+        setProfile(account.profile); setHistory(account.history);
+        if (account.profile) { setProfileName(account.profile.name); setProfileCpf(account.profile.cpf || ""); }
+        if (!account.profile) throw new Error("Cadastro não localizado neste restaurante. Escolha criar cadastro para continuar.");
+      }
+      setOtpSent(false); setOtp(""); setNotice("Acesso confirmado neste aparelho. Você também pode entrar em outro aparelho com o CPF e um novo código SMS.");
     } catch (reason) { setAuthError(reason instanceof Error ? reason.message : "Código inválido ou expirado."); }
     finally { setAuthBusy(false); }
   }
@@ -394,9 +443,16 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
 
   async function sendTableRequest(type: "call_waiter" | "request_bill") {
     if (!token || !data?.tableOpen) return;
+    if (type === "request_bill" && (!session?.access_token || !phoneSessionVerified || !profile)) {
+      setAuthError("Entre com seu CPF ou complete o cadastro com nome, telefone e CPF para pedir a conta. O balcão verá seu nome.");
+      document.getElementById("qr-account-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     setTableBusy(true); setTableNotice(""); setError("");
     try {
-      const response = await fetch("/api/restaurant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "table-request", token, requestType: type }) });
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token && phoneSessionVerified) headers.Authorization = "Bearer " + session.access_token;
+      const response = await fetch("/api/restaurant", { method: "POST", headers, body: JSON.stringify({ kind: "table-request", token, requestType: type }) });
       const payload = await response.json() as { error?: string };
       if (!response.ok) throw new Error(payload.error || "A equipe não recebeu a solicitação.");
       setTableNotice(type === "call_waiter" ? "Solicitação para chamar o garçom enviada à equipe." : "Solicitação de conta enviada à equipe.");
@@ -520,8 +576,11 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
         <div className={styles.qrAccountHeading}><div><span>CONTA DO CLIENTE</span><h2 id="qr-account-title">Seus pedidos e dados</h2></div>{profile ? <button type="button" className={styles.buttonGhost} disabled={authBusy} onClick={() => void signOut()}>Sair</button> : null}</div>
         {!supabase ? <p className={styles.qrAuthMessage} role="alert">Autenticação por telefone indisponível: este ambiente ainda não está configurado para enviar SMS.</p> : null}
         {!signedIn ? <div className={styles.qrAuthForms}>
-          {!otpSent ? <form className={styles.qrAuthForm} onSubmit={(event) => void requestCode(event)}><label>Telefone com DDD<input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="(00) 00000-0000" inputMode="tel" autoComplete="tel" required/></label><label>CPF<input value={profileCpf} onChange={(event) => setProfileCpf(event.target.value.replace(/\D/g, "").slice(0, 11))} placeholder="11 dígitos" inputMode="numeric" autoComplete="off" minLength={11} maxLength={11} required/></label><p>Enviaremos um código por SMS. O CPF ajuda a localizar seu cadastro depois da confirmação do telefone; CPF sozinho não abre pedidos ou histórico. Usamos seus dados para a conta e o atendimento, nunca para marketing automático.</p><button type="submit" disabled={authBusy || !supabase}>{authBusy ? "Enviando código…" : "Confirmar telefone e consultar conta"}</button></form>
-          : <form className={styles.qrAuthForm} onSubmit={(event) => void confirmCode(event)}><label>Código recebido por SMS<input value={otp} onChange={(event) => setOtp(event.target.value)} inputMode="numeric" autoComplete="one-time-code" minLength={4} maxLength={10} required/></label><p>Enviado para {phone}. Se a mensagem não chegar, confira o provedor de SMS ou solicite outro código.</p><button type="submit" disabled={authBusy || !supabase}>{authBusy ? "Verificando…" : "Confirmar telefone"}</button><button type="button" className={styles.buttonGhost} disabled={authBusy} onClick={() => { setOtpSent(false); setOtp(""); }}>Trocar telefone</button></form>}
+          {!otpSent ? <>
+            <div className={styles.qrAuthSwitch} role="group" aria-label="Acesso do cliente"><button type="button" className={authMode === "login" ? styles.qrAuthSwitchActive : ""} aria-pressed={authMode === "login"} onClick={() => { setAuthMode("login"); setAuthError(""); }}>Já tenho cadastro</button><button type="button" className={authMode === "register" ? styles.qrAuthSwitchActive : ""} aria-pressed={authMode === "register"} onClick={() => { setAuthMode("register"); setAuthError(""); }}>Criar cadastro</button></div>
+            {authMode === "login" ? <form className={styles.qrAuthForm} onSubmit={(event) => void requestCode(event)}><label>CPF<input value={profileCpf} onChange={(event) => setProfileCpf(event.target.value.replace(/\D/g, "").slice(0, 11))} placeholder="11 dígitos" inputMode="numeric" autoComplete="off" minLength={11} maxLength={11} required/></label><p>Informe somente seu CPF. Se houver cadastro neste restaurante, enviaremos um código de acesso ao telefone confirmado. O CPF sozinho não libera pedidos nem histórico.</p><button type="submit" disabled={authBusy || !supabase}>{authBusy ? "Solicitando código…" : "Entrar com CPF"}</button></form>
+              : <form className={styles.qrAuthForm} onSubmit={(event) => void requestCode(event)}><label>Nome completo<input value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Seu nome" minLength={2} maxLength={120} autoComplete="name" required/></label><label>Telefone com DDD<input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="(00) 00000-0000" inputMode="tel" autoComplete="tel" required/></label><label>CPF<input value={profileCpf} onChange={(event) => setProfileCpf(event.target.value.replace(/\D/g, "").slice(0, 11))} placeholder="11 dígitos" inputMode="numeric" autoComplete="off" minLength={11} maxLength={11} required/></label><p>Vamos confirmar o telefone por SMS antes de salvar seu cadastro. Usamos os dados para identificar pedidos e atendimento; marketing não é ativado.</p><button type="submit" disabled={authBusy || !supabase}>{authBusy ? "Enviando código…" : "Continuar cadastro"}</button></form>}
+          </> : <form className={styles.qrAuthForm} onSubmit={(event) => void confirmCode(event)}><label>Código recebido por SMS<input value={otp} onChange={(event) => setOtp(event.target.value)} inputMode="numeric" autoComplete="one-time-code" minLength={4} maxLength={10} required/></label><p>{authMode === "login" ? "Digite o código enviado ao telefone confirmado do cadastro. A mesma conta pode ser acessada em outro aparelho, com uma nova confirmação." : `Código enviado para ${displayPhone(phone)}. Se não chegar, confira o telefone e solicite outro código.`}</p><button type="submit" disabled={authBusy || !supabase}>{authBusy ? "Verificando…" : authMode === "login" ? "Confirmar e entrar" : "Confirmar telefone e salvar cadastro"}</button><button type="button" className={styles.buttonGhost} disabled={authBusy} onClick={() => { setOtpSent(false); setOtp(""); setAuthError(""); }}>Voltar</button></form>}
         </div> : accountLoading ? <p className={styles.qrAuthMessage} role="status">Consultando sua conta neste restaurante…</p>
         : profile && !editingProfile ? <div className={styles.qrProfile}><div><strong>{profile.name}</strong><span>{profile.phone}{profile.cpf ? " · CPF " + profile.cpf : ""}</span><small>O acesso é protegido pelo telefone confirmado. O histórico fica separado por restaurante.</small></div><button type="button" className={styles.buttonGhost} onClick={() => setEditingProfile(true)}>Editar cadastro</button></div>
         : <form className={styles.qrAuthForm} onSubmit={(event) => void saveProfile(event)}><p>{profile ? "Atualize os dados deste restaurante." : "Complete seu cadastro neste restaurante para enviar pedidos e consultar seu histórico."}</p><label>Nome completo<input value={profileName} onChange={(event) => setProfileName(event.target.value)} minLength={2} maxLength={120} autoComplete="name" required/></label><label>Telefone confirmado por SMS<input value={displayPhone(profile?.phone || session?.user.phone || phone)} readOnly aria-readonly="true" autoComplete="tel"/></label><label>CPF<input value={profileCpf} onChange={(event) => setProfileCpf(event.target.value.replace(/\D/g, "").slice(0, 11))} placeholder="11 dígitos" inputMode="numeric" autoComplete="off" minLength={11} maxLength={11} required={!profile?.cpf}/></label><p>O telefone foi confirmado por SMS. Usamos estes dados para identificar seus pedidos; marketing não é ativado.</p><button type="submit" disabled={authBusy}>{authBusy ? "Salvando…" : "Salvar cadastro"}</button>{!profile ? <button type="button" className={styles.buttonGhost} disabled={authBusy} onClick={() => void signOut()}>Trocar telefone e confirmar novamente</button> : null}{profile ? <button type="button" className={styles.buttonGhost} onClick={() => setEditingProfile(false)}>Cancelar edição</button> : null}</form>}
@@ -565,3 +624,4 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
     </> : null}
   </main>;
 }
+
