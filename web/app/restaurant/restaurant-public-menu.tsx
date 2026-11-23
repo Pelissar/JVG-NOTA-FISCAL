@@ -58,6 +58,14 @@ function e164(value: string) {
   throw new Error("Informe um telefone brasileiro com DDD.");
 }
 
+function displayPhone(value: string) {
+  let digits = value.replace(/\D/g, "");
+  if (digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) digits = digits.slice(2);
+  if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return value;
+}
+
 function contrastRatio(hex: string, foreground: string) {
   const value = Number.parseInt(hex.replace("#", ""), 16);
   const foregroundValue = Number.parseInt(foreground.replace("#", ""), 16);
@@ -129,13 +137,15 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   const supabase = useMemo(() => supabaseUrl && supabaseKey ? createBrowserClient(supabaseUrl, supabaseKey) : null, [supabaseUrl, supabaseKey]);
+  const phoneSessionVerified = Boolean(session?.user.phone && session.user.phone_confirmed_at);
 
   function setAuthSession(next: Session | null) {
     setSession(next);
     setQuote(null);
     setAccountLoading(Boolean(next));
     setAuthError("");
-    if (!next) { setProfile(null); setHistory([]); setEditingProfile(false); }
+    if (next?.user.phone) setPhone(next.user.phone);
+    if (!next) { setPhone(""); setProfile(null); setHistory([]); setEditingProfile(false); }
   }
 
   useEffect(() => {
@@ -171,7 +181,7 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
   }, [slug, token]);
 
   useEffect(() => {
-    if (!session?.access_token || !data) return;
+    if (!session?.access_token || !phoneSessionVerified || !data) return;
     let active = true;
     void loadAccount(session.access_token)
       .then((payload) => {
@@ -186,10 +196,10 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
       .catch((reason: Error) => { if (active) setAuthError(reason.message); })
       .finally(() => { if (active) setAccountLoading(false); });
     return () => { active = false; };
-  }, [session, data, loadAccount]);
+  }, [session, phoneSessionVerified, data, loadAccount]);
 
   useEffect(() => {
-    if (!session?.access_token || !profile || !data) return;
+    if (!session?.access_token || !phoneSessionVerified || !profile || !data) return;
     let active = true;
     const timer = window.setInterval(() => {
       void loadAccount(session.access_token).then((payload) => {
@@ -197,7 +207,7 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
       }).catch(() => undefined);
     }, 15000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [session?.access_token, profile, data, loadAccount]);
+  }, [session?.access_token, phoneSessionVerified, profile, data, loadAccount]);
 
   const visibleMenu = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("pt-BR");
@@ -471,7 +481,7 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
 
   const accent = data?.brandColor || "#1768d2";
   const pageStyle = { "--qr-accent": accent, "--qr-accent-contrast": readableAccent(accent), "--qr-accent-text": readableAccentText(accent) } as CSSProperties;
-  const signedIn = Boolean(session?.access_token);
+  const signedIn = Boolean(session?.access_token && phoneSessionVerified);
   return <main className={`${styles.qrPage} ${data?.mode === "website" ? styles.publicWebsite : styles.tableMenu}`} data-menu-mode={data?.mode || "loading"} style={pageStyle}>
     {loading ? <div className={styles.qrEmpty} role="status">Carregando cardápio…</div> : null}
     {error && !data ? <div className={styles.qrError} role="alert">{error}</div> : null}
@@ -514,7 +524,7 @@ export function RestaurantPublicMenu({ token, slug }: { token?: string; slug?: s
           : <form className={styles.qrAuthForm} onSubmit={(event) => void confirmCode(event)}><label>Código recebido por SMS<input value={otp} onChange={(event) => setOtp(event.target.value)} inputMode="numeric" autoComplete="one-time-code" minLength={4} maxLength={10} required/></label><p>Enviado para {phone}. Se a mensagem não chegar, confira o provedor de SMS ou solicite outro código.</p><button type="submit" disabled={authBusy || !supabase}>{authBusy ? "Verificando…" : "Confirmar telefone"}</button><button type="button" className={styles.buttonGhost} disabled={authBusy} onClick={() => { setOtpSent(false); setOtp(""); }}>Trocar telefone</button></form>}
         </div> : accountLoading ? <p className={styles.qrAuthMessage} role="status">Consultando sua conta neste restaurante…</p>
         : profile && !editingProfile ? <div className={styles.qrProfile}><div><strong>{profile.name}</strong><span>{profile.phone}{profile.cpf ? " · CPF " + profile.cpf : ""}</span><small>O acesso é protegido pelo telefone confirmado. O histórico fica separado por restaurante.</small></div><button type="button" className={styles.buttonGhost} onClick={() => setEditingProfile(true)}>Editar cadastro</button></div>
-        : <form className={styles.qrAuthForm} onSubmit={(event) => void saveProfile(event)}><p>{profile ? "Atualize os dados deste restaurante." : "Complete seu cadastro neste restaurante para enviar pedidos e consultar seu histórico."}</p><label>Nome completo<input value={profileName} onChange={(event) => setProfileName(event.target.value)} minLength={2} maxLength={120} autoComplete="name" required/></label><label>CPF<input value={profileCpf} onChange={(event) => setProfileCpf(event.target.value.replace(/\D/g, "").slice(0, 11))} placeholder="11 dígitos" inputMode="numeric" autoComplete="off" minLength={11} maxLength={11} required={!profile?.cpf}/></label><p>O telefone foi confirmado por SMS. Usamos estes dados para identificar seus pedidos; marketing não é ativado.</p><button type="submit" disabled={authBusy}>{authBusy ? "Salvando…" : "Salvar cadastro"}</button>{profile ? <button type="button" className={styles.buttonGhost} onClick={() => setEditingProfile(false)}>Cancelar edição</button> : null}</form>}
+        : <form className={styles.qrAuthForm} onSubmit={(event) => void saveProfile(event)}><p>{profile ? "Atualize os dados deste restaurante." : "Complete seu cadastro neste restaurante para enviar pedidos e consultar seu histórico."}</p><label>Nome completo<input value={profileName} onChange={(event) => setProfileName(event.target.value)} minLength={2} maxLength={120} autoComplete="name" required/></label><label>Telefone confirmado por SMS<input value={displayPhone(profile?.phone || session?.user.phone || phone)} readOnly aria-readonly="true" autoComplete="tel"/></label><label>CPF<input value={profileCpf} onChange={(event) => setProfileCpf(event.target.value.replace(/\D/g, "").slice(0, 11))} placeholder="11 dígitos" inputMode="numeric" autoComplete="off" minLength={11} maxLength={11} required={!profile?.cpf}/></label><p>O telefone foi confirmado por SMS. Usamos estes dados para identificar seus pedidos; marketing não é ativado.</p><button type="submit" disabled={authBusy}>{authBusy ? "Salvando…" : "Salvar cadastro"}</button>{!profile ? <button type="button" className={styles.buttonGhost} disabled={authBusy} onClick={() => void signOut()}>Trocar telefone e confirmar novamente</button> : null}{profile ? <button type="button" className={styles.buttonGhost} onClick={() => setEditingProfile(false)}>Cancelar edição</button> : null}</form>}
         {authError ? <p className={styles.qrError} role="alert">{authError}</p> : null}
         {profile ? <div className={styles.qrHistory}><div className={styles.qrAccountHeading}><div><span>HISTÓRICO</span><h3>Pedidos recentes neste restaurante</h3></div><button type="button" className={styles.buttonGhost} disabled={accountLoading} onClick={() => session?.access_token ? void loadAccount(session.access_token) : undefined}>Atualizar</button></div>
           {history.length ? history.map((order) => <article className={styles.qrHistoryCard} key={order.id}><div className={styles.qrHistoryTop}><strong>Pedido #{order.order_number}</strong><span>{statuses[order.status] || order.status}</span></div><small>{new Date(order.created_at).toLocaleString("pt-BR")} · {order.fulfillment_type === "pickup" ? "Retirada" : "Mesa"} · {order.payment_status === "paid" ? "Pagamento registrado no caixa" : order.payment_status === "pending" ? "Pagamento pendente no caixa" : "Pagamento não informado"}</small><ul>{order.items.map((item, index) => <li key={item.product_id + ":" + index}>{item.quantity} × {item.description}{item.selectedOptions?.length ? " · " + item.selectedOptions.map((option) => option.name).join(", ") : ""}</li>)}</ul>{order.fiscalDocuments?.length ? <div className={styles.qrCustomerDocuments}><strong>Documento fiscal disponível por 30 dias</strong>{order.fiscalDocuments.map((fiscalDocument) => <div key={fiscalDocument.id}><span>{fiscalDocument.documentType.toUpperCase()} {fiscalDocument.number || ""}{fiscalDocument.series ? " · Série " + fiscalDocument.series : ""}</span><div>{fiscalDocument.formats.includes("pdf") ? <button type="button" className={styles.buttonGhost} disabled={Boolean(documentBusy)} onClick={() => void openCustomerDocument(fiscalDocument, "pdf")}>{documentBusy === fiscalDocument.id + ":pdf" ? "Abrindo PDF…" : "Visualizar PDF"}</button> : null}{fiscalDocument.formats.includes("xml") ? <button type="button" className={styles.buttonGhost} disabled={Boolean(documentBusy)} onClick={() => void openCustomerDocument(fiscalDocument, "xml")}>{documentBusy === fiscalDocument.id + ":xml" ? "Baixando XML…" : "Baixar XML"}</button> : null}</div><small>Disponível até {new Date(fiscalDocument.availableUntil).toLocaleDateString("pt-BR")}.</small></div>)}</div> : null}<div className={styles.qrHistoryBottom}><strong>{money(order.total)}</strong><button type="button" className={styles.buttonGhost} onClick={() => void reorder(order)}>Pedir novamente</button></div></article>) : <p className={styles.qrEmpty}>Você ainda não tem pedidos neste restaurante.</p>}
