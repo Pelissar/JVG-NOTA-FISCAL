@@ -14,18 +14,42 @@ async function api(url,options){
 function rows(){return [...$('quoteItems').querySelectorAll('.quote-row')];}
 function update(){
  const total=rows().reduce((sum,row)=>sum+(Number(row.querySelector('.quantity').value)||0)*(Number(row.querySelector('.price').value)||0),0);
- $('quoteTotal').textContent='Total: '+money(total);
+ $('quoteTotal').textContent=money(total);
+ const validRow=row=>{
+  const manual=row.dataset.manual==='true';
+  const hasItem=manual?!!row.querySelector('.manual-description').value.trim()&&!!row.querySelector('.manual-unit').value.trim():!!row.querySelector('.item').value;
+  return hasItem&&Number(row.querySelector('.quantity').value)>0&&row.querySelector('.price').value!=='';
+ };
  $('quoteAdd').disabled=!ready||busy||rows().length>=100;
- $('quoteSave').disabled=!ready||busy||!rows().length||rows().some(row=>!row.querySelector('.item').value||!(Number(row.querySelector('.quantity').value)>0)||row.querySelector('.price').value==='');
+ $('quoteAddManual').disabled=!ready||busy||rows().length>=100;
+ $('quoteSave').disabled=!ready||busy||!rows().length||rows().some(row=>!validRow(row));
+ $('quoteItemCount').textContent=rows().length+' '+(rows().length===1?'item':'itens');
 }
-function addRow(){
+function addRow(mode='catalog',itemData=null){
  if(!ready||busy||rows().length>=100)return;
- const row=document.createElement('div');row.className='quote-row';
- row.innerHTML='<label>Produto ou serviço<select class="item" required><option value="">Selecione</option>'+catalog.map(x=>'<option value="'+safe(x.kind+':'+x.id)+'">'+safe(x.name)+'</option>').join('')+'</select></label><label>Quantidade<input class="quantity" type="number" min="0.001" max="999999" step="0.001" value="1" required></label><label>Preço (R$)<input class="price" type="number" min="0" max="999999999" step="0.01" required></label><button type="button" class="btn remove">Remover</button>';
- row.querySelector('.item').addEventListener('change',()=>{const x=catalog.find(x=>x.kind+':'+x.id===row.querySelector('.item').value);row.querySelector('.price').value=x?Number(x.price).toFixed(2):'';update();});
+ const manual=mode==='manual'||itemData?.manual===true||(!itemData?.productId&&!itemData?.serviceId&&!!itemData);
+ const row=document.createElement('div');row.className='quote-row'+(manual?' quote-row--manual':'');row.dataset.manual=manual?'true':'false';
+ const itemField=manual
+  ?'<label class="manual-description-label">Descrição do item<input class="manual-description" maxlength="180" autocomplete="off" placeholder="Ex.: peça ou produto sob encomenda" required></label><label>Unidade<input class="manual-unit" maxlength="12" value="UN" autocomplete="off" required></label>'
+  :'<label>Produto ou serviço cadastrado<select class="item" required><option value="">Selecione no catálogo</option>'+catalog.map(x=>'<option value="'+safe(x.kind+':'+x.id)+'">'+safe(x.name)+'</option>').join('')+'</select></label>';
+ row.innerHTML=itemField+'<label>Quantidade<input class="quantity" type="number" min="0.001" max="999999" step="0.001" value="1" required></label><label>Preço unitário (R$)<input class="price" type="number" min="0" max="999999999" step="0.01" placeholder="0,00" required></label><button type="button" class="btn remove" aria-label="Remover item">Remover</button>';
+ if(manual){row.querySelector('.manual-description').value=itemData?.description||'';row.querySelector('.manual-unit').value=itemData?.unit||'UN';}
+ else if(itemData?.productId||itemData?.serviceId){const kind=itemData.productId?'product':'service',id=itemData.productId||itemData.serviceId,value=kind+':'+id,select=row.querySelector('.item');if(!Array.from(select.options).some(option=>option.value===value))select.insertAdjacentHTML('beforeend','<option value="'+safe(value)+'">'+safe(itemData.description||'Item inativo do orçamento')+'</option>');select.value=value;}
+ if(itemData){row.querySelector('.quantity').value=String(itemData.quantity??1);row.querySelector('.price').value=Number(itemData.unitPrice||0).toFixed(2);}
+ if(!manual)row.querySelector('.item').addEventListener('change',()=>{const x=catalog.find(x=>x.kind+':'+x.id===row.querySelector('.item').value);row.querySelector('.price').value=x?Number(x.price).toFixed(2):'';update();});
  row.querySelectorAll('input').forEach(el=>el.addEventListener('input',update));
  row.querySelector('.remove').addEventListener('click',()=>{row.remove();update();});
- $('quoteItems').append(row);update();
+ $('quoteItems').append(row);update();return row;
+}
+function loadItem(item){
+ const row=addRow(item.manual===true||(!item.productId&&!item.serviceId)?'manual':'catalog',item);
+ if(!row)return;
+ if(!row.dataset.manual||row.dataset.manual!=='true'){
+  const kind=item.productId?'product':'service',value=kind+':'+(item.productId||item.serviceId),select=row.querySelector('.item');
+  if(!Array.from(select.options).some(option=>option.value===value))select.insertAdjacentHTML('beforeend','<option value="'+safe(value)+'">'+safe(item.description||'Item inativo do orçamento')+'</option>');
+  select.value=value;
+ }
+ update();
 }
 async function history(nextPage=page){
  if(historyBusy)return;
@@ -74,19 +98,11 @@ function cloneQuote(q){
  if(!ready||busy)return;
  if(!confirm('A cópia abrirá como um novo orçamento editável. O formulário atual será substituído; o orçamento original permanece intacto. Continuar?'))return;
  $('quoteItems').replaceChildren();
- editingQuote=null;$('quoteFormTitle').textContent='Novo orçamento';$('quoteSave').textContent='Salvar proposta';$('quoteEditCancel').hidden=true;
+ editingQuote=null;$('quoteFormTitle').textContent='Monte seu orçamento';$('quoteSave').textContent='Salvar orçamento';$('quoteEditCancel').hidden=true;
  $('quoteCustomer').value=q.customer_id||'';
  $('quoteValidity').value='';
  $('quoteNotes').value=q.notes||'';
- (Array.isArray(q.items)?q.items:[]).forEach(item=>{
-  const kind=item.productId?'product':'service';
-  const id=item.productId||item.serviceId;
-  addRow();
-  const currentRows=rows();const row=currentRows[currentRows.length-1];
-  row.querySelector('.item').value=kind+':'+id;
-  row.querySelector('.quantity').value=String(item.quantity??1);
-  row.querySelector('.price').value=Number(item.unitPrice||0).toFixed(2);
- });
+ (Array.isArray(q.items)?q.items:[]).forEach(loadItem);
  if(!rows().length)addRow();
  update();
  $('quoteForm').scrollIntoView({behavior:'smooth',block:'start'});
@@ -94,22 +110,17 @@ function cloneQuote(q){
 }
 function editQuote(q){
  if(!ready||busy||!q||!['draft','sent'].includes(q.status))return;
- const hasDraft=$('quoteNotes').value.trim()||rows().some(row=>row.querySelector('.item').value);
+ const hasDraft=$('quoteNotes').value.trim()||rows().some(row=>row.dataset.manual==='true'?row.querySelector('.manual-description').value.trim():row.querySelector('.item').value);
  if(hasDraft&&editingQuote===null&&!confirm('O formulário atual será substituído. Deseja continuar?'))return;
  editingQuote={id:q.id,status:q.status};
  $('quoteItems').replaceChildren();$('quoteCustomer').value=q.customer_id||'';$('quoteValidity').value=q.valid_until||'';$('quoteNotes').value=q.notes||'';
- (Array.isArray(q.items)?q.items:[]).forEach(item=>{
-  const kind=item.productId?'product':'service',id=item.productId||item.serviceId,value=kind+':'+id;
-  addRow();const row=rows()[rows().length-1],select=row.querySelector('.item');
-  if(!Array.from(select.options).some(option=>option.value===value))select.insertAdjacentHTML('beforeend','<option value="'+safe(value)+'">'+safe(item.description||'Item inativo do orçamento')+'</option>');
-  select.value=value;row.querySelector('.quantity').value=String(item.quantity??1);row.querySelector('.price').value=Number(item.unitPrice||0).toFixed(2);
- });
+ (Array.isArray(q.items)?q.items:[]).forEach(loadItem);
  if(!rows().length)addRow();
  $('quoteFormTitle').textContent='Editar orçamento '+quoteNumber(q);$('quoteSave').textContent='Salvar alterações';$('quoteEditCancel').hidden=false;
  update();$('quoteForm').scrollIntoView({behavior:'smooth',block:'start'});
  notice(q.status==='sent'?'Ao salvar, esta proposta voltará para elaboração e precisará ser enviada novamente.':'Editando proposta em elaboração.');
 }
-function clearEditor(){editingQuote=null;$('quoteItems').replaceChildren();$('quoteCustomer').value='';$('quoteValidity').value='';$('quoteNotes').value='';$('quoteFormTitle').textContent='Novo orçamento';$('quoteSave').textContent='Salvar proposta';$('quoteEditCancel').hidden=true;addRow();}
+function clearEditor(){editingQuote=null;$('quoteItems').replaceChildren();$('quoteCustomer').value='';$('quoteValidity').value='';$('quoteNotes').value='';$('quoteFormTitle').textContent='Monte seu orçamento';$('quoteSave').textContent='Salvar orçamento';$('quoteEditCancel').hidden=true;addRow();}
 function showDetails(q){const items=Array.isArray(q.items)?q.items:[];$('quoteDetailsTitle').textContent='Orçamento '+quoteNumber(q);$('quoteDetailsBody').innerHTML='<dl><div><dt>Cliente</dt><dd>'+safe(customers.get(q.customer_id)||'Consumidor não identificado')+'</dd></div><div><dt>Situação</dt><dd><span class="status-pill '+(statusClasses[q.status]||'')+'">'+safe(statusLabels[q.status]||q.status)+'</span></dd></div><div><dt>Criado em</dt><dd>'+safe(new Date(q.created_at).toLocaleString('pt-BR'))+'</dd></div><div><dt>Validade</dt><dd>'+safe(q.valid_until||'Sem validade definida')+'</dd></div></dl><div class="detail-items">'+items.map(item=>'<article><span>'+safe(item.description||'Item comercial')+' · '+safe(item.quantity)+' × '+safe(money(item.unitPrice))+'</span><strong>'+safe(money(item.lineTotal))+'</strong></article>').join('')+'</div><p class="dialog-note">'+safe(q.notes||'Nenhuma observação registrada.')+'</p><div class="dialog-actions"><strong>Total: '+safe(money(q.total))+'</strong></div>';if(q.orderId)$('quoteDetailsBody').insertAdjacentHTML('beforeend',q.orderStatus==='cancelled'?'<p class="dialog-note">Pedido e orçamento de origem cancelados. Use Clonar para preparar uma nova proposta com outro número.</p>':'<p class="dialog-note">Pedido gerado. O orçamento original está bloqueado; use Clonar para iniciar outra proposta.</p>');$('quoteDetails').showModal();}
 $('quoteList').addEventListener('click',async event=>{
  const editButton=event.target.closest('button.quote-edit');if(editButton){const quote=quoteRows.find(q=>q.id===editButton.dataset.id);if(quote)editQuote(quote);return;}
@@ -150,14 +161,19 @@ async function start(){
   ready=true;addRow();await history();if(!historyError)notice('Orçamentos conectados à empresa.');
  }catch(error){historyError=error.message||'Não foi possível carregar os dados da empresa.';renderHistory();notice(error.message);}
 }
-$('quoteAdd').addEventListener('click',addRow);
+$('quoteAdd').addEventListener('click',()=>addRow('catalog'));
+$('quoteAddManual').addEventListener('click',()=>{const row=addRow('manual');row?.querySelector('.manual-description')?.focus();});
 $('quotePrev').addEventListener('click',()=>history(page-1).catch(e=>notice(e.message)));
 $('quoteNext').addEventListener('click',()=>history(page+1).catch(e=>notice(e.message)));
 $('quoteSearch').addEventListener('input',renderHistory);$('quoteStatus').addEventListener('change',renderHistory);$('quoteRefresh').addEventListener('click',()=>history(page).catch(e=>notice(e.message)));$('quoteDetailsClose').addEventListener('click',()=>$('quoteDetails').close());$('quoteDetails').addEventListener('click',event=>{if(event.target===$('quoteDetails'))$('quoteDetails').close();});
 $('quoteEditCancel').addEventListener('click',clearEditor);
 $('quoteForm').addEventListener('submit',async event=>{
  event.preventDefault();if(!ready||busy||$('quoteSave').disabled)return;
- const items=rows().map(row=>{const [kind,id]=row.querySelector('.item').value.split(':');return {productId:kind==='product'?id:null,serviceId:kind==='service'?id:null,quantity:Number(row.querySelector('.quantity').value),unitPrice:Number(row.querySelector('.price').value)};});
+ const items=rows().map(row=>{
+  const quantity=Number(row.querySelector('.quantity').value),unitPrice=Number(row.querySelector('.price').value);
+  if(row.dataset.manual==='true')return {manual:true,description:row.querySelector('.manual-description').value.trim(),unit:row.querySelector('.manual-unit').value.trim(),quantity,unitPrice};
+  const [kind,id]=row.querySelector('.item').value.split(':');return {productId:kind==='product'?id:null,serviceId:kind==='service'?id:null,quantity,unitPrice};
+ });
  busy=true;update();notice('Salvando orçamento...');
  try{
   const payload={customerId:$('quoteCustomer').value||null,validUntil:$('quoteValidity').value||null,notes:$('quoteNotes').value,items};

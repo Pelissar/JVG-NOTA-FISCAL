@@ -74,43 +74,11 @@ export async function POST(request: Request) {
     if (validUntil !== null && (typeof validUntil !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(validUntil) || !Number.isFinite(Date.parse(validUntil)) || new Date(validUntil).toISOString().slice(0,10) !== validUntil))
       throw new JvgBackendError("Validade inválida.", 400);
     if (!Array.isArray(data.items) || data.items.length < 1 || data.items.length > 100) throw new JvgBackendError("Informe entre 1 e 100 itens.", 400);
-    const companyScope = `tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}`;
-    if (customerId) {
-      const customer = await dbRequest<Array<{id:string}>>(`/rest/v1/jvg_parties?${companyScope}&id=${filterEq(customerId)}&is_customer=eq.true&active=eq.true&select=id&limit=1`);
-      if (!customer.length) throw new JvgBackendError("Cliente indisponível nesta empresa.", 400);
-    }
-    // Consulta apenas os IDs presentes na proposta: evita rejeitar itens além dos 1000 primeiros.
-    const productIds = [...new Set(data.items.filter((entry: unknown) => entry && typeof entry === "object" && !Array.isArray(entry)).map((entry: Record<string,unknown>) => entry.productId).filter((id: unknown) => id != null).map(uuid))];
-    const serviceIds = [...new Set(data.items.filter((entry: unknown) => entry && typeof entry === "object" && !Array.isArray(entry)).map((entry: Record<string,unknown>) => entry.serviceId).filter((id: unknown) => id != null).map(uuid))];
-    const products = productIds.length ? await dbRequest<Array<{id:string;name:string;unit:string}>>(`/rest/v1/jvg_products?${companyScope}&active=eq.true&id=in.(${productIds.join(",")})&select=id,name,unit`) : [];
-    const services = serviceIds.length ? await dbRequest<Array<{id:string;name:string}>>(`/rest/v1/jvg_services?${companyScope}&active=eq.true&id=in.(${serviceIds.join(",")})&select=id,name`) : [];
-    const productById = new Map(products.map(p=>[p.id,p]));
-    const serviceById = new Map(services.map(s=>[s.id,s]));
-    let totalCents = 0;
-    const items = data.items.map((entry: unknown) => {
-      if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new JvgBackendError("Item inválido.", 400);
-      const row = entry as Record<string,unknown>;
-      const productId = row.productId == null ? null : uuid(row.productId);
-      const serviceId = row.serviceId == null ? null : uuid(row.serviceId);
-      if (!!productId === !!serviceId) throw new JvgBackendError("Informe produto ou serviço.", 400);
-      const product = productId ? productById.get(productId) : null;
-      const service = serviceId ? serviceById.get(serviceId) : null;
-      if (!product && !service) throw new JvgBackendError("Item indisponível nesta empresa.", 400);
-      const quantity = row.quantity, unitPrice = row.unitPrice;
-      if (typeof quantity !== "number" || !Number.isFinite(quantity) || quantity <= 0 || quantity > 999999 ||
-          typeof unitPrice !== "number" || !Number.isFinite(unitPrice) || unitPrice < 0 || unitPrice > 999999999 ||
-          Math.abs(Math.round(unitPrice * 100) - unitPrice * 100) > 1e-7)
-        throw new JvgBackendError("Quantidade ou preço inválido.", 400);
-      const lineCents = Math.round(quantity * Math.round(unitPrice * 100));
-      if (!Number.isSafeInteger(lineCents)) throw new JvgBackendError("Total inválido.", 400);
-      totalCents += lineCents;
-      if (!Number.isSafeInteger(totalCents) || totalCents > 99999999999) throw new JvgBackendError("Total excede o limite.", 400);
-      return { productId, serviceId, description: product?.name ?? service?.name, unit: product?.unit ?? "UN", quantity, unitPrice, lineTotal: lineCents/100 };
-    });
+    const prepared = await prepareCommercialItems(data.items, scope);
     const created = await dbRequest<Array<{id:string;quote_number?:number|string}>>("/rest/v1/jvg_quotes", {
       method: "POST",
       body: JSON.stringify({ tenant_id:scope.tenant_id, company_id:scope.company_id, customer_id:customerId,
-        notes, valid_until:validUntil, status:"draft", items, total:totalCents/100 }),
+        notes, valid_until:validUntil, status:"draft", items:prepared.items, total:prepared.total }),
     });
     return apiJson({ ok:true, id:created[0]?.id, quoteNumber:created[0]?.quote_number ?? null }, 201);
   } catch (error) { return safeError(error); }

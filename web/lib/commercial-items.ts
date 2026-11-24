@@ -3,6 +3,7 @@ import { dbRequest, filterEq, JvgBackendError, type SiteAccount } from "./jvg-ba
 type CommercialItem = {
   productId: string | null;
   serviceId: string | null;
+  manual: boolean;
   description: string;
   unit: string;
   quantity: number;
@@ -32,7 +33,16 @@ export async function prepareCommercialItems(
     const row = entry as Record<string, unknown>;
     const productId = row.productId == null || row.productId === "" ? null : uuid(row.productId);
     const serviceId = row.serviceId == null || row.serviceId === "" ? null : uuid(row.serviceId);
-    if (!!productId === !!serviceId) throw new JvgBackendError("Informe produto ou serviço para cada item.", 400);
+    const manual = row.manual === true;
+    if (row.manual != null && typeof row.manual !== "boolean") throw new JvgBackendError("Tipo de item inválido.", 400);
+    if (manual ? (!!productId || !!serviceId) : (!!productId === !!serviceId))
+      throw new JvgBackendError("Selecione um produto/serviço cadastrado ou informe um item manual.", 400);
+    const description = manual ? (typeof row.description === "string" ? row.description.trim() : "") : "";
+    const unit = manual ? (typeof row.unit === "string" ? row.unit.trim() : "") : "";
+    if (manual && (!description || description.length > 180 || /[\u0000-\u001f\u007f]/.test(description)))
+      throw new JvgBackendError("Descreva o item manual com até 180 caracteres.", 400);
+    if (manual && (!unit || unit.length > 12 || /[\u0000-\u001f\u007f]/.test(unit)))
+      throw new JvgBackendError("Informe uma unidade com até 12 caracteres para o item manual.", 400);
     const quantity = row.quantity;
     const unitPrice = row.unitPrice;
     if (typeof quantity !== "number" || !Number.isFinite(quantity) || quantity <= 0 || quantity > 999999 ||
@@ -40,7 +50,7 @@ export async function prepareCommercialItems(
         Math.abs(Math.round(unitPrice * 100) - unitPrice * 100) > 1e-7) {
       throw new JvgBackendError("Quantidade ou preço inválido.", 400);
     }
-    return { productId, serviceId, quantity, unitPrice };
+    return { productId, serviceId, manual, description, unit, quantity, unitPrice };
   });
 
   const productIds = [...new Set(source.flatMap((row) => row.productId ? [row.productId] : []))];
@@ -65,7 +75,7 @@ export async function prepareCommercialItems(
   const items = source.map((row) => {
     const product = row.productId ? productById.get(row.productId) : null;
     const service = row.serviceId ? serviceById.get(row.serviceId) : null;
-    if (!product && !service) throw new JvgBackendError("Produto ou serviço não encontrado nesta empresa.", 400);
+    if (!row.manual && !product && !service) throw new JvgBackendError("Produto ou serviço não encontrado nesta empresa.", 400);
 
     const old = previousItems.find((entry) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
@@ -74,7 +84,7 @@ export async function prepareCommercialItems(
         Number(previous.quantity) === row.quantity && Number(previous.unitPrice) === row.unitPrice;
     }) as Record<string, unknown> | undefined;
     const active = product ? product.active !== false : service?.active !== false;
-    if (!active && !old) throw new JvgBackendError("Um item está inativo no cadastro. Reative-o ou remova-o antes de salvar.", 409);
+    if (!row.manual && !active && !old) throw new JvgBackendError("Um item está inativo no cadastro. Reative-o ou remova-o antes de salvar.", 409);
 
     const lineCents = Math.round(row.quantity * Math.round(row.unitPrice * 100));
     if (!Number.isSafeInteger(lineCents)) throw new JvgBackendError("Total do item inválido.", 400);
@@ -84,8 +94,9 @@ export async function prepareCommercialItems(
     return {
       productId: row.productId,
       serviceId: row.serviceId,
-      description: product?.name ?? service?.name ?? String(old?.description ?? "Item comercial"),
-      unit: product?.unit ?? String(old?.unit ?? "UN"),
+      manual: row.manual,
+      description: row.manual ? row.description : product?.name ?? service?.name ?? String(old?.description ?? "Item comercial"),
+      unit: row.manual ? row.unit : product?.unit ?? String(old?.unit ?? "UN"),
       quantity: row.quantity,
       unitPrice: row.unitPrice,
       lineTotal: lineCents / 100,

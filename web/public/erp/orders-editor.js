@@ -20,18 +20,33 @@
   function updateTotal() {
     const total = rows().reduce((sum, row) => sum + (Number(row.querySelector('.editor-quantity').value) || 0) * (Number(row.querySelector('.editor-price').value) || 0), 0);
     $('orderEditTotal').textContent = 'Total: ' + money(total);
-    $('orderEditSave').disabled = saving || !rows().length || rows().some((row) => !row.querySelector('.editor-item').value || !(Number(row.querySelector('.editor-quantity').value) > 0) || row.querySelector('.editor-price').value === '');
+    $('orderEditSave').disabled = saving || !rows().length || rows().some((row) => {
+      const validItem = row.dataset.manual === 'true'
+        ? !!row.querySelector('.editor-description').value.trim() && !!row.querySelector('.editor-unit').value.trim()
+        : !!row.querySelector('.editor-item').value;
+      return !validItem || !(Number(row.querySelector('.editor-quantity').value) > 0) || row.querySelector('.editor-price').value === '';
+    });
     $('orderEditAdd').disabled = saving || rows().length >= 100;
+    $('orderEditAddManual').disabled = saving || rows().length >= 100;
   }
 
-  function addRow(item) {
+  function addRow(item, requestedMode = 'catalog') {
     if (rows().length >= 100) return;
     const row = document.createElement('div');
     row.className = 'commercial-editor-row';
+    const manual = requestedMode === 'manual' || item?.manual === true || (!item?.productId && !item?.serviceId && !!item);
+    row.dataset.manual = manual ? 'true' : 'false';
+    if (manual) row.classList.add('commercial-editor-row--manual');
     const options = catalog.map((entry) => '<option value="' + safe(entry.kind + ':' + entry.id) + '">' + safe(entry.name) + '</option>').join('');
-    row.innerHTML = '<label>Produto ou serviço<select class="editor-item" required><option value="">Selecione</option>' + options + '</select></label><label>Quantidade<input class="editor-quantity" type="number" min="0.001" max="999999" step="0.001" required></label><label>Preço (R$)<input class="editor-price" type="number" min="0" max="999999999" step="0.01" required></label><button class="btn editor-remove" type="button">Remover</button>';
-    const select = row.querySelector('.editor-item');
-    if (item) {
+    const picker = manual
+      ? '<label>Descrição<input class="editor-description" maxlength="180" required></label><label>Unidade<input class="editor-unit" maxlength="12" value="UN" required></label>'
+      : '<label>Produto ou serviço<select class="editor-item" required><option value="">Selecione</option>' + options + '</select></label>';
+    row.innerHTML = picker + '<label>Quantidade<input class="editor-quantity" type="number" min="0.001" max="999999" step="0.001" required></label><label>Preço unitário (R$)<input class="editor-price" type="number" min="0" max="999999999" step="0.01" required></label><button class="btn editor-remove" type="button">Remover</button>';
+    if (manual) {
+      row.querySelector('.editor-description').value = item?.description || '';
+      row.querySelector('.editor-unit').value = item?.unit || 'UN';
+    } else if (item) {
+      const select = row.querySelector('.editor-item');
       const kind = item.productId ? 'product' : 'service';
       const id = item.productId || item.serviceId;
       const value = kind + ':' + id;
@@ -42,8 +57,8 @@
     } else {
       row.querySelector('.editor-quantity').value = '1';
     }
-    select.addEventListener('change', () => {
-      const entry = catalog.find((value) => value.kind + ':' + value.id === select.value);
+    if (!manual) row.querySelector('.editor-item').addEventListener('change', (event) => {
+      const entry = catalog.find((value) => value.kind + ':' + value.id === event.currentTarget.value);
       if (entry) row.querySelector('.editor-price').value = Number(entry.price || 0).toFixed(2);
       updateTotal();
     });
@@ -51,6 +66,7 @@
     row.querySelector('.editor-remove').addEventListener('click', () => { row.remove(); updateTotal(); });
     $('orderEditItems').append(row);
     updateTotal();
+    return row;
   }
 
   async function editOrder(id) {
@@ -86,6 +102,7 @@
     if (button) editOrder(button.dataset.id);
   });
   $('orderEditAdd').addEventListener('click', () => addRow());
+  $('orderEditAddManual').addEventListener('click', () => addRow(null, 'manual')?.querySelector('.editor-description')?.focus());
   $('orderEditClose').addEventListener('click', () => dialog.close());
   $('orderEditCancel').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
@@ -93,9 +110,10 @@
     event.preventDefault();
     if (!currentOrder || saving || $('orderEditSave').disabled) return;
     const items = rows().map((row) => {
+      const quantity = Number(row.querySelector('.editor-quantity').value), unitPrice = Number(row.querySelector('.editor-price').value);
+      if (row.dataset.manual === 'true') return { manual: true, description: row.querySelector('.editor-description').value.trim(), unit: row.querySelector('.editor-unit').value.trim(), quantity, unitPrice };
       const [kind, id] = row.querySelector('.editor-item').value.split(':');
-      return { productId: kind === 'product' ? id : null, serviceId: kind === 'service' ? id : null,
-        quantity: Number(row.querySelector('.editor-quantity').value), unitPrice: Number(row.querySelector('.editor-price').value) };
+      return { productId: kind === 'product' ? id : null, serviceId: kind === 'service' ? id : null, quantity, unitPrice };
     });
     if (!confirm('Confirme que o cliente concordou com as alterações deste pedido. O orçamento aprovado original não será alterado.')) return;
     saving = true; updateTotal(); notice('Salvando alterações do pedido...');
