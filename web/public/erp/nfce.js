@@ -477,7 +477,7 @@
     return available ? '<button type="button" data-file-kind="' + safe(kind) + '" data-file-id="' + safe(row.id) + '">' + safe(label) + '</button>' : '';
   }
 
-  function renderDraftReview(review) {
+  function renderDocumentReview(review) {
     if (!review || !Array.isArray(review.items)) return '';
     const originNames = ['Nacional', 'Estrangeira · importação direta', 'Estrangeira · mercado interno', 'Nacional · conteúdo importado acima de 40%', 'Nacional · processo produtivo básico', 'Nacional · conteúdo importado até 40%', 'Estrangeira · sem similar nacional', 'Estrangeira · mercado interno sem similar nacional', 'Nacional · conteúdo importado acima de 70%'];
     const rtcTaxLabels = {
@@ -497,7 +497,7 @@
       ];
       if (item.cest) fiscal.push('CEST ' + item.cest);
       return '<li><div><strong>' + safe(item.quantity) + ' × ' + safe(item.name || 'Produto') + '</strong><span>' + money(Number(item.unitPrice)) + ' cada · ' + money(Number(item.total)) + '</span></div><small>' + safe(fiscal.join(' · ')) + '</small>' +
-        '<details class="nfce-draft-tax-review"><summary>Valores tributários numéricos</summary>' + (taxValues ? '<ul>' + taxValues + '</ul>' : '<span>Nenhum valor numérico adicional consta no payload.</span>') + '</details></li>';
+        '<details class="nfce-document-tax-review"><summary>Valores tributários numéricos</summary>' + (taxValues ? '<ul>' + taxValues + '</ul>' : '<span>Nenhum valor numérico adicional consta no payload.</span>') + '</details></li>';
     }).join('');
     const payments = Array.isArray(review.payments) ? review.payments.map(payment => {
       const method = paymentOptions.find(([code]) => code === payment.method)?.[1] || ('Forma ' + (payment.method || 'não informada'));
@@ -505,10 +505,10 @@
       const description = payment.description ? ' · ' + safe(payment.description) : '';
       return '<li>' + safe(method) + ' · ' + timing + ' · ' + money(Number(payment.amount)) + description + '</li>';
     }).join('') : '';
-    return '<details class="nfce-draft-review"><summary>Conferir itens, impostos e pagamento</summary><div class="nfce-draft-review-body">' +
+    return '<details class="nfce-document-review"><summary>Ver itens, impostos e pagamento</summary><div class="nfce-document-review-body">' +
       '<p><strong>' + safe(review.nature || 'Natureza não informada') + '</strong></p>' +
-      '<ul class="nfce-draft-review-items">' + items + '</ul>' +
-      '<strong>Pagamentos</strong><ul class="nfce-draft-review-payments">' + (payments || '<li>Nenhum pagamento informado</li>') + '</ul></div></details>';
+      (items ? '<ul class="nfce-document-review-items">' + items + '</ul>' : '<span>Itens não disponíveis para consulta neste registro.</span>') +
+      '<strong>Pagamentos</strong><ul class="nfce-document-review-payments">' + (payments || '<li>Nenhum pagamento informado</li>') + '</ul></div></details>';
   }
 
   function setCapabilities(capabilities = {}) {
@@ -526,6 +526,7 @@
       const key = row.access_key || response.chave_nfe || '—';
       const reference = row.focus_reference || response.ref || '';
       const reason = providerReason(response);
+      const responseCode = response.codigo_status ?? response.status_sefaz;
       const authorized = ['authorized', 'cancelled'].includes(row.status);
       const files = [
         fileButton(row, 'danfce', 'Baixar DANFCe', authorized && Boolean(row.pdf_storage_path || response.caminho_danfe)),
@@ -535,12 +536,13 @@
       const action = row.status === 'processing'
         ? '<button type="button" data-reconcile="' + safe(row.id) + '">Consultar status</button>'
         : row.status === 'draft'
-          ? '<button type="button" data-resume="' + safe(row.id) + '" data-total="' + safe(row.totalCents || 0) + '" data-reference="' + safe(reference) + '">Selecionar rascunho</button>' + renderDraftReview(row.draftReview)
+          ? '<button type="button" data-resume="' + safe(row.id) + '" data-total="' + safe(row.totalCents || 0) + '" data-reference="' + safe(reference) + '">Selecionar rascunho</button>'
           : row.status === 'authorized' && state.canCancel
             ? '<button type="button" data-cancel="' + safe(row.id) + '">Cancelar cupom</button>' : '';
+      const review = renderDocumentReview(row.documentReview);
       return '<tr><td>' + safe(row.document_number || '—') + (row.series ? ' · série ' + safe(row.series) : '') + '<small>' + safe(new Date(row.created_at).toLocaleString('pt-BR')) + '</small></td>' +
-        '<td><span class="nfce-status nfce-status-' + safe(row.status) + '">' + safe(labels[row.status] || row.status) + '</span>' + (reason ? '<small>' + safe(reason) + '</small>' : '') + '</td>' +
-        '<td>' + safe(key) + (reference ? '<small>Ref. ' + safe(reference) + '</small>' : '') + '</td><td>' + money(Number(row.totalCents || 0) / 100) + '</td><td>' + [files, action].filter(Boolean).join('<br>') + '</td></tr>';
+        '<td><span class="nfce-status nfce-status-' + safe(row.status) + '">' + safe(labels[row.status] || row.status) + '</span>' + (reason ? '<small>' + safe(reason) + '</small>' : '') + (responseCode ? '<small>Código retornado: ' + safe(responseCode) + '</small>' : '') + '</td>' +
+        '<td>' + safe(key) + (reference ? '<small>Ref. ' + safe(reference) + '</small>' : '') + '</td><td>' + money(Number(row.totalCents || 0) / 100) + '</td><td>' + [files, action, review].filter(Boolean).join('<br>') + '</td></tr>';
     }).join('');
     $('nfceList').innerHTML = rows.length
       ? '<div class="nfce-table-scroll"><table><thead><tr><th>Número</th><th>Situação e retorno</th><th>Chave / referência</th><th>Valor</th><th>Ações</th></tr></thead><tbody>' + body + '</tbody></table></div>'

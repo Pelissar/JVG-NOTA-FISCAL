@@ -61,7 +61,7 @@ function safeProviderResponse(value: unknown): Row {
   return output;
 }
 
-function safeDraftReview(value: unknown): Row {
+function safeDocumentReview(value: unknown): Row {
   const payload = obj(value);
   const items = Array.isArray(payload.items) ? payload.items.slice(0, 20).map(value => {
     const item = obj(value);
@@ -122,7 +122,8 @@ export async function GET() {
         return {
           ...publicRow,
           totalCents: Number.isSafeInteger(stored.totalCents) ? stored.totalCents : 0,
-          draftReview: row.status === "draft" ? safeDraftReview(stored.payload) : null,
+          documentReview: ["jvg_nfce_homologacao_v1", "jvg_nfce_homologacao_v2"].includes(String(stored.schema))
+            ? safeDocumentReview(stored.payload) : null,
           provider_response: safeProviderResponse(obj(row.provider_response).response),
         };
       }),
