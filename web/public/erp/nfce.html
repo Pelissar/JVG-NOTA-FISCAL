@@ -9,10 +9,10 @@
   <link rel="stylesheet" href="/erp/styles.css">
   <link rel="stylesheet" href="/erp/unified-pages.css">
   <link rel="stylesheet" href="/erp/erp-design-v2.css">
-  <link rel="stylesheet" href="/erp/nfce-workspace.css?v=20261124-history-review">
+  <link rel="stylesheet" href="/erp/nfce-workspace.css?v=20261124-history-filters">
   <script src="/erp/theme-switch.js"></script>
   <script defer src="/erp/erp-page-nav.js?v=20261117-navigation-2"></script>
-  <script defer src="/erp/nfce.js?v=20261124-history-review"></script>
+  <script defer src="/erp/nfce.js?v=20261124-history-filters"></script>
   <link rel="stylesheet" href="/erp/site-refresh.css?v=20261119-dashboard-consumption">
 </head>
 <body>
@@ -107,7 +107,15 @@
 
         <section class="panel nfce-history-panel" aria-labelledby="nfceHistoryTitle">
           <div class="nfce-card-heading"><div><span class="section-kicker">HISTÓRICO</span><h2 id="nfceHistoryTitle">Cupons desta empresa</h2><p>Confira o status, a chave de acesso, os arquivos e o histórico de eventos.</p></div><button id="nfceRefresh" class="button-secondary" type="button">Atualizar</button></div>
+          <div class="nfce-history-filters" aria-label="Filtros do histórico de NFC-e">
+            <label>Situação<select id="nfceHistoryStatus"><option value="">Todas as situações</option><option value="draft">Preparadas</option><option value="processing">Aguardando retorno</option><option value="authorized">Autorizadas</option><option value="rejected">Rejeitadas</option><option value="cancelled">Canceladas</option><option value="denied">Denegadas</option></select></label>
+            <label>Data inicial<input id="nfceHistoryFrom" type="date"></label>
+            <label>Data final<input id="nfceHistoryTo" type="date"></label>
+            <div class="nfce-history-filter-actions"><button id="nfceHistoryApply" class="button-secondary" type="button">Filtrar</button><button id="nfceHistoryClear" class="button-secondary" type="button">Limpar</button></div>
+          </div>
+          <p id="nfceHistorySummary" class="nfce-history-summary" aria-live="polite"></p>
           <div id="nfceList" class="nfce-history-table">Carregando...</div>
+          <button id="nfceLoadMore" class="button-secondary nfce-history-more" type="button" hidden>Carregar mais cupons</button>
         </section>
       </div>
 

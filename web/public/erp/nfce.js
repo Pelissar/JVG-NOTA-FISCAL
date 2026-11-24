@@ -57,7 +57,7 @@
     cofins_aliquota_valor_st: 'Alíquota Cofins-ST por unidade (R$)', cofins_valor_st: 'Valor Cofins-ST (R$)',
   };
 
-  let state = { products: [], profiles: [], productProfileIds: {}, defaults: {}, canIssue: false, canCancel: false };
+  let state = { products: [], profiles: [], productProfileIds: {}, defaults: {}, canIssue: false, canCancel: false, historyRows: [], historyOffset: 0, historyHasMore: false, historyLoading: false };
   let draftId = '';
   let cancelId = '';
   let busy = false;
@@ -546,7 +546,20 @@
     }).join('');
     $('nfceList').innerHTML = rows.length
       ? '<div class="nfce-table-scroll"><table><thead><tr><th>Número</th><th>Situação e retorno</th><th>Chave / referência</th><th>Valor</th><th>Ações</th></tr></thead><tbody>' + body + '</tbody></table></div>'
-      : '<div class="nfce-empty"><strong>Nenhum cupom registrado nesta empresa</strong><span>As notas autorizadas, rejeitadas, canceladas e as preparadas aparecerão aqui.</span></div>';
+      : '<div class="nfce-empty"><strong>' + (hasHistoryFilter() ? 'Nenhum cupom encontrado com estes filtros' : 'Nenhum cupom registrado nesta empresa') + '</strong><span>As notas autorizadas, rejeitadas, canceladas e as preparadas aparecerão aqui.</span></div>';
+  }
+
+  function hasHistoryFilter() {
+    return Boolean($('nfceHistoryStatus').value || $('nfceHistoryFrom').value || $('nfceHistoryTo').value);
+  }
+
+  function updateHistoryPagination() {
+    $('nfceHistorySummary').textContent = state.historyRows.length
+      ? state.historyRows.length + (state.historyRows.length === 1 ? ' cupom carregado' : ' cupons carregados') + (state.historyHasMore ? ' · existem registros anteriores' : '')
+      : hasHistoryFilter() ? 'Nenhum registro corresponde aos filtros.' : 'Nenhum cupom carregado.';
+    $('nfceLoadMore').hidden = !state.historyHasMore;
+    $('nfceLoadMore').disabled = state.historyLoading;
+    $('nfceLoadMore').textContent = state.historyLoading ? 'Carregando…' : 'Carregar mais cupons';
   }
 
   async function load() {
@@ -558,7 +571,11 @@
     setCapabilities(docs.capabilities || {});
     if (!document.querySelector('.nfce-line-item')) addItem();
     if (!document.querySelector('.nfce-payment-row')) addPayment();
-    renderList(docs.documents || []);
+    state.historyRows = docs.documents || [];
+    state.historyOffset = Number(docs.pagination?.nextOffset) || state.historyRows.length;
+    state.historyHasMore = docs.pagination?.hasMore === true;
+    renderList(state.historyRows);
+    updateHistoryPagination();
     notice(!state.canIssue
       ? 'Seu perfil pode consultar os documentos desta empresa, mas a emissão e o cancelamento ficam disponíveis para administradores e operadores autorizados.'
       : docs.defaults?.isJvgPilot
@@ -675,9 +692,25 @@
     }
   }
 
-  async function refresh() {
-    try { const data = await api('/api/fiscal/nfce-drafts'); setCapabilities(data.capabilities || {}); renderList(data.documents || []); }
-    catch (error) { notice(error.message, true); }
+  async function refresh(append = false) {
+    if (state.historyLoading) return;
+    state.historyLoading = true;
+    updateHistoryPagination();
+    const params = new URLSearchParams({ offset: String(append ? state.historyOffset : 0), setup: '0' });
+    if ($('nfceHistoryStatus').value) params.set('status', $('nfceHistoryStatus').value);
+    if ($('nfceHistoryFrom').value) params.set('from', $('nfceHistoryFrom').value);
+    if ($('nfceHistoryTo').value) params.set('to', $('nfceHistoryTo').value);
+    try {
+      const data = await api('/api/fiscal/nfce-drafts?' + params.toString());
+      setCapabilities(data.capabilities || {});
+      const page = Array.isArray(data.documents) ? data.documents : [];
+      state.historyRows = append ? state.historyRows.concat(page) : page;
+      state.historyOffset = Number(data.pagination?.nextOffset) || (append ? state.historyOffset + page.length : page.length);
+      state.historyHasMore = data.pagination?.hasMore === true;
+      renderList(state.historyRows);
+      notice('Histórico atualizado.');
+    } catch (error) { notice(error.message, true); }
+    finally { state.historyLoading = false; updateHistoryPagination(); }
   }
 
   async function reconcile(id) {
@@ -769,7 +802,15 @@
   $('nfceForm').addEventListener('submit', prepare);
   $('nfceConfirm').addEventListener('change', () => { $('nfceSend').disabled = !state.canIssue || !draftId || !$('nfceConfirm').checked; });
   $('nfceSend').addEventListener('click', transmit);
-  $('nfceRefresh').addEventListener('click', refresh);
+  $('nfceRefresh').addEventListener('click', () => { void refresh(false); });
+  $('nfceHistoryApply').addEventListener('click', () => { void refresh(false); });
+  $('nfceHistoryClear').addEventListener('click', () => {
+    $('nfceHistoryStatus').value = '';
+    $('nfceHistoryFrom').value = '';
+    $('nfceHistoryTo').value = '';
+    void refresh(false);
+  });
+  $('nfceLoadMore').addEventListener('click', () => { void refresh(true); });
   $('nfcePresence').addEventListener('change', updateDeliveryFields);
   $('nfceIntermediary').addEventListener('change', updateDeliveryFields);
   $('nfceTransportMode').addEventListener('change', updateDeliveryFields);

@@ -102,20 +102,51 @@ function safeDocumentReview(value: unknown): Row {
   };
 }
 
-export async function GET() {
+const nfceStatuses = new Set(["draft", "processing", "authorized", "rejected", "cancelled", "denied"]);
+const historyPageSize = 30;
+
+function historyDate(value: string | null, endOfDay = false): string | null {
+  if (!value) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new JvgBackendError("Informe as datas do histórico no formato correto.", 400);
+  const [year, month, day] = value.split("-").map(Number);
+  if (new Date(Date.UTC(year, month - 1, day)).toISOString().slice(0, 10) !== value)
+    throw new JvgBackendError("A data informada no filtro não existe.", 400);
+  const date = new Date(`${value}T00:00:00-03:00`);
+  if (endOfDay) date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString();
+}
+
+export async function GET(request: Request) {
   try {
     const site = await account();
+    const params = new URL(request.url).searchParams;
+    const status = params.get("status") || "";
+    if (status && !nfceStatuses.has(status)) throw new JvgBackendError("Situação inválida para filtrar os cupons.", 400);
+    const from = historyDate(params.get("from"));
+    const to = historyDate(params.get("to"), true);
+    if (from && params.get("to") && params.get("from")! > params.get("to")!)
+      throw new JvgBackendError("A data inicial não pode ser posterior à data final.", 400);
+    const offsetText = params.get("offset") || "0";
+    if (!/^\d+$/.test(offsetText) || Number(offsetText) > 1000000)
+      throw new JvgBackendError("Página do histórico inválida. Atualize a lista e tente novamente.", 400);
+    const offset = Number(offsetText);
+    const includeSetup = params.get("setup") !== "0";
+    let documentQuery = `/rest/v1/jvg_fiscal_documents?${scope(site)}&document_type=eq.nfce&environment=eq.homologacao&select=id,status,document_number,series,access_key,focus_reference,provider_response,xml_storage_path,pdf_storage_path,fiscal_payload,created_at,updated_at&order=created_at.desc,id.desc&limit=${historyPageSize + 1}&offset=${offset}`;
+    if (status) documentQuery += `&status=${filterEq(status)}`;
+    if (from) documentQuery += `&created_at=gte.${encodeURIComponent(from)}`;
+    if (to) documentQuery += `&created_at=lt.${encodeURIComponent(to)}`;
     const [documents, products, profiles, company] = await Promise.all([
-      dbRequest<Row[]>(`/rest/v1/jvg_fiscal_documents?${scope(site)}&document_type=eq.nfce&environment=eq.homologacao&select=id,status,document_number,series,access_key,focus_reference,provider_response,xml_storage_path,pdf_storage_path,fiscal_payload,created_at,updated_at&order=created_at.desc&limit=30`),
-      dbRequest<Row[]>(`/rest/v1/jvg_products?${scope(site)}&active=eq.true&select=id,tax_profile_id,default_csosn,default_pis_cst,default_cofins_cst&limit=1000`),
-      dbRequest<Row[]>(`/rest/v1/jvg_tax_profiles?${scope(site)}&document_type=eq.nfe&select=id,name,rules,review_status&order=created_at.desc&limit=200`),
-      getCompany(site),
+      dbRequest<Row[]>(documentQuery),
+      includeSetup ? dbRequest<Row[]>(`/rest/v1/jvg_products?${scope(site)}&active=eq.true&select=id,tax_profile_id,default_csosn,default_pis_cst,default_cofins_cst&limit=1000`) : Promise.resolve([]),
+      includeSetup ? dbRequest<Row[]>(`/rest/v1/jvg_tax_profiles?${scope(site)}&document_type=eq.nfe&select=id,name,rules,review_status&order=created_at.desc&limit=200`) : Promise.resolve([]),
+      includeSetup ? getCompany(site) : Promise.resolve(null),
     ]);
     const pilotCompanyId = focusRuntimeEnv("JVG_FOCUS_PILOT_COMPANY_ID");
     const isJvgPilot = Boolean(pilotCompanyId && site.company_id === pilotCompanyId);
+    const page = documents.slice(0, historyPageSize);
     return apiJson({
       environment: "homologacao",
-      documents: documents.map(row => {
+      documents: page.map(row => {
         const stored = obj(row.fiscal_payload);
         const publicRow = { ...row };
         delete publicRow.fiscal_payload;
@@ -133,7 +164,8 @@ export async function GET() {
       }])),
       profiles,
       capabilities: { canIssue: canManageNfce(site), canCancel: canManageNfce(site) },
-      defaults: { isJvgPilot, simplesNacionalConfirmado: company ? simpleConfirmed(company) : false },
+      defaults: includeSetup ? { isJvgPilot, simplesNacionalConfirmado: company ? simpleConfirmed(company) : false } : undefined,
+      pagination: { offset, limit: historyPageSize, nextOffset: offset + page.length, hasMore: documents.length > historyPageSize },
     });
   } catch (error) { return safeError(error); }
 }
