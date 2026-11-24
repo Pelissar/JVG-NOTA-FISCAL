@@ -1,5 +1,6 @@
 import { getJvgUser } from "../../jvg-auth";
 import { apiJson, dbRequest, filterEq, getSiteAccount, isSameOrigin, JvgBackendError, requireModuleAccess, safeError } from "../../../lib/jvg-backend";
+import { prepareCommercialItems, validateCommercialCustomer } from "../../../lib/commercial-items";
 
 export const dynamic = "force-dynamic";
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
     const input: unknown = await request.json();
     if (!input || typeof input !== "object" || Array.isArray(input)) throw new JvgBackendError("Orçamento inválido.", 400);
     const data = input as Record<string, unknown>;
-    const customerId = data.customerId == null ? null : uuid(data.customerId);
+    const customerId = await validateCommercialCustomer(data.customerId, scope);
     const notes = data.notes == null ? "" : data.notes;
     if (typeof notes !== "string" || notes.length > 2000) throw new JvgBackendError("Observações inválidas.", 400);
     const validUntil = data.validUntil == null || data.validUntil === "" ? null : data.validUntil;
@@ -125,6 +126,32 @@ export async function PATCH(request: Request) {
     if (!input || typeof input !== "object" || Array.isArray(input)) throw new JvgBackendError("Alteração inválida.", 400);
     const data = input as Record<string, unknown>;
     const id = uuid(data.id);
+    if (data.action === "edit") {
+      const from = data.fromStatus;
+      if (from !== "draft" && from !== "sent") throw new JvgBackendError("Somente propostas em elaboração ou enviadas podem ser editadas. Propostas aprovadas devem ser clonadas para uma nova revisão.", 409);
+      const notes = data.notes == null ? "" : data.notes;
+      if (typeof notes !== "string" || notes.length > 2000) throw new JvgBackendError("Observações inválidas.", 400);
+      const validUntil = data.validUntil == null || data.validUntil === "" ? null : data.validUntil;
+      if (validUntil !== null && (typeof validUntil !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(validUntil) || !Number.isFinite(Date.parse(validUntil)) || new Date(validUntil).toISOString().slice(0, 10) !== validUntil))
+        throw new JvgBackendError("Validade inválida.", 400);
+      const companyScope = `tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}`;
+      const current = await dbRequest<Array<{ id: string; status: string; items: unknown[]; updated_at: string }>>(
+        `/rest/v1/jvg_quotes?${companyScope}&id=${filterEq(id)}&status=${filterEq(from)}&select=id,status,items,updated_at&limit=1`,
+      );
+      if (!current[0]) throw new JvgBackendError("A proposta foi alterada ou não está mais disponível para edição. Atualize a lista.", 409);
+      const existingOrders = await dbRequest<Array<{ id: string }>>(
+        `/rest/v1/jvg_orders?${companyScope}&quote_id=${filterEq(id)}&select=id&limit=1`,
+      );
+      if (existingOrders.length) throw new JvgBackendError("Esta proposta já originou um pedido e não pode ser alterada. Clone-a para criar outra revisão.", 409);
+      const customerId = await validateCommercialCustomer(data.customerId, scope);
+      const prepared = await prepareCommercialItems(data.items, scope, Array.isArray(current[0].items) ? current[0].items : []);
+      const updated = await dbRequest<Array<{ id: string; status: string }>>(
+        `/rest/v1/jvg_quotes?${companyScope}&id=${filterEq(id)}&status=${filterEq(from)}&updated_at=${filterEq(current[0].updated_at)}&select=id,status`,
+        { method: "PATCH", body: JSON.stringify({ customer_id: customerId, notes, valid_until: validUntil, items: prepared.items, total: prepared.total, status: "draft", updated_at: new Date().toISOString() }) },
+      );
+      if (!updated.length) throw new JvgBackendError("A proposta foi atualizada por outra pessoa. Atualize a lista e tente novamente.", 409);
+      return apiJson({ ok: true, quote: updated[0], returnedToDraft: from === "sent" });
+    }
     const from = data.fromStatus;
     const to = data.status;
     const transitions: Record<string, readonly string[]> = {

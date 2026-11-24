@@ -70,7 +70,7 @@ function money(value: unknown): number | null {
 
 const transitions: Record<Status, readonly Status[]> = {
   open: ["diagnosis", "cancelled"],
-  diagnosis: ["awaiting_approval", "awaiting_parts", "in_progress", "cancelled"],
+  diagnosis: ["awaiting_approval", "cancelled"],
   awaiting_approval: ["in_progress", "cancelled"],
   awaiting_parts: ["in_progress", "cancelled"],
   in_progress: ["awaiting_parts", "ready", "cancelled"],
@@ -199,11 +199,22 @@ export async function PATCH(request: Request) {
     }
     const fromStatus = data.fromStatus;
     if (typeof fromStatus !== "string" || !statuses.includes(fromStatus as Status)) throw new JvgBackendError("Situação atual da OS inválida. Atualize a ficha.", 400);
+    const currentRows = await dbRequest<Array<{ id: string; status: string; customer_approved: boolean | null; os_number: number; updated_at: string }>>(
+      `/rest/v1/jvg_service_orders?tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}&id=${filterEq(id)}&status=${filterEq(fromStatus)}&select=id,status,customer_approved,os_number,updated_at&limit=1`,
+    );
+    const current = currentRows[0];
+    if (!current) throw new JvgBackendError("OS alterada por outra pessoa. Atualize a ficha e tente novamente.", 409);
+    if (data.customerApproved !== undefined && !isCommercial(account.role) && data.customerApproved !== current.customer_approved)
+      throw new JvgBackendError("Somente o comercial pode registrar ou alterar a aprovação do cliente.", 403);
+    if (data.customerApproved === false && current.customer_approved === true && current.status !== "awaiting_approval")
+      throw new JvgBackendError("A aprovação já foi usada para iniciar o serviço e não pode ser retirada nesta etapa.", 409);
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (data.status !== undefined) {
       if (typeof data.status !== "string" || !statuses.includes(data.status as Status)) throw new JvgBackendError("Nova situação inválida.", 400);
       const next = data.status as Status, current = fromStatus as Status;
       if (next !== current && !transitions[current].includes(next)) throw new JvgBackendError("Essa mudança de situação não é permitida.", 400);
+      const approved = data.customerApproved === true || (data.customerApproved === undefined && currentRows[0].customer_approved === true);
+      if (next === "in_progress" && next !== current && !approved) throw new JvgBackendError("A manutenção só pode começar depois que o comercial registrar a aprovação do cliente.", 409);
       patch.status = next;
     }
     if (data.diagnosis !== undefined) patch.diagnosis = text(data.diagnosis, "Diagnóstico", 5000);
@@ -221,11 +232,17 @@ export async function PATCH(request: Request) {
     if (data.internalNotes !== undefined) patch.internal_notes = text(data.internalNotes, "Observações internas", 3000);
     if (Object.keys(patch).length === 1) throw new JvgBackendError("Nenhuma alteração informada.", 400);
     const updated = await dbRequest<Array<Record<string, unknown>>>(
-      `/rest/v1/jvg_service_orders?tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}&id=${filterEq(id)}&status=${filterEq(fromStatus)}&select=id,os_number,status,updated_at`,
+      `/rest/v1/jvg_service_orders?tenant_id=${filterEq(account.tenant_id)}&company_id=${filterEq(account.company_id)}&id=${filterEq(id)}&status=${filterEq(fromStatus)}&updated_at=${filterEq(current.updated_at)}&select=id,os_number,status,updated_at`,
       { method: "PATCH", body: JSON.stringify(patch) },
     );
     if (!updated.length) throw new JvgBackendError("OS não encontrada ou atualizada por outra pessoa. Atualize a lista.", 409);
-    await recordEvent(account, userId, displayName, updated[0], "updated", "Ficha da OS atualizada.");
+    const approvalChanged = data.customerApproved !== undefined && data.customerApproved !== current.customer_approved;
+    const eventDetail = approvalChanged && data.customerApproved === true
+      ? "Aprovação do cliente registrada pelo comercial."
+      : approvalChanged && data.customerApproved === false
+        ? "Cliente não aprovou o serviço."
+        : data.status ? `Situação da OS alterada para ${String(data.status)}.` : "Ficha da OS atualizada.";
+    await recordEvent(account, userId, displayName, updated[0], "updated", eventDetail);
     return apiJson({ ok: true, serviceOrder: updated[0] });
   } catch (error) { return safeError(error); }
 }

@@ -220,7 +220,7 @@
     field('name','Nome / nome fantasia *',p.name,'required maxlength="160"',true)+
     field('legalName','Razão social',p.legalName,'maxlength="180"',true)+
     select('type','Tipo de pessoa',[['PJ','Pessoa jurídica'],['PF','Pessoa física'],['EXT','Estrangeiro']],p.type||'PJ',true)+
-    lookupField('document','CPF / CNPJ (consulta para PJ)',p.document,'maxlength="18"','cnpj',false)+'<p class="lookup-note field full" data-cnpj-lookup-status role="status" aria-live="polite" hidden></p>'+
+    lookupField('document','CPF / CNPJ (consulta para PJ)',p.document,'maxlength="14"','cnpj',false)+'<p class="lookup-note field full" data-cnpj-lookup-status role="status" aria-live="polite" hidden></p>'+
     field('stateRegistration','Inscrição Estadual (IE)',p.stateRegistration,'maxlength="40"',false)+
     field('municipalRegistration','Inscrição Municipal (IM)',p.municipalRegistration,'maxlength="40"',false)+
     field('email','E-mail',p.email,'type="email" maxlength="160"',false)+
@@ -236,7 +236,15 @@
     field('cityCode','Código IBGE do município',p.cityCode,'inputmode="numeric" maxlength="7"',false)+
     select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false')+
     '<p class="lookup-note field full">A consulta de CNPJ combina a Focus com fontes cadastrais complementares. Confira os dados antes de salvar; IE e IM podem exigir confirmação direta com a empresa.</p>';}
-  function updatePartyRequirements(form){if(!form||form.dataset.kind!=='client')return;var supplier=form.querySelector('[name="isSupplier"]'),type=form.querySelector('[name="type"]'),doc=form.querySelector('[name="document"]'),label=form.querySelector('label[for="f-document"]');var required=!!(supplier&&supplier.checked&&type&&type.value!=='EXT');if(doc)doc.required=required;if(label)label.textContent='CPF / CNPJ'+(required?' *':'');}
+  function constrainPartyDocument(form){
+    if(!form||form.dataset.kind!=="client")return;
+    var type=form.querySelector("[name=type]"),doc=form.querySelector("[name=document]"),button=form.querySelector("[data-action=lookup-cnpj]");if(!type||!doc)return;
+    if(type.value==="PF"){doc.value=doc.value.replace(/\D/g,"").slice(0,11);doc.inputMode="numeric";doc.maxLength=11;doc.pattern="[0-9]{11}";doc.placeholder="11 digitos";}
+    else if(type.value==="PJ"){doc.value=doc.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,14);doc.inputMode="text";doc.maxLength=14;doc.pattern="[A-Z0-9]{12}[0-9]{2}";doc.placeholder="12 letras/numeros + 2 digitos";}
+    else{doc.value=doc.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,22);doc.inputMode="text";doc.maxLength=22;doc.removeAttribute("pattern");doc.placeholder="Documento estrangeiro";}
+    if(button)button.hidden=type.value!=="PJ";
+  }
+  function updatePartyRequirements(form){if(!form||form.dataset.kind!=="client")return;var supplier=form.querySelector("[name=isSupplier]"),type=form.querySelector("[name=type]"),doc=form.querySelector("[name=document]"),label=form.querySelector("label[for=f-document]");var required=!!(supplier&&supplier.checked&&type&&type.value!=="EXT");if(doc)doc.required=required;if(label)label.textContent=(type&&type.value==="PF"?"CPF (11 digitos)":type&&type.value==="PJ"?"CNPJ (12 letras/numeros + 2 digitos)":"Documento estrangeiro")+(required?" *":"");constrainPartyDocument(form);}
   function serviceForm(p){return field('code','Código do serviço *',p.code,'required maxlength="40"',false)+field('name','Descrição do serviço *',p.name,'required maxlength="160"',false)+field('description','Detalhamento',p.description,'maxlength="255"',true)+field('price','Valor (R$) *',p.price,'required type="number" min="0" step="0.01"',false)+select('active','Situação',[['true','Ativo'],['false','Inativo']],p.active!==false?'true':'false');}
   async function callApi(endpoint,options){
     var controller=new AbortController(),timeout=setTimeout(function(){controller.abort();},20000);
@@ -374,7 +382,7 @@
       '<label class="field full"><span>Atividade principal da empresa *</span><select name="businessType" required>'+businessTypeOptions+'</select><small>Esse segmento organiza a configuração do ERP. Os recursos específicos aparecem conforme forem habilitados no plano.</small></label>'+
       (includeTaxSetup?'<div class="field full"><strong>Enquadramento tributário</strong></div>'+regimeBlock:'')+
       field('tradeName','Nome fantasia',company.trade_name||'','maxlength="160"',false)+
-      lookupField('cnpj','CNPJ (numérico ou alfanumérico)',company.cnpj||'','maxlength="18" placeholder="00.000.000/0000-00"','cnpj',false)+'<p class="lookup-note field full" data-cnpj-lookup-status role="status" aria-live="polite" hidden></p>'+
+      lookupField('cnpj','CNPJ (numérico ou alfanumérico)',company.cnpj||'','maxlength="14" inputmode="text" autocapitalize="characters" spellcheck="false" placeholder="14 caracteres alfanumericos"','cnpj',false)+'<p class="lookup-note field full" data-cnpj-lookup-status role="status" aria-live="polite" hidden></p>'+
       '<p class="lookup-note field full">A consulta preenche os dados cadastrais disponíveis. Confira tudo antes de salvar; IE e IM podem precisar de confirmação manual.</p>'+
       field('stateRegistration','Inscrição Estadual (IE)',company.state_registration||'','maxlength="40"',false)+
       field('municipalRegistration','Inscrição Municipal',company.municipal_registration||'','maxlength="40"',false,'Opcional. Use se a prefeitura exigir no cadastro da empresa.')+
@@ -589,6 +597,8 @@ function exportCsv(kind){
   document.addEventListener('change',function(e){if(e.target.matches('[name="isSupplier"], [name="type"]'))updatePartyRequirements(e.target.form);});
   document.addEventListener('submit',function(e){if(e.target.id==='recordForm'){e.preventDefault();saveRecord(e.target);}if(e.target.id==='stockForm'){e.preventDefault();saveStock(e.target);}if(e.target.id==='internalConsumptionForm'){e.preventDefault();saveInternalConsumption(e.target);}if(e.target.id==='companyForm'){e.preventDefault();saveCompany(e.target);}if(e.target.id==='profileForm'){e.preventDefault();saveProfile(e.target);}if(e.target.id==='passwordForm'){e.preventDefault();savePassword(e.target);}if(e.target.id==='logoForm'){e.preventDefault();uploadCompanyLogo(e.target);}});
   document.addEventListener('input',function(e){
+    if(e.target.name==="document"&&e.target.form?.dataset.kind==="client")constrainPartyDocument(e.target.form);
+    if(e.target.name==="cnpj"&&e.target.form?.id==="companyForm"){e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,14);e.target.maxLength=14;e.target.inputMode="text";}
     if(e.target.id==='globalSearch'){var searchText=e.target.value;if(view==='dashboard'){setView('products');query=searchText;render();}else{query=searchText;render();}return;}
     if(e.target.hasAttribute('data-search-input')){query=e.target.value;var pos=e.target.selectionStart;render();var next=document.querySelector('[data-search-input]');if(next){next.focus();next.setSelectionRange(pos,pos);}}
   });

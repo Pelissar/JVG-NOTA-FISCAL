@@ -3,6 +3,7 @@ type JsonRecord = Record<string, unknown>;
 const record = (value: unknown): JsonRecord => value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {};
 const text = (value: unknown, max = 200): string => typeof value === "string" || typeof value === "number" ? String(value).trim().slice(0, max) : "";
 const digits = (value: unknown): string => text(value).replace(/\D/g, "");
+const cnpjValue = (value: unknown): string => text(value, 24).toUpperCase().replace(/[^A-Z0-9]/g, "");
 const email = (value: unknown): string => {
   const address = text(value, 254).toLowerCase();
   return address.length <= 160 ? address : "";
@@ -54,7 +55,7 @@ export function focusCnpjFields(payload: unknown, cnpj: string): CnpjFields {
   const address = record(data.endereco);
   return {
     ...emptyCnpjFields(cnpj),
-    cnpj: digits(data.cnpj) || cnpj,
+    cnpj: cnpjValue(data.cnpj) || cnpj,
     legalName: text(data.razao_social),
     cnae: digits(data.cnae_principal),
     street: streetName(address.tipo_logradouro, address.logradouro),
@@ -75,7 +76,7 @@ export function brasilApiCnpjFields(payload: unknown, cnpj: string): CnpjFields 
   const data = record(payload);
   return {
     ...emptyCnpjFields(cnpj),
-    cnpj: digits(data.cnpj) || cnpj,
+    cnpj: cnpjValue(data.cnpj) || cnpj,
     legalName: text(data.razao_social),
     tradeName: text(data.nome_fantasia),
     email: email(data.email),
@@ -104,7 +105,7 @@ export function cnpjWsFields(payload: unknown, cnpj: string): CnpjFields {
   const activity = record(establishment.atividade_principal);
   return {
     ...emptyCnpjFields(cnpj),
-    cnpj: digits(establishment.cnpj) || cnpj,
+    cnpj: cnpjValue(establishment.cnpj) || cnpj,
     legalName: text(data.razao_social),
     tradeName: text(establishment.nome_fantasia),
     email: email(establishment.email),

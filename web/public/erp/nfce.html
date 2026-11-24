@@ -50,7 +50,7 @@
                   <label>Intermediador da venda <span class="required">*</span><select id="nfceIntermediary"><option value="">Selecione</option><option value="0">Venda direta, sem intermediador</option><option value="1">Plataforma de terceiros / marketplace</option></select><small>Ex.: marketplace ou plataforma de delivery.</small></label>
                 </div>
                 <div id="nfceMarketplaceFields" class="nfce-form-grid nfce-conditional-grid" hidden>
-                  <label>CNPJ da plataforma <span class="required">*</span><input id="nfceIntermediaryCnpj" inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00"></label>
+                  <label>CNPJ da plataforma <span class="required">*</span><input id="nfceIntermediaryCnpj" inputmode="text" autocapitalize="characters" maxlength="18" placeholder="CNPJ numérico ou alfanumérico"></label>
                   <label>Seu cadastro na plataforma <span class="required">*</span><input id="nfceIntermediaryId" minlength="2" maxlength="60" placeholder="Nome da loja ou perfil"></label>
                 </div>
               </div>
@@ -71,7 +71,7 @@
                 </div>
                 <div id="nfceThirdPartyFields" class="nfce-form-grid nfce-conditional-grid" hidden>
                   <label>Transportador / entregador <span class="required">*</span><input id="nfceCarrierName" maxlength="60" placeholder="Nome ou razão social"></label>
-                  <label>CNPJ do transportador <span class="optional">opcional</span><input id="nfceCarrierCnpj" inputmode="numeric" maxlength="18" placeholder="Se possuir CNPJ"></label>
+                  <label>CNPJ do transportador <span class="optional">opcional</span><input id="nfceCarrierCnpj" inputmode="text" autocapitalize="characters" maxlength="18" placeholder="Se possuir CNPJ"></label>
                   <label>CPF do transportador <span class="optional">opcional</span><input id="nfceCarrierCpf" inputmode="numeric" maxlength="14" placeholder="Se for pessoa física"></label>
                   <label>Endereço do transportador <span class="optional">opcional</span><input id="nfceCarrierAddress" maxlength="60"></label>
                   <label>Cidade do transportador <span class="optional">opcional</span><input id="nfceCarrierCity" maxlength="60"></label>

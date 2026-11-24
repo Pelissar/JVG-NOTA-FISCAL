@@ -285,7 +285,7 @@
     addOption(indicator.input, '', 'Selecione conforme a operação');
     addOption(indicator.input, '0', '0 · Sem intermediador / plataforma própria');
     addOption(indicator.input, '1', '1 · Plataforma de terceiros / marketplace');
-    var cnpj = makeField('CNPJ do intermediador', 'intermediaryCnpj', 'text', { inputmode: 'numeric', maxlength: '18', placeholder: '00.000.000/0000-00' });
+    var cnpj = makeField('CNPJ do intermediador', 'intermediaryCnpj', 'text', { inputmode: 'text', maxlength: '18', autocapitalize: 'characters', placeholder: 'CNPJ · numérico ou alfanumérico' });
     var intermediaryId = makeField('Identificador na plataforma', 'intermediaryId', 'text', { maxlength: '60', placeholder: 'Identificador fornecido pela plataforma' });
     cnpj.wrapper.classList.add('intermediary-extra');
     intermediaryId.wrapper.classList.add('intermediary-extra');
@@ -379,7 +379,7 @@
     card.hidden = true;
     var integration = makeField('Integração de cartão', 'paymentIntegration', 'select');
     addOption(integration.input, '', 'Selecione'); addOption(integration.input, '1', '1 · Integrado'); addOption(integration.input, '2', '2 · Não integrado');
-    var acquirer = makeField('CNPJ credenciadora', 'paymentAcquirerCnpj', 'text', { inputmode: 'numeric', maxlength: '18' });
+    var acquirer = makeField('CNPJ credenciadora', 'paymentAcquirerCnpj', 'text', { inputmode: 'text', maxlength: '18', autocapitalize: 'characters', placeholder: 'CNPJ · numérico ou alfanumérico' });
     var authorization = makeField('Nº de autorização', 'paymentAuthorization', 'text', { maxlength: '128' });
     card.append(integration.wrapper, acquirer.wrapper, authorization.wrapper);
     var remove = document.createElement('button');
@@ -521,15 +521,15 @@
   }
 
   function cnpjIsValid(raw) {
-    var digits = String(raw || '').replace(/\D/g, '');
-    if (!/^\d{14}$/.test(digits) || /^(\d)\1{13}$/.test(digits)) return false;
+    var cnpj = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!/^[A-Z0-9]{12}\d{2}$/.test(cnpj) || /^(\d)\1{13}$/.test(cnpj)) return false;
     function digit(base, weights) {
-      var sum = base.split('').reduce(function (total, char, index) { return total + Number(char) * weights[index]; }, 0);
+      var sum = base.split('').reduce(function (total, char, index) { return total + (char.charCodeAt(0) - 48) * weights[index]; }, 0);
       var remainder = sum % 11;
       return remainder < 2 ? 0 : 11 - remainder;
     }
-    return Number(digits[12]) === digit(digits.slice(0, 12), [5,4,3,2,9,8,7,6,5,4,3,2]) &&
-      Number(digits[13]) === digit(digits.slice(0, 13), [6,5,4,3,2,9,8,7,6,5,4,3,2]);
+    return Number(cnpj[12]) === digit(cnpj.slice(0, 12), [5,4,3,2,9,8,7,6,5,4,3,2]) &&
+      Number(cnpj[13]) === digit(cnpj.slice(0, 13), [6,5,4,3,2,9,8,7,6,5,4,3,2]);
   }
 
   function addStepError(errors, control, message) {
@@ -549,7 +549,7 @@
       return;
     }
     var documentType = partyDocumentType(client);
-    var document = String(client.document || client.documentNumber || '').replace(/\D/g, '');
+    var document = String(client.document || client.documentNumber || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (!((documentType === 'cpf' && cpfIsValid(document)) || (documentType === 'cnpj' && cnpjIsValid(document))))
       addStepError(errors, select, 'Complete o CPF/CNPJ do destinatário em Cadastros > Pessoas antes de continuar.');
     var name = String(client.legalName || client.name || client.displayName || '').trim();
@@ -707,7 +707,7 @@
         if (!carrier) addStepError(errors, form.elements.namedItem('carrierId'), 'Não foi possível carregar os dados da transportadora.');
         else {
           var carrierName = String(carrier.legalName || carrier.name || '').trim();
-          var carrierDocument = String(carrier.document || carrier.documentNumber || '').replace(/\D/g, '');
+          var carrierDocument = String(carrier.document || carrier.documentNumber || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
           var carrierType = partyDocumentType(carrier);
           var carrierDocumentValid = (carrierType === 'cpf' && cpfIsValid(carrierDocument)) ||
             (carrierType === 'cnpj' && cnpjIsValid(carrierDocument));

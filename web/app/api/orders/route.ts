@@ -1,5 +1,6 @@
 import { getJvgUser } from "../../jvg-auth";
 import { apiJson, dbRequest, filterEq, getSiteAccount, isSameOrigin, JvgBackendError, requireModuleAccess, safeError } from "../../../lib/jvg-backend";
+import { prepareCommercialItems } from "../../../lib/commercial-items";
 export const dynamic = "force-dynamic";
 const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 async function account(){
@@ -82,6 +83,24 @@ export async function PATCH(request:Request){
   if(!input||typeof input!=="object"||Array.isArray(input))throw new JvgBackendError("Pedido inválido.",400);
   const data=input as Record<string,unknown>;
   if(typeof data.id!=="string"||!uuidPattern.test(data.id))throw new JvgBackendError("Pedido inválido.",400);
+  if(data.action==="edit"){
+   const fromStatus=data.fromStatus;
+   if(fromStatus!=="open")throw new JvgBackendError("Somente pedidos em aberto podem ser editados. Pedidos concluídos devem ser corrigidos em uma nova operação comercial.",409);
+   const companyScope=`tenant_id=${filterEq(scope.tenant_id)}&company_id=${filterEq(scope.company_id)}`;
+   const current=await dbRequest<Array<{id:string;status:string;items:unknown[];updated_at:string}>>(
+    `/rest/v1/jvg_orders?${companyScope}&id=${filterEq(data.id)}&status=eq.open&select=id,status,items,updated_at&limit=1`
+   );
+   if(!current[0])throw new JvgBackendError("O pedido não está mais aberto ou foi alterado por outra pessoa. Atualize a lista.",409);
+   const notes=data.notes==null?"":data.notes;
+   if(typeof notes!=="string"||notes.length>2000)throw new JvgBackendError("Observações inválidas.",400);
+   const prepared=await prepareCommercialItems(data.items,scope,Array.isArray(current[0].items)?current[0].items:[]);
+   const updated=await dbRequest<Array<{id:string;status:string}>>(
+    `/rest/v1/jvg_orders?${companyScope}&id=${filterEq(data.id)}&status=eq.open&updated_at=${filterEq(current[0].updated_at)}&select=id,status`,
+    {method:"PATCH",body:JSON.stringify({items:prepared.items,notes,total:prepared.total,updated_at:new Date().toISOString()})}
+   );
+   if(!updated.length)throw new JvgBackendError("O pedido foi atualizado por outra pessoa. Atualize a lista e tente novamente.",409);
+   return apiJson({ok:true,order:updated[0]});
+  }
   if(data.status!=="cancelled")throw new JvgBackendError("Alteração não permitida.",400);
   const cancelled=await dbRequest<boolean>("/rest/v1/rpc/jvg_cancel_order",{
    method:"POST",
