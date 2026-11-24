@@ -40,6 +40,7 @@
 
   function lineDetails(item) {
     var values = [];
+    if (item.manual === true) values.push('Item avulso, sem vínculo com o catálogo');
     if (item.brand) values.push('Marca: ' + item.brand);
     if (item.model) values.push('Modelo: ' + item.model);
     if (item.serialNumber) values.push('Nº de série: ' + item.serialNumber);
@@ -60,7 +61,7 @@
       var unitPrice = Number(item.unitPrice) || 0;
       var total = Number(item.lineTotal);
       if (!Number.isFinite(total)) total = quantity * unitPrice;
-      var kind = item.serviceId ? 'Serviço' : 'Produto';
+      var kind = item.manual === true ? 'Item avulso' : item.serviceId ? 'Serviço' : 'Produto';
       return '<tr><td class="index">' + (index + 1) + '</td><td><b>' +
         escapeHtml(text(item.description, kind)) + '</b>' + lineDetails(item) +
         '</td><td class="num">' + escapeHtml(quantity.toLocaleString('pt-BR')) + ' ' +

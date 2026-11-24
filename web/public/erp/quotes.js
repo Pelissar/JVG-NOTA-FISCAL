@@ -82,7 +82,7 @@ function renderHistory(){
  $('quoteList').innerHTML=rows.length?'<table><thead><tr><th>Data</th><th>Proposta</th><th>Cliente</th><th>Situação</th><th>Validade</th><th>Total</th><th>Ações</th></tr></thead><tbody>'+rows.map(q=>'<tr><td>'+safe(new Date(q.created_at).toLocaleDateString('pt-BR'))+'</td><td title="'+safe(q.id)+'">#'+safe(quoteNumber(q))+'</td><td>'+safe(customers.get(q.customer_id)||'Consumidor não identificado')+'</td><td><span class="status-pill '+(statusClasses[q.status]||'')+'">'+safe(statusLabels[q.status]||q.status)+'</span></td><td>'+safe(q.valid_until||'—')+'</td><td>'+safe(money(q.total))+'</td><td>'+actions(q)+'</td></tr>').join('')+'</tbody></table>':'<div class="empty-state"><strong>Nenhuma proposta encontrada</strong><p>Altere os filtros ou crie um orçamento para começar.</p></div>';
 }
 function actions(q){
- const next=q.status==='draft'?[['sent','Marcar enviado'],['rejected','Recusar']]:q.status==='sent'?[['accepted','Registrar aprovação'],['rejected','Recusar'],['expired','Expirar']]:[];
+ const next=q.status==='draft'?[['sent','Registrar envio'],['rejected','Recusar']]:q.status==='sent'?[['accepted','Registrar aprovação'],['rejected','Recusar'],['expired','Expirar']]:[];
  const buttons=next.map(([status,label])=>'<button type="button" class="btn quote-status" data-id="'+safe(q.id)+'" data-from="'+safe(q.status)+'" data-to="'+safe(status)+'">'+safe(label)+'</button>');
  if(q.status==='accepted'){
   if(q.orderId)buttons.push('<button type="button" class="btn" disabled>'+(q.orderStatus==='cancelled'?'Pedido cancelado':'Pedido gerado')+'</button>');
@@ -121,7 +121,14 @@ function editQuote(q){
  notice(q.status==='sent'?'Ao salvar, esta proposta voltará para elaboração e precisará ser enviada novamente.':'Editando proposta em elaboração.');
 }
 function clearEditor(){editingQuote=null;$('quoteItems').replaceChildren();$('quoteCustomer').value='';$('quoteValidity').value='';$('quoteNotes').value='';$('quoteFormTitle').textContent='Monte seu orçamento';$('quoteSave').textContent='Salvar orçamento';$('quoteEditCancel').hidden=true;addRow();}
-function showDetails(q){const items=Array.isArray(q.items)?q.items:[];$('quoteDetailsTitle').textContent='Orçamento '+quoteNumber(q);$('quoteDetailsBody').innerHTML='<dl><div><dt>Cliente</dt><dd>'+safe(customers.get(q.customer_id)||'Consumidor não identificado')+'</dd></div><div><dt>Situação</dt><dd><span class="status-pill '+(statusClasses[q.status]||'')+'">'+safe(statusLabels[q.status]||q.status)+'</span></dd></div><div><dt>Criado em</dt><dd>'+safe(new Date(q.created_at).toLocaleString('pt-BR'))+'</dd></div><div><dt>Validade</dt><dd>'+safe(q.valid_until||'Sem validade definida')+'</dd></div></dl><div class="detail-items">'+items.map(item=>'<article><span>'+safe(item.description||'Item comercial')+' · '+safe(item.quantity)+' × '+safe(money(item.unitPrice))+'</span><strong>'+safe(money(item.lineTotal))+'</strong></article>').join('')+'</div><p class="dialog-note">'+safe(q.notes||'Nenhuma observação registrada.')+'</p><div class="dialog-actions"><strong>Total: '+safe(money(q.total))+'</strong></div>';if(q.orderId)$('quoteDetailsBody').insertAdjacentHTML('beforeend',q.orderStatus==='cancelled'?'<p class="dialog-note">Pedido e orçamento de origem cancelados. Use Clonar para preparar uma nova proposta com outro número.</p>':'<p class="dialog-note">Pedido gerado. O orçamento original está bloqueado; use Clonar para iniciar outra proposta.</p>');$('quoteDetails').showModal();}
+function showDetails(q){
+ const items=Array.isArray(q.items)?q.items:[];
+ $('quoteDetailsTitle').textContent='Orçamento '+quoteNumber(q);
+ const itemRows=items.map(item=>'<article><span>'+(item.manual===true?'<small class="commercial-item-tag">Item avulso · fora do catálogo</small>':'')+safe(item.description||'Item comercial')+' · '+safe(item.quantity)+' '+safe(item.unit||'UN')+' × '+safe(money(item.unitPrice))+'</span><strong>'+safe(money(item.lineTotal))+'</strong></article>').join('');
+ $('quoteDetailsBody').innerHTML='<dl><div><dt>Cliente</dt><dd>'+safe(customers.get(q.customer_id)||'Consumidor não identificado')+'</dd></div><div><dt>Situação</dt><dd><span class="status-pill '+(statusClasses[q.status]||'')+'">'+safe(statusLabels[q.status]||q.status)+'</span></dd></div><div><dt>Criado em</dt><dd>'+safe(new Date(q.created_at).toLocaleString('pt-BR'))+'</dd></div><div><dt>Validade</dt><dd>'+safe(q.valid_until||'Sem validade definida')+'</dd></div></dl><div class="detail-items">'+itemRows+'</div><p class="dialog-note">'+safe(q.notes||'Nenhuma observação registrada.')+'</p><div class="dialog-actions"><strong>Total: '+safe(money(q.total))+'</strong></div>';
+ if(q.orderId)$('quoteDetailsBody').insertAdjacentHTML('beforeend',q.orderStatus==='cancelled'?'<p class="dialog-note">Pedido e orçamento de origem cancelados. Use Clonar para preparar uma nova proposta com outro número.</p>':'<p class="dialog-note">Pedido gerado. O orçamento original está bloqueado; use Clonar para iniciar outra proposta.</p>');
+ $('quoteDetails').showModal();
+}
 $('quoteList').addEventListener('click',async event=>{
  const editButton=event.target.closest('button.quote-edit');if(editButton){const quote=quoteRows.find(q=>q.id===editButton.dataset.id);if(quote)editQuote(quote);return;}
  const detailButton=event.target.closest('button.quote-details');if(detailButton){const quote=quoteRows.find(q=>q.id===detailButton.dataset.id);if(quote)showDetails(quote);return;}
@@ -142,7 +149,9 @@ $('quoteList').addEventListener('click',async event=>{
  const button=event.target.closest('button.quote-status');
  if(!button||busy||historyBusy)return;
  const {id,from,to}=button.dataset;
- const confirmation=to==='accepted'
+ const confirmation=to==='sent'
+  ?'Registre como enviado somente depois de compartilhar o PDF com o cliente. Esta ação atualiza a situação, mas não envia mensagem nem arquivo.'
+  :to==='accepted'
   ?'Confirma que o cliente aprovou este orçamento? Só depois dessa confirmação o sistema permitirá gerar o pedido.'
   :'Alterar situação do orçamento para '+(statusLabels[to]||to)+'?';
  if(!confirm(confirmation))return;
